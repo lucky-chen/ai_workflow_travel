@@ -69,11 +69,11 @@ TEMPLATE_PLACEHOLDER_END -->
 The architecture must supprt the full folw from requirement input to desing generation、implementation generation, review, validation adn acceptance
 
 ### 3.2 requirement interpretation as stable upstream input
-As raw requirement is written by nature-language which is hard to use by downstream stages as stable input. So the architecture need a requirement interpretation stage and check whether the raw requirement doc is stable
+Requirement documents written in natural language must be checked and stabilized before they are used as downstream input. So the architecture needs requirement interpretation and contract-based checks to make requirement outputs become stable input for the next stage.
 
 ### 3.3 design doc interpretation as stable upstream input
 
-As raw design doc is generate by AI which is hard to use by downstream stages as stable input. So the architecture need a design doc interpretation stage and check whether the design doc is stable
+Design outputs generated in upstream stages must be checked and stabilized before they are used as downstream input. So the architecture needs contract-based checks and gate decisions to make architecture design outputs and module design outputs become stable input for the next stage.
 
 ### 3.4 hunman-in-loop control
 Important changes must remain human reviewable and require users to confirm. So the architecture needs explict review and apply point
@@ -106,44 +106,84 @@ Writing Hints:
 - Include one high-level diagram.
 TEMPLATE_GUIDANCE_END -->
 
-### 4.1 Overview
-<!-- TEMPLATE_PLACEHOLDER: [Provide a concise summary of the architecture.] -->
 
-### 4.2 Architecture Style
+### 4.1 Architecture Style
 <!-- TEMPLATE_PLACEHOLDER: [Describe the overall architectural style, such as layered, event-driven, modular monolith, service-oriented, or hybrid.] -->
 
-### 4.3 Layers or Partitions
+The system adopts a layered modular architecture 
+
+### 4.2 Layers or Partitions
 <!-- TEMPLATE_PLACEHOLDER_START
 - [Layer / Partition 1]: [Responsibility]
 - [Layer / Partition 2]: [Responsibility]
 - [Layer / Partition 3]: [Responsibility]
 TEMPLATE_PLACEHOLDER_END -->
 
-### 4.4 Dependency Rules
-<!-- TEMPLATE_PLACEHOLDER_START
-- [Describe allowed dependency direction]
-- [Describe forbidden dependency relationships]
-- [Describe important structural constraints]
-TEMPLATE_PLACEHOLDER_END -->
+- Interface: entrance and info shows, eg: cli, ui
+- Workflow: control process, state/context, resume, and retry
+- Execution: real ability of task, eg: requirement interpretation, design/implement generation
+- Contract: define the required structure and validation contract for stage inputs and outputs.
+- QualityGate: manage review, reject, and apply decisions for pending changes, and decide whether reviewed results are allowed to pass to the next stage.
+- Data: storage data like intermediate outpts from Execution/Workflow/QualityGate.
 
-### 4.5 High-level Diagram
+### 4.3 Allowed Dependencies
+<!-- TEMPLATE_GUIDANCE_START
+Writing Hints:
+- Define dependency rules by allowed relations only.
+- Treat all unspecified dependencies as forbidden by default.
+- Keep the rules aligned with the layers or partitions defined above.
+TEMPLATE_GUIDANCE_END -->
+
+ALLOW:
+- Interface -> Workflow
+- Workflow -> Execution
+- Workflow -> Contract
+- Workflow -> QualityGate
+- QualityGate -> Data
+- Execution -> Data
+
+### 4.4 High-level Diagram
 ```text
-[TEMPLATE_PLACEHOLDER: Insert high-level architecture diagram here]
++------------------+
+|    Interface     |
+|   CLI / FutureUI |
++------------------+
+          |
+          v
++------------------+
+| Workflow         |
+| process/state/   |
+| context/resume   |
++------------------+
+    /    |    \
+   v     v     v
++----------+  +-------------------------+  +-------------+
+| Execution|  |        Contract         |  | QualityGate |
+| interpret|  |   structure rules       |  | review/apply|
+| generate |  +-------------------------+  | decision    |
+| validate |                             +-------------+
++----------+                                   |
+     |                                         v
+     +-----------------------------------> +----------+
+                                          |   Data   |
+                                          | shared   |
+                                          | storage  |
+                                          +----------+
 ```
 
 ---
 
-## 5. Module Collaboration
+## 5. System Flow
 
 <!-- TEMPLATE_GUIDANCE_START
 Goal:
-Explain how the core modules work together to support the main system flow.
+Explain the key system-level flow, module interactions, and control points that shape runtime behavior.
 
 Writing Hints:
-- List only the major modules needed to explain the architecture.
-- Focus on collaboration and flow, not module internals.
+- Describe only the runtime interactions needed to understand the system flow.
+- Focus on module collaboration, main flow, and control points rather than module internals.
 - Make the main execution or request path explicit.
-- Identify review, approval, validation, or control points where relevant.
+- Identify review, approval, validation, resume, retry, or control points where relevant.
 TEMPLATE_GUIDANCE_END -->
 
 ### 5.1 Core Modules
@@ -154,24 +194,112 @@ TEMPLATE_GUIDANCE_END -->
 - [Module D]: [High-level responsibility]
 TEMPLATE_PLACEHOLDER_END -->
 
+
+- Interface/UI: show process information and provide future UI-based task entry.
+- Interface/CLI: trigger workflow-related tasks through CLI.
+- Interface/ServiceApi: handle service-side API requests, task requests, responses, and error handling.
+- Workflow/Pipeline: control workflow execution, stage state, and resume.
+- Execution/RequirementInterpreter: turn raw requirement documents into structured and stable upstream input.
+- Contract/RequirementContract: define the required structure and validation contract for requirement-stage inputs and outputs.
+- Execution/ArchitectureDesignGenerator: generate architecture design documents and check whether they meet requirements.
+- Contract/ArchitectureDesignContract: define the required structure and validation contract for architecture design inputs and outputs.
+- Execution/ModuleDesignGenerator: generate module design documents from upstream architecture design outputs and check whether they meet requirements.
+- Contract/ModuleDesignContract: define the required structure and validation contract for module design inputs and outputs.
+- Execution/ImplementationGenerator: generate code and test artifacts from upstream module design outputs.
+- Contract/ImplementationContract: define the required structure and validation contract for implementation-stage inputs and outputs.
+- Execution/ValidationRunner: run validation and check whether generated outputs pass required tests.
+- QualityGate/Trace: provide visible review status, pending review items, and important progress information.
+- QualityGate/ChangeGate: manage review, reject, and apply decisions based on contracts and required checks.
+- Data/HistoryStore: store workflow history and operation records.
+- Data/ArtifactStore: store raw files and generated artifacts, such as documents and resources.
+
+
 ### 5.2 Interaction Model
 <!-- TEMPLATE_PLACEHOLDER: [Explain how the modules collaborate at a high level.] -->
 
+- Interface/UI -> Interface/CLI: reuse the CLI entry path to start workflow tasks
+- Interface/CLI -> Interface/ServiceApi: send workflow task request
+- Interface/ServiceApi -> Workflow/Pipeline: start workflow task
+
+- Workflow/Pipeline -> Execution/RequirementInterpreter: interpret raw requirement input
+- Workflow/Pipeline -> Contract/RequirementContract: check requirement
+
+- Workflow/Pipeline -> Execution/ArchitectureDesignGenerator: generate architecture design output
+- Workflow/Pipeline -> Contract/ArchitectureDesignContract: check Architecture design
+
+- Workflow/Pipeline -> Execution/ModuleDesignGenerator: generate module design output
+- Workflow/Pipeline -> Contract/ModuleDesignContract: check module design
+
+- Workflow/Pipeline -> Execution/ImplementationGenerator: generate intermediate resouces eg: code,test_case,config
+- Workflow/Pipeline -> Contract/ImplementationContract: check result of final arifacts. eg: test_case
+
+- Workflow/Pipeline -> Execution/ValidationRunner: run to validation 
+- Workflow/Pipeline -> QualityGate/ChangeGate: submit stage results together with contract check results for review, reject, or apply decisions
+
+- Workflow/Pipeline -> QualityGate/Trace: notify important infos
+- QualityGate/Trace -> Data/HistoryStore: save important process info. 
+- Execution/* -> Data/ArtifactStore: save generated artifacts
+- Contract/* -> Data/ArtifactStore: load/store contract definitions
+
 ### 5.3 Main Flow
+```text
+Interface/UI
+    |
+    v
+Interface/CLI
+    |
+    v
+Interface/ServiceApi
+    |
+    v
+Workflow/Pipeline
+    |
+    +--> Execution/*
+    |      |
+    |      +--> Data/ArtifactStore
+    |      |
+    |      +--> callback stage output to Workflow/Pipeline
+    |
+    +--> Contract/*
+    |      |
+    |      +--> Data/ArtifactStore
+    |      |
+    |      +--> callback check result to Workflow/Pipeline
+    |
+    +--> QualityGate/ChangeGate
+    |      |
+    |      +--> review / reject / apply decision
+    |      |
+    |      +--> callback decision to Workflow/Pipeline
+    |
+    +--> QualityGate/Trace
+           |
+           +--> Data/HistoryStore
+```
+
+1. Interface/UI or Interface/CLI starts a workflow task, and the request enters Workflow/Pipeline through Interface/ServiceApi.
+2. Workflow/Pipeline sends stage input to the corresponding Execution module, and the Execution module generates stage output and returns the result to Workflow/Pipeline.
+3. Workflow/Pipeline sends the returned output to the corresponding Contract module as input, and the Contract module checks the result and returns the check result to Workflow/Pipeline.
+4. Workflow/Pipeline sends the contract check result together with the stage result to QualityGate/ChangeGate, and QualityGate/ChangeGate returns review, reject, or apply decisions to Workflow/Pipeline.
+5. Workflow/Pipeline uses the returned decision to determine whether to continue, stop, retry, or move to the next stage.
+6. During the flow, Workflow/Pipeline sends important process information to QualityGate/Trace, which stores workflow history through the Data layer, while Execution or Contract modules store generated artifacts and contract-related data through the Data layer. The same interaction pattern is reused across requirement interpretation, design generation, implementation generation, and validation stages.
+
+### 5.4 Key Considerations
 <!-- TEMPLATE_PLACEHOLDER_START
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-4. [Step 4]
+- [Important process consideration]
+- [Important state or transition consideration]
+- [Important quality or consistency consideration]
+- [Other important constraint or note]
 TEMPLATE_PLACEHOLDER_END -->
 
-### 5.4 Key Control Points
-<!-- TEMPLATE_PLACEHOLDER_START
-- [Review point]
-- [Approval point]
-- [State transition point]
-- [Validation point]
-TEMPLATE_PLACEHOLDER_END -->
+- Supported stage-level start points:
+  - Design generation or update
+  - Implementation generation or update
+  - Validation
+- Checkpoint:
+  - Review interpreted requirement outputs
+  - Review design outputs
+  - Review implementation outputs
 
 ---
 
