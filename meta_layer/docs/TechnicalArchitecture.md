@@ -11,7 +11,7 @@ TEMPLATE_GUIDANCE_END -->
 
 Define the overall technical architecture of the AI-RD platform.
 
-- Teammbers: provide a shared high-level baseline for the team.
+- Team members: provide a shared high-level baseline for the team.
 - Senior engineers: review architecture direction and boundaries.
 - Junior engineers: understand system and module structure for later design and implementation.
 
@@ -65,8 +65,8 @@ TEMPLATE_PLACEHOLDER_END -->
 
 ---
 
-### 3.1 end-to-end work-flow support
-The architecture must supprt the full folw from requirement input to desing generation、implementation generation, review, validation adn acceptance
+### 3.1 end-to-end workflow support
+The architecture must support the full flow from requirement input to design generation, implementation generation, review, validation, and acceptance.
 
 ### 3.2 requirement interpretation as stable upstream input
 Requirement documents written in natural language must be checked and stabilized before they are used as downstream input. So the architecture needs requirement interpretation and contract-based checks to make requirement outputs become stable input for the next stage.
@@ -75,20 +75,20 @@ Requirement documents written in natural language must be checked and stabilized
 
 Design outputs generated in upstream stages must be checked and stabilized before they are used as downstream input. So the architecture needs contract-based checks and gate decisions to make architecture design outputs and module design outputs become stable input for the next stage.
 
-### 3.4 hunman-in-loop control
-Important changes must remain human reviewable and require users to confirm. So the architecture needs explict review and apply point
+### 3.4 human-in-the-loop control
+Important changes must remain human-reviewable and require users to confirm. So the architecture needs explicit review and apply points.
 
 ### 3.5 Validation visibility
 The system must provide validation or test feedback for generated outputs, so validation needs to be a first-class part of the workflow
 
-### 3.6 Evolation form cli to UI
-CLI-first, while later versions add UI-based workflow support, so the architecture should separate core workflow logic from interface-specific layers.
+### 3.6 evolution from CLI to UI
+The platform is CLI-first, while later versions add UI-based workflow support, so the architecture should separate core workflow logic from interface-specific layers.
 
 ### 3.7 execution transparency and stage traceability
 Users need to understand what the platform is doing at each stage, so the architecture should make execution process, stage status, and important changes visible and traceable.
 
 ### 3.8 incremental update on requirement changes
-requirements change is frequency, so the architecture should support compare the changes between different version and generage new changes to downstream stages.
+Requirement changes are frequent, so the architecture should support comparing changes between different versions and generating downstream updates.
 
 ### 3.9 Stage-level resumability
 The architecture should support stage-level resumability as a core capability based on clear stage inputs, outputs, and state, so users can start from a selected intermediate stage when the required inputs are available, and the workflow can recover from stage failure without rerunning the whole workflow.
@@ -119,12 +119,12 @@ The system adopts a layered modular architecture
 - [Layer / Partition 3]: [Responsibility]
 TEMPLATE_PLACEHOLDER_END -->
 
-- Interface: entrance and info shows, eg: cli, ui
+- Interface: system entry and information display, for example CLI and UI.
 - Workflow: control process, state/context, resume, and retry
-- Execution: real ability of task, eg: requirement interpretation, design/implement generation
-- Contract: define the required structure and validation contract for stage inputs and outputs.
-- QualityGate: manage review, reject, and apply decisions for pending changes, and decide whether reviewed results are allowed to pass to the next stage.
-- Data: storage data like intermediate outpts from Execution/Workflow/QualityGate.
+- Execution: stage execution capabilities, for example requirement interpretation, design generation, implementation generation, and validation.
+- Contract: check whether stage inputs and outputs meet required structure and rules, and return issues and check results.
+- QualityGate: manage review, reject, and apply decisions for pending changes, and decide whether results are allowed to pass to the next stage based on returned check results.
+- Data: store shared data such as intermediate outputs from Execution and process records from QualityGate.
 
 ### 4.3 Allowed Dependencies
 <!-- TEMPLATE_GUIDANCE_START
@@ -146,7 +146,7 @@ ALLOW:
 ```text
 +------------------+
 |    Interface     |
-|   CLI / FutureUI |
+|  CLI / Future UI |
 +------------------+
           |
           v
@@ -195,20 +195,20 @@ TEMPLATE_GUIDANCE_END -->
 TEMPLATE_PLACEHOLDER_END -->
 
 
-- Interface/UI: show process information and provide future UI-based task entry.
+- Interface/UI: provide UI-based user interaction, workflow entry, and optional CLI capability reuse.
 - Interface/CLI: trigger workflow-related tasks through CLI.
 - Interface/ServiceApi: handle service-side API requests, task requests, responses, and error handling.
-- Workflow/Pipeline: control workflow execution, stage state, and resume.
+- Workflow/Pipeline: control workflow execution, stage state, resume, and retry.
 - Execution/RequirementInterpreter: turn raw requirement documents into structured and stable upstream input.
-- Contract/RequirementContract: define the required structure and validation contract for requirement-stage inputs and outputs.
-- Execution/ArchitectureDesignGenerator: generate architecture design documents and check whether they meet requirements.
-- Contract/ArchitectureDesignContract: define the required structure and validation contract for architecture design inputs and outputs.
-- Execution/ModuleDesignGenerator: generate module design documents from upstream architecture design outputs and check whether they meet requirements.
-- Contract/ModuleDesignContract: define the required structure and validation contract for module design inputs and outputs.
+- Contract/RequirementContract: check whether requirement-stage inputs and outputs meet required structure and rules, and report issues.
+- Execution/ArchitectureDesignGenerator: generate architecture design documents from upstream stable input.
+- Contract/ArchitectureDesignContract: check whether architecture-design-stage inputs and outputs meet required structure and rules, and report issues.
+- Execution/ModuleDesignGenerator: generate module design documents from upstream stable architecture design input.
+- Contract/ModuleDesignContract: check whether module-design-stage inputs and outputs meet required structure and rules, and report issues.
 - Execution/ImplementationGenerator: generate code and test artifacts from upstream module design outputs.
-- Contract/ImplementationContract: define the required structure and validation contract for implementation-stage inputs and outputs.
-- Execution/ValidationRunner: run validation and check whether generated outputs pass required tests.
-- QualityGate/Trace: provide visible review status, pending review items, and important progress information.
+- Contract/ImplementationContract: check whether implementation-stage inputs and outputs meet required structure and rules, and report issues.
+- Execution/ValidationRunner: run validation and produce validation results for generated outputs.
+- QualityGate/Trace: provide visible review status, pending changes, and important progress information.
 - QualityGate/ChangeGate: manage review, reject, and apply decisions based on contracts and required checks.
 - Data/HistoryStore: store workflow history and operation records.
 - Data/ArtifactStore: store raw files and generated artifacts, such as documents and resources.
@@ -217,41 +217,45 @@ TEMPLATE_PLACEHOLDER_END -->
 ### 5.2 Interaction Model
 <!-- TEMPLATE_PLACEHOLDER: [Explain how the modules collaborate at a high level.] -->
 
-- Interface/UI -> Interface/CLI: reuse the CLI entry path to start workflow tasks
-- Interface/CLI -> Interface/ServiceApi: send workflow task request
+- Interface/UI -> Interface/ServiceApi: send UI-based workflow task request
+- Interface/CLI -> Interface/ServiceApi: send CLI-based workflow task request
+- Interface/UI -> Interface/CLI: optionally reuse CLI capabilities when needed
 - Interface/ServiceApi -> Workflow/Pipeline: start workflow task
 
 - Workflow/Pipeline -> Execution/RequirementInterpreter: interpret raw requirement input
-- Workflow/Pipeline -> Contract/RequirementContract: check requirement
+- Workflow/Pipeline -> Contract/RequirementContract: check requirement-stage input/output, report issues, and return the result for next-step decision
 
 - Workflow/Pipeline -> Execution/ArchitectureDesignGenerator: generate architecture design output
-- Workflow/Pipeline -> Contract/ArchitectureDesignContract: check Architecture design
+- Workflow/Pipeline -> Contract/ArchitectureDesignContract: check architecture-design-stage input/output, report issues, and return the result for the next-step decision
 
 - Workflow/Pipeline -> Execution/ModuleDesignGenerator: generate module design output
-- Workflow/Pipeline -> Contract/ModuleDesignContract: check module design
+- Workflow/Pipeline -> Contract/ModuleDesignContract: check module-design-stage input/output, report issues, and return the result for the next-step decision
 
-- Workflow/Pipeline -> Execution/ImplementationGenerator: generate intermediate resouces eg: code,test_case,config
-- Workflow/Pipeline -> Contract/ImplementationContract: check result of final arifacts. eg: test_case
+- Workflow/Pipeline -> Execution/ImplementationGenerator: generate intermediate resources, for example code, test cases, and config
+- Workflow/Pipeline -> Contract/ImplementationContract: check implementation-stage input/output, report issues, and return the result for the next-step decision
 
-- Workflow/Pipeline -> Execution/ValidationRunner: run to validation 
+- Workflow/Pipeline -> Execution/ValidationRunner: run validation
 - Workflow/Pipeline -> QualityGate/ChangeGate: submit stage results together with contract check results for review, reject, or apply decisions
 
-- Workflow/Pipeline -> QualityGate/Trace: notify important infos
-- QualityGate/Trace -> Data/HistoryStore: save important process info. 
+- Workflow/Pipeline -> QualityGate/Trace: notify important process information
+- QualityGate/Trace -> Data/HistoryStore: save important process information
 - Execution/* -> Data/ArtifactStore: save generated artifacts
 - Contract/* -> Data/ArtifactStore: load/store contract definitions
 
 ### 5.3 Main Flow
 ```text
-Interface/UI
-    |
-    v
-Interface/CLI
-    |
-    v
-Interface/ServiceApi
-    |
-    v
+Interface/UI -----------+
+    |                   |
+    | optional CLI use  v
+    |             Interface/CLI
+    |                   |
+    +-------------------+
+            task request
+                 |
+                 v
+      Interface/ServiceApi
+                 |
+                 v
 Workflow/Pipeline
     |
     +--> Execution/*
@@ -277,7 +281,7 @@ Workflow/Pipeline
            +--> Data/HistoryStore
 ```
 
-1. Interface/UI or Interface/CLI starts a workflow task, and the request enters Workflow/Pipeline through Interface/ServiceApi.
+1. Interface/UI or Interface/CLI starts a workflow task, and the request enters Workflow/Pipeline through Interface/ServiceApi. Interface/UI can also optionally reuse CLI capabilities when needed.
 2. Workflow/Pipeline sends stage input to the corresponding Execution module, and the Execution module generates stage output and returns the result to Workflow/Pipeline.
 3. Workflow/Pipeline sends the returned output to the corresponding Contract module as input, and the Contract module checks the result and returns the check result to Workflow/Pipeline.
 4. Workflow/Pipeline sends the contract check result together with the stage result to QualityGate/ChangeGate, and QualityGate/ChangeGate returns review, reject, or apply decisions to Workflow/Pipeline.
@@ -300,108 +304,81 @@ TEMPLATE_PLACEHOLDER_END -->
   - Review interpreted requirement outputs
   - Review design outputs
   - Review implementation outputs
+- Failure handling:
+  - Stop at the current failed stage
+  - Do not roll back automatically
+  - Restart from the same stage after the issue is fixed
 
 ---
 
-## 6. Quality Attributes
+## 6. Non-Functional Considerations
 
 <!-- TEMPLATE_GUIDANCE_START
-Goal:
-Describe the quality attributes that materially affect the architecture.
-
-Writing Hints:
-- Include only quality attributes that materially shape the design.
-- Add or remove subsections as needed.
-- For each attribute, state why it matters and how the architecture supports it.
+Writing Hints: Use this section to deep-dive into the non-functional considerations that materially shape the architecture, and use common examples such as high availability, high scalability, and high performance.
 TEMPLATE_GUIDANCE_END -->
 
-<!-- TEMPLATE_GUIDANCE_START
-Suggested candidates:
-- Reliability
-- Availability
-- Scalability
-- Security
-- Observability
-- Traceability
-- Operability
-- Extensibility
-TEMPLATE_GUIDANCE_END -->
-
-<!-- TEMPLATE_PLACEHOLDER_START
-### 6.x [Quality Attribute Name]
+### 6.1 High Availability
 - Why it matters:
+  - The platform should remain available when part of the system fails.
 - Architectural support:
+  - Servers should support deployment on multiple machines to reduce single-point failure risk.
+  - Services should be separated so part of the platform can still work when another part fails.
+  - The platform should expose error information when system failure happens.
 
-### 6.x [Quality Attribute Name]
-- Why it matters:
-- Architectural support:
+### 6.2 High Scalability
 
-### 6.x [Quality Attribute Name]
 - Why it matters:
+  - The platform should support more tasks, scenarios, and user-defined rules in the future.
 - Architectural support:
-TEMPLATE_PLACEHOLDER_END -->
+  - Workflow should support more task types in future stages.
+  - Contract should support user-defined customization.
+
+### 6.3 High Performance
+
+- Why it matters:
+  - The platform should reduce waiting time for generation and validation tasks.
+- Architectural support:
+  - Parallelization should be supported when possible, especially for design and implementation related execution units.
 
 ---
 
-## 7. Evolution Strategy
+## 7. Design Document Breakdown
 
 <!-- TEMPLATE_GUIDANCE_START
-Goal:
-Describe how the architecture can evolve over time while preserving core consistency.
-
-Writing Hints:
-- Distinguish between stable foundation and future extension points.
-- Focus on how the architecture can absorb future change.
-- Keep this section at architectural level rather than implementation roadmap detail.
-TEMPLATE_GUIDANCE_END -->
-
-### 7.1 Current Baseline
-<!-- TEMPLATE_PLACEHOLDER: [Describe the current architectural baseline.] -->
-
-### 7.2 Stable Core
-<!-- TEMPLATE_PLACEHOLDER: [Describe what should remain stable as the system evolves.] -->
-
-### 7.3 Extension Points
-<!-- TEMPLATE_PLACEHOLDER: [Describe where change or extension is expected.] -->
-
-### 7.4 Evolution Direction
-<!-- TEMPLATE_PLACEHOLDER_START
-- [Evolution direction 1]
-- [Evolution direction 2]
-- [Evolution direction 3]
-TEMPLATE_PLACEHOLDER_END -->
-
----
-
-## 8. Module Design Decomposition
-
-<!-- TEMPLATE_GUIDANCE_START
-Goal:
-Define how the architecture should be broken down into follow-up module design documents.
-
 Writing Hints:
 - Keep this section lightweight.
-- Focus on decomposition strategy rather than module internals.
-- Clarify how later design documents relate back to this architecture.
+- List only follow-up design documents that are really needed after this architecture document.
+- Focus on document scope rather than module internals.
 TEMPLATE_GUIDANCE_END -->
 
-### 8.1 Decomposition Principle
-<!-- TEMPLATE_PLACEHOLDER: [Explain how detailed module design documents are divided.] -->
-
-### 8.2 Suggested Module Design Documents
 <!-- TEMPLATE_PLACEHOLDER_START
-- [Module Design A]: [Scope]
-- [Module Design B]: [Scope]
-- [Module Design C]: [Scope]
-- [Module Design D]: [Scope]
+- [Design Document A]: [Scope]
+- [Design Document B]: [Scope]
+- [Design Document C]: [Scope]
+- [Design Document D]: [Scope]
 TEMPLATE_PLACEHOLDER_END -->
 
-### 8.3 Relationship to This Document
-<!-- TEMPLATE_PLACEHOLDER: [Explain that this document defines overall structure, boundaries, and key design decisions, while module design documents define the detailed solution within those constraints.] -->
+- Interface/UI Design: UI-based entry, process display, and future UI interaction design.
+- Interface/CLI Design: CLI-based task trigger and CLI interaction flow.
+- Interface/ServiceApi Design: service-side API request handling, task request handling, response handling, and error handling.
+- Workflow/Pipeline Design: workflow execution, stage state, resume, retry, and stage transition control.
+- Execution/RequirementInterpreter Design: requirement interpretation logic and requirement-stage execution flow.
+- Contract/RequirementContract Design: requirement-stage input/output structure rules and validation contracts.
+- Execution/ArchitectureDesignGenerator Design: architecture design generation logic and architecture-stage execution flow.
+- Contract/ArchitectureDesignContract Design: architecture design input/output structure rules and validation contracts.
+- Execution/ModuleDesignGenerator Design: module design generation logic and module-design-stage execution flow.
+- Contract/ModuleDesignContract Design: module design input/output structure rules and validation contracts.
+- Execution/ImplementationGenerator Design: implementation generation logic for code and test artifacts.
+- Contract/ImplementationContract Design: implementation-stage input/output structure rules and validation contracts.
+- Execution/ValidationRunner Design: validation execution flow and validation result generation.
+- QualityGate/Trace Design: review status tracking, pending review visibility, and important progress information.
+- QualityGate/ChangeGate Design: review, reject, and apply decision handling for pending changes.
+- Data/HistoryStore Design: workflow history, operation records, and process trace storage.
+- Data/ArtifactStore Design: raw file storage and generated artifact storage.
 
 ---
 
-## 9. Open Issues
+## 8. Open Issues
 
 <!-- TEMPLATE_GUIDANCE_START
 Goal:
@@ -420,18 +397,3 @@ TEMPLATE_GUIDANCE_END -->
 TEMPLATE_PLACEHOLDER_END -->
 
 ---
-
-## 10. Summary
-
-<!-- TEMPLATE_GUIDANCE_START
-Goal:
-Summarize the architecture direction and reaffirm the role of this document.
-
-Writing Hints:
-- Keep this section short.
-- Restate the architecture direction clearly.
-- Explain how this document should guide subsequent design work.
-
-Placeholder:
-[Summarize the architecture direction, key structural characteristics, and the role of this document in guiding later module-level design.]
-TEMPLATE_GUIDANCE_END -->
