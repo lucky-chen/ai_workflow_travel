@@ -261,7 +261,7 @@ interface ILlmExecutor {
 LLM invocation rules:
 
 - the generator service only calls `ILlmExecutor.execute`; it does not embed agent or model invocation logic directly.
-- agent design and model selection are defined in [LlmExecutor.md](/Users/chen/Documents/workspace/ai/mvp/meta_layer/docs/design_docs/SDK/LlmExecutor.md).
+- agent design and model selection are defined in [LlmExecutor.md](../SDK/LlmExecutor.md).
 - the LLM execution result is treated as raw generated document content before `StageOutputBuilder` converts it into structured output.
 
 #### 4.1.5 Output Types
