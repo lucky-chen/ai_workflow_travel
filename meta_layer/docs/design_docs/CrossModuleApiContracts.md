@@ -37,7 +37,22 @@ Notes:
 - `Pipeline` only depends on the generic `runStage` shape.
 - which concrete execution module is used is decided by stage registration, not by hard-coded pipeline logic.
 
-### 2.3 Check Stage Result
+### 2.3 Shared LLM Execution
+
+- `Execution/RequirementInterpreter -> SDK/LlmExecutor.execute(request) -> llm_result`
+- `Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
+- `Execution/ModuleDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
+- `Execution/ImplementationGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
+- `Contract/* -> SDK/LlmExecutor.execute(request) -> llm_result`
+- `Other eligible modules -> SDK/LlmExecutor.execute(request) -> llm_result`
+
+Notes:
+
+- `SDK/LlmExecutor` is a shared llm execution capability.
+- upstream modules provide prompt input and receive model result output.
+- agent design and model selection are hidden behind the `SDK/LlmExecutor` boundary.
+
+### 2.4 Check Stage Result
 
 - `Contract/RequirementContract.checkStage(request) -> check_result`
 - `Contract/ArchitectureDesignContract.checkStage(request) -> check_result`
@@ -49,7 +64,7 @@ Notes:
 - contract check is optional per stage.
 - contract success does not replace review.
 
-### 2.4 Review And Decision
+### 2.5 Review And Decision
 
 - `QualityGate/ChangeGate.review(request) -> gate_decision`
 
@@ -57,7 +72,7 @@ Notes:
 
 - `Pipeline` uses the gate decision to continue, stop, or wait for review.
 
-### 2.5 Trace And Visibility
+### 2.6 Trace And Visibility
 
 - `QualityGate/Trace.recordTrace(request) -> event_ref`
 

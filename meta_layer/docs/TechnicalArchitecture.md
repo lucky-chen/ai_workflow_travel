@@ -124,6 +124,7 @@ TEMPLATE_PLACEHOLDER_END -->
 - Interface: system entry and information display, for example CLI and UI.
 - Workflow: control process, state/context, stage entry, and retry
 - Execution: stage execution capabilities, for example requirement interpretation, design generation, implementation generation, and validation.
+- SDK: shared technical capabilities, for example shared llm execution.
 - Contract: check whether stage inputs and outputs meet required structure and rules, and return issues and check results.
 - QualityGate: manage review, reject, and apply decisions for pending changes, and decide whether results are allowed to pass to the next stage based on returned check results.
 - Data: store shared data such as intermediate outputs from Execution and process records from QualityGate.
@@ -141,6 +142,8 @@ ALLOW:
 - Workflow -> Execution
 - Workflow -> Contract
 - Workflow -> QualityGate
+- Execution -> SDK
+- Contract -> SDK
 - QualityGate -> Data
 - Execution -> Data
 
@@ -190,6 +193,7 @@ TEMPLATE_PLACEHOLDER_END -->
 - Interface/CLI: runtime entry for workflow requests in the current scope.
 - Workflow/Pipeline, Contract/*, QualityGate/*: run in the core backend service in V1.
 - Execution/*: run in the core backend service in V1; they can be split into workers later.
+- SDK/*, including shared `SDK/LlmExecutor`: run in the core backend service in V1.
 - Data/HistoryStore and Data/ArtifactStore: shared storage, implemented by local, backend-managed, or cloud storage.
 
 ---
@@ -255,6 +259,7 @@ TEMPLATE_PLACEHOLDER_END -->
 - Interface/CLI: trigger workflow-related tasks through CLI.
 - Workflow/Pipeline: control workflow execution, stage state, stage entry, and retry.
 - Execution/RequirementInterpreter: turn raw requirement documents into structured and stable upstream input.
+- SDK/LlmExecutor: provide shared agent-based llm execution capability through prompt-in and model-result-out abstraction for modules that need llm execution.
 - Contract/RequirementContract: check whether requirement-stage inputs and outputs meet required structure and rules, and report issues.
 - Execution/ArchitectureDesignGenerator: generate architecture design documents from upstream stable input.
 - Contract/ArchitectureDesignContract: check whether architecture-design-stage inputs and outputs meet required structure and rules, and report issues.
@@ -280,6 +285,11 @@ This section describes workflow-level module interaction. The concrete public AP
 
 #### 5.3.2 Generate Or Update Stage Artifact
 
+- Execution/RequirementInterpreter -> SDK/LlmExecutor: execute requirement interpretation request through shared llm execution capability
+- Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor: execute architecture-design generation request through shared llm execution capability
+- Execution/ModuleDesignGenerator -> SDK/LlmExecutor: execute module-design generation request through shared llm execution capability
+- Execution/ImplementationGenerator -> SDK/LlmExecutor: execute implementation generation request through shared llm execution capability
+- Contract/* -> SDK/LlmExecutor: execute llm-based contract-support request when a contract module needs shared llm capability
 - Workflow/Pipeline -> Execution/RequirementInterpreter: interpret raw requirement input
 - Workflow/Pipeline -> Execution/ArchitectureDesignGenerator: generate architecture design output
 - Workflow/Pipeline -> Execution/ModuleDesignGenerator: generate module design output
