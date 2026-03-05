@@ -521,12 +521,14 @@ Workflow/Pipeline
 1. Interface/CLI starts a workflow task and sends the request to Workflow/Pipeline.
 2. Workflow/Pipeline runs one `StagePipeline` for the current stage.
 3. Inside the stage pipeline, the system loads source input or confirmed upstream artifacts, then calls the corresponding `Execution/*` module to generate or update the stage artifact.
-4. The generated result is checked by the corresponding `Contract/*` module and then submitted to `QualityGate/*` for review and decision.
+4. For non-validation stages, the generated result is checked by the corresponding `Contract/*` module and then submitted to `QualityGate/*` for review and decision; for validation stage, contract check is skipped and the validation result is submitted to `QualityGate/*` for final confirmation.
 5. During the stage flow, artifact results and workflow history are stored through the Data layer.
 6. After the stage finishes, Workflow/Pipeline decides whether to continue to the next stage, stop, retry, or wait for user action.
-7. The same main flow pattern is reused across requirement interpretation, design generation, implementation generation, and validation stages.
+7. The same main flow pattern is reused across requirement interpretation, design generation, implementation generation, and validation stages, with a validation-stage exception on contract only.
 
 Each stage follows the same control shape: load source or upstream artifacts, generate or update the stage artifact, check the result, review the result, and store the accepted output.
+
+Exception for validation stage in V1: `Contract/ValidationContract` does not require `Contract/*` check, but it requires `QualityGate/*` review to confirm final validation success/failure information; confirmed success is treated as stage pass, and confirmed failure ends the workflow.
 
 ### 5.2 Core Modules
 
@@ -547,7 +549,7 @@ Each stage follows the same control shape: load source or upstream artifacts, ge
 
 - Interface/CLI: trigger workflow-related tasks through CLI.
 - Workflow/Pipeline: control workflow execution, stage state, stage entry, and retry.
-- Execution/RequirementInterpreter: turn raw requirement documents into structured and stable upstream input.
+- Execution/RequirementGenerator: turn raw requirement documents into structured and stable upstream input.
 - SDK/LlmExecutor: provide shared agent-based llm execution capability through prompt-in and model-result-out abstraction for modules that need llm execution.
 - Contract/RequirementContract: check whether requirement-stage inputs and outputs meet required structure and rules, and report issues.
 - Execution/ArchitectureDesignGenerator: generate architecture design documents from upstream stable input.
@@ -556,7 +558,7 @@ Each stage follows the same control shape: load source or upstream artifacts, ge
 - Contract/ModuleDesignContract: check whether module-design-stage inputs and outputs meet required structure and rules, and report issues.
 - Execution/ImplementationGenerator: generate code and test artifacts from upstream module design outputs.
 - Contract/ImplementationContract: check whether implementation-stage inputs and outputs meet required structure and rules, and report issues.
-- Execution/ValidationRunner: run validation and produce validation results for generated outputs.
+- Contract/ValidationContract: check validation-stage output and produce contract-check results for final confirmation.
 - QualityGate/Trace: provide visible review status, pending changes, and important progress information.
 - QualityGate/ChangeGate: manage review, reject, and apply decisions based on contracts and required checks.
 - Data/HistoryStore: store workflow history and operation records.
@@ -581,7 +583,7 @@ Each stage follows the same control shape: load source or upstream artifacts, ge
 }
 -->
 
-This section describes workflow-level module interaction. The concrete public APIs for these cross-module calls are defined in `design_docs/CrossModuleApiContracts.md`.
+This section describes workflow-level module interaction. The concrete public APIs for these cross-module calls are defined in `System Interaction Design` (`design_docs/SystemInteractionDesign.md`).
 
 #### 5.3.1 Start Task
 
@@ -619,16 +621,16 @@ This section describes workflow-level module interaction. The concrete public AP
 }
 -->
 
-- Execution/RequirementInterpreter -> SDK/LlmExecutor: execute requirement interpretation request through shared llm execution capability
+- Execution/RequirementGenerator -> SDK/LlmExecutor: execute requirement interpretation request through shared llm execution capability
 - Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor: execute architecture-design generation request through shared llm execution capability
 - Execution/ModuleDesignGenerator -> SDK/LlmExecutor: execute module-design generation request through shared llm execution capability
 - Execution/ImplementationGenerator -> SDK/LlmExecutor: execute implementation generation request through shared llm execution capability
 - Contract/* -> SDK/LlmExecutor: execute llm-based contract-support request when a contract module needs shared llm capability
-- Workflow/Pipeline -> Execution/RequirementInterpreter: interpret raw requirement input
+- Workflow/Pipeline -> Execution/RequirementGenerator: interpret raw requirement input
 - Workflow/Pipeline -> Execution/ArchitectureDesignGenerator: generate architecture design output
 - Workflow/Pipeline -> Execution/ModuleDesignGenerator: generate module design output
 - Workflow/Pipeline -> Execution/ImplementationGenerator: generate intermediate resources, for example code, test cases, and config
-- Workflow/Pipeline -> Execution/ValidationRunner: run validation
+- Workflow/Pipeline -> Contract/ValidationContract: check validation-stage output
 
 #### 5.3.3 Check Stage Result
 
@@ -669,7 +671,7 @@ This section describes workflow-level module interaction. The concrete public AP
 }
 -->
 
-- Workflow/Pipeline -> QualityGate/ChangeGate: submit stage results together with contract check results for review, reject, or apply decisions
+- Workflow/Pipeline -> QualityGate/ChangeGate: for contract-enabled stages, submit stage results together with contract check results; for validation stage, submit validation success/failure result information directly for final review decision
 
 #### 5.3.5 Store Artifact And History
 
@@ -809,6 +811,37 @@ This section describes workflow-level module interaction. The concrete public AP
 - Architectural support:
   - Parallelization should be supported when possible, especially for design and implementation related execution units.
 
+### 6.4 Technology Stack (Implementation Baseline)
+
+This section defines system-level technology choices. Module documents should inherit this baseline and only add module-specific choices when necessary.
+
+- Runtime and language:
+  - Primary language: `TypeScript`
+  - Runtime: `NodeJS`
+- CLI and interaction:
+  - CLI framework: `Python`
+- LLM and agent execution:
+  - Model provider SDK / gateway: `Gpt/DeepSeek/CladeCode`
+- Data and persistence:
+  - Artifact storage backend: `LocalFile`
+  - History storage backend: `LocalFile`
+- Validation and test:
+  - Test framework / command strategy: `Python Shell`
+- Build and dependency management:
+  - Build toolchain: `Python Shell`
+  - Package/dependency manager: `NPM`
+- Deployment baseline:
+  - Runtime topology baseline: 
+    - Single-machine, single-process runtime for CLI
+    - Remote cloud-hosted LLM provider for all model inference calls
+  - Environment strategy (local/cloud): `Local`
+
+Selection principles:
+
+- Prefer proven and maintainable technologies for V1.
+- Keep module boundaries stable when replacing implementation libraries.
+- Global stack decisions should be recorded here first, then referenced by module design documents.
+
 ---
 
 ## 7. Design Documents
@@ -874,6 +907,12 @@ Design categories:
 }
 -->
 
+Before reading the detailed breakdown, apply this three-layer structure:
+
+- Layer 1 - Architecture document (`TechnicalArchitecture.md`): define system-level boundaries, dependency rules, and global workflow constraints.
+- Layer 2 - System interaction document (`design_docs/SystemInteractionDesign.md`): define cross-module collaboration, interaction boundaries, and stage-level orchestration view.
+- Layer 3 - Module design documents (`design_docs/*/*.md`): define module-local interfaces, runtime flow, and implementation-oriented details.
+
 #### 7.2.1 Start Task
 
 <!--
@@ -891,7 +930,7 @@ Design categories:
 }
 -->
 
-- Cross-Module API Contracts: shared public APIs and request/response boundaries for cross-module calls.
+- System Interaction Design: shared public APIs and request/response boundaries for cross-module calls.
 - Interface/CLI Design: CLI-based task trigger and CLI interaction flow.
 - Workflow/Pipeline Design: task start, stage selection, stage entry, and workflow control.
 
@@ -912,11 +951,11 @@ Design categories:
 }
 -->
 
-- Execution/RequirementInterpreter Design: requirement interpretation logic and requirement-stage execution flow.
+- Execution/RequirementGenerator Design: requirement interpretation logic and requirement-stage execution flow.
 - Execution/ArchitectureDesignGenerator Design: architecture design generation logic and architecture-stage execution flow.
 - Execution/ModuleDesignGenerator Design: module design generation logic and module-design-stage execution flow.
 - Execution/ImplementationGenerator Design: implementation generation logic for code and test artifacts.
-- Execution/ValidationRunner Design: validation execution flow and validation result generation.
+- Contract/ValidationContract Design: validation execution flow and validation result generation.
 - Data/ArtifactStore Design: staged artifact storage and generated artifact persistence.
 
 #### 7.2.3 Check Stage Result

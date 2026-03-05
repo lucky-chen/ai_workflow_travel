@@ -17,7 +17,7 @@ This module design collaborates with:
 - `Execution/ArchitectureDesignGenerator`
 - `Execution/ModuleDesignGenerator`
 - `Execution/ImplementationGenerator`
-- `Execution/RequirementInterpreter`
+- `Execution/RequirementGenerator`
 - `Contract/*`
 - `QualityGate/*`
 

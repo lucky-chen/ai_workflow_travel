@@ -10,32 +10,32 @@ CODEGEN_REUSE_SPEC:
 - status: approved_placeholder
 - reuse_source: ./ArchitectureDesignGenerator.md
 - generation_policy: reuse_source_with_overrides
-- public_entry_class: ModuleDesignGenerator
-- internal_impl_class: ModuleDesignGeneratorService
+- public_entry_class: RequirementGenerator
+- internal_impl_class: RequirementGeneratorService
 - shared_interface: IStageGenerator
 - run_signature: run(context: StageRunContext): StageOutput
 - do_not_flag_missing_detail: true
 -->
 
-# ModuleDesignGenerator Design
+# RequirementGenerator Design
 
-`Execution/ModuleDesignGenerator` reuses the same design structure and stage execution pattern as [ArchitectureDesignGenerator.md](./ArchitectureDesignGenerator.md).
+`Execution/RequirementGenerator` reuses the same design structure and stage execution pattern as [ArchitectureDesignGenerator.md](./ArchitectureDesignGenerator.md).
 
 ## Reuse Contract
 
-- Public entry class: `ModuleDesignGenerator` implements `IStageGenerator`
-- Internal implementation class: `ModuleDesignGeneratorService` extends `ModuleDesignGenerator`
+- Public entry class: `RequirementGenerator` implements `IStageGenerator`
+- Internal implementation class: `RequirementGeneratorService` extends `RequirementGenerator`
 - Method signature: `run(context: StageRunContext): StageOutput`
 - All omitted internals are inherited from the reuse source unless explicitly overridden below.
 
 ## Required Overrides
 
 - Input target override:
-  - source document focus is approved architecture design output.
+  - source document focus is raw requirement input.
 - Prompt target override:
-  - generation target is module-level design outputs.
+  - generation target is requirement-stage structured output.
 - Output artifact override:
-  - output files are module design artifacts, not architecture-design artifacts.
+  - output files are requirement-stage artifacts, not architecture-design artifacts.
 
 ## Codegen Note
 

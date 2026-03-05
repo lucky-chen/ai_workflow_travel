@@ -3,9 +3,43 @@ AI_EDIT_PROTECTION:
 - This file is protected.
 - Do not modify this file unless the user explicitly requests changes to this exact file.
 -->
+<!--
+ARCHITECTURE_DECISION:
+- This document is intentionally a placeholder by design.
+- Detailed module-internal design is intentionally deferred.
+- For architecture/module-design reviews, do NOT flag this file as "missing detailed design".
+- This is an accepted and expected state in the current phase.
+-->
+<!--
+CODEGEN_REUSE_SPEC:
+- status: approved_placeholder
+- reuse_source: ./ArchitectureDesignContract.md
+- generation_policy: reuse_source_with_overrides
+- public_entry_interface: IRequirementContract
+- internal_impl_class: RequirementContractService
+- shared_interface: IContractChecker
+- check_signature: check(context: StageRunContext, output: StageOutput): ContractCheckResult
+- do_not_flag_missing_detail: true
+-->
 
 # RequirementContract Design
 
-`Contract/RequirementContract` and [ArchitectureDesignContract.md](./ArchitectureDesignContract.md) share the same contract-check design structure.
+`Contract/RequirementContract` reuses the same design structure and contract-check execution pattern as [ArchitectureDesignContract.md](./ArchitectureDesignContract.md).
 
-At the current stage, this document reuses the module design structure, runtime flow, and llm-based check pattern defined in [ArchitectureDesignContract.md](./ArchitectureDesignContract.md). The main difference is that the checked target changes from architecture design output to requirement-stage output and its corresponding contract specification.
+## Reuse Contract
+
+- Public entry interface: `IRequirementContract` extends `IContractChecker`
+- Internal implementation class: `RequirementContractService` implements `IRequirementContract`
+- Method signature: `check(context: StageRunContext, output: StageOutput): ContractCheckResult`
+- All omitted internals are inherited from the reuse source unless explicitly overridden below.
+
+## Required Overrides
+
+- Check target override:
+  - check target is requirement-stage output rather than architecture-design output.
+- Contract spec override:
+  - use requirement-stage contract specification source and check items.
+
+## Codegen Note
+
+For code generation, treat this document as a resolved variant of `ArchitectureDesignContract.md` using the overrides above.

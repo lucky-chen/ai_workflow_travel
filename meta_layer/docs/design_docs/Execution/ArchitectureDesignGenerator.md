@@ -36,11 +36,13 @@ Its core functions are:
 
 ```plantuml
 @startuml
-interface IArchitectureDesignGenerator {
+interface IStageGenerator <<from Workflow/Pipeline>>
+
+class ArchitectureDesignGenerator <<public>> {
   +run(context: StageRunContext): StageOutput
 }
 
-class ArchitectureDesignGeneratorService {
+class ArchitectureDesignGeneratorService <<internal>> {
   -requirementDocLoader: RequirementDocLoader
   -architectureTemplateLoader: ArchitectureTemplateLoader
   -promptBuilder: ArchitecturePromptBuilder
@@ -60,11 +62,10 @@ interface ILlmExecutor {
   +execute(request: LlmExecutionRequest): LlmExecutionResult
 }
 
-interface IArtifactStore {
-  +getArtifact(ref: ArtifactRef): ArtifactContent
-}
+interface IArtifactStore <<from Data/ArtifactStore>>
 
-IArchitectureDesignGenerator <|.. ArchitectureDesignGeneratorService
+IStageGenerator <|.. ArchitectureDesignGenerator
+ArchitectureDesignGenerator <|-- ArchitectureDesignGeneratorService
 ArchitectureDesignGeneratorService --> RequirementDocLoader
 ArchitectureDesignGeneratorService --> ArchitectureTemplateLoader
 ArchitectureDesignGeneratorService --> ArchitecturePromptBuilder
@@ -78,12 +79,12 @@ RequirementDocLoader --> IArtifactStore
 
 Role:
 
-- module entry point
+- internal implementation class
 - owns architecture design generation orchestration
 
 Responsibilities:
 
-- accept stage run request
+- implement internal stage run orchestration behind `ArchitectureDesignGenerator`
 - load the upstream requirement document
 - load the required technical architecture template
 - build prompt input from the requirement document and template
@@ -146,11 +147,12 @@ Responsibilities:
 - convert model output into `StageOutput`
 - keep returned file structure stable
 
-### 2.8 `IArchitectureDesignGenerator`
+### 2.8 `ArchitectureDesignGenerator`
 
 Role:
 
-- abstract execution interface for this module
+- public external API class for this module
+- module entry point exposed to stage runners
 
 Responsibilities:
 
@@ -163,7 +165,7 @@ Responsibilities:
 ```plantuml
 @startuml
 participant Caller as "IStageRunner or other caller"
-participant IArchitectureDesignGenerator as "Execution/IArchitectureDesignGenerator"
+participant ArchitectureDesignGenerator as "Execution/ArchitectureDesignGenerator"
 participant ArchitectureDesignGeneratorService
 participant RequirementDocLoader
 participant ArchitectureTemplateLoader
@@ -172,8 +174,8 @@ participant ILlmExecutor as "SDK/ILlmExecutor"
 participant StageOutputBuilder
 participant IArtifactStore
 
-Caller -> IArchitectureDesignGenerator: run(stage_run_context)
-IArchitectureDesignGenerator -> ArchitectureDesignGeneratorService: run(stage_run_context)
+Caller -> ArchitectureDesignGenerator: run(stage_run_context)
+ArchitectureDesignGenerator -> ArchitectureDesignGeneratorService: run(stage_run_context)
 ArchitectureDesignGeneratorService -> RequirementDocLoader: loadRequirementDoc(stage_run_context)
 RequirementDocLoader -> IArtifactStore: getArtifact(ref)
 IArtifactStore --> RequirementDocLoader: requirement_doc
@@ -197,10 +199,12 @@ ArchitectureDesignGeneratorService --> Caller: stage_output
 #### 4.1.1 Public API
 
 ```ts
-interface IArchitectureDesignGenerator {
+class ArchitectureDesignGenerator implements IStageGenerator {
   run(context: StageRunContext): StageOutput
 }
 ```
+
+`IStageGenerator` is the shared contract defined in [Pipeline.md](../Workflow/Pipeline.md). This module does not redefine it. `ArchitectureDesignGenerator` is the only public generator API and implements `IStageGenerator`.
 
 #### 4.1.2 Stage Input Types
 
@@ -268,7 +272,7 @@ LLM invocation rules:
 
 ```ts
 
-interface StageOutput {
+interface ArchitectureStageArtifacts {
   files: GeneratedFile[]
 }
 
@@ -282,6 +286,8 @@ interface StageOutputBuilder {
 }
 ```
 
+`StageOutput` is the shared workflow output class defined in [Pipeline.md](../Workflow/Pipeline.md). This module only defines `ArchitectureStageArtifacts` as the stage-specific payload carried in `StageOutput.artifacts`.
+
 #### 4.1.6 Storage Dependency Types
 
 ```ts
@@ -289,11 +295,9 @@ interface ArtifactContent {
   format: string
   body: string
 }
-
-interface IArtifactStore {
-  getArtifact(ref: ArtifactRef): ArtifactContent
-}
 ```
+
+`IArtifactStore` is reused from [ArtifactStore.md](../Data/ArtifactStore.md). This module does not redefine that interface.
 
 ### 4.2 Suggested Output Shape
 

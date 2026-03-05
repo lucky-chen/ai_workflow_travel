@@ -36,11 +36,13 @@ Its core functions are:
 
 ```plantuml
 @startuml
-interface IImplementationGenerator {
+interface IStageGenerator <<from Workflow/Pipeline>>
+
+class ImplementationGenerator <<public>> {
   +run(context: StageRunContext): StageOutput
 }
 
-class ImplementationGeneratorService {
+class ImplementationGeneratorService <<internal>> {
   -moduleDesignLoader: ModuleDesignLoader
   -projectContextLoader: ProjectContextLoader
   -promptBuilder: ImplementationPromptBuilder
@@ -62,11 +64,10 @@ interface ILlmExecutor {
   +execute(request: LlmExecutionRequest): LlmExecutionResult
 }
 
-interface IArtifactStore {
-  +getArtifact(ref: ArtifactRef): ArtifactContent
-}
+interface IArtifactStore <<from Data/ArtifactStore>>
 
-IImplementationGenerator <|.. ImplementationGeneratorService
+IStageGenerator <|.. ImplementationGenerator
+ImplementationGenerator <|-- ImplementationGeneratorService
 ImplementationGeneratorService --> ModuleDesignLoader
 ImplementationGeneratorService --> ProjectContextLoader
 ImplementationGeneratorService --> ImplementationPromptBuilder
@@ -81,12 +82,12 @@ ModuleDesignLoader --> IArtifactStore
 
 Role:
 
-- module entry point
+- internal implementation class
 - owns implementation generation orchestration
 
 Responsibilities:
 
-- accept stage run request
+- implement internal stage run orchestration behind `ImplementationGenerator`
 - load the upstream structured module design document
 - load the target project context that should be updated
 - build implementation-generation prompt input
@@ -162,11 +163,12 @@ Responsibilities:
 - convert applied changes and generation result into `StageOutput`
 - keep returned change summary structure stable
 
-### 2.9 `IImplementationGenerator`
+### 2.9 `ImplementationGenerator`
 
 Role:
 
-- abstract execution interface for this module
+- public external API class for this module
+- module entry point exposed to stage runners
 
 Responsibilities:
 
@@ -179,7 +181,7 @@ Responsibilities:
 ```plantuml
 @startuml
 participant Caller as "IStageRunner or other caller"
-participant IImplementationGenerator as "Execution/IImplementationGenerator"
+participant ImplementationGenerator as "Execution/ImplementationGenerator"
 participant ImplementationGeneratorService
 participant ModuleDesignLoader
 participant ProjectContextLoader
@@ -189,8 +191,8 @@ participant ChangeApplier
 participant StageOutputBuilder
 participant IArtifactStore
 
-Caller -> IImplementationGenerator: run(stage_run_context)
-IImplementationGenerator -> ImplementationGeneratorService: run(stage_run_context)
+Caller -> ImplementationGenerator: run(stage_run_context)
+ImplementationGenerator -> ImplementationGeneratorService: run(stage_run_context)
 ImplementationGeneratorService -> ModuleDesignLoader: loadModuleDesign(stage_run_context)
 ModuleDesignLoader -> IArtifactStore: getArtifact(ref)
 IArtifactStore --> ModuleDesignLoader: module_design_doc
@@ -216,10 +218,12 @@ ImplementationGeneratorService --> Caller: stage_output
 #### 4.1.1 Public API
 
 ```ts
-interface IImplementationGenerator {
+class ImplementationGenerator implements IStageGenerator {
   run(context: StageRunContext): StageOutput
 }
 ```
+
+`IStageGenerator` is the shared contract defined in [Pipeline.md](../Workflow/Pipeline.md). This module does not redefine it. `ImplementationGenerator` is the only public generator API and implements `IStageGenerator`.
 
 #### 4.1.2 Stage Input Types
 
@@ -312,7 +316,7 @@ interface ChangeApplier {
 #### 4.1.6 Output Types
 
 ```ts
-interface StageOutput {
+interface ImplementationStageArtifacts {
   changed_files: ChangedFile[]
   summary: string
 }
@@ -322,6 +326,8 @@ interface StageOutputBuilder {
 }
 ```
 
+`StageOutput` is the shared workflow output class defined in [Pipeline.md](../Workflow/Pipeline.md). This module only defines `ImplementationStageArtifacts` as the stage-specific payload carried in `StageOutput.artifacts`.
+
 #### 4.1.7 Storage Dependency Types
 
 ```ts
@@ -329,11 +335,9 @@ interface ArtifactContent {
   format: string
   body: string
 }
-
-interface IArtifactStore {
-  getArtifact(ref: ArtifactRef): ArtifactContent
-}
 ```
+
+`IArtifactStore` is reused from [ArtifactStore.md](../Data/ArtifactStore.md). This module does not redefine that interface.
 
 ### 4.2 Suggested Output Shape
 

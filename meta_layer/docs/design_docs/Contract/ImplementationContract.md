@@ -36,9 +36,7 @@ Its core functions are:
 
 ```plantuml
 @startuml
-interface IImplementationContract {
-  +checkStage(context: StageRunContext, output: StageOutput): ContractCheckResult
-}
+interface IImplementationContract {}
 
 class ImplementationContractService {
   -environmentPreparer: ExecutionEnvironmentPreparer
@@ -53,6 +51,8 @@ interface ITestRunner {
   +run(input: TestRunInput): TestRunResult
 }
 
+interface IContractChecker <<from Workflow/Pipeline>>
+IContractChecker <|-- IImplementationContract
 IImplementationContract <|.. ImplementationContractService
 ImplementationContractService --> ExecutionEnvironmentPreparer
 ImplementationContractService --> ITestRunner
@@ -116,7 +116,7 @@ Role:
 
 Responsibilities:
 
-- expose `checkStage` to the stage runner or equivalent caller
+- expose `check` (shared checker API) to the stage runner or equivalent caller
 
 ## 3. Core Runtime Flow
 
@@ -131,8 +131,8 @@ participant ExecutionEnvironmentPreparer
 participant ITestRunner
 participant ContractResultBuilder
 
-Caller -> IImplementationContract: checkStage(stage_run_context, stage_output)
-IImplementationContract -> ImplementationContractService: checkStage(stage_run_context, stage_output)
+Caller -> IImplementationContract: check(stage_run_context, stage_output)
+IImplementationContract -> ImplementationContractService: check(stage_run_context, stage_output)
 ImplementationContractService -> ExecutionEnvironmentPreparer: prepare(stage_run_context, stage_output)
 ExecutionEnvironmentPreparer --> ImplementationContractService: execution_environment
 ImplementationContractService -> ITestRunner: run(test_run_input)
@@ -150,10 +150,10 @@ ImplementationContractService --> Caller: contract_check_result
 #### 4.1.1 Public API
 
 ```ts
-interface IImplementationContract {
-  checkStage(context: StageRunContext, output: StageOutput): ContractCheckResult
-}
+interface IImplementationContract extends IContractChecker {}
 ```
+
+`IContractChecker` is the shared checker interface defined in [Pipeline.md](../Workflow/Pipeline.md). This module extends that shared interface and uses `check` as the only pipeline-facing API.
 
 #### 4.1.2 Input Types
 

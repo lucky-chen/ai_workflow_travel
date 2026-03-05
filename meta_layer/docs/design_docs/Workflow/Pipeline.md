@@ -51,7 +51,7 @@ class PipelineService {
 }
 
 interface IStageRunner {
-  +run(context: StageRunContext): StageResult
+  +run(context: StageRunContext): StageOutput
 }
 
 class LaunchValidator {
@@ -81,11 +81,11 @@ interface IContractChecker {
 }
 
 interface IChangeGate {
-  +decide(context: StageRunContext, check_result: ContractCheckResult): GateDecision
+  +review(change_request: ChangeReviewRequest): GateDecision
 }
 
 interface IArtifactStore {
-  +create(request: ArtifactCreateRequest): Record<string, ArtifactRef>
+  +create(request: ArtifactCreateRequest): boolean
 }
 
 IPipeline <|.. PipelineService
@@ -151,10 +151,10 @@ Responsibilities:
 
 - run one stage based on `StageRunContext`
 - record stage trace through `ITraceRecorder`
-- check stage result through `IContractChecker`
-- ask `IChangeGate` whether the stage passes
-- persist stage output through `IArtifactStore`
-- return `StageResult`
+- run bound `IContractChecker` when contract binding is defined; otherwise skip
+- submit stage change content or validation final result information to bound `IChangeGate` when review binding is defined; otherwise skip
+- persist stage output through bound `IArtifactStore` when storage binding is defined; otherwise skip
+- return `StageOutput`
 
 ### 2.6 `LaunchValidator`
 
@@ -178,6 +178,65 @@ Responsibilities:
 
 - record task-level events
 - record stage-level events
+
+### 2.8 StageRunner Implementation Model
+
+`Pipeline` executes one registered `IStageRunner` per stage. This section only defines the pipeline-side runner abstraction model.
+
+Design pattern:
+
+- parent class (`BaseStageRunner`) binds shared pipeline adapter dependencies:
+  - `ITraceRecorder`
+  - `IChangeGate`
+  - `IArtifactStore`
+- `BaseStageRunner` is an abstract class that implements `IStageRunner`.
+- child runners bind stage-specific capability dependencies:
+  - bind stage execution capability through `IStageGenerator` when execution binding is defined
+  - bind stage check capability through `IContractChecker` when contract binding is defined
+  - unbound capabilities are skipped by runner behavior
+  - concrete stage runner implementations are defined in [StageRunners.md](./StageRunners.md), not in `Pipeline`
+
+Concrete stage-to-module mapping is defined in [System Interaction Design](../SystemInteractionDesign.md), not in this module design document.
+
+```plantuml
+@startuml
+interface IStageRunner {
+  +run(context: StageRunContext): StageOutput
+}
+
+abstract class BaseStageRunner {
+  -traceRecorder: ITraceRecorder
+  -changeGate: IChangeGate
+  -artifactStore: IArtifactStore
+}
+
+interface IStageGenerator {
+  +run(context: StageRunContext): StageOutput
+}
+BaseStageRunner ..|> IStageRunner
+
+BaseStageRunner --> IStageGenerator : optional
+@enduml
+```
+
+Type sketch:
+
+```ts
+abstract class BaseStageRunner implements IStageRunner {
+  protected traceRecorder: ITraceRecorder
+  protected changeGate: IChangeGate
+  protected artifactStore: IArtifactStore
+  abstract run(context: StageRunContext): StageOutput
+}
+
+interface IStageGenerator {
+  run(context: StageRunContext): StageOutput
+}
+
+// concrete stage runner classes are module-specific and defined outside Pipeline
+// each concrete stage runner extends BaseStageRunner
+// bind `IStageGenerator` and `IContractChecker` according to stage mapping
+```
 
 ## 3. Core Runtime Flow
 
@@ -206,23 +265,25 @@ loop for each stage
   PipelineService -> IStageRunner: run(stage_run_context)
   IStageRunner -> ITraceRecorder: recordTrace(stage_started)
   IStageRunner -> IStageRunner: generate stage output
-  IStageRunner -> IContractChecker: check(stage_run_context, stage_output)
-  IContractChecker --> IStageRunner: check_result
-  IStageRunner -> IChangeGate: decide(stage_run_context, check_result)
+  alt contract checker binding exists
+    IStageRunner -> IContractChecker: check(stage_run_context, stage_output)
+    IContractChecker --> IStageRunner: check_result
+  end
+  IStageRunner -> IChangeGate: review(change_request_or_validation_result)
   IChangeGate --> IStageRunner: gate_decision
 
   alt stage passed
-    IStageRunner -> IArtifactStore: create(stage_output)
-    IArtifactStore --> IStageRunner: output_refs
+  IStageRunner -> IArtifactStore: create(stage_output)
+  IArtifactStore --> IStageRunner: persisted
   else stage failed
   end
 
-  IStageRunner --> PipelineService: stage_result
+  IStageRunner --> PipelineService: stage_output
 
-  alt stage_result.status == completed
-    PipelineService -> PipelineService: merge output_refs
+  alt stage_output.status == completed
+    PipelineService -> PipelineService: merge artifacts by ArtifactRef key
     PipelineService -> PipelineService: current_stage = definition.next_stage_id
-  else stage_result.status == failed
+  else stage_output.status == failed
     PipelineService -> ITraceRecorder: recordTrace(stage_failed)
     break
   end
@@ -306,6 +367,8 @@ interface StageDefinition {
   stage_id: StageId
   launch_requirements: string[]
   runner: IStageRunner
+  requires_contract_check?: boolean
+  requires_gate_review?: boolean
   next_stage_id: StageId | null
 }
 
@@ -334,10 +397,10 @@ interface StageRunContext {
   task_options: Record<string, string | number | boolean>
 }
 
-interface StageResult {
+class StageOutput {
   stage_id: StageId
   status: StageStatus
-  output_refs: Record<string, ArtifactRef>
+  artifacts: Record<string, object>
   error?: StageError
 }
 ```
@@ -345,12 +408,17 @@ interface StageResult {
 #### 4.2.4 Stage Execution Related Types
 
 ```ts
-interface StageOutput {
-  artifacts: Record<string, unknown>
+
+interface ValidationResult {
+  passed: boolean
+  summary: string
+  passed_commands: string[]
+  failed_commands: string[]
+  logs?: string
 }
 
 interface IStageRunner {
-  run(context: StageRunContext): StageResult
+  run(context: StageRunContext): StageOutput
 }
 
 interface ContractCheckResult {
@@ -358,7 +426,9 @@ interface ContractCheckResult {
 }
 
 interface GateDecision {
-  passed: boolean
+  action: string
+  summary: string
+  comment?: string
 }
 
 interface ArtifactCreateRequest {
@@ -368,9 +438,25 @@ interface ArtifactCreateRequest {
 }
 
 interface IArtifactStore {
-  create(request: ArtifactCreateRequest): Record<string, ArtifactRef>
+  create(request: ArtifactCreateRequest): boolean
 }
 ```
+
+`Workflow/Pipeline` owns these adapter interfaces (`IArtifactStore`, `IChangeGate`, `IContractChecker`, `ITraceRecorder`) and binds external module implementations through dependency injection.
+
+Artifact persistence mapping rule:
+
+- `IArtifactStore.create(request)` is a pipeline-side adapter API.
+- when adapted to `Data/ArtifactStore.writeArtifact`, check `request.output.artifacts` for keys `file_name` and `file_body`.
+- enforce runtime type checks for both fields:
+  - `artifacts["file_name"]` must be `string`
+  - `artifacts["file_body"]` must be `string`
+- if both keys exist and both values are `string`, map them to one `WriteArtifactRequest`:
+  - `file_name`: value of `artifacts["file_name"]`
+  - `content.body`: value of `artifacts["file_body"]`
+  - `content.format`: `"utf8"` (default)
+- if either key is missing or either value is not `string`, skip file persistence for this call.
+- return `true` when adapter handling completes successfully; otherwise return `false`.
 
 #### 4.2.5 Check, Gate And Trace Types
 
@@ -380,7 +466,20 @@ interface IContractChecker {
 }
 
 interface IChangeGate {
-  decide(context: StageRunContext, check_result: ContractCheckResult): GateDecision
+  review(change_request: ChangeReviewRequest): GateDecision
+}
+
+interface ChangeReviewRequest {
+  task_id: TaskId
+  stage_id?: StageId
+  summary: string
+  changed_files: ChangedFile[]
+}
+
+interface ChangedFile {
+  path: string
+  operation: string
+  content?: string
 }
 
 interface ITraceRecorder {
@@ -425,10 +524,13 @@ registry.register({
 })
 ```
 
+Stage-level collaboration mapping is defined in [System Interaction Design](../SystemInteractionDesign.md). `Pipeline.md` focuses on pipeline module design only.
+
 ### 4.4 Constraints
 
 - `Pipeline` may depend on concrete stage capability only through registered `IStageRunner`.
 - `Pipeline` must not hard-code business-stage identifiers.
-- `IStageRunner` may call `Data/ArtifactStore` through `IArtifactStore` to persist stage outputs inside stage execution.
+- `IStageRunner` may call `Data/ArtifactStore` through the pipeline-owned `IArtifactStore` interface to persist stage outputs inside stage execution.
 - `Pipeline` must treat stage result as `completed` or `failed`.
+- stage behavior must follow interface binding: execute bound interfaces and skip unbound interfaces.
 - only `StageRegistry` defines which stages exist and how they connect.

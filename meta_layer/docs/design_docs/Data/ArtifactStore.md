@@ -38,7 +38,7 @@ Its core functions are:
 ```plantuml
 @startuml
 interface IArtifactStore {
-  +writeArtifact(request: WriteArtifactRequest): ArtifactRef
+  +writeArtifact(request: WriteArtifactRequest): boolean
   +getArtifact(ref: ArtifactRef): ArtifactContent
   +listArtifacts(query: ArtifactQuery): ArtifactRef[]
 }
@@ -133,7 +133,7 @@ type ArtifactRef = string
 
 ```ts
 interface IArtifactStore {
-  writeArtifact(request: WriteArtifactRequest): ArtifactRef
+  writeArtifact(request: WriteArtifactRequest): boolean
   getArtifact(ref: ArtifactRef): ArtifactContent
   listArtifacts(query: ArtifactQuery): ArtifactRef[]
 }

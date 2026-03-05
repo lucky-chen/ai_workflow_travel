@@ -50,10 +50,6 @@ class TraceNormalizer {
   +normalize(event: TraceEvent): TraceRecord
 }
 
-interface IHistoryStore {
-  +create(request: HistoryCreateRequest): HistoryRef
-}
-
 ITraceRecorder <|.. TraceService
 TraceService --> TraceNormalizer
 TraceService --> IHistoryStore
@@ -96,16 +92,16 @@ Responsibilities:
 
 - expose `recordTrace` to upstream modules
 
-### 2.5 `IHistoryStore`
+### 2.5 `IHistoryStore` Reuse
 
 Role:
 
-- abstract persistence interface used by `Trace`
+- reuse the shared persistence interface from `Data/HistoryStore`
 
 Responsibilities:
 
-- persist trace records
-- return trace/history references
+- persist trace records through `writeRecord`
+- query trace/history records through shared history APIs when needed
 
 ## 3. Core Runtime Flow
 
@@ -123,7 +119,7 @@ Caller -> ITraceRecorder: recordTrace(trace_event)
 ITraceRecorder -> TraceService: recordTrace(trace_event)
 TraceService -> TraceNormalizer: normalize(trace_event)
 TraceNormalizer --> TraceService: trace_record
-TraceService -> IHistoryStore: create(trace_record)
+TraceService -> IHistoryStore: writeRecord(history_record)
 IHistoryStore --> TraceService: history_ref
 TraceService --> Caller: event_ref
 @enduml
@@ -172,15 +168,16 @@ interface TraceRecord {
 #### 4.2.3 Persistence Related Types
 
 ```ts
-interface HistoryCreateRequest {
-  category: "trace"
-  payload: TraceRecord
-}
-
-interface IHistoryStore {
-  create(request: HistoryCreateRequest): HistoryRef
+interface HistoryRecord {
+  category: string
+  task_id?: string
+  stage_id?: string
+  summary?: string
+  payload: Record<string, unknown>
 }
 ```
+
+`IHistoryStore` is reused directly from [HistoryStore.md](../Data/HistoryStore.md#421-public-api). `QualityGate/Trace` does not redefine this interface.
 
 ### 4.3 Example Event Types
 
