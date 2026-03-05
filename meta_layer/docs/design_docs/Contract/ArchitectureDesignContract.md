@@ -1,3 +1,5 @@
+
+
 # ArchitectureDesignContract Design
 
 ## 1. Goal
@@ -17,12 +19,6 @@ This module design collaborates with:
 - `Workflow/Pipeline`
 - `SDK/LlmExecutor`
 
-<!-- TEMPLATE_PLACEHOLDER_START
-- [Layer / Partition 1]: [Responsibility]
-- [Layer / Partition 2]: [Responsibility]
-- [Layer / Partition 3]: [Responsibility]
-TEMPLATE_PLACEHOLDER_END -->
-
 ### 1.3 Core Functions
 
 `Contract/ArchitectureDesignContract` is the architecture-design validation module.
@@ -39,11 +35,6 @@ Its core functions are:
 ## 2. Core Classes
 
 ### 2.1 Class Diagram
-
-<!-- TEMPLATE_GUIDANCE_START
-Writing Hints:
-plantuml
-TEMPLATE_GUIDANCE_END -->
 
 ```plantuml
 @startuml
@@ -210,21 +201,20 @@ interface GeneratedArchitectureDesignResult {
 
 interface ContractSpec {
   template_content: string
-  document_checks: ContractDocumentCheck[]
-  sections: ContractSpecSection[]
+  document_contracts: DocumentContract[]
+  section_contracts: SectionContract[]
 }
 
-interface ContractDocumentCheck {
+interface DocumentContract {
   check_item: string
   description: string
   severity: string
 }
 
-interface ContractSpecSection {
+interface SectionContract {
   section_id: string
   title: string
-  expected_format: string
-  hints: string[]
+  checkitems: string[]
   severity: string
 }
 ```
@@ -257,12 +247,11 @@ Prompt construction rules:
 
 - `system_prompt` defines the contract-check role, output schema, and checking boundary.
 - `user_prompt` includes the generated structured result and the target contract specification file.
-- document-level check requirements should be derived from `ContractSpec.document_checks`.
-- paragraph and section format requirements should be derived from `ContractSpec.sections[].expected_format`.
-- each section-level check point should be derived from `ContractSpec.sections[].hints`.
-- `ArchitectureContractPromptBuilder` should convert document-level requirements, section format requirements, and hint-based check points into explicit checklist items.
-- checklist items should explicitly cover document structure, cross-section semantic logic, ambiguity detection, and requirement coverage when these are expressed by the document checks or section hints.
-- the prompt should require the model to check every document-level item, every section, and every hint one by one, instead of giving only a free-form review summary.
+- document-level check requirements should be derived from `ContractSpec.document_contracts`.
+- each section-level check requirement should be derived from `ContractSpec.section_contracts[].checkitems`.
+- `ArchitectureContractPromptBuilder` should convert document-level contracts and section-level check items into explicit checklist items.
+- checklist items should explicitly cover document structure, section completeness, cross-section semantic logic, ambiguity detection, and requirement coverage when these are expressed by the document contracts or section contracts.
+- the prompt should require the model to check every document-level item, every section, and every section check item one by one, instead of giving only a free-form review summary.
 - the prompt should require evidence-based output, so every failed item includes supporting evidence from the generated result.
 - the prompt should guide the model to return explicit issues rather than free-form review text.
 
