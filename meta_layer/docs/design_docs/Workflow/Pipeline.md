@@ -447,14 +447,15 @@ interface IArtifactStore {
 Artifact persistence mapping rule:
 
 - `IArtifactStore.create(request)` is a pipeline-side adapter API.
-- when adapted to `Data/ArtifactStore.writeArtifact`, check `request.output.artifacts` for keys `file_name` and `file_body`.
+- when adapted to `Data/ArtifactStore.writeArtifact`, check `request.output.artifacts` for keys `file_path` and `file_body`.
 - enforce runtime type checks for both fields:
-  - `artifacts["file_name"]` must be `string`
+  - `artifacts["file_path"]` must be `string`
   - `artifacts["file_body"]` must be `string`
 - if both keys exist and both values are `string`, map them to one `WriteArtifactRequest`:
-  - `file_name`: value of `artifacts["file_name"]`
-  - `content.body`: value of `artifacts["file_body"]`
-  - `content.format`: `"utf8"` (default)
+  - `task_id`: value of `request.task_id`
+  - `stage_id`: value of `request.stage_id`
+  - `file_path`: value of `artifacts["file_path"]`
+  - `content`: value of `artifacts["file_body"]`
 - if either key is missing or either value is not `string`, skip file persistence for this call.
 - return `true` when adapter handling completes successfully; otherwise return `false`.
 

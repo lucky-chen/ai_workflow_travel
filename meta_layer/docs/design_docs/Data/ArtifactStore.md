@@ -25,9 +25,8 @@ This module design collaborates with:
 Its core functions are:
 
 - persist artifact files
-- return stable artifact references
 - load stored artifact files
-- query artifacts by task and stage
+- query artifacts by task and root directory
 
 `ArtifactStore` does not decide workflow progression, contract validity, or gate approval result.
 
@@ -39,8 +38,8 @@ Its core functions are:
 @startuml
 interface IArtifactStore {
   +writeArtifact(request: WriteArtifactRequest): boolean
-  +getArtifact(ref: ArtifactRef): ArtifactContent
-  +listArtifacts(query: ArtifactQuery): ArtifactRef[]
+  +getArtifact(request: GetArtifactRequest): string
+  +listArtifacts(query: ListArtifactRequest): string[]
 }
 
 class ArtifactStoreService {
@@ -77,7 +76,7 @@ Role:
 Responsibilities:
 
 - persist artifact content
-- load artifact content by ref
+- load artifact content by task id and file path
 
 ### 2.4 `IArtifactStore`
 
@@ -105,16 +104,16 @@ IArtifactStore -> ArtifactStoreService: dispatch request
 
 alt write artifact
   ArtifactStoreService -> ArtifactContentStore: write content
-  ArtifactContentStore --> ArtifactStoreService: artifact_ref
-  ArtifactStoreService --> Caller: artifact_ref
+  ArtifactContentStore --> ArtifactStoreService: write_ok
+  ArtifactStoreService --> Caller: write_ok
 else get artifact
   ArtifactStoreService -> ArtifactContentStore: get content
-  ArtifactContentStore --> ArtifactStoreService: artifact_content
-  ArtifactStoreService --> Caller: artifact_content
+  ArtifactContentStore --> ArtifactStoreService: file_content
+  ArtifactStoreService --> Caller: file_content
 else list artifacts
-  ArtifactStoreService -> ArtifactContentStore: list refs by query
-  ArtifactContentStore --> ArtifactStoreService: artifact_refs
-  ArtifactStoreService --> Caller: artifact_refs
+  ArtifactStoreService -> ArtifactContentStore: list file paths by query
+  ArtifactContentStore --> ArtifactStoreService: file_paths
+  ArtifactStoreService --> Caller: file_paths
 end
 @enduml
 ```
@@ -124,7 +123,7 @@ end
 ### 4.1 Core Model
 
 ```ts
-type ArtifactRef = string
+type FilePath = string
 ```
 
 ### 4.2 Core APIs And Fields
@@ -134,8 +133,8 @@ type ArtifactRef = string
 ```ts
 interface IArtifactStore {
   writeArtifact(request: WriteArtifactRequest): boolean
-  getArtifact(ref: ArtifactRef): ArtifactContent
-  listArtifacts(query: ArtifactQuery): ArtifactRef[]
+  getArtifact(request: GetArtifactRequest): string
+  listArtifacts(query: ListArtifactRequest): string[]
 }
 ```
 
@@ -143,24 +142,22 @@ interface IArtifactStore {
 
 ```ts
 interface WriteArtifactRequest {
-  task_id?: string
-  stage_id?: string
-  file_name: string
-  content: ArtifactContent
+  task_id: string
+  stage_id: string
+  file_path: FilePath
+  content: string
 }
 
-interface ArtifactQuery {
-  task_id?: string
-  stage_id?: string
+interface GetArtifactRequest {
+  task_id: string
+  stage_id: string
+  file_path: FilePath
 }
-```
 
-#### 4.2.3 Content Types
-
-```ts
-interface ArtifactContent {
-  format: string
-  body: string
+interface ListArtifactRequest {
+  task_id: string
+  stage_id: string
+  root_dir: FilePath
 }
 ```
 
@@ -169,8 +166,8 @@ interface ArtifactContent {
 ```text
 artifact_store/
   {task_id}/
-    {stage_id}/
-      {artifact_ref}_{file_name}
+    {root_dir}/
+      {file_path}
 ```
 
 ### 4.4 Constraints
@@ -179,4 +176,4 @@ artifact_store/
 - `ArtifactStore` must not decide whether an artifact should be approved or applied.
 - the storage model should stay caller-agnostic.
 - `ArtifactStore` only stores files.
-- `ArtifactStore` should remain queryable by task and stage.
+- `ArtifactStore` should remain queryable by task and root directory.
