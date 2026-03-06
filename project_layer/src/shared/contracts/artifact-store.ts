@@ -1,3 +1,4 @@
+// Shared artifact-store contract: defines the read/write/query boundary for persisted artifacts.
 import type { FilePath, StageId, TaskId } from "../types/common.js";
 
 export interface WriteArtifactRequest {

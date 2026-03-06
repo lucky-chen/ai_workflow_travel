@@ -1,3 +1,4 @@
+// CLI module: parses user commands, maps them to workflow requests, and renders basic output.
 import type { IPipeline, LaunchTaskRequest } from "../../shared/contracts/pipeline.js";
 
 export interface ParsedCommand {
@@ -15,7 +16,7 @@ export interface CLIRequestMapper {
 
 export interface IReviewInteraction {
   waitForReview(reviewSession: { reviewId: string; summary: string }): Promise<{
-    action: string;
+    action: "apply" | "reject" | "wait";
     summary: string;
     comment?: string;
   }>;
@@ -26,10 +27,12 @@ export interface TraceViewer {
   renderResult(summary: string): void;
 }
 
+// Public API: command-line entry interface exposed to the executable layer.
 export interface ICLI {
   run(argv: string[]): Promise<number>;
 }
 
+// Public API: CLI entry implementation that dispatches user commands into workflow requests.
 export class CLIService implements ICLI {
   constructor(
     private readonly commandParser: CLICommandParser,

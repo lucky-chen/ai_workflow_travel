@@ -1,11 +1,19 @@
-import type { ArtifactRef, ChangedFile, StageId, TaskId } from "../types/common.js";
+// Shared pipeline contract: defines stage runtime input, output, and workflow-facing interfaces.
+import type {
+  ArtifactMap,
+  ChangedFile,
+  IssueSeverity,
+  StageId,
+  StringMap,
+  TaskId,
+} from "../types/common.js";
 
 export interface StageRunContext {
   taskId: TaskId;
   stageId: StageId;
   workspaceRoot: string;
-  inputArtifacts: Record<string, ArtifactRef>;
-  params?: Record<string, string>;
+  inputArtifacts: ArtifactMap;
+  params?: StringMap;
 }
 
 export interface StageOutput<TArtifacts = unknown> {
@@ -16,15 +24,17 @@ export interface StageOutput<TArtifacts = unknown> {
 }
 
 export interface LaunchTaskRequest {
-  startStage: StageId;
-  inputRefs: Record<string, ArtifactRef>;
+  startStageId: StageId;
+  workspaceRoot: string;
+  inputArtifacts: ArtifactMap;
+  params?: StringMap;
   targetModule?: string;
 }
 
 export interface ContractIssue {
   checkItem: string;
   message: string;
-  severity: "low" | "medium" | "high";
+  severity: IssueSeverity;
 }
 
 export interface ContractCheckResult {
@@ -33,8 +43,8 @@ export interface ContractCheckResult {
   issues: ContractIssue[];
 }
 
-export interface IStageGenerator {
-  run(context: StageRunContext): Promise<StageOutput>;
+export interface IStageGenerator<TOutput extends StageOutput = StageOutput> {
+  run(context: StageRunContext): Promise<TOutput>;
 }
 
 export interface IStageRunner {

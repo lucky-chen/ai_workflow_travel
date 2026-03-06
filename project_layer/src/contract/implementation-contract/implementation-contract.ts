@@ -1,3 +1,4 @@
+// Implementation contract module: prepares a test environment and converts test results into contract checks.
 import type {
   ContractCheckResult,
   IContractChecker,
@@ -43,6 +44,7 @@ export class ContractResultBuilder {
   }
 }
 
+// Public API: contract checker entry used by stage runners to validate generated implementation output.
 export class ImplementationContractService implements IContractChecker {
   constructor(
     private readonly environmentPreparer: ExecutionEnvironmentPreparer,
