@@ -85,15 +85,12 @@ export async function runImplementationGeneratorTests(): Promise<void> {
       },
     ]);
 
-    assert.equal(
-      await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"),
-      "export const generated = true;\n",
-    );
+    await assert.rejects(access(path.join(workspaceRoot, "src", "generated.ts")));
     assert.equal(
       await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"),
-      "export const value = 2;\n",
+      "export const value = 1;\n",
     );
-    await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
+    assert.equal(await readFile(path.join(workspaceRoot, "obsolete.txt"), "utf8"), "to be deleted\n");
 
     const projectContextLoader = new ProjectContextLoader();
     const projectContext = await projectContextLoader.loadProjectContext({
@@ -106,36 +103,6 @@ export async function runImplementationGeneratorTests(): Promise<void> {
     });
     assert.equal(projectContext.relevantFiles.some((file: ProjectFile) => file.path === "dist/ignored.txt"), false);
 
-    const unsafeGenerator = new ImplementationGenerator(
-      {
-        artifactStore,
-        llmExecutor: new MockLlmExecutor({
-          summary: "Unsafe update.",
-          changed_files: [
-            {
-              path: "../outside.txt",
-              operation: "create",
-              content: "blocked\n",
-            },
-          ],
-        }),
-      },
-    );
-
-    await assert.rejects(
-      unsafeGenerator.run({
-        taskId: "task-1",
-        stageId: "implementation",
-        workspaceRoot,
-        inputArtifacts: {
-          moduleDesign: "module-design.md",
-        },
-        params: {
-          moduleDesignStageId: "module-design",
-        },
-      }),
-      /outside workspace root/,
-    );
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });

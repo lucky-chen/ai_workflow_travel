@@ -1,4 +1,4 @@
-// Implementation generator service: orchestrates loading, prompting, execution, applying changes, and output shaping.
+// Implementation generator service: orchestrates loading, prompting, execution, and output shaping.
 import type { IArtifactStore } from "../../shared/contracts/artifact-store.js";
 import type { ILlmExecutor } from "../../shared/contracts/llm-executor.js";
 import type {
@@ -42,7 +42,7 @@ export class ImplementationGeneratorService implements IStageGenerator {
     const projectContext = await this.projectContextLoader.loadProjectContext(context);
     const request = this.promptBuilder.build({ moduleDesignDoc, projectContext });
     const llmResult = await this.llmExecutor.execute(request);
-    const applyResult = await this.changeApplier.apply(llmResult, projectContext);
-    return this.outputBuilder.build(context.stageId, applyResult);
+    const generatedChanges = this.changeApplier.parseGeneratedChanges(llmResult);
+    return this.outputBuilder.build(context.stageId, generatedChanges);
   }
 }

@@ -6,19 +6,23 @@ import type { ChangedFile } from "../../shared/types/common.js";
 import type { ApplyResult, ParsedGenerationResult, ProjectContext } from "./types.js";
 
 export class ChangeApplier {
-  async apply(result: LlmExecutionResult, context: ProjectContext): Promise<ApplyResult> {
+  parseGeneratedChanges(result: LlmExecutionResult): ApplyResult {
     const parsed = this.parseResult(result);
-    const changedFiles: ChangedFile[] = [];
-
-    for (const file of parsed.changedFiles) {
-      await this.applySingleChange(file, context.rootPath);
-      changedFiles.push(file);
-    }
-
     return {
-      changedFiles,
+      changedFiles: parsed.changedFiles,
       summary: parsed.summary,
     };
+  }
+
+  async applyChangedFiles(changedFiles: ChangedFile[], workspaceRoot: string): Promise<ChangedFile[]> {
+    const applied: ChangedFile[] = [];
+
+    for (const file of changedFiles) {
+      await this.applySingleChange(file, workspaceRoot);
+      applied.push(file);
+    }
+
+    return applied;
   }
 
   private parseResult(result: LlmExecutionResult): ParsedGenerationResult {
