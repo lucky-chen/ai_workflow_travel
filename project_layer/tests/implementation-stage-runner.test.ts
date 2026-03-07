@@ -6,6 +6,7 @@ import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.
 import { ImplementationGenerator } from "../src/execution/implementation-generator/implementation-generator.js";
 import { ImplementationContractService } from "../src/contract/implementation-contract/implementation-contract.js";
 import { InMemoryChangeGate } from "../src/quality-gate/change-gate/change-gate.js";
+import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 import { ImplementationStageRunner } from "../src/workflow/stage-runners/implementation-stage-runner.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/shared/contracts/llm-executor.js";
 import type { IContractChecker, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
@@ -53,10 +54,12 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
     const contractChecker = ImplementationContractService.create();
 
     const applyGate = new InMemoryChangeGate();
+    const traceRecorder = new InMemoryTraceRecorder();
     const runner = new ImplementationStageRunner({
       generator,
       contractChecker,
       changeGate: applyGate,
+      traceRecorder,
     });
 
     const output = await runner.run({
@@ -75,6 +78,13 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
     assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
     await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
     assert.deepEqual(applyGate.getLastRequest()?.changedPaths, ["src/generated.ts", "src/existing.ts", "obsolete.txt"]);
+    assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+      "stage_started",
+      "gate_reviewed",
+    ]);
+    assert.deepEqual(traceRecorder.getEvents()[1]?.event.metadata, {
+      action: "apply",
+    });
 
     const rejectGate = new InMemoryChangeGate({
       decision: {

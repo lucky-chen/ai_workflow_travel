@@ -18,6 +18,7 @@ export interface StageRunContext {
 
 export interface StageOutput<TArtifacts = unknown> {
   stageId: StageId;
+  status?: "completed" | "failed";
   success: boolean;
   summary: string;
   artifacts: TArtifacts;
@@ -49,6 +50,17 @@ export interface IStageGenerator<TOutput extends StageOutput = StageOutput> {
 
 export interface IStageRunner {
   run(context: StageRunContext): Promise<StageOutput>;
+}
+
+export interface StageDefinition {
+  stageId: StageId;
+  launchRequirements: string[];
+  runner: IStageRunner;
+  nextStageId?: StageId | null;
+}
+
+export interface StageRunnerSharedDependencies {
+  traceRecorder?: import("./trace.js").ITraceRecorder;
 }
 
 export interface IContractChecker {

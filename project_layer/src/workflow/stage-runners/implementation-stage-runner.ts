@@ -1,28 +1,31 @@
 // Implementation stage runner: executes implementation generation, contract check, review, and final apply.
-import type { IContractChecker, IStageGenerator, IStageRunner, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
-import type { IChangeGate } from "../../shared/contracts/change-gate.js";
+import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ImplementationStageArtifacts } from "../../shared/contracts/pipeline.js";
 import { ChangeApplier } from "../../execution/implementation-generator/change-applier.js";
+import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 
-export interface ImplementationStageRunnerDependencies {
-  generator: IStageGenerator<StageOutput<ImplementationStageArtifacts>>;
-  contractChecker: IContractChecker;
-  changeGate: IChangeGate;
-}
-
-export class ImplementationStageRunner implements IStageRunner {
+export class ImplementationStageRunner extends BaseStageRunner {
   private readonly changeApplier = new ChangeApplier();
 
-  constructor(private readonly dependencies: ImplementationStageRunnerDependencies) {}
+  constructor(
+    private readonly dependencies: BaseStageRunnerDependencies & {
+      generator: IStageGenerator<StageOutput<ImplementationStageArtifacts>>;
+      contractChecker: IContractChecker;
+    },
+  ) {
+    super(dependencies);
+  }
 
   async run(context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
+    await this.recordStageStart(context);
+
     const output = await this.dependencies.generator.run(context);
-    const contractResult = await this.dependencies.contractChecker.check(context, output);
+    const contractResult = await this.runContractCheck(this.dependencies.contractChecker, context, output);
     if (!contractResult.passed) {
       throw new Error(`Implementation contract failed: ${contractResult.summary}`);
     }
 
-    const gateDecision = await this.dependencies.changeGate.review({
+    const gateDecision = await this.reviewChanges({
       taskId: context.taskId,
       stageId: context.stageId,
       summary: output.summary,

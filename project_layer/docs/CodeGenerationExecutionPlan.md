@@ -13,6 +13,23 @@ This plan is organized to match:
 - the workflow runtime order
 - the architecture module boundaries
 
+## 1.1 Collaboration Rule
+
+The following collaboration rule applies to all implementation work under this plan:
+
+- Before making any code change, Codex must first provide a short change plan for review.
+- The change plan must include:
+  - target
+  - involved files
+  - specific change items
+  - risks or open questions
+  - expected validation method
+- Codex may start file edits only after the user explicitly approves the plan.
+- Reading code, reading documents, and doing analysis do not require approval.
+- Any file edit requires plan review and approval first.
+- After each completed chunk of implementation work, Codex must automatically update this plan and check off the corresponding completed items.
+- Only tasks that are actually implemented and verified may be checked off.
+
 ## 2. Workflow Delivery Order
 
 The implementation should be delivered in this order:
@@ -62,16 +79,16 @@ What to build:
 
 Still missing:
 
-- [ ] `StageRegistry`
-- [ ] `StageDefinition`
-- [ ] `LaunchValidator`
-- [ ] `BaseStageRunner`
+- [x] `StageRegistry`
+- [x] `StageDefinition`
+- [x] `LaunchValidator`
+- [x] `BaseStageRunner`
 - [ ] Full generic pipeline orchestration
-- [ ] Stage-to-stage continuation using `next_stage_id`
-- [ ] Downstream input merge between stages
+- [x] Stage-to-stage continuation using `next_stage_id`
+- [x] Downstream input merge between stages
 - [ ] Retry/restart semantics
 - [ ] Trace persistence through `HistoryStore`
-- [ ] Gate decision trace recording
+- [x] Gate decision trace recording
 - [ ] `ChangeReviewPresenter`
 - [ ] Full CLI trace rendering
 - [ ] Full CLI review interaction
