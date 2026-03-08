@@ -28,6 +28,7 @@ Interface source index (single source of truth):
   - [QualityGate/ChangeGate.md](./QualityGate/ChangeGate.md)
   - [QualityGate/Trace.md](./QualityGate/Trace.md)
 - Shared execution SDK:
+  - [SDK/AgentRuntime.md](./SDK/AgentRuntime.md)
   - [SDK/LlmExecutor.md](./SDK/LlmExecutor.md)
 
 Minimal shared shapes used in this document:
@@ -92,6 +93,7 @@ Notes:
 Notes:
 
 - `SDK/LlmExecutor` is a shared llm execution capability.
+- `SDK/AgentRuntime` owns the reusable internal agent execution loop used by `SDK/LlmExecutor`.
 - upstream modules provide prompt input and receive model result output.
 - agent design and model selection are hidden behind the `SDK/LlmExecutor` boundary.
 
