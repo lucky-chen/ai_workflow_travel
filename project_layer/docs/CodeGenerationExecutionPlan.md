@@ -181,16 +181,16 @@ This step delivers the shared runtime backbone used by all stages.
 ### Step 4. Deliver `module_design` Stage
 
 - [x] Step 4 is in progress
-- [ ] Architecture modules in scope
+- [x] Architecture modules in scope
   - [x] `Execution/ModuleDesignGenerator`
   - [x] `Contract/ModuleDesignContract`
-  - [ ] `Workflow/ModuleStageRunner`
+  - [x] `Workflow/ModuleStageRunner`
 - [x] Batch 1: module-design generation backbone
   - [x] module design prompt builder
   - [x] module-design stage output builder
   - [x] `ModuleDesignGenerator` implementation
   - [x] minimal tests for prompt building and output shaping
-- [ ] Batch 2: module-design contract backbone
+- [x] Batch 2: module-design contract backbone
   - [x] `ModuleDesignContract`
   - [x] module design document structure checks
   - [x] class-diagram and section-contract alignment checks
@@ -223,12 +223,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] `Execution/ImplementationPlanGenerator`
   - [ ] `Contract/ImplementationPlanContract`
   - [ ] `Workflow/ImplementationPlanStageRunner`
-- [ ] Batch 1: implementation plan generation backbone
-  - [ ] `ImplementationPlanGenerator`
-  - [ ] ordered project-level `workplan` generation
-  - [ ] load requirement, architecture, and all module-design documents as plan input
-  - [ ] review generated `workplan`
-  - [ ] focused tests for workplan generation flow
+- [x] Batch 1: implementation plan generation backbone
+  - [x] `ImplementationPlanGenerator`
+  - [x] ordered project-level `workplan` generation
+  - [x] load requirement, architecture, and all module-design documents as plan input
+  - [x] review generated `workplan`
+  - [x] focused tests for workplan generation flow
 - [ ] Batch 2: implementation plan contract backbone
   - [ ] `ImplementationPlanContract`
   - [ ] implementation-plan contract-check prompt construction
