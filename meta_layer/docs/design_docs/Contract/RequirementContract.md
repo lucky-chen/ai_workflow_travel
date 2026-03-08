@@ -3,43 +3,170 @@ AI_EDIT_PROTECTION:
 - This file is protected.
 - Do not modify this file unless the user explicitly requests changes to this exact file.
 -->
-<!--
-ARCHITECTURE_DECISION:
-- This document is intentionally a placeholder by design.
-- Detailed module-internal design is intentionally deferred.
-- For architecture/module-design reviews, do NOT flag this file as "missing detailed design".
-- This is an accepted and expected state in the current phase.
--->
-<!--
-CODEGEN_REUSE_SPEC:
-- status: approved_placeholder
-- reuse_source: ./ArchitectureDesignContract.md
-- generation_policy: reuse_source_with_overrides
-- public_entry_interface: IRequirementContract
-- internal_impl_class: RequirementContractService
-- shared_interface: IContractChecker
-- check_signature: check(context: StageRunContext, output: StageOutput): ContractCheckResult
-- do_not_flag_missing_detail: true
--->
 
 # RequirementContract Design
 
-`Contract/RequirementContract` reuses the same design structure and contract-check execution pattern as [ArchitectureDesignContract.md](./ArchitectureDesignContract.md).
+## 1. Goal
 
-## Reuse Contract
+### 1.1 Purpose
 
-- Public entry interface: `IRequirementContract` extends `IContractChecker`
-- Internal implementation class: `RequirementContractService` implements `IRequirementContract`
-- Method signature: `check(context: StageRunContext, output: StageOutput): ContractCheckResult`
-- All omitted internals are inherited from the reuse source unless explicitly overridden below.
+Define the module design of `Contract/RequirementContract`.
 
-## Required Overrides
+### 1.2 Involved Modules
 
-- Check target override:
-  - check target is requirement-stage output rather than architecture-design output.
-- Contract spec override:
-  - use requirement-stage contract specification source and check items.
+This module design directly involves:
 
-## Codegen Note
+- `Contract/RequirementContract`
 
-For code generation, treat this document as a resolved variant of `ArchitectureDesignContract.md` using the overrides above.
+This module design collaborates with:
+
+- `Workflow/Pipeline`
+- `Execution/RequirementGenerator`
+- `SDK/LlmExecutor`
+
+### 1.3 Core Functions
+
+`Contract/RequirementContract` is the requirement-stage document contract-check module.
+
+Its core functions are:
+
+- follow the shared flow defined in [DocumentStageContractPattern.md](./DocumentStageContractPattern.md)
+- check requirement-stage raw input or normalized requirement document
+- return structured `ContractCheckResult`
+
+`RequirementContract` does not decide workflow progression, gate approval, or artifact persistence.
+
+## 2. Core Classes
+
+### 2.1 Class Diagram
+
+```plantuml
+@startuml
+interface IContractChecker <<from Workflow/Pipeline>>
+interface RequirementContract
+interface ILlmExecutor
+
+class RequirementContractService
+class GeneratedResultLoader
+class ContractSpecLoader
+class RequirementContractPromptBuilder
+class ContractResultBuilder
+
+IContractChecker <|-- RequirementContract
+RequirementContract <|.. RequirementContractService
+RequirementContractService --> GeneratedResultLoader
+RequirementContractService --> ContractSpecLoader
+RequirementContractService --> RequirementContractPromptBuilder
+RequirementContractService --> ILlmExecutor
+RequirementContractService --> ContractResultBuilder
+@enduml
+```
+
+### 2.2 `RequirementContract`
+
+Role:
+
+- requirement-stage contract-check interface
+
+Responsibilities:
+
+- expose `check(context, output)`
+- keep requirement-stage contract entry stable for `RequirementStageRunner`
+
+### 2.3 `RequirementContractService`
+
+Role:
+
+- module implementation entry
+
+Responsibilities:
+
+- orchestrate requirement-stage contract check flow
+- load requirement-stage check target
+- load contract specification
+- build contract-check request
+- convert check result into `ContractCheckResult`
+
+## 3. Core Runtime Flow
+
+### 3.1 Main Sequence Diagram
+
+```plantuml
+@startuml
+participant RequirementStageRunner
+participant RequirementContract
+participant RequirementContractService
+participant GeneratedResultLoader
+participant ContractSpecLoader
+participant RequirementContractPromptBuilder
+participant ILlmExecutor
+participant ContractResultBuilder
+
+RequirementStageRunner -> RequirementContract: check(context, output)
+RequirementContract -> RequirementContractService: check(context, output)
+RequirementContractService -> GeneratedResultLoader: loadGeneratedResult(output)
+GeneratedResultLoader --> RequirementContractService: generated_result
+RequirementContractService -> ContractSpecLoader: loadSpec()
+ContractSpecLoader --> RequirementContractService: contract_spec
+RequirementContractService -> RequirementContractPromptBuilder: build(generated_result, contract_spec)
+RequirementContractPromptBuilder --> RequirementContractService: llm_request
+RequirementContractService -> ILlmExecutor: execute(llm_request)
+ILlmExecutor --> RequirementContractService: llm_result
+RequirementContractService -> ContractResultBuilder: build(llm_result)
+ContractResultBuilder --> RequirementContractService: contract_check_result
+RequirementContractService --> RequirementStageRunner: contract_check_result
+@enduml
+```
+
+## 4. Detailed Design
+
+### 4.1 Implementation Binding
+
+- Implementation interface: `RequirementContract` extends `IContractChecker`
+- Implementation class: `RequirementContractService` implements `RequirementContract`
+- Bound by: `RequirementStageRunner`
+
+`RequirementStageRunner` binds:
+
+- `RequirementGenerator`
+- `RequirementContract`
+- `ITraceRecorder`
+- `IChangeGate`
+- `IArtifactStore`
+
+### 4.2 Stage-Specific Runtime Rules
+
+#### 4.2.1 Generation
+
+- generation rule follows requirement-stage runtime decision
+- when generation is disabled, `RequirementStageRunner` loads raw requirement input directly
+- when generation is enabled, output must stay requirement-stage document shaped
+
+#### 4.2.2 Check
+
+- check target is raw requirement-stage input or requirement-stage normalized document
+- contract source is `meta_layer/resources/contract/RequirementTemplate.contract.json`
+- contract-specific rules are requirement document structure rules, requirement scope consistency rules, and workflow/goal alignment rules
+- checker output is `ContractCheckResult`
+
+#### 4.2.3 Record
+
+- record stage start
+- record requirement contract result
+- record review result
+- record accepted artifact persistence result
+
+#### 4.2.4 Review Input / Output Limit
+
+- review input must contain requirement-stage document summary and artifacts only
+- review output is limited to `GateDecision`
+
+#### 4.2.5 Persistence Limit
+
+- only accepted requirement-stage artifacts may be persisted for downstream stages
+
+### 4.3 Constraints
+
+- reuse the shared flow from [DocumentStageContractPattern.md](./DocumentStageContractPattern.md)
+- keep requirement-stage implementation names owned by this module
+- do not redefine workflow-owned shared interfaces from [Pipeline.md](../Workflow/Pipeline.md)

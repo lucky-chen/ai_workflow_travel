@@ -24,14 +24,14 @@ CODEGEN_REUSE_SPEC:
 
 - Class: `RequirementGenerator` implements `IStageGenerator`
 - Method signature: `run(context: StageRunContext): StageOutput`
-- The implementation may return a pass-through or empty stage output when invoked.
+- The implementation may return a pass-through requirement-stage output when invoked.
 - No prompt builder, template loader, or llm execution flow is required in the current phase.
 
 ## Current Runtime Intention
 
-- `requirement_interpretation` currently uses raw requirement input as the contract-check target.
-- This module exists only to preserve stage-level interface consistency with other generation-backed stages.
-- The stage runner may skip execution binding and go directly to `Contract/RequirementContract.check`.
+- `requirement_interpretation` uses `RequirementGenerator` as the execution binding for the stage.
+- This module may keep minimal or pass-through generation behavior as long as it returns requirement-stage `StageOutput`.
+- The stage runner calls `Contract/RequirementContract.check` after generation before review.
 
 ## Codegen Note
 

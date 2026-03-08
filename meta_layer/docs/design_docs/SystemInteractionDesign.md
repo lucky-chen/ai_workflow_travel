@@ -19,7 +19,6 @@ Interface source index (single source of truth):
   - [Execution/ModuleDesignGenerator.md](./Execution/ModuleDesignGenerator.md)
   - [Execution/ImplementationGenerator.md](./Execution/ImplementationGenerator.md)
 - `Contract/*` stage check interfaces:
-  - [Contract/RequirementContract.md](./Contract/RequirementContract.md)
   - [Contract/ArchitectureDesignContract.md](./Contract/ArchitectureDesignContract.md)
   - [Contract/ModuleDesignContract.md](./Contract/ModuleDesignContract.md)
   - [Contract/ImplementationContract.md](./Contract/ImplementationContract.md)
@@ -55,7 +54,7 @@ This document does not define detailed request fields, response fields, or stora
 
 Placeholder note:
 
-- `Execution/RequirementGenerator` is an approved empty placeholder; codegen should not expand it into a full generation path unless explicitly requested.
+- `Execution/RequirementGenerator` is an approved empty implementation placeholder; it stays bound to the requirement stage but may keep pass-through generation behavior unless explicitly expanded later.
 - `Execution/ModuleDesignGenerator` is an approved reuse placeholder with explicit `CODEGEN_REUSE_SPEC`; codegen should resolve it via its declared reuse source and overrides, not treat it as missing design.
 
 ## 2. API List By Interaction Step
@@ -72,6 +71,7 @@ Notes:
 
 ### 2.2 Execute Stage
 
+- `Execution/RequirementGenerator.run(context) -> stage_output`
 - `Execution/ArchitectureDesignGenerator.run(context) -> stage_output`
 - `Execution/ModuleDesignGenerator.run(context) -> stage_output`
 - `Execution/ImplementationGenerator.run(context) -> stage_output`
@@ -79,11 +79,11 @@ Notes:
 Notes:
 
 - `Pipeline` depends on shared stage APIs (`run` for execution modules, `check` for contract modules).
-- `requirement_interpretation` currently skips execution and enters contract check directly with loaded raw requirement input.
 - which concrete execution module is used is decided by stage registration, not by hard-coded pipeline logic.
 
 ### 2.3 Shared LLM Execution
 
+- `Execution/RequirementGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ModuleDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ImplementationGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`

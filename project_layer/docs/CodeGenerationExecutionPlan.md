@@ -110,17 +110,17 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] define requirement-stage upstream input shape
   - [ ] define requirement-stage review/check input shape
   - [ ] `RequirementGenerator` empty implementation placeholder
-  - [ ] confirm this stage skips generation and goes directly to contract check
+  - [ ] confirm `RequirementGenerator -> RequirementContract` runtime handoff
 - [ ] Batch 2: requirement contract backbone
   - [ ] `RequirementContract`
   - [ ] requirement document structure checks
   - [ ] requirement document contract-alignment checks
-  - [ ] contract result builder for requirement-stage validation
+  - [ ] stable contract result mapping
   - [ ] focused tests for contract success and failure
 - [ ] Batch 3: requirement stage runner flow
   - [ ] `RequirementStageRunner`
   - [ ] direct binding creation inside `RequirementStageRunner`
-  - [ ] `load/check -> review` main flow
+  - [ ] `generate -> contract -> review` main flow
   - [ ] requirement artifact persistence in runner
   - [ ] requirement trace recording in runner
   - [ ] requirement gate review flow

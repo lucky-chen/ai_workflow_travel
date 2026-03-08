@@ -98,7 +98,7 @@ All runners keep the same public signature as `BaseStageRunner`.
 
 | stage_id | runner_class | execution_binding | contract_binding | gate_policy |
 | --- | --- | --- | --- | --- |
-| `requirement_interpretation` | `RequirementStageRunner` | `none` | `Contract/RequirementContract.check` | `review_required` |
+| `requirement_interpretation` | `RequirementStageRunner` | `Execution/RequirementGenerator.run` | `Contract/RequirementContract.check` | `review_required` |
 | `architecture_design` | `ArchitectureStageRunner` | `Execution/ArchitectureDesignGenerator.run` | `Contract/ArchitectureDesignContract.check` | `review_required` |
 | `module_design` | `ModuleStageRunner` | `Execution/ModuleDesignGenerator.run` | `Contract/ModuleDesignContract.check` | `review_required` |
 | `implementation` | `ImplementationStageRunner` | `Execution/ImplementationGenerator.run` | `Contract/ImplementationContract.check` | `review_required` |
@@ -106,7 +106,6 @@ All runners keep the same public signature as `BaseStageRunner`.
 
 Stage exceptions:
 
-- `requirement_interpretation` currently skips execution binding and sends loaded raw requirement input directly into `Contract/RequirementContract.check` before gate review.
 - `validation` does not bind an execution module and uses `Contract/ValidationContract.check` as its validation confirmation input before gate review.
 
 ## 4. Runtime Responsibilities
