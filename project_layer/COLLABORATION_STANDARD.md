@@ -38,3 +38,14 @@ This document defines the shared collaboration standard for all work under `proj
 - Example human commit: `[Human]: refine implementation stage plan`
 - Example AI commit: `[AI] gpt-5.4: add stage registry validation`
 - The commit message should be a concise summary of that round of changes.
+
+## 5. Recommended Git Permission Rules
+
+- To avoid repeated permission prompts for normal collaboration, prefer approving stable git command prefixes instead of one-off commands.
+- Recommended prefixes to approve:
+  - `["git", "add"]`
+  - `["git", "commit"]`
+  - `["git", "status"]`
+- These prefixes cover the normal edit-review-commit workflow with limited scope.
+- Do not broadly auto-approve all `git` commands.
+- Do not auto-approve destructive or remote-affecting commands such as `git reset`, `git checkout`, or `git push` unless explicitly intended.
