@@ -70,6 +70,7 @@ This module design collaborates with:
 - `Workflow/Pipeline`
 - `QualityGate/Trace`
 - `Upstream SDK callers (through stable SDK APIs only)`
+- `MCP-compatible tool providers`
 
 ### 1.3 Core Functions
 
@@ -98,6 +99,7 @@ Its core functions are:
 - keep planning, execution, and observation responsibilities replaceable and independently extensible
 - expose stable runtime types and JSON-based LLM input/output contracts that let upstream callers integrate agent execution without depending on provider-specific logic
 - record runtime trace information that supports both real-time inspection and post-run traceback
+- provide extension points for session-aware execution, MCP tool invocation, and agent memory management
 
 `AgentRuntime` does not own caller-specific business logic, provider SDK details, workflow stage progression, or artifact persistence.
 
@@ -152,11 +154,22 @@ interface IObserver {
   +observe(context: AgentContext, plan: ExecutionPlan, result: ExecutionResult): ObservationResult
 }
 
+interface IMcpGateway {
+  +call(request: McpToolRequest): McpToolResult
+}
+
+interface IAgentSessionStore {
+  +load(sessionId: string): AgentSession
+  +save(session: AgentSession): void
+}
+
 class DefaultAgent {
   -planner: IPlanner
   -executor: IExecutor
   -observer: IObserver
   -traceRecorder: IAgentTraceRecorder
+  -sessionStore: IAgentSessionStore
+  -mcpGateway: IMcpGateway
 }
 
 class DefaultPlanner
@@ -174,6 +187,8 @@ DefaultAgent --> IPlanner
 DefaultAgent --> IExecutor
 DefaultAgent --> IObserver
 DefaultAgent --> IAgentTraceRecorder
+DefaultAgent --> IAgentSessionStore
+IExecutor --> IMcpGateway
 @enduml
 ```
 
@@ -219,6 +234,7 @@ Responsibilities:
 
 - build an execution plan from agent input
 - choose the minimal execution mode for the current request
+- decide whether the current run requires direct generation, tool-augmented execution, or session continuation
 - keep planning logic replaceable from execution logic
 
 ### 2.2 `IExecutor`
@@ -232,6 +248,7 @@ Responsibilities:
 - execute planned steps against the provided runtime collaborators
 - normalize execution output into a stable runtime result
 - preserve the JSON output contract expected by downstream callers
+- call MCP-compatible tools when a plan step requires external tool usage
 - isolate execution details from planning and observation
 
 ### 2.2 `IObserver`
@@ -257,6 +274,7 @@ Responsibilities:
 - call planner, executor, and observer in order
 - emit runtime trace at stable agent checkpoints through `IAgentTraceRecorder`
 - keep external SDK integration stable without coupling the runtime to caller code structure
+- manage session-aware runtime context and memory progression through stable runtime abstractions
 - provide the default reusable agent path for simple direct generation
 
 ## 3. Core Runtime Flow
@@ -300,19 +318,29 @@ participant IAgentTraceRecorder
 participant IPlanner
 participant IExecutor
 participant IObserver
+participant IAgentSessionStore
+participant IMcpGateway
 
 Caller -> IAgent: run(agent_context)
+IAgent -> IAgentSessionStore: load(session_id)
+IAgentSessionStore --> IAgent: agent_session
 IAgent -> IAgentTraceRecorder: record(agent_run_started)
 IAgent -> IPlanner: plan(agent_context)
 IPlanner --> IAgent: execution_plan
 IAgent -> IAgentTraceRecorder: record(agent_plan_created)
 IAgent -> IExecutor: execute(agent_context, execution_plan)
+opt plan contains MCP tool step
+  IExecutor -> IMcpGateway: call(tool_request)
+  IMcpGateway --> IExecutor: tool_result
+  IExecutor -> IAgentTraceRecorder: record(agent_tool_called)
+end
 IAgent -> IAgentTraceRecorder: record(agent_execution_started)
 IExecutor --> IAgent: execution_result
 IAgent -> IAgentTraceRecorder: record(agent_execution_finished)
 IAgent -> IObserver: observe(agent_context, execution_plan, execution_result)
 IObserver --> IAgent: observation_result
 IAgent -> IAgentTraceRecorder: record(agent_observation_finished)
+IAgent -> IAgentSessionStore: save(updated_session)
 IAgent --> Caller: agent_result
 @enduml
 ```
@@ -365,6 +393,7 @@ interface IAgent {
 ```ts
 interface AgentContext {
   request: LlmExecutionRequest
+  session_id?: string
   input_payload: Record<string, unknown>
 }
 ```
@@ -392,12 +421,24 @@ interface ExecutionPlan {
   summary: string
 }
 
+interface AgentSession {
+  session_id: string
+  messages: AgentMessage[]
+  memory?: AgentMemory
+}
+
+interface AgentMessage {
+  role: "system" | "user" | "assistant" | "tool"
+  content: string
+}
+
 interface ExecutionResult {
   result: LlmExecutionResult
+  tool_results?: McpToolResult[]
 }
 
 interface ObservationResult {
-  accepted: boolean
+  decision: "accept" | "continue" | "abort"
   summary: string
 }
 
@@ -431,6 +472,7 @@ interface AgentResult {
   result: LlmExecutionResult
   plan: ExecutionPlan
   observation: ObservationResult
+  session_id?: string
 }
 ```
 
@@ -457,6 +499,9 @@ interface AgentResult {
 - llm-facing input must be expressed through stable JSON fields instead of caller-specific free-form prompt assembly
 - llm-facing output must remain JSON-parseable when downstream callers require structured consumption
 - agent runtime must record at least plan creation, execution start, execution finish, and observation finish as trace events
+- session-aware execution must keep session state in explicit runtime structures instead of leaking caller-owned state into the SDK
+- MCP tool usage must flow through `IMcpGateway` rather than embedding MCP protocol details into planner or facade layers
+- memory must be represented as stable agent-owned session data, not as implicit prompt-only concatenation
 - the default observer must only decide acceptance and must not mutate the execution result payload
 
 ### 4.2 Constraints
@@ -485,3 +530,5 @@ interface AgentResult {
 - JSON-based LLM input/output is the default reusable contract for integrating this SDK across different callers.
 - agent trace must support both runtime observation and post-run traceback, but caller-side trace system integration must be completed through adapters outside the SDK boundary.
 - `AgentRuntime` trace abstraction is SDK-owned and must not depend on `Workflow/Pipeline` contracts.
+- session persistence and memory persistence must be abstracted behind `IAgentSessionStore` so the runtime can evolve from in-memory sessions to persistent sessions without changing SDK-facing APIs.
+- MCP integration must remain optional and capability-driven; callers that do not enable `IMcpGateway` should still be able to use direct-generation agent execution.
