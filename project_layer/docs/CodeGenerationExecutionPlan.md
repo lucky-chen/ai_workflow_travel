@@ -153,11 +153,11 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] `ArchitectureDesignGenerator` implementation
   - [x] minimal tests for prompt building and output shaping
 - [ ] Batch 2: architecture contract backbone
-  - [ ] `ArchitectureDesignContract`
-  - [ ] architecture document structure checks
-  - [ ] architecture section-contract alignment checks
-  - [ ] architecture module-boundary consistency checks
-  - [ ] focused tests for contract success and failure
+  - [x] `ArchitectureDesignContract`
+  - [x] architecture document structure checks
+  - [x] architecture section-contract alignment checks
+  - [x] architecture module-boundary consistency checks
+  - [x] focused tests for contract success and failure
 - [ ] Batch 3: architecture stage runner flow
   - [ ] `ArchitectureStageRunner`
   - [ ] direct binding creation inside `ArchitectureStageRunner`

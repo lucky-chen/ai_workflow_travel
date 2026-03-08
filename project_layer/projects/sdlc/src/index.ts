@@ -5,6 +5,7 @@ export * from "./shared/types/common.js";
 
 // Public API: module entry classes exposed to callers and composition roots.
 export * from "./app/composition-root.js";
+export * from "./contract/architecture-design-contract/architecture-design-contract.js";
 export * from "./contract/implementation-contract/implementation-contract.js";
 export * from "./contract/requirement-contract/requirement-contract.js";
 export * from "./data/artifact-store/artifact-store.js";
