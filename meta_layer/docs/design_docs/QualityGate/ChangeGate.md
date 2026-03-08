@@ -106,7 +106,7 @@ Responsibilities:
 
 Role:
 
-- abstract trace recording interface used by `ChangeGate`
+- pipeline-owned trace recording interface used by `ChangeGate`
 
 Responsibilities:
 
@@ -116,11 +116,16 @@ Responsibilities:
 
 Role:
 
-- abstract gate decision interface for upstream modules
+- pipeline-owned gate decision interface implemented by `QualityGate/ChangeGate`
 
 Responsibilities:
 
 - expose `review` to the stage runner or equivalent caller
+
+Ownership rule:
+
+- `IChangeGate` is owned by `Workflow/Pipeline` as a cross-module collaboration interface.
+- `QualityGate/ChangeGate` implements this interface and is bound through the application composition root.
 
 ## 3. Core Runtime Flow
 

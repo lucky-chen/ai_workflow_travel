@@ -34,6 +34,8 @@ Its core functions are:
 
 `Workflow/Pipeline` does not know business-stage semantics.
 
+`Workflow/Pipeline` also owns the shared collaboration interfaces used across module boundaries in the workflow runtime. External modules implement these interfaces, and concrete bindings are completed in the application composition root.
+
 ## 2. Core Classes
 
 ### 2.1 Class Diagram
@@ -178,6 +180,13 @@ Responsibilities:
 
 - record task-level events
 - record stage-level events
+
+Ownership rule:
+
+- `ITraceRecorder`, `IChangeGate`, and `IArtifactStore` are pipeline-owned collaboration interfaces.
+- `QualityGate/*` and `Data/*` modules implement these interfaces when they provide workflow-facing capabilities.
+- `Pipeline` and stage runners depend only on these interfaces and do not directly depend on external module implementation files.
+- Concrete bindings are completed in the application composition root.
 
 ### 2.8 StageRunner Implementation Model
 
@@ -443,6 +452,11 @@ interface IArtifactStore {
 ```
 
 `Workflow/Pipeline` owns these adapter interfaces (`IArtifactStore`, `IChangeGate`, `IContractChecker`, `ITraceRecorder`) and binds external module implementations through dependency injection.
+
+Binding rule:
+
+- external modules implement pipeline-owned collaboration interfaces instead of owning cross-module workflow interfaces themselves
+- application startup or equivalent composition root is the only place that binds these interfaces to concrete implementations
 
 Artifact persistence mapping rule:
 

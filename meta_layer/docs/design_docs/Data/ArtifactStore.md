@@ -82,11 +82,16 @@ Responsibilities:
 
 Role:
 
-- abstract artifact persistence interface
+- pipeline-owned artifact persistence interface implemented by `Data/ArtifactStore`
 
 Responsibilities:
 
 - provide stable artifact write/read contract to upstream modules
+
+Ownership rule:
+
+- `IArtifactStore` is owned by `Workflow/Pipeline` as a cross-module collaboration interface.
+- `Data/ArtifactStore` implements this interface and is bound through the application composition root.
 
 ## 3. Core Runtime Flow
 

@@ -116,3 +116,9 @@ For each stage runner:
 4. call `QualityGate/ChangeGate.review`
 5. call `IArtifactStore.create` on pass
 6. return `StageOutput`
+
+Dependency rule:
+
+- concrete stage runners depend only on pipeline-owned collaboration interfaces such as `ITraceRecorder`, `IChangeGate`, and `IArtifactStore`
+- concrete stage runners must not directly reference external module implementation files for cross-module collaboration
+- all concrete bindings are completed outside runners in the application composition root

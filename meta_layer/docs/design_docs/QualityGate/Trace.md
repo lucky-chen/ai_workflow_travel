@@ -86,7 +86,7 @@ Responsibilities:
 
 Role:
 
-- abstract trace recording interface
+- workflow-owned trace recording interface implemented by `QualityGate/Trace`
 
 Responsibilities:
 
@@ -177,7 +177,7 @@ interface HistoryRecord {
 }
 ```
 
-`IHistoryStore` is reused directly from [HistoryStore.md](../Data/HistoryStore.md#421-public-api). `QualityGate/Trace` does not redefine this interface.
+`ITraceRecorder` is owned by `Workflow/Pipeline` as a cross-module collaboration interface. `QualityGate/Trace` implements this interface. `IHistoryStore` is reused directly from [HistoryStore.md](../Data/HistoryStore.md#421-public-api) for persistence inside the trace module.
 
 ### 4.3 Example Event Types
 

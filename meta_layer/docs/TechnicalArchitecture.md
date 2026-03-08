@@ -393,6 +393,13 @@ ALLOW:
 - QualityGate -> Data
 - Execution -> Data
 
+Cross-module collaboration rule:
+
+- `Workflow/Pipeline` owns the shared collaboration interfaces used across module boundaries.
+- `Execution/*`, `QualityGate/*`, and `Data/*` modules implement these workflow-owned interfaces when they expose capabilities to other modules.
+- Modules must not directly depend on another module's implementation file for cross-module collaboration.
+- Concrete implementation binding is completed only in the application composition root.
+
 ### 4.4 High-level Diagram
 
 <!--
@@ -461,6 +468,7 @@ ALLOW:
 - Execution/*: run in the core backend service in V1; they can be split into workers later.
 - SDK/*, including shared `SDK/LlmExecutor`: run in the core backend service in V1.
 - Data/HistoryStore and Data/ArtifactStore: shared storage, implemented by local, backend-managed, or cloud storage.
+- Application composition root: binds workflow-owned collaboration interfaces to concrete module implementations before the runtime starts serving requests.
 
 ---
 
@@ -527,6 +535,8 @@ Workflow/Pipeline
 7. The same main flow pattern is reused across requirement interpretation, design generation, implementation generation, and validation stages, with a validation-stage exception on contract only.
 
 Each stage follows the same control shape: load source or upstream artifacts, generate or update the stage artifact, check the result, review the result, and store the accepted output.
+
+Cross-module collaboration in this flow uses workflow-owned interfaces. Concrete service implementations are bound in the application composition root and are not referenced directly across module boundaries.
 
 Exception for validation stage in V1: `Contract/ValidationContract` does not require `Contract/*` check, but it requires `QualityGate/*` review to confirm final validation success/failure information; confirmed success is treated as stage pass, and confirmed failure ends the workflow.
 
