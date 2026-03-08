@@ -43,17 +43,17 @@ Its core functions are:
 ```plantuml
 @startuml
 interface IPipeline {
-  +launchTask(request: LaunchTaskRequest): TaskId
+  +launchTask(request: LaunchTaskRequest): Promise<TaskId>
 }
 
 class PipelineService {
   -registry: StageRegistry
   -trace: ITraceRecorder
-  +launchTask(request: LaunchTaskRequest): TaskId
+  +launchTask(request: LaunchTaskRequest): Promise<TaskId>
 }
 
 interface IStageRunner {
-  +run(context: StageRunContext): StageOutput
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
 class LaunchValidator {
@@ -75,19 +75,21 @@ class StageDefinition {
 }
 
 interface ITraceRecorder {
-  +recordTrace(event: TraceEvent): void
+  +recordTrace(event: TraceEvent): Promise<TraceRef>
 }
 
 interface IContractChecker {
-  +check(context: StageRunContext, output: StageOutput): ContractCheckResult
+  +check(context: StageRunContext, output: StageOutput): Promise<ContractCheckResult>
 }
 
 interface IChangeGate {
-  +review(change_request: ChangeReviewRequest): GateDecision
+  +review(change_request: ChangeReviewRequest): Promise<GateDecision>
 }
 
 interface IArtifactStore {
-  +create(request: ArtifactCreateRequest): boolean
+  +writeArtifact(request: WriteArtifactRequest): Promise<boolean>
+  +getArtifact(request: GetArtifactRequest): Promise<string>
+  +listArtifacts(query: ListArtifactRequest): Promise<string[]>
 }
 
 IPipeline <|.. PipelineService
@@ -212,7 +214,7 @@ Concrete stage-to-module mapping is defined in [System Interaction Design](../Sy
 ```plantuml
 @startuml
 interface IStageRunner {
-  +run(context: StageRunContext): StageOutput
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
 abstract class BaseStageRunner {
@@ -222,7 +224,7 @@ abstract class BaseStageRunner {
 }
 
 interface IStageGenerator {
-  +run(context: StageRunContext): StageOutput
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 BaseStageRunner ..|> IStageRunner
 
@@ -237,11 +239,11 @@ abstract class BaseStageRunner implements IStageRunner {
   protected traceRecorder: ITraceRecorder
   protected changeGate: IChangeGate
   protected artifactStore: IArtifactStore
-  abstract run(context: StageRunContext): StageOutput
+  abstract run(context: StageRunContext): Promise<StageOutput>
 }
 
 interface IStageGenerator {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 
 // concrete stage runner classes are module-specific and defined outside Pipeline
@@ -348,7 +350,7 @@ state Stage {
 
 ```ts
 interface IPipeline {
-  launchTask(request: LaunchTaskRequest): TaskId
+  launchTask(request: LaunchTaskRequest): Promise<TaskId>
 }
 ```
 
@@ -429,7 +431,7 @@ interface ValidationResult {
 }
 
 interface IStageRunner {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 
 interface ContractCheckResult {
@@ -442,14 +444,29 @@ interface GateDecision {
   comment?: string
 }
 
-interface ArtifactCreateRequest {
-  task_id: TaskId
-  stage_id: StageId
-  output: StageOutput
+interface WriteArtifactRequest {
+  taskId: TaskId
+  stageId: StageId
+  filePath: string
+  content: string
+}
+
+interface GetArtifactRequest {
+  taskId: TaskId
+  stageId: StageId
+  filePath: string
+}
+
+interface ListArtifactRequest {
+  taskId: TaskId
+  stageId: StageId
+  rootDir: string
 }
 
 interface IArtifactStore {
-  create(request: ArtifactCreateRequest): boolean
+  writeArtifact(request: WriteArtifactRequest): Promise<boolean>
+  getArtifact(request: GetArtifactRequest): Promise<string>
+  listArtifacts(query: ListArtifactRequest): Promise<string[]>
 }
 ```
 
@@ -463,28 +480,19 @@ Binding rule:
 
 Artifact persistence mapping rule:
 
-- `IArtifactStore.create(request)` is a pipeline-side adapter API.
-- when adapted to `Data/ArtifactStore.writeArtifact`, check `request.output.artifacts` for keys `file_path` and `file_body`.
-- enforce runtime type checks for both fields:
-  - `artifacts["file_path"]` must be `string`
-  - `artifacts["file_body"]` must be `string`
-- if both keys exist and both values are `string`, map them to one `WriteArtifactRequest`:
-  - `task_id`: value of `request.task_id`
-  - `stage_id`: value of `request.stage_id`
-  - `file_path`: value of `artifacts["file_path"]`
-  - `content`: value of `artifacts["file_body"]`
-- if either key is missing or either value is not `string`, skip file persistence for this call.
-- return `true` when adapter handling completes successfully; otherwise return `false`.
+- `IArtifactStore.writeArtifact(request)` is the pipeline-side persistence API.
+- stage runners build `WriteArtifactRequest` directly from accepted stage artifacts.
+- `getArtifact(request)` and `listArtifacts(query)` are the corresponding read-side APIs used by execution and contract modules.
 
 #### 4.2.5 Check, Gate And Trace Types
 
 ```ts
 interface IContractChecker {
-  check(context: StageRunContext, output: StageOutput): ContractCheckResult
+  check(context: StageRunContext, output: StageOutput): Promise<ContractCheckResult>
 }
 
 interface IChangeGate {
-  review(change_request: ChangeReviewRequest): GateDecision
+  review(change_request: ChangeReviewRequest): Promise<GateDecision>
 }
 
 interface ChangeReviewRequest {
@@ -501,7 +509,7 @@ interface ChangedFile {
 }
 
 interface ITraceRecorder {
-  recordTrace(event: TraceEvent): void
+  recordTrace(event: TraceEvent): Promise<TraceRef>
 }
 
 interface TraceEvent {
