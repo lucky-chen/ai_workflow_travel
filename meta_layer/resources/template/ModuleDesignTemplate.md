@@ -205,10 +205,12 @@
     "checkitems": [
       "define only input structures that belong to this module",
       "do not repeat upstream shared types unless this module owns them",
-      "when the module contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`"
+      "when the module contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
+      "input format must be defined explicitly in code blocks",
+      "do not use natural-language prose to describe input structure"
     ],
     "severity": "medium",
-    "expected_format": "```ts\ninterface {PrimaryInputType} {\n  {InputFieldA}: {InputFieldTypeA}\n  {InputFieldB}?: {InputFieldTypeB}\n}\n\ninterface ContractSpec {\n  document_contracts: DocumentContract[]\n  section_contracts: SectionContract[]\n}\n```"
+    "expected_format": "```ts\ninterface {PrimaryInputType} {\n  {InputFieldA}: {InputFieldTypeA}\n  {InputFieldB}?: {InputFieldTypeB}\n}\n\ninterface ContractSpec {\n  document_contracts: DocumentContract[]\n  section_contracts: SectionContract[]\n}\n```\n\nNo prose outside code blocks."
   }
 }
 -->
@@ -239,10 +241,12 @@
     "title": "Output Types",
     "checkitems": [
       "define the stable output structure produced by this module",
-      "make downstream-consumed fields explicit"
+      "make downstream-consumed fields explicit",
+      "output format must be defined explicitly in code blocks",
+      "do not use natural-language prose to describe output structure"
     ],
     "severity": "medium",
-    "expected_format": "```ts\ninterface {PrimaryOutputType} {\n  {OutputFieldA}: {OutputFieldTypeA}\n  {OutputFieldB}?: {OutputFieldTypeB}\n}\n```"
+    "expected_format": "```ts\ninterface {PrimaryOutputType} {\n  {OutputFieldA}: {OutputFieldTypeA}\n  {OutputFieldB}?: {OutputFieldTypeB}\n}\n```\n\nNo prose outside code blocks."
   }
 }
 -->

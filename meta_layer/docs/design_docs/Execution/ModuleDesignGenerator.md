@@ -125,10 +125,17 @@ Overridden methods:
 
 #### 4.2.1 Input
 
-- upstream file content source is:
-  - `StageRunContext.inputArtifacts["architecture_document"]`
-  - `StageRunContext.inputArtifacts["module_descriptors"]`
-- input loader reads the architecture document content and module descriptor payload directly from runner-provided input artifacts
+```ts
+interface ModuleDescriptor {
+  name: string
+  responsibilities: string[]
+}
+
+interface ModuleDesignGeneratorInputArtifacts {
+  architecture_document: string
+  module_descriptors: ModuleDescriptor
+}
+```
 
 #### 4.2.1.1 Module Descriptor Shape
 
@@ -145,12 +152,12 @@ interface ModuleDescriptor {
 
 #### 4.2.3 Prompt
 
-- prompt must combine architecture-design input and module-design template
+- prompt must combine architecture-design input, the single module descriptor, and module-design template
 - prompt must keep output aligned with the module-design template structure
 
 #### 4.2.4 Output
 
-- output is generated module-design file content for the requested module
+- output is generated module-design file content for the single requested module
 - `StageOutput` wraps that file content as module-design-stage document artifact
 - output artifact shape is:
 
