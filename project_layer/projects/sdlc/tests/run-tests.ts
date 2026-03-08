@@ -1,4 +1,5 @@
 import { runArtifactStoreTests } from "./artifact-store.test.js";
+import { runArchitectureDesignGeneratorTests } from "./architecture-design-generator.test.js";
 import { runChangeGateTests } from "./change-gate.test.js";
 import { runCliTests } from "./cli.test.js";
 import { runImplementationContractTests } from "./implementation-contract.test.js";
@@ -14,6 +15,7 @@ import { runTraceTests } from "./trace.test.js";
 
 async function main(): Promise<void> {
   await runArtifactStoreTests();
+  await runArchitectureDesignGeneratorTests();
   await runChangeGateTests();
   await runCliTests();
   await runHistoryStoreTests();

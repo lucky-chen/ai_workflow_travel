@@ -142,16 +142,16 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 3. Deliver `architecture_design` Stage
 
-- [ ] Step 3 is not started
-- [ ] Architecture modules in scope
-  - [ ] `Execution/ArchitectureDesignGenerator`
+- [x] Step 3 is in progress
+- [x] Architecture modules in scope
+  - [x] `Execution/ArchitectureDesignGenerator`
   - [ ] `Contract/ArchitectureDesignContract`
   - [ ] `Workflow/ArchitectureStageRunner`
-- [ ] Batch 1: architecture generation backbone
-  - [ ] architecture design prompt builder
-  - [ ] architecture-stage output builder
-  - [ ] `ArchitectureDesignGenerator` implementation
-  - [ ] minimal tests for prompt building and output shaping
+- [x] Batch 1: architecture generation backbone
+  - [x] architecture design prompt builder
+  - [x] architecture-stage output builder
+  - [x] `ArchitectureDesignGenerator` implementation
+  - [x] minimal tests for prompt building and output shaping
 - [ ] Batch 2: architecture contract backbone
   - [ ] `ArchitectureDesignContract`
   - [ ] architecture document structure checks

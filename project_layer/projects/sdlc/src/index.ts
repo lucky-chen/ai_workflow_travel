@@ -8,6 +8,7 @@ export * from "./app/composition-root.js";
 export * from "./contract/implementation-contract/implementation-contract.js";
 export * from "./contract/requirement-contract/requirement-contract.js";
 export * from "./data/artifact-store/artifact-store.js";
+export * from "./execution/architecture-design-generator/architecture-design-generator.js";
 export * from "./execution/implementation-generator/implementation-generator.js";
 export * from "./execution/requirement-generator/requirement-generator.js";
 export * from "./interface/cli/cli.js";
