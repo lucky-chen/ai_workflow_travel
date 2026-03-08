@@ -177,7 +177,7 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Step 4 is not started
 - [ ] Architecture modules in scope
   - [x] `Execution/ModuleDesignGenerator`
-  - [ ] `Contract/ModuleDesignContract`
+  - [x] `Contract/ModuleDesignContract`
   - [ ] `Workflow/ModuleStageRunner`
 - [ ] Batch 1: module-design generation backbone
   - [x] module design prompt builder
@@ -185,11 +185,11 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] `ModuleDesignGenerator` implementation
   - [x] minimal tests for prompt building and output shaping
 - [ ] Batch 2: module-design contract backbone
-  - [ ] `ModuleDesignContract`
-  - [ ] module design document structure checks
-  - [ ] class-diagram and section-contract alignment checks
-  - [ ] module dependency and responsibility consistency checks
-  - [ ] focused tests for contract success and failure
+  - [x] `ModuleDesignContract`
+  - [x] module design document structure checks
+  - [x] class-diagram and section-contract alignment checks
+  - [x] module dependency and responsibility consistency checks
+  - [x] focused tests for contract success and failure
 - [ ] Batch 3: module-design stage runner flow
   - [ ] `ModuleStageRunner`
   - [ ] direct binding creation inside `ModuleStageRunner`
