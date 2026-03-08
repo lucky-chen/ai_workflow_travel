@@ -1,4 +1,3 @@
-// HTTP JSON client: shared helper for provider adapters that issue JSON POST requests.
 import http from "node:http";
 import https from "node:https";
 import { URL } from "node:url";

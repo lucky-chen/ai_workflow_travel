@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 
+import type { FetchLike } from "ai-meta-agent-agent-runtime";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
-import { ExecutionStrategySelector } from "../src/sdk/llm-executor/execution-strategy-selector.js";
 import { LlmExecutorService } from "../src/sdk/llm-executor/llm-executor.js";
-import type { FetchLike } from "../src/sdk/llm-executor/http-json-client.js";
 
 export async function runLlmExecutorTests(): Promise<void> {
-  await testExecutionStrategySelectorDefaultsToMock();
-  await testExecutionStrategySelectorChoosesRealProvider();
   await testDefaultMockExecutor();
   await testLlmTraceRecorderIntegration();
   await testCustomMockExecutor();
@@ -40,54 +37,6 @@ async function testLlmTraceRecorderIntegration(): Promise<void> {
     "llm_execution_started",
     "llm_execution_finished",
   ]);
-}
-
-async function testExecutionStrategySelectorDefaultsToMock(): Promise<void> {
-  const selector = new ExecutionStrategySelector();
-  const strategy = selector.select({
-    mockContent: "mock content",
-  });
-
-  assert.equal(strategy.mode, "mock");
-  const result = await strategy.executor.execute({
-    prompt: {
-      systemPrompt: "system",
-      userPrompt: "user",
-    },
-    responseFormat: "text",
-  });
-  assert.equal(result.content, "mock content");
-}
-
-async function testExecutionStrategySelectorChoosesRealProvider(): Promise<void> {
-  const selector = new ExecutionStrategySelector();
-  const strategy = selector.select({
-    mode: "real",
-    realProvider: {
-      provider: "deepseek",
-      apiKey: "deepseek-key",
-      model: "deepseek-chat",
-      fetchFn: createMockFetch({
-        choices: [
-          {
-            message: {
-              content: "selected deepseek",
-            },
-          },
-        ],
-      }),
-    },
-  });
-
-  assert.equal(strategy.mode, "real");
-  const result = await strategy.executor.execute({
-    prompt: {
-      systemPrompt: "system",
-      userPrompt: "user",
-    },
-    responseFormat: "text",
-  });
-  assert.equal(result.content, "selected deepseek");
 }
 
 async function testDefaultMockExecutor(): Promise<void> {

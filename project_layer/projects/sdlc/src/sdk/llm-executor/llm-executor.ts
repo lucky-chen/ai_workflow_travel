@@ -5,7 +5,7 @@ import { createLlmExecutor } from "./llm-executor-factory.js";
 import type { LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
 
 export type { LlmExecutorMode, LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
-export type { RealLlmProvider, RealProviderConfig } from "./real-provider-config.js";
+export type { RealLlmProvider, RealProviderConfig } from "ai-meta-agent-agent-runtime";
 
 export interface PromptInput {
   systemPrompt: string;
