@@ -42,18 +42,10 @@ interface ILlmExecutor
 abstract class DocumentStageContract <<from DocumentStageContractPattern>>
 
 class ArchitectureDesignContract
-class GeneratedResultLoader
-class ContractSpecLoader
-class ArchitectureContractPromptBuilder
-class ContractResultBuilder
 
 IContractChecker <|.. DocumentStageContract
 DocumentStageContract <|-- ArchitectureDesignContract
-ArchitectureDesignContract --> GeneratedResultLoader
-ArchitectureDesignContract --> ContractSpecLoader
-ArchitectureDesignContract --> ArchitectureContractPromptBuilder
 ArchitectureDesignContract --> ILlmExecutor
-ArchitectureDesignContract --> ContractResultBuilder
 @enduml
 ```
 
@@ -67,9 +59,8 @@ Responsibilities:
 
 - expose `check(context, output)`
 - keep architecture-stage contract entry stable for `ArchitectureStageRunner`
-- load generated document result
-- load contract specification
-- build contract-check request
+- implement the abstract extension points defined by `DocumentStageContract`
+- provide architecture-stage-specific contract sources and check-request building
 - convert model result into `ContractCheckResult`
 
 ## 3. Core Runtime Flow
@@ -80,23 +71,17 @@ Responsibilities:
 @startuml
 participant ArchitectureStageRunner
 participant ArchitectureDesignContract
-participant GeneratedResultLoader
-participant ContractSpecLoader
-participant ArchitectureContractPromptBuilder
 participant ILlmExecutor
-participant ContractResultBuilder
 
 ArchitectureStageRunner -> ArchitectureDesignContract: check(context, output)
-ArchitectureDesignContract -> GeneratedResultLoader: loadGeneratedResult(output)
-GeneratedResultLoader --> ArchitectureDesignContract: generated_result
-ArchitectureDesignContract -> ContractSpecLoader: loadSpec()
-ContractSpecLoader --> ArchitectureDesignContract: contract_spec
-ArchitectureDesignContract -> ArchitectureContractPromptBuilder: build(generated_result, contract_spec)
-ArchitectureContractPromptBuilder --> ArchitectureDesignContract: llm_request
+ArchitectureDesignContract -> ArchitectureDesignContract: loadSharedContract()
+ArchitectureDesignContract --> ArchitectureDesignContract: shared_contract
+ArchitectureDesignContract -> ArchitectureDesignContract: loadSpecificContract()
+ArchitectureDesignContract --> ArchitectureDesignContract: specific_contract
+ArchitectureDesignContract -> ArchitectureDesignContract: buildCheckRequest(output, contract_spec)
 ArchitectureDesignContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> ArchitectureDesignContract: llm_result
-ArchitectureDesignContract -> ContractResultBuilder: build(llm_result)
-ContractResultBuilder --> ArchitectureDesignContract: contract_check_result
+ArchitectureDesignContract -> ArchitectureDesignContract: buildContractResult(llm_result)
 ArchitectureDesignContract --> ArchitectureStageRunner: contract_check_result
 @enduml
 ```

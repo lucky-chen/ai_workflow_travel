@@ -47,18 +47,10 @@ interface ILlmExecutor
 abstract class DocumentStageContract <<from DocumentStageContractPattern>>
 
 class RequirementContract
-class GeneratedResultLoader
-class ContractSpecLoader
-class RequirementContractPromptBuilder
-class ContractResultBuilder
 
 IContractChecker <|.. DocumentStageContract
 DocumentStageContract <|-- RequirementContract
-RequirementContract --> GeneratedResultLoader
-RequirementContract --> ContractSpecLoader
-RequirementContract --> RequirementContractPromptBuilder
 RequirementContract --> ILlmExecutor
-RequirementContract --> ContractResultBuilder
 @enduml
 ```
 
@@ -72,9 +64,8 @@ Responsibilities:
 
 - expose `check(context, output)`
 - keep requirement-stage contract entry stable for `RequirementStageRunner`
-- load requirement-stage check target
-- load contract specification
-- build contract-check request
+- implement the abstract extension points defined by `DocumentStageContract`
+- provide requirement-stage-specific contract sources and check-request building
 - convert check result into `ContractCheckResult`
 
 ## 3. Core Runtime Flow
@@ -85,23 +76,17 @@ Responsibilities:
 @startuml
 participant RequirementStageRunner
 participant RequirementContract
-participant GeneratedResultLoader
-participant ContractSpecLoader
-participant RequirementContractPromptBuilder
 participant ILlmExecutor
-participant ContractResultBuilder
 
 RequirementStageRunner -> RequirementContract: check(context, output)
-RequirementContract -> GeneratedResultLoader: loadGeneratedResult(output)
-GeneratedResultLoader --> RequirementContract: generated_result
-RequirementContract -> ContractSpecLoader: loadSpec()
-ContractSpecLoader --> RequirementContract: contract_spec
-RequirementContract -> RequirementContractPromptBuilder: build(generated_result, contract_spec)
-RequirementContractPromptBuilder --> RequirementContract: llm_request
+RequirementContract -> RequirementContract: loadSharedContract()
+RequirementContract --> RequirementContract: shared_contract
+RequirementContract -> RequirementContract: loadSpecificContract()
+RequirementContract --> RequirementContract: specific_contract
+RequirementContract -> RequirementContract: buildCheckRequest(output, contract_spec)
 RequirementContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> RequirementContract: llm_result
-RequirementContract -> ContractResultBuilder: build(llm_result)
-ContractResultBuilder --> RequirementContract: contract_check_result
+RequirementContract -> RequirementContract: buildContractResult(llm_result)
 RequirementContract --> RequirementStageRunner: contract_check_result
 @enduml
 ```

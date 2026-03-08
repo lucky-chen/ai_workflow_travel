@@ -47,18 +47,10 @@ interface ILlmExecutor
 abstract class DocumentStageContract <<from DocumentStageContractPattern>>
 
 class ModuleDesignContract
-class GeneratedResultLoader
-class ContractSpecLoader
-class ModuleDesignContractPromptBuilder
-class ContractResultBuilder
 
 IContractChecker <|.. DocumentStageContract
 DocumentStageContract <|-- ModuleDesignContract
-ModuleDesignContract --> GeneratedResultLoader
-ModuleDesignContract --> ContractSpecLoader
-ModuleDesignContract --> ModuleDesignContractPromptBuilder
 ModuleDesignContract --> ILlmExecutor
-ModuleDesignContract --> ContractResultBuilder
 @enduml
 ```
 
@@ -72,9 +64,8 @@ Responsibilities:
 
 - expose `check(context, output)`
 - keep module-design-stage contract entry stable for `ModuleStageRunner`
-- load generated document result
-- load contract specification
-- build contract-check request
+- implement the abstract extension points defined by `DocumentStageContract`
+- provide module-design-stage-specific contract sources and check-request building
 - convert check result into `ContractCheckResult`
 
 ## 3. Core Runtime Flow
@@ -85,23 +76,17 @@ Responsibilities:
 @startuml
 participant ModuleStageRunner
 participant ModuleDesignContract
-participant GeneratedResultLoader
-participant ContractSpecLoader
-participant ModuleDesignContractPromptBuilder
 participant ILlmExecutor
-participant ContractResultBuilder
 
 ModuleStageRunner -> ModuleDesignContract: check(context, output)
-ModuleDesignContract -> GeneratedResultLoader: loadGeneratedResult(output)
-GeneratedResultLoader --> ModuleDesignContract: generated_result
-ModuleDesignContract -> ContractSpecLoader: loadSpec()
-ContractSpecLoader --> ModuleDesignContract: contract_spec
-ModuleDesignContract -> ModuleDesignContractPromptBuilder: build(generated_result, contract_spec)
-ModuleDesignContractPromptBuilder --> ModuleDesignContract: llm_request
+ModuleDesignContract -> ModuleDesignContract: loadSharedContract()
+ModuleDesignContract --> ModuleDesignContract: shared_contract
+ModuleDesignContract -> ModuleDesignContract: loadSpecificContract()
+ModuleDesignContract --> ModuleDesignContract: specific_contract
+ModuleDesignContract -> ModuleDesignContract: buildCheckRequest(output, contract_spec)
 ModuleDesignContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> ModuleDesignContract: llm_result
-ModuleDesignContract -> ContractResultBuilder: build(llm_result)
-ContractResultBuilder --> ModuleDesignContract: contract_check_result
+ModuleDesignContract -> ModuleDesignContract: buildContractResult(llm_result)
 ModuleDesignContract --> ModuleStageRunner: contract_check_result
 @enduml
 ```
