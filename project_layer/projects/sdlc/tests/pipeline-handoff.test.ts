@@ -6,10 +6,14 @@ import { ArchitectureStageRunner } from "../src/workflow/stage-runners/architect
 import { ImplementationPlanStageRunner } from "../src/workflow/stage-runners/implementation-plan-stage-runner.js";
 import { ModuleStageRunner } from "../src/workflow/stage-runners/module-stage-runner.js";
 import { RequirementStageRunner } from "../src/workflow/stage-runners/requirement-stage-runner.js";
+import { ValidationStageRunner } from "../src/workflow/stage-runners/validation-stage-runner.js";
+import { InMemoryChangeGate } from "../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 import { PipelineService } from "../src/workflow/pipeline/pipeline.js";
 import type { IStageRunner, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
+import type { ShellResult } from "../src/workflow/validation/shell-runner.js";
+import { ShellRunner } from "../src/workflow/validation/shell-runner.js";
 import {
   MockTextLlmExecutor,
   createArchitectureDocument,
@@ -20,6 +24,8 @@ import {
 
 export async function runPipelineHandoffTests(workspaceRoot: string): Promise<void> {
   await testRequirementStageHandoffIntoImplementationExecution(workspaceRoot);
+  await testValidationFinalStageMarksTaskCompleted(workspaceRoot);
+  await testValidationRejectMarksTaskFailed(workspaceRoot);
 }
 
 async function testRequirementStageHandoffIntoImplementationExecution(workspaceRoot: string): Promise<void> {
@@ -388,6 +394,138 @@ class ImplementationPlanPipelineLlmExecutor implements ILlmExecutor {
         ...(request.metadata ?? {}),
       },
     };
+  }
+}
+
+async function testValidationFinalStageMarksTaskCompleted(workspaceRoot: string): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
+  const pipeline = new PipelineService({
+    traceRecorder,
+    registry: createRegistry(
+      {
+        stageId: "implementation_execution",
+        launchRequirements: ["project_path"],
+        runner: {
+          async run(context: StageRunContext): Promise<StageOutput> {
+            return {
+              stageId: context.stageId,
+              status: "completed",
+              success: true,
+              summary: "Implementation execution stage completed.",
+              artifacts: {
+                project_path: context.inputArtifacts.project_path,
+              },
+            };
+          },
+        },
+        nextStageId: "validation",
+      },
+      {
+        stageId: "validation",
+        launchRequirements: ["project_path"],
+        runner: new ValidationStageRunner({
+          traceRecorder,
+          shellRunner: new MockValidationShellRunner({
+            passed: true,
+            summary: 'Shell command passed: cd "/tmp/final-project" && npm test',
+            command: 'cd "/tmp/final-project" && npm test',
+            exit_code: 0,
+          }),
+        }),
+        nextStageId: null,
+      },
+    ),
+  });
+
+  const taskId = await pipeline.launchTask({
+    startStageId: "implementation_execution",
+    workspaceRoot,
+    inputArtifacts: {
+      project_path: "/tmp/final-project",
+    },
+  });
+
+  assert.equal(pipeline.getTaskStatus(taskId), "completed");
+  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+    "task_started",
+    "stage_started",
+    "validation_finished",
+    "task_finished",
+  ]);
+}
+
+async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
+  const pipeline = new PipelineService({
+    traceRecorder,
+    registry: createRegistry(
+      {
+        stageId: "implementation_execution",
+        launchRequirements: ["project_path"],
+        runner: {
+          async run(context: StageRunContext): Promise<StageOutput> {
+            return {
+              stageId: context.stageId,
+              status: "completed",
+              success: true,
+              summary: "Implementation execution stage completed.",
+              artifacts: {
+                project_path: context.inputArtifacts.project_path,
+              },
+            };
+          },
+        },
+        nextStageId: "validation",
+      },
+      {
+        stageId: "validation",
+        launchRequirements: ["project_path"],
+        runner: new ValidationStageRunner({
+          traceRecorder,
+          changeGate: new InMemoryChangeGate({
+            decision: {
+              action: "reject",
+              summary: "Validation rejected by reviewer.",
+            },
+          }),
+          shellRunner: new MockValidationShellRunner({
+            passed: true,
+            summary: 'Shell command passed: cd "/tmp/final-project" && npm test',
+            command: 'cd "/tmp/final-project" && npm test',
+            exit_code: 0,
+          }),
+        }),
+        nextStageId: null,
+      },
+    ),
+  });
+
+  const taskId = await pipeline.launchTask({
+    startStageId: "implementation_execution",
+    workspaceRoot,
+    inputArtifacts: {
+      project_path: "/tmp/final-project",
+    },
+  });
+
+  assert.equal(pipeline.getTaskStatus(taskId), "failed");
+  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+    "task_started",
+    "stage_started",
+    "validation_finished",
+    "gate_reviewed",
+    "stage_failed",
+    "task_finished",
+  ]);
+}
+
+class MockValidationShellRunner extends ShellRunner {
+  constructor(private readonly result: ShellResult) {
+    super();
+  }
+
+  override async run(_command: string): Promise<ShellResult> {
+    return this.result;
   }
 }
 

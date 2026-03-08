@@ -84,7 +84,26 @@ export class PipelineService implements IPipeline {
         params: request.params,
       };
 
-      const output = await stage.runner.run(context);
+      let output: StageOutput;
+      try {
+        output = await stage.runner.run(context);
+      } catch (error) {
+        this.taskRuntimeStore.updateTask(taskId, {
+          currentStageId,
+          inputArtifacts: currentInputArtifacts,
+          status: "failed",
+        });
+        await this.traceRecorder?.recordTrace({
+          taskId,
+          stageId: currentStageId,
+          eventType: "stage_failed",
+          summary: error instanceof Error
+            ? error.message
+            : `Stage "${currentStageId}" failed.`,
+        });
+        break;
+      }
+
       this.taskRuntimeStore.updateTask(taskId, {
         currentStageId,
         inputArtifacts: currentInputArtifacts,

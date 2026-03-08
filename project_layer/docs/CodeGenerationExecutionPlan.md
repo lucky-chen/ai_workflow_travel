@@ -323,10 +323,10 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] validation trace flow
   - [x] focused tests for runner and stage flow
 - [ ] Batch 4: validation-stage runtime alignment
-  - [ ] load implementation-stage artifacts as validation input
-  - [ ] align validation completion semantics with pipeline task completion
-  - [ ] align validation review semantics with CLI presentation
-  - [ ] confirm final-stage completion behavior
+  - [x] load implementation-stage artifacts as validation input
+  - [x] align validation completion semantics with pipeline task completion
+  - [x] align validation review semantics with CLI presentation
+  - [x] confirm final-stage completion behavior
 
 ### Step 8. Align Runtime Semantics With Design Docs
 
