@@ -207,14 +207,14 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] module-design trace recording in runner
   - [x] module-design gate review flow
   - [x] focused tests for runner and stage flow
-- [ ] Batch 4: module-design runtime alignment
-  - [ ] load architecture-stage artifacts as generation input
-  - [ ] parse module count and ordered module descriptors from accepted `architecture_document`
-  - [ ] launch one `module_design` execution per module in sequence
-  - [ ] aggregate accepted module-design outputs into `inputArtifacts["module_design_documents"]`
-  - [ ] align output artifacts with `implementation_plan` input needs
-  - [ ] align trace and review semantics with shared runner behavior
-  - [ ] confirm handoff contract into `implementation_plan`
+- [x] Batch 4: module-design runtime alignment
+  - [x] load architecture-stage artifacts as generation input
+  - [x] parse module count and ordered module descriptors from accepted `architecture_document`
+  - [x] launch one `module_design` execution per module in sequence
+  - [x] aggregate accepted module-design outputs into `inputArtifacts["module_design_documents"]`
+  - [x] align output artifacts with `implementation_plan` input needs
+  - [x] align trace and review semantics with shared runner behavior
+  - [x] confirm handoff contract into `implementation_plan`
 
 ### Step 5. Deliver `implementation_plan` Stage
 

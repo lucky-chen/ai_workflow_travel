@@ -10,6 +10,7 @@ import { runImplementationStageRunnerTests } from "./implementation-stage-runner
 import { runHistoryStoreTests } from "./history-store.test.js";
 import { runLlmExecutorTests } from "./llm-executor.test.js";
 import { runModuleDesignContractTests } from "./module-design-contract.test.js";
+import { runModuleDesignFanoutTests } from "./module-design-fanout.test.js";
 import { runModuleDesignGeneratorTests } from "./module-design-generator.test.js";
 import { runModuleStageRunnerTests } from "./module-stage-runner.test.js";
 import { runPipelineCoreTests } from "./pipeline-core.test.js";
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   await runImplementationStageRunnerTests();
   await runLlmExecutorTests();
   await runModuleDesignContractTests();
+  await runModuleDesignFanoutTests();
   await runModuleDesignGeneratorTests();
   await runModuleStageRunnerTests();
   await runPipelineCoreTests(pipelineWorkspaceRoot);

@@ -10,6 +10,7 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js";
 import { LaunchValidator } from "./launch-validator.js";
+import { continueAfterArchitectureDesign } from "./module-design-fanout.js";
 import { StageRegistry } from "./stage-registry.js";
 import { TaskRuntimeStore } from "./task-runtime-store.js";
 
@@ -22,7 +23,7 @@ export interface PipelineServiceDependencies {
 
 // Public API: workflow entry used by CLI or other callers to launch a task.
 export class PipelineService implements IPipeline {
-  private static readonly NON_FORWARD_ARTIFACT_KEYS = new Set(["artifactKey", "content", "summary"]);
+  private static readonly NON_FORWARD_ARTIFACT_KEYS = new Set(["artifactKey", "content", "summary", "moduleName"]);
   private readonly registry: StageRegistry;
   private readonly launchValidator: LaunchValidator;
   private readonly traceRecorder?: ITraceRecorder;
@@ -101,6 +102,52 @@ export class PipelineService implements IPipeline {
           summary: `Stage "${currentStageId}" failed.`,
         });
         break;
+      }
+
+      // Special continuation flow:
+      // 1. after architecture_design, parse ordered modules from the accepted architecture result
+      // 2. run one module_design per module in sequence
+      // 3. aggregate accepted outputs into module_design_documents before continuing to implementation_plan
+      // Test entry: tests/pipeline-handoff.test.ts -> runPipelineHandoffTests()
+      const architectureContinuation = await continueAfterArchitectureDesign({
+        currentStageId,
+        nextStageId: stage.nextStageId,
+        taskId,
+        workspaceRoot: request.workspaceRoot,
+        attempt: context.attempt,
+        params: request.params,
+        currentInputArtifacts,
+        stageOutput: output,
+        moduleStageDefinition: currentStageId === "architecture_design" && stage.nextStageId === "module_design"
+          ? this.registry.get("module_design")
+          : undefined,
+      }, {
+        mergeInputArtifacts: (current, stageOutput) => this.mergeInputArtifacts(current, stageOutput),
+        resolveStageStatus: (stageOutput) => this.resolveStageStatus(stageOutput),
+        updateTaskAfterModuleRun: (moduleContext, moduleOutput) => {
+          this.taskRuntimeStore.updateTask(taskId, {
+            currentStageId: "module_design",
+            inputArtifacts: moduleContext.inputArtifacts,
+            lastOutput: moduleOutput,
+          });
+        },
+        onModuleStageFailure: async (failedTaskId) => {
+          this.taskRuntimeStore.updateTask(failedTaskId, {
+            status: "failed",
+          });
+          await this.traceRecorder?.recordTrace({
+            taskId: failedTaskId,
+            stageId: "module_design",
+            eventType: "stage_failed",
+            summary: 'Stage "module_design" failed.',
+          });
+        },
+      });
+
+      if (architectureContinuation.matched) {
+        currentInputArtifacts = architectureContinuation.nextInputArtifacts;
+        currentStageId = architectureContinuation.nextStageId;
+        continue;
       }
 
       currentInputArtifacts = this.mergeInputArtifacts(currentInputArtifacts, output);
