@@ -24,7 +24,6 @@ Interface source index (single source of truth):
   - [Contract/ModuleDesignContract.md](./Contract/ModuleDesignContract.md)
   - [Contract/ImplementationPlanContract.md](./Contract/ImplementationPlanContract.md)
   - [Contract/ImplementationContract.md](./Contract/ImplementationContract.md)
-  - [Contract/ValidationContract.md](./Contract/ValidationContract.md)
 - `QualityGate/*` decision and trace interfaces:
   - [QualityGate/ChangeGate.md](./QualityGate/ChangeGate.md)
   - [QualityGate/Trace.md](./QualityGate/Trace.md)

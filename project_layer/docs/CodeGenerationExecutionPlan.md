@@ -303,21 +303,18 @@ This step delivers the shared runtime backbone used by all stages.
 
 - [ ] Step 7 is in progress
 - [ ] Architecture modules in scope
-  - [ ] `Contract/ValidationContract`
   - [ ] `Workflow/ValidationStageRunner`
 - [x] Batch 1: validation input and result model
   - [x] final validation input shape
   - [x] validation-stage output shape
   - [x] validation summary and issue model
   - [x] minimal tests for validation input and output shaping
-- [ ] Batch 2: validation contract backbone
-  - [ ] `ValidationContract`
+- [ ] Batch 2: validation execution backbone
   - [ ] final workspace validation checks
   - [ ] final artifact completeness checks
   - [ ] project-path loading and shell-test execution flow
-  - [ ] shell-test result to `ContractCheckResult` mapping
-  - [ ] validation result builder
-  - [ ] focused tests for contract success and failure
+  - [ ] shell-test result shaping
+  - [ ] focused tests for validation execution success and failure
 - [ ] Batch 3: validation stage runner flow
   - [ ] `ValidationStageRunner`
   - [ ] direct `run -> review` main flow
