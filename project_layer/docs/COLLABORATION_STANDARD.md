@@ -36,13 +36,26 @@ This document defines the shared collaboration standard for all work under `proj
 - Human-authored commits must use the first line format: `[Human]: <summary>`
 - AI-authored commits must use the first line format: `[AI] <Model>: <summary>`
 - Commit details must start from the second line and describe the scope of the current change.
-- Commit details must explicitly include the current target and the concrete change items of this commit.
+- Commit details must explicitly follow this format:
+  - `Target: <target>`
+  - `Items:`
+  - `1. <item one>`
+  - `2. <item two>`
+- Add more numbered items when needed.
 - Example human commit:
   - first line: `[Human]: refine implementation stage plan`
-  - second line: `Target: execution plan management. Change items: update plan scope and step tracking.`
+  - details:
+    - `Target: execution plan management`
+    - `Items:`
+    - `1. Update plan scope.`
+    - `2. Update step tracking.`
 - Example AI commit:
   - first line: `[AI] gpt-5.4: add stage registry validation`
-  - second line: `Target: pipeline stage registry. Change items: cover duplicate registration and next stage validation in pipeline flow.`
+  - details:
+    - `Target: pipeline stage registry`
+    - `Items:`
+    - `1. Cover duplicate registration.`
+    - `2. Cover next stage validation in pipeline flow.`
 - The commit message should be a concise summary of that round of changes.
 
 ## 5. Recommended Git Permission Rules
