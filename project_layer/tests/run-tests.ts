@@ -4,6 +4,7 @@ import { runCliTests } from "./cli.test.js";
 import { runImplementationContractTests } from "./implementation-contract.test.js";
 import { runImplementationGeneratorTests } from "./implementation-generator.test.js";
 import { runImplementationStageRunnerTests } from "./implementation-stage-runner.test.js";
+import { runHistoryStoreTests } from "./history-store.test.js";
 import { runLlmExecutorTests } from "./llm-executor.test.js";
 import { runPipelineTests } from "./pipeline.test.js";
 import { runTraceTests } from "./trace.test.js";
@@ -12,6 +13,7 @@ async function main(): Promise<void> {
   await runArtifactStoreTests();
   await runChangeGateTests();
   await runCliTests();
+  await runHistoryStoreTests();
   await runImplementationContractTests();
   await runImplementationGeneratorTests();
   await runImplementationStageRunnerTests();

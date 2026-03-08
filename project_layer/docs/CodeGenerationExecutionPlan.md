@@ -78,7 +78,7 @@ Still missing:
 - [x] Stage-to-stage continuation using `next_stage_id`
 - [x] Downstream input merge between stages
 - [ ] Retry/restart semantics
-- [ ] Trace persistence through `HistoryStore`
+- [x] Trace persistence through `HistoryStore`
 - [x] Gate decision trace recording
 - [x] `ChangeReviewPresenter`
 - [x] Full CLI trace rendering
