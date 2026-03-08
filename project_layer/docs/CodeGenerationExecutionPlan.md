@@ -85,10 +85,12 @@ Still missing:
 - [x] Full CLI review interaction
 - [x] `LlmExecutor` strategy layer
 - [x] `ExecutionStrategySelector`
-- [ ] `IAgent`
-- [ ] `IPlanner`
-- [ ] `IExecutor`
-- [ ] `IObserver`
+- [ ] AgentRuntime core interfaces (`IAgent`, `IPlanner`, `IExecutor`, `IObserver`)
+- [ ] `SDK/AgentRuntime` module skeleton and runtime types
+- [ ] minimal single-pass `plan -> execute -> observe` runtime
+- [ ] SDK-owned agent trace abstraction
+- [ ] composition binding between `LlmExecutor` and `AgentRuntime`
+- [ ] tests for agent runtime path, trace, and `LlmExecutor` integration
 - [x] `ILlmTraceRecorder`
 
 ### Step 2. Deliver `requirement_interpretation` Stage
@@ -265,6 +267,7 @@ What to build:
 - [ ] `IPlanner`
 - [ ] `IExecutor`
 - [ ] `IObserver`
+- [ ] `SDK/AgentRuntime` implementation aligned with `meta_layer/docs/design_docs/SDK/AgentRuntime.md`
 - [ ] richer workflow automation after core stages are complete
 
 ## 4. Current Status Summary

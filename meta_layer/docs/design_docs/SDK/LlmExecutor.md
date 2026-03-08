@@ -6,6 +6,8 @@
 
 Define the module design of `SDK/LlmExecutor`.
 
+`SDK/LlmExecutor` builds on `SDK/AgentRuntime` for reusable agent execution flow, while keeping `LlmExecutorService` as the stable SDK-facing facade for LLM callers.
+
 ### 1.2 Involved Modules
 
 This module design directly involves:
@@ -14,6 +16,7 @@ This module design directly involves:
 
 This module design collaborates with:
 
+- `SDK/AgentRuntime`
 - `Execution/ArchitectureDesignGenerator`
 - `Execution/ModuleDesignGenerator`
 - `Execution/ImplementationGenerator`
@@ -28,7 +31,7 @@ This module design collaborates with:
 Its core functions are:
 
 - accept prompt input from upstream modules
-- organize agent execution flow for one generation request
+- adapt prompt execution requests into the reusable `SDK/AgentRuntime` execution flow
 - select an available model according to execution policy
 - call the selected model and return model response
 
@@ -47,6 +50,7 @@ interface ILlmExecutor {
 class LlmExecutorService {
   -strategySelector: ExecutionStrategySelector
   -modelGateway: IModelGateway
+  -agentRuntime: IAgent
   -traceRecorder: ILlmTraceRecorder
 }
 
@@ -81,7 +85,7 @@ interface ILlmTraceRecorder {
 
 ILlmExecutor <|.. LlmExecutorService
 LlmExecutorService --> ExecutionStrategySelector
-LlmExecutorService --> IModelGateway
+LlmExecutorService --> IAgent
 LlmExecutorService --> ILlmTraceRecorder
 ExecutionStrategySelector --> IAgent
 IAgent --> IPlanner
@@ -103,9 +107,10 @@ Responsibilities:
 
 - accept prompt execution requests
 - select the proper agent strategy
+- adapt llm execution requests into `SDK/AgentRuntime`
 - select the proper model
 - emit internal runtime trace events
-- call the model gateway
+- delegate runtime execution to the selected agent
 - return normalized model result
 
 ### 2.3 `ExecutionStrategySelector`
@@ -124,7 +129,7 @@ Responsibilities:
 
 Role:
 
-- abstract agent execution interface
+- reusable agent runtime interface owned by `SDK/AgentRuntime`
 
 Responsibilities:
 
@@ -220,7 +225,7 @@ participant ILlmExecutor as "SDK/ILlmExecutor"
 participant LlmExecutorService
 participant ExecutionStrategySelector
 participant ILlmTraceRecorder
-participant IAgent
+participant IAgent as "SDK/AgentRuntime"
 participant IPlanner
 participant IExecutor
 participant IObserver

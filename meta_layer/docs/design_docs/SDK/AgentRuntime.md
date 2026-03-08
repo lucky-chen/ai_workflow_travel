@@ -41,7 +41,7 @@
 }
 -->
 
-Define the module design of `SDK/AgentRuntime`, which owns the reusable planning, execution, and observation runtime abstraction used by `SDK/LlmExecutor` and future SDK callers.
+Define the module design of `SDK/AgentRuntime`, which owns the reusable planning, execution, and observation runtime abstraction exposed as an independent SDK capability to external callers through stable SDK APIs.
 
 ### 1.2 Involved Modules
 
@@ -69,6 +69,7 @@ This module design collaborates with:
 - `SDK/LlmExecutor`
 - `Workflow/Pipeline`
 - `QualityGate/Trace`
+- `Upstream SDK callers (through stable SDK APIs only)`
 
 ### 1.3 Core Functions
 
@@ -95,9 +96,10 @@ Its core functions are:
 - define stable `plan -> execute -> observe` runtime interfaces for agent-style execution
 - provide a minimal default agent loop that can be reused by `SDK/LlmExecutor` and other SDK callers
 - keep planning, execution, and observation responsibilities replaceable and independently extensible
-- expose stable runtime types that let upstream callers integrate agent execution without depending on provider-specific logic
+- expose stable runtime types and JSON-based LLM input/output contracts that let upstream callers integrate agent execution without depending on provider-specific logic
+- record runtime trace information that supports both real-time inspection and post-run traceback
 
-`AgentRuntime` does not own provider SDK details, workflow stage progression, or artifact persistence.
+`AgentRuntime` does not own caller-specific business logic, provider SDK details, workflow stage progression, or artifact persistence.
 
 ## 2. Core Classes
 
@@ -154,14 +156,14 @@ class DefaultAgent {
   -planner: IPlanner
   -executor: IExecutor
   -observer: IObserver
-  -traceRecorder: ITraceRecorder
+  -traceRecorder: IAgentTraceRecorder
 }
 
 class DefaultPlanner
 class DefaultExecutor
 class DefaultObserver
 
-interface ITraceRecorder
+interface IAgentTraceRecorder
 
 IAgent <|.. DefaultAgent
 IPlanner <|.. DefaultPlanner
@@ -171,7 +173,7 @@ IObserver <|.. DefaultObserver
 DefaultAgent --> IPlanner
 DefaultAgent --> IExecutor
 DefaultAgent --> IObserver
-DefaultAgent --> ITraceRecorder
+DefaultAgent --> IAgentTraceRecorder
 @enduml
 ```
 
@@ -203,6 +205,8 @@ Responsibilities:
 
 - organize one complete `plan -> execute -> observe` cycle
 - hide internal planning and execution composition from upstream callers
+- preserve the stable JSON-oriented LLM interaction contract across the full runtime cycle
+- emit runtime checkpoints for real-time visibility and post-run traceback
 - return one normalized `AgentResult`
 
 ### 2.2 `IPlanner`
@@ -227,6 +231,7 @@ Responsibilities:
 
 - execute planned steps against the provided runtime collaborators
 - normalize execution output into a stable runtime result
+- preserve the JSON output contract expected by downstream callers
 - isolate execution details from planning and observation
 
 ### 2.2 `IObserver`
@@ -250,7 +255,8 @@ Role:
 Responsibilities:
 
 - call planner, executor, and observer in order
-- emit runtime trace at stable agent checkpoints
+- emit runtime trace at stable agent checkpoints through `IAgentTraceRecorder`
+- keep external SDK integration stable without coupling the runtime to caller code structure
 - provide the default reusable agent path for simple direct generation
 
 ## 3. Core Runtime Flow
@@ -290,22 +296,23 @@ Responsibilities:
 @startuml
 participant Caller
 participant IAgent
-participant ITraceRecorder
+participant IAgentTraceRecorder
 participant IPlanner
 participant IExecutor
 participant IObserver
 
 Caller -> IAgent: run(agent_context)
-IAgent -> ITraceRecorder: recordTrace(agent_run_started)
+IAgent -> IAgentTraceRecorder: record(agent_run_started)
 IAgent -> IPlanner: plan(agent_context)
 IPlanner --> IAgent: execution_plan
-IAgent -> ITraceRecorder: recordTrace(agent_plan_created)
+IAgent -> IAgentTraceRecorder: record(agent_plan_created)
 IAgent -> IExecutor: execute(agent_context, execution_plan)
+IAgent -> IAgentTraceRecorder: record(agent_execution_started)
 IExecutor --> IAgent: execution_result
-IAgent -> ITraceRecorder: recordTrace(agent_execution_finished)
+IAgent -> IAgentTraceRecorder: record(agent_execution_finished)
 IAgent -> IObserver: observe(agent_context, execution_plan, execution_result)
 IObserver --> IAgent: observation_result
-IAgent -> ITraceRecorder: recordTrace(agent_observation_finished)
+IAgent -> IAgentTraceRecorder: record(agent_observation_finished)
 IAgent --> Caller: agent_result
 @enduml
 ```
@@ -358,7 +365,7 @@ interface IAgent {
 ```ts
 interface AgentContext {
   request: LlmExecutionRequest
-  runtime_metadata?: Record<string, string>
+  input_payload: Record<string, unknown>
 }
 ```
 
@@ -392,6 +399,13 @@ interface ExecutionResult {
 interface ObservationResult {
   accepted: boolean
   summary: string
+}
+
+interface AgentTraceEvent {
+  run_id: string
+  event_type: string
+  summary: string
+  payload?: Record<string, unknown>
 }
 ```
 
@@ -440,6 +454,9 @@ interface AgentResult {
 
 - the minimal V1 agent runtime must support exactly one `plan -> execute -> observe` pass
 - the default planner must produce a stable `direct_generation` plan so the runtime stays reusable for simple callers
+- llm-facing input must be expressed through stable JSON fields instead of caller-specific free-form prompt assembly
+- llm-facing output must remain JSON-parseable when downstream callers require structured consumption
+- agent runtime must record at least plan creation, execution start, execution finish, and observation finish as trace events
 - the default observer must only decide acceptance and must not mutate the execution result payload
 
 ### 4.2 Constraints
@@ -462,5 +479,9 @@ interface AgentResult {
 
 - `AgentRuntime` must remain reusable for multiple upstream callers and must not be specialized to `ImplementationGenerator` or any single stage module.
 - V1 must not require multi-step planning, MCP tool invocation, or observer-driven retry loops in order to be considered complete.
-- Runtime tracing should reuse the pipeline-owned `ITraceRecorder` instead of creating a separate agent-specific trace channel.
 - Provider-specific model SDK logic must remain outside `AgentRuntime`; it should be injected through execution collaborators.
+- `AgentRuntime` must not depend on caller-specific business modules or inspect caller code structure.
+- caller adaptation and prompt shaping that depend on business code context must remain outside the SDK boundary.
+- JSON-based LLM input/output is the default reusable contract for integrating this SDK across different callers.
+- agent trace must support both runtime observation and post-run traceback, but caller-side trace system integration must be completed through adapters outside the SDK boundary.
+- `AgentRuntime` trace abstraction is SDK-owned and must not depend on `Workflow/Pipeline` contracts.

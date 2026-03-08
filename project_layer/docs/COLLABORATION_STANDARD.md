@@ -10,8 +10,9 @@ This document defines the shared collaboration standard for all work under `proj
   - involved files
   - specific change items
   - risks or open questions
-  - expected validation method
+- expected validation method
 - Codex may start file edits only after the user explicitly approves the plan.
+- Documentation-only edits may be made directly without a pre-review change plan.
 
 ## 2. Work That Does Not Require Approval
 

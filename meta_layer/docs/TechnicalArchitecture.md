@@ -111,6 +111,8 @@ Define the overall technical architecture of the AI-RD platform.
 
 Cross-module interaction contracts are covered at a lightweight shared-boundary level in a separate design document, not in full module-level detail here.
 
+Independent SDK runtimes such as `SDK/AgentRuntime` define their own internal collaboration contracts and expose only stable SDK APIs to external callers.
+
 ---
 
 ## 3. Design Drivers
