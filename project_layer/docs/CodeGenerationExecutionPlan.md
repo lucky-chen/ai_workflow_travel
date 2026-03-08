@@ -303,7 +303,7 @@ This step delivers the shared runtime backbone used by all stages.
 
 - [ ] Step 7 is in progress
 - [ ] Architecture modules in scope
-  - [ ] `Workflow/ValidationStageRunner`
+  - [x] `Workflow/ValidationStageRunner`
 - [x] Batch 1: validation input and result model
   - [x] final validation input shape
   - [x] validation-stage output shape
@@ -315,13 +315,13 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] project-path loading and shell-test execution flow
   - [x] shell-test result shaping
   - [x] focused tests for validation execution success and failure
-- [ ] Batch 3: validation stage runner flow
-  - [ ] `ValidationStageRunner`
-  - [ ] direct `run -> review` main flow
-  - [ ] validation review flow
-  - [ ] validation artifact persistence
-  - [ ] validation trace flow
-  - [ ] focused tests for runner and stage flow
+- [x] Batch 3: validation stage runner flow
+  - [x] `ValidationStageRunner`
+  - [x] direct `run -> review` main flow
+  - [x] validation review flow
+  - [x] validation artifact persistence
+  - [x] validation trace flow
+  - [x] focused tests for runner and stage flow
 - [ ] Batch 4: validation-stage runtime alignment
   - [ ] load implementation-stage artifacts as validation input
   - [ ] align validation completion semantics with pipeline task completion

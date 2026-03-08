@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 
-import {
-  buildValidationStageOutput,
-  parseValidationInputArtifacts,
-} from "../src/workflow/validation/validation-shapes.js";
+import { ValidationStageRunner } from "../src/workflow/stage-runners/validation-stage-runner.js";
 import type { ShellResult } from "../src/workflow/validation/shell-runner.js";
 
 export async function runValidationModelTests(): Promise<void> {
@@ -13,42 +10,73 @@ export async function runValidationModelTests(): Promise<void> {
 }
 
 async function testParseValidationInputArtifactsRequiresProjectPath(): Promise<void> {
-  assert.throws(
-    () => parseValidationInputArtifacts({}),
+  const runner = new ValidationStageRunner({
+    shellRunner: new MockShellRunner({
+      passed: true,
+      summary: "unused",
+      command: "unused",
+      exit_code: 0,
+    }),
+  });
+
+  await assert.rejects(
+    runner.run({
+      taskId: "task-validation",
+      stageId: "validation",
+      attempt: 1,
+      workspaceRoot: "/tmp/validation-workspace",
+      inputArtifacts: {},
+    }),
     /Missing required input artifact "project_path"\./,
   );
 }
 
 async function testParseValidationInputArtifactsReturnsNormalizedShape(): Promise<void> {
-  const input = parseValidationInputArtifacts({
-    project_path: "  /tmp/validation-project  ",
+  const runner = new ValidationStageRunner({
+    shellRunner: new MockShellRunner({
+      passed: true,
+      summary: 'Shell command passed: cd "/tmp/validation-project" && npm test',
+      command: 'cd "/tmp/validation-project" && npm test',
+      exit_code: 0,
+    }),
   });
 
-  assert.deepEqual(input, {
-    project_path: "/tmp/validation-project",
+  const output = await runner.run({
+    taskId: "task-validation",
+    stageId: "validation",
+    attempt: 1,
+    workspaceRoot: "/tmp/validation-workspace",
+    inputArtifacts: {
+      project_path: "  /tmp/validation-project  ",
+    },
   });
+
+  assert.equal(output.artifacts.projectPath, "/tmp/validation-project");
 }
 
 async function testBuildValidationStageOutputShapesValidationResult(): Promise<void> {
-  const shellResult: ShellResult = {
-    passed: false,
-    summary: "Validation failed: unit tests returned exit code 1.",
-    command: "npm test",
-    exit_code: 1,
-    logs: "1 test failed",
-  };
+  const runner = new ValidationStageRunner({
+    shellRunner: new MockShellRunner({
+      passed: false,
+      summary: "Validation failed: unit tests returned exit code 1.",
+      command: "npm test",
+      exit_code: 1,
+      logs: "1 test failed",
+    }),
+  });
 
-  const output = buildValidationStageOutput(
-    { project_path: "/tmp/validation-project" },
-    shellResult,
-    [
-      {
-        checkItem: "shell_test_execution",
-        message: "Shell test command exited with code 1.",
-        severity: "high",
-      },
-    ],
-  );
+  const output = await runner.run({
+    taskId: "task-validation",
+    stageId: "validation",
+    attempt: 1,
+    workspaceRoot: "/tmp/validation-workspace",
+    inputArtifacts: {
+      project_path: "/tmp/validation-project",
+    },
+    params: {
+      validationCommand: "npm test",
+    },
+  });
 
   assert.deepEqual(output, {
     stageId: "validation",
@@ -61,13 +89,14 @@ async function testBuildValidationStageOutputShapesValidationResult(): Promise<v
       exitCode: 1,
       logs: "1 test failed",
       passed: false,
-      issues: [
-        {
-          checkItem: "shell_test_execution",
-          message: "Shell test command exited with code 1.",
-          severity: "high",
-        },
-      ],
     },
   });
+}
+
+class MockShellRunner {
+  constructor(private readonly result: ShellResult) {}
+
+  async run(_command: string): Promise<ShellResult> {
+    return this.result;
+  }
 }

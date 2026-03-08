@@ -26,6 +26,7 @@ import { runShellRunnerTests } from "./shell-runner.test.js";
 import { createTempDir } from "./pipeline-test-helpers.js";
 import { runTraceTests } from "./trace.test.js";
 import { runValidationModelTests } from "./validation-model.test.js";
+import { runValidationStageRunnerTests } from "./validation-stage-runner.test.js";
 
 async function main(): Promise<void> {
   const pipelineWorkspaceRoot = await createTempDir("pipeline-workspace-");
@@ -56,6 +57,7 @@ async function main(): Promise<void> {
   await runShellRunnerTests();
   await runTraceTests();
   await runValidationModelTests();
+  await runValidationStageRunnerTests();
   process.stdout.write("All tests passed.\n");
 }
 
