@@ -150,9 +150,13 @@ Stage-to-stage artifact mapping:
   - downstream handoff: `inputArtifacts["architecture_document"]`
 - `module_design`
   - generator output: `artifacts.artifactKey == "module_design_document"`
+  - runtime fan-out source: parse module count and ordered module list from accepted `architecture_document`
+  - runtime launch rule: start one `module_design` execution per parsed module descriptor
+  - runtime execution order: execute module-design runs sequentially in architecture-defined order
   - downstream aggregation: `inputArtifacts["module_design_documents"]`
 - `implementation_plan`
   - generator output: `artifacts.artifactKey == "implementation_workplan"`
+  - runtime input source: aggregated accepted outputs from all sequential `module_design` runs
   - downstream handoff: `inputArtifacts["implementation_workplan"]`
 - `implementation_execution`
   - generator output: `artifacts.generatedFiles`

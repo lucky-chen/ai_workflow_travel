@@ -552,6 +552,30 @@ registry.register({
 
 Stage-level collaboration mapping is defined in [System Interaction Design](../SystemInteractionDesign.md). `Pipeline.md` focuses on pipeline module design only.
 
+Special stage-continuation rule for `module_design`:
+
+```plantuml
+@startuml
+start
+
+:finish `architecture_design`;
+:load accepted `architecture_document`;
+:parse ordered module descriptors;
+
+while (more module descriptors?) is (yes)
+  :create `module_design` StageRunContext;
+  :run one `module_design`;
+  :persist accepted `docs/module_design/{moduleName}.md`;
+  :append accepted output to `module_design_documents`;
+endwhile (no)
+
+:aggregate accepted outputs into `inputArtifacts["module_design_documents"]`;
+:continue to `implementation_plan`;
+
+stop
+@enduml
+```
+
 ### 4.4 Constraints
 
 - `Pipeline` may depend on concrete stage capability only through registered `IStageRunner`.
