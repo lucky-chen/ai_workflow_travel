@@ -145,8 +145,8 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 3 is in progress
 - [x] Architecture modules in scope
   - [x] `Execution/ArchitectureDesignGenerator`
-  - [ ] `Contract/ArchitectureDesignContract`
-  - [ ] `Workflow/ArchitectureStageRunner`
+  - [x] `Contract/ArchitectureDesignContract`
+  - [x] `Workflow/ArchitectureStageRunner`
 - [x] Batch 1: architecture generation backbone
   - [x] architecture design prompt builder
   - [x] architecture-stage output builder
@@ -159,13 +159,13 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] architecture module-boundary consistency checks
   - [x] focused tests for contract success and failure
 - [ ] Batch 3: architecture stage runner flow
-  - [ ] `ArchitectureStageRunner`
-  - [ ] direct binding creation inside `ArchitectureStageRunner`
-  - [ ] `generate -> contract -> review` main flow
-  - [ ] architecture artifact persistence in runner
-  - [ ] architecture trace recording in runner
-  - [ ] architecture gate review flow
-  - [ ] focused tests for runner and stage flow
+  - [x] `ArchitectureStageRunner`
+  - [x] direct binding creation inside `ArchitectureStageRunner`
+  - [x] `generate -> contract -> review` main flow
+  - [x] architecture artifact persistence in runner
+  - [x] architecture trace recording in runner
+  - [x] architecture gate review flow
+  - [x] focused tests for runner and stage flow
 - [ ] Batch 4: architecture-stage runtime alignment
   - [ ] load requirement-stage artifacts as generation input
   - [ ] align output artifacts with module-design stage needs
