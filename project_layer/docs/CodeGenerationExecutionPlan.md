@@ -225,7 +225,7 @@ Already built:
 - [x] planned change output
 - [x] `ImplementationContract`
 - [x] `ImplementationStageRunner`
-- [x] `generate -> contract -> review -> apply` main flow
+- [x] step-execution vertical slice
 - [x] runnable tests for the vertical slice
 
 Still missing:
@@ -237,21 +237,23 @@ Still missing:
   - [ ] persist accepted `workplan`
   - [ ] handoff accepted `workplan` into `implementation_step_execution`
 - [ ] Batch 5: execution-environment contract validation
-  - [ ] make `ImplementationContract` validate generated changes in a prepared execution environment
+  - [ ] make `ImplementationContract` validate step-execution generated changes in a prepared execution environment
   - [ ] apply generated changes into prepared validation workspace before test execution
   - [ ] isolate validation workspace lifecycle from user workspace
   - [ ] extend tests for prepared-environment success and failure cases
 - [ ] Batch 6: implementation step runner persistence and trace
   - [ ] persist implementation-stage artifacts after successful runner completion
+  - [ ] load `implementation_workplan` and `current_step` as step-execution runtime input
   - [ ] record trace for stage start
   - [ ] record trace for contract result
   - [ ] record trace for gate result
-  - [ ] record trace for final apply result
+  - [ ] record trace for final step result
   - [ ] extend tests for artifact persistence and trace flow
 - [ ] Batch 7: step review and runtime semantics alignment
   - [ ] support review `comment`
   - [ ] align plan-step review outcomes with next-step transition semantics
   - [ ] align step execution input with workplan-driven context loading
+  - [ ] remove residual single-module execution assumptions
   - [ ] fully align implementation-plan and step-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes
 
