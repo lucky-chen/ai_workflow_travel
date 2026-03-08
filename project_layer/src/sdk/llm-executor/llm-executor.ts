@@ -1,12 +1,11 @@
 // LLM executor module: public entry for shared LLM execution.
+import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { StringMap } from "../../shared/types/common.js";
 import { createLlmExecutor } from "./llm-executor-factory.js";
 import type { LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
-import type { ILlmTraceRecorder } from "./llm-trace-recorder.js";
 
 export type { LlmExecutorMode, LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
 export type { RealLlmProvider, RealProviderConfig } from "./real-provider-config.js";
-export type { ILlmTraceRecorder, LlmTraceEvent } from "./llm-trace-recorder.js";
 
 export interface PromptInput {
   systemPrompt: string;
@@ -32,16 +31,17 @@ export interface ILlmExecutor {
 // Public API: shared LLM execution entry used by generation and contract modules.
 export class LlmExecutorService implements ILlmExecutor {
   private readonly executor: ILlmExecutor;
-  private readonly llmTraceRecorder?: ILlmTraceRecorder;
+  private readonly traceRecorder?: ITraceRecorder;
 
-  constructor(dependencies: LlmExecutorServiceDependencies & { llmTraceRecorder?: ILlmTraceRecorder } = {}) {
+  constructor(dependencies: LlmExecutorServiceDependencies & { traceRecorder?: ITraceRecorder } = {}) {
     this.executor = createLlmExecutor(dependencies);
-    this.llmTraceRecorder = dependencies.llmTraceRecorder;
+    this.traceRecorder = dependencies.traceRecorder;
   }
 
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
-    await this.llmTraceRecorder?.record({
-      eventType: "execution_started",
+    await this.traceRecorder?.recordTrace({
+      taskId: "llm-executor",
+      eventType: "llm_execution_started",
       summary: "LLM execution started.",
       metadata: {
         responseFormat: request.responseFormat,
@@ -50,8 +50,9 @@ export class LlmExecutorService implements ILlmExecutor {
 
     const result = await this.executor.execute(request);
 
-    await this.llmTraceRecorder?.record({
-      eventType: "execution_finished",
+    await this.traceRecorder?.recordTrace({
+      taskId: "llm-executor",
+      eventType: "llm_execution_finished",
       summary: "LLM execution finished.",
       metadata: {
         responseFormat: result.responseFormat,

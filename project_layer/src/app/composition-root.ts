@@ -3,14 +3,12 @@ import { HistoryStoreService } from "../data/history-store/history-store.js";
 import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
 import { TraceService } from "../quality-gate/trace/trace-recorder.js";
 import { LlmExecutorService, type LlmExecutorServiceDependencies } from "../sdk/llm-executor/llm-executor.js";
-import { InMemoryLlmTraceRecorder } from "../sdk/llm-executor/llm-trace-recorder.js";
 
 export interface ApplicationServices {
   artifactStore: ArtifactStoreService;
   historyStore: HistoryStoreService;
   traceRecorder: TraceService;
   changeGate: InMemoryChangeGate;
-  llmTraceRecorder: InMemoryLlmTraceRecorder;
   llmExecutor: LlmExecutorService;
 }
 
@@ -25,10 +23,9 @@ export function createApplicationServices(options: CompositionRootOptions = {}):
   const historyStore = new HistoryStoreService(options.historyStorageRoot);
   const traceRecorder = new TraceService(historyStore);
   const changeGate = new InMemoryChangeGate();
-  const llmTraceRecorder = new InMemoryLlmTraceRecorder();
   const llmExecutor = new LlmExecutorService({
     ...options.llmExecutor,
-    llmTraceRecorder,
+    traceRecorder,
   });
 
   return {
@@ -36,7 +33,6 @@ export function createApplicationServices(options: CompositionRootOptions = {}):
     historyStore,
     traceRecorder,
     changeGate,
-    llmTraceRecorder,
     llmExecutor,
   };
 }

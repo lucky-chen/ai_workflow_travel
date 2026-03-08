@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 
+import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 import { ExecutionStrategySelector } from "../src/sdk/llm-executor/execution-strategy-selector.js";
 import { LlmExecutorService } from "../src/sdk/llm-executor/llm-executor.js";
 import type { FetchLike } from "../src/sdk/llm-executor/http-json-client.js";
-import { InMemoryLlmTraceRecorder } from "../src/sdk/llm-executor/llm-trace-recorder.js";
 
 export async function runLlmExecutorTests(): Promise<void> {
   await testExecutionStrategySelectorDefaultsToMock();
@@ -21,10 +21,10 @@ export async function runLlmExecutorTests(): Promise<void> {
 }
 
 async function testLlmTraceRecorderIntegration(): Promise<void> {
-  const llmTraceRecorder = new InMemoryLlmTraceRecorder();
+  const traceRecorder = new InMemoryTraceRecorder();
   const executor = new LlmExecutorService({
     mockContent: "trace-aware mock",
-    llmTraceRecorder,
+    traceRecorder,
   });
 
   const result = await executor.execute({
@@ -36,9 +36,9 @@ async function testLlmTraceRecorderIntegration(): Promise<void> {
   });
 
   assert.equal(result.content, "trace-aware mock");
-  assert.deepEqual(llmTraceRecorder.getEvents().map((entry) => entry.event.eventType), [
-    "execution_started",
-    "execution_finished",
+  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+    "llm_execution_started",
+    "llm_execution_finished",
   ]);
 }
 
