@@ -21,7 +21,7 @@ export async function runRequirementContractTests(): Promise<void> {
 }
 
 async function testRequirementContractPassesForStructuredDocument(workspaceRoot: string): Promise<void> {
-  const contract = new RequirementContract({ llmExecutor: new RequirementContractMockLlmExecutor() });
+  const contract = new RequirementContract(new RequirementContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-1",
@@ -49,7 +49,7 @@ async function testRequirementContractPassesForStructuredDocument(workspaceRoot:
 }
 
 async function testRequirementContractFailsForMissingSections(workspaceRoot: string): Promise<void> {
-  const contract = new RequirementContract({ llmExecutor: new RequirementContractMockLlmExecutor() });
+  const contract = new RequirementContract(new RequirementContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-2",
@@ -80,7 +80,7 @@ async function testRequirementContractFailsForMissingSections(workspaceRoot: str
 async function testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(
   workspaceRoot: string,
 ): Promise<void> {
-  const contract = new RequirementContract({ llmExecutor: new RequirementContractMockLlmExecutor() });
+  const contract = new RequirementContract(new RequirementContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-3",
@@ -112,9 +112,7 @@ async function testRequirementContractFailsForTemplatePlaceholdersAndImplementat
 }
 
 async function testRequirementContractRejectsInvalidLlmResult(workspaceRoot: string): Promise<void> {
-  const contract = new RequirementContract({
-    llmExecutor: new InvalidJsonLlmExecutor(),
-  });
+  const contract = new RequirementContract(new InvalidJsonLlmExecutor());
 
   await assert.rejects(
     contract.check(

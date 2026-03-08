@@ -6,7 +6,7 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
-import type { ILlmExecutor, LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
+import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
 import type { RequirementArtifacts } from "../../execution/requirement-generator/requirement-generator.js";
 import {
   DocumentStageContract,
@@ -26,10 +26,6 @@ const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
 );
 
 export class RequirementContract extends DocumentStageContract {
-  constructor(dependencies: { llmExecutor?: ILlmExecutor } = {}) {
-    super(dependencies.llmExecutor);
-  }
-
   protected getContractFilePath(): string {
     return REQUIREMENT_TEMPLATE_CONTRACT_PATH;
   }

@@ -20,9 +20,7 @@ export class RequirementStageRunner extends BaseStageRunner {
 
   constructor(dependencies: RequirementStageRunnerDependencies) {
     super(dependencies);
-    this.contractChecker = new RequirementContract({
-      llmExecutor: dependencies.llmExecutor,
-    });
+    this.contractChecker = new RequirementContract(dependencies.llmExecutor);
   }
 
   async run(context: StageRunContext): Promise<StageOutput<RequirementArtifacts & { requirement_document: string }>> {
