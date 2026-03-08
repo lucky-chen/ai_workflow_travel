@@ -125,8 +125,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] align `buildCheckRequest(...)` with contract-check prompt construction
   - [x] make request shape compatible with later `ILlmExecutor` integration
   - [x] define stable prompt input for requirement document and contract spec
-  - [ ] execute requirement contract checks through real `ILlmExecutor`
-  - [ ] parse real `LlmExecutionResult` into stable `ContractCheckResult`
+  - [x] execute requirement contract checks through real `ILlmExecutor`
+  - [x] parse real `LlmExecutionResult` into stable `ContractCheckResult`
   - [x] extend tests for prompt request construction and result mapping
 - [x] Batch 3: requirement stage runner flow
   - [x] `RequirementStageRunner`

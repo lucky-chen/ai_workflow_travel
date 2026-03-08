@@ -5,6 +5,7 @@ import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.
 import { ArchitectureStageRunner } from "../src/workflow/stage-runners/architecture-stage-runner.js";
 import { RequirementStageRunner } from "../src/workflow/stage-runners/requirement-stage-runner.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 import { PipelineService } from "../src/workflow/pipeline/pipeline.js";
 import type { IStageRunner, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
 import {
@@ -44,7 +45,11 @@ async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: s
         {
           stageId: "requirement_interpretation",
           launchRequirements: ["requirement_document"],
-          runner: new RequirementStageRunner({ artifactStore, traceRecorder }),
+          runner: new RequirementStageRunner({
+            artifactStore,
+            traceRecorder,
+            llmExecutor: new ApproveRequirementContractLlmExecutor(),
+          }),
           nextStageId: "architecture_design",
         },
         {
@@ -110,5 +115,18 @@ async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: s
     ]);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
+  }
+}
+
+class ApproveRequirementContractLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: JSON.stringify({
+        passed: true,
+        summary: "Requirement document passed contract checks.",
+        issues: [],
+      }),
+      responseFormat: "json",
+    };
   }
 }

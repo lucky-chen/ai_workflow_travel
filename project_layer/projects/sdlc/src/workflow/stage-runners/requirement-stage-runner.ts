@@ -1,11 +1,13 @@
 import type { GateDecision, IArtifactStore, IChangeGate, ITraceRecorder, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
+import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import { RequirementContract } from "../../contract/requirement-contract/requirement-contract.js";
 import { RequirementGenerator, type RequirementArtifacts } from "../../execution/requirement-generator/requirement-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 
 export interface RequirementStageRunnerDependencies extends BaseStageRunnerDependencies {
   artifactStore: IArtifactStore;
+  llmExecutor: ILlmExecutor;
   traceRecorder?: ITraceRecorder;
   changeGate?: IChangeGate;
 }
@@ -14,10 +16,13 @@ const REQUIREMENT_ARTIFACT_PATH = "docs/requirements/Requirement.md";
 
 export class RequirementStageRunner extends BaseStageRunner {
   private readonly generator = new RequirementGenerator();
-  private readonly contractChecker = new RequirementContract();
+  private readonly contractChecker: RequirementContract;
 
   constructor(dependencies: RequirementStageRunnerDependencies) {
     super(dependencies);
+    this.contractChecker = new RequirementContract({
+      llmExecutor: dependencies.llmExecutor,
+    });
   }
 
   async run(context: StageRunContext): Promise<StageOutput<RequirementArtifacts & { requirement_document: string }>> {

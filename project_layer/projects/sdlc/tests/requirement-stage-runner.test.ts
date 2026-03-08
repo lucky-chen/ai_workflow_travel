@@ -5,6 +5,7 @@ import path from "node:path";
 import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.js";
 import { InMemoryChangeGate } from "../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 import { RequirementStageRunner } from "../src/workflow/stage-runners/requirement-stage-runner.js";
 
 export async function runRequirementStageRunnerTests(): Promise<void> {
@@ -31,6 +32,7 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(
     artifactStore,
     traceRecorder,
     changeGate,
+    llmExecutor: new ApproveRequirementContractLlmExecutor(),
   });
   const content = createRequirementDocument();
 
@@ -73,6 +75,7 @@ async function testRequirementStageRunnerRejectStopsPersistence(
         summary: "Rejected in review.",
       },
     }),
+    llmExecutor: new ApproveRequirementContractLlmExecutor(),
   });
 
   await assert.rejects(
@@ -172,4 +175,17 @@ function createRequirementDocument(): string {
     "## 10.1 Timeline",
     "- review points must remain explicit.",
   ].join("\n");
+}
+
+class ApproveRequirementContractLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: JSON.stringify({
+        passed: true,
+        summary: "Requirement document passed contract checks.",
+        issues: [],
+      }),
+      responseFormat: "json",
+    };
+  }
 }

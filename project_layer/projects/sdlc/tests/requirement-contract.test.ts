@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { RequirementContract } from "../src/contract/requirement-contract/requirement-contract.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 
 export async function runRequirementContractTests(): Promise<void> {
   const workspaceRoot = await createTempDir("requirement-contract-");
@@ -11,6 +12,7 @@ export async function runRequirementContractTests(): Promise<void> {
     await testRequirementContractPassesForStructuredDocument(workspaceRoot);
     await testRequirementContractFailsForMissingSections(workspaceRoot);
     await testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(workspaceRoot);
+    await testRequirementContractRejectsInvalidLlmResult(workspaceRoot);
     await testRequirementContractLoadsTemplateContractSource();
     await testRequirementContractBuildsPromptRequest(workspaceRoot);
   } finally {
@@ -19,7 +21,7 @@ export async function runRequirementContractTests(): Promise<void> {
 }
 
 async function testRequirementContractPassesForStructuredDocument(workspaceRoot: string): Promise<void> {
-  const contract = new RequirementContract();
+  const contract = new RequirementContract({ llmExecutor: new RequirementContractMockLlmExecutor() });
   const result = await contract.check(
     {
       taskId: "task-1",
@@ -47,7 +49,7 @@ async function testRequirementContractPassesForStructuredDocument(workspaceRoot:
 }
 
 async function testRequirementContractFailsForMissingSections(workspaceRoot: string): Promise<void> {
-  const contract = new RequirementContract();
+  const contract = new RequirementContract({ llmExecutor: new RequirementContractMockLlmExecutor() });
   const result = await contract.check(
     {
       taskId: "task-2",
@@ -78,7 +80,7 @@ async function testRequirementContractFailsForMissingSections(workspaceRoot: str
 async function testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(
   workspaceRoot: string,
 ): Promise<void> {
-  const contract = new RequirementContract();
+  const contract = new RequirementContract({ llmExecutor: new RequirementContractMockLlmExecutor() });
   const result = await contract.check(
     {
       taskId: "task-3",
@@ -106,6 +108,34 @@ async function testRequirementContractFailsForTemplatePlaceholdersAndImplementat
   assert.equal(
     result.issues.some((issue) => issue.message.includes("implementation-level detail")),
     true,
+  );
+}
+
+async function testRequirementContractRejectsInvalidLlmResult(workspaceRoot: string): Promise<void> {
+  const contract = new RequirementContract({
+    llmExecutor: new InvalidJsonLlmExecutor(),
+  });
+
+  await assert.rejects(
+    contract.check(
+      {
+        taskId: "task-invalid",
+        stageId: "requirement_interpretation",
+        attempt: 1,
+        workspaceRoot,
+        inputArtifacts: {},
+      },
+      {
+        stageId: "requirement_interpretation",
+        success: true,
+        summary: "Requirement document loaded.",
+        artifacts: {
+          artifactKey: "requirement_document",
+          content: createRequirementDocument(),
+        },
+      },
+    ),
+    /Unexpected token|must contain/,
   );
 }
 
@@ -292,4 +322,99 @@ function createRequirementDocument(): string {
     "## 10.1 Timeline",
     "- review points must remain explicit.",
   ].join("\n");
+}
+
+class RequirementContractMockLlmExecutor implements ILlmExecutor {
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    const payload = JSON.parse(request.prompt.userPrompt) as {
+      generatedResult: string;
+      contractSpec: {
+        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+        section_contracts: Array<{ section_id: string; title: string }>;
+      };
+    };
+
+    const generatedResult = payload.generatedResult;
+    const contractSpec = payload.contractSpec;
+    const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
+
+    if (generatedResult.length === 0) {
+      issues.push({
+        checkItem: "requirement_document_not_empty",
+        message: "Requirement document content must not be empty.",
+        severity: "high",
+      });
+    }
+
+    for (const section of contractSpec.section_contracts.filter((entry) => !entry.section_id.includes("."))) {
+      const headingCandidates = [`# ${section.section_id}. ${section.title}`, `# ${section.section_id} ${section.title}`];
+      if (!headingCandidates.some((heading) => generatedResult.includes(heading))) {
+        issues.push({
+          checkItem: "document_structure_complete",
+          message: `Missing required heading for section ${section.section_id}: ${section.title}`,
+          severity: "high",
+        });
+      }
+    }
+
+    const scopeContract = contractSpec.document_contracts.find((entry) => entry.check_item === "requirement_scope_consistency");
+    if (/{[^}]+}/.test(generatedResult)) {
+      issues.push({
+        checkItem: scopeContract?.check_item ?? "requirement_scope_consistency",
+        message: "Requirement document still contains unresolved template placeholders.",
+        severity: scopeContract?.severity ?? "high",
+      });
+    }
+    if (/\bclass\s+\w+/i.test(generatedResult) || /\bAPI endpoint\b/i.test(generatedResult)) {
+      issues.push({
+        checkItem: scopeContract?.check_item ?? "requirement_scope_consistency",
+        message: "Requirement document appears to contain implementation-level detail.",
+        severity: scopeContract?.severity ?? "high",
+      });
+    }
+
+    const alignmentContract = contractSpec.document_contracts.find((entry) => entry.check_item === "workflow_and_goal_alignment");
+    if (!generatedResult.includes("# 3. Product Goals") || !/^\s*-\s+/m.test(extractSection(generatedResult, "# 3. Product Goals"))) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "workflow_and_goal_alignment",
+        message: "Product Goals section should include concrete goal items.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+
+    return {
+      content: JSON.stringify({
+        passed: issues.length === 0,
+        summary: issues.length === 0
+          ? "Requirement document passed contract checks."
+          : "Requirement document failed contract checks.",
+        issues,
+      }),
+      responseFormat: "json",
+    };
+  }
+}
+
+class InvalidJsonLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: "{not-json",
+      responseFormat: "json",
+    };
+  }
+}
+
+function extractSection(content: string, heading: string): string {
+  const startIndex = content.indexOf(heading);
+  if (startIndex < 0) {
+    return "";
+  }
+
+  const rest = content.slice(startIndex + heading.length);
+  const nextHeadingOffset = rest.search(/\n# /);
+  if (nextHeadingOffset < 0) {
+    return rest;
+  }
+
+  return rest.slice(0, nextHeadingOffset);
 }
