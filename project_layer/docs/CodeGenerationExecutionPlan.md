@@ -81,8 +81,8 @@ Still missing:
 - [ ] Trace persistence through `HistoryStore`
 - [x] Gate decision trace recording
 - [ ] `ChangeReviewPresenter`
-- [ ] Full CLI trace rendering
-- [ ] Full CLI review interaction
+- [x] Full CLI trace rendering
+- [x] Full CLI review interaction
 - [ ] `LlmExecutor` strategy layer
 - [ ] `ExecutionStrategySelector`
 - [ ] `IAgent`

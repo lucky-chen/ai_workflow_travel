@@ -3,8 +3,8 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import type { IPipeline, LaunchTaskRequest } from "../../shared/contracts/pipeline.js";
 import type { GateDecision } from "../../shared/contracts/change-gate.js";
+import type { TraceEvent } from "../../shared/contracts/trace.js";
 import type { ChangedFile } from "../../shared/types/common.js";
-import type { StringMap } from "../../shared/types/common.js";
 
 export interface ParsedCommand {
   command: string;
@@ -25,6 +25,7 @@ export interface IReviewInteraction {
 
 export interface TraceViewer {
   renderStatus(message: string): void;
+  renderTrace(event: TraceEvent): void;
   renderResult(summary: string): void;
 }
 
@@ -107,6 +108,11 @@ export class ConsoleTraceViewer implements TraceViewer {
     process.stdout.write(`${message}\n`);
   }
 
+  renderTrace(event: TraceEvent): void {
+    const scope = event.stageId ? `[${event.stageId}] ` : "";
+    process.stdout.write(`${scope}${event.eventType}: ${event.summary}\n`);
+  }
+
   renderResult(summary: string): void {
     process.stdout.write(`${summary}\n`);
   }
@@ -128,11 +134,20 @@ export class ConsoleReviewInteraction implements IReviewInteraction {
       );
     }
 
-    const answer = (await this.promptAdapter.ask("Apply changes? [apply/reject]: ")).trim().toLowerCase();
+    const answer = (await this.promptAdapter.ask("Apply changes? [apply/reject/comment]: ")).trim().toLowerCase();
     if (answer === "reject") {
       return {
         action: "reject",
         summary: "User rejected the change set.",
+      };
+    }
+
+    if (answer === "comment") {
+      const comment = (await this.promptAdapter.ask("Enter review comment: ")).trim();
+      return {
+        action: "wait",
+        summary: "User requested changes before apply.",
+        comment,
       };
     }
 
@@ -170,6 +185,11 @@ export class CLIService implements ICLI {
   async run(argv: string[]): Promise<number> {
     const parsed = this.commandParser.parse(argv);
     const request = this.requestMapper.map(parsed);
+    this.traceViewer.renderTrace({
+      taskId: "pending",
+      eventType: "task_launch_requested",
+      summary: `Launching command "${parsed.command}" for stage "${request.startStageId}".`,
+    });
     const taskId = await this.pipelineClient.launchTask(request);
     this.traceViewer.renderStatus(`Task launched: ${taskId}`);
     this.traceViewer.renderResult(`Completed command: ${parsed.command}`);

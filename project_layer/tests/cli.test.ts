@@ -44,6 +44,9 @@ export async function runCliTests(): Promise<void> {
     renderStatus(message: string): void {
       rendered.push(`status:${message}`);
     },
+    renderTrace(event): void {
+      rendered.push(`trace:${event.eventType}:${event.summary}`);
+    },
     renderResult(summary: string): void {
       rendered.push(`result:${summary}`);
     },
@@ -77,6 +80,7 @@ export async function runCliTests(): Promise<void> {
     },
   });
   assert.deepEqual(rendered, [
+    'trace:task_launch_requested:Launching command "generate" for stage "implementation".',
     "status:Task launched: task-cli-1",
     "result:Completed command: generate",
   ]);
@@ -122,5 +126,26 @@ export async function runCliTests(): Promise<void> {
   assert.deepEqual(rejectDecision, {
     action: "reject",
     summary: "User rejected the change set.",
+  });
+
+  const commentInteraction = new ConsoleReviewInteraction({
+    async ask(prompt: string): Promise<string> {
+      if (prompt.includes("Apply changes?")) {
+        return "comment";
+      }
+
+      return "Please regenerate the service layer.";
+    },
+    write(): void {},
+  });
+  const commentDecision = await commentInteraction.waitForReview({
+    reviewId: "review-3",
+    summary: "Comment on generated changes.",
+    changedFiles: [],
+  });
+  assert.deepEqual(commentDecision, {
+    action: "wait",
+    summary: "User requested changes before apply.",
+    comment: "Please regenerate the service layer.",
   });
 }
