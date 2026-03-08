@@ -105,7 +105,7 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 2. Deliver `requirement_interpretation` Stage
 
-- [x] Step 2 is completed
+- [x] Step 2 is in progress
 - [x] Architecture modules in scope
   - [x] `Execution/RequirementGenerator`
   - [x] `Contract/RequirementContract`
@@ -125,6 +125,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] align `buildCheckRequest(...)` with contract-check prompt construction
   - [x] make request shape compatible with later `ILlmExecutor` integration
   - [x] define stable prompt input for requirement document and contract spec
+  - [ ] execute requirement contract checks through real `ILlmExecutor`
+  - [ ] parse real `LlmExecutionResult` into stable `ContractCheckResult`
   - [x] extend tests for prompt request construction and result mapping
 - [x] Batch 3: requirement stage runner flow
   - [x] `RequirementStageRunner`
@@ -157,6 +159,9 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] architecture document structure checks
   - [x] architecture section-contract alignment checks
   - [x] architecture module-boundary consistency checks
+  - [x] architecture contract-check prompt construction
+  - [ ] real `ILlmExecutor`-based architecture contract execution
+  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
 - [ ] Batch 3: architecture stage runner flow
   - [x] `ArchitectureStageRunner`
@@ -174,7 +179,7 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 4. Deliver `module_design` Stage
 
-- [ ] Step 4 is not started
+- [x] Step 4 is in progress
 - [ ] Architecture modules in scope
   - [x] `Execution/ModuleDesignGenerator`
   - [x] `Contract/ModuleDesignContract`
@@ -189,6 +194,9 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] module design document structure checks
   - [x] class-diagram and section-contract alignment checks
   - [x] module dependency and responsibility consistency checks
+  - [x] module-design contract-check prompt construction
+  - [ ] real `ILlmExecutor`-based module-design contract execution
+  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
 - [ ] Batch 3: module-design stage runner flow
   - [ ] `ModuleStageRunner`
@@ -223,6 +231,7 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 2: implementation contract and runner backbone
   - [x] `ImplementationContract`
   - [x] `ImplementationStageRunner`
+  - [ ] review whether `ImplementationContract` needs prompt-shaped request and real `ILlmExecutor` execution tasks
   - [x] step-execution vertical slice through `generate -> contract -> review -> apply`
 - [ ] Batch 3: implementation plan generation flow
   - [ ] generate ordered project-level `workplan`
@@ -275,6 +284,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] `ValidationContract`
   - [ ] final workspace validation checks
   - [ ] final artifact completeness checks
+  - [ ] review whether `ValidationContract` needs prompt-shaped request and real `ILlmExecutor` execution tasks
   - [ ] validation result builder
   - [ ] focused tests for contract success and failure
 - [ ] Batch 3: validation stage runner flow
@@ -365,9 +375,9 @@ This step delivers the shared runtime backbone used by all stages.
 ## 4. Current Status Summary
 
 - [x] Step 1 has a usable V1 backbone
-- [ ] Step 2 is not started
-- [ ] Step 3 is not started
-- [ ] Step 4 is not started
+- [x] Step 2 is in progress
+- [x] Step 3 is in progress
+- [x] Step 4 is in progress
 - [x] Step 5 is in progress
 - [ ] Step 6 is not started
 - [ ] Step 7 is not started
