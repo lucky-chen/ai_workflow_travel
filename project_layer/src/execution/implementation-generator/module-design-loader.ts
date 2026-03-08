@@ -1,5 +1,5 @@
 // Module design loader: resolves and loads the upstream module design artifact for implementation generation.
-import type { IArtifactStore } from "../../data/artifact-store/artifact-store.js";
+import type { IArtifactStore } from "../../shared/contracts/pipeline.js";
 import type { StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, ArtifactRef } from "../../shared/types/common.js";
 import type { ModuleDesignDoc } from "./types.js";

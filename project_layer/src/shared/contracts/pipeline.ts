@@ -2,10 +2,13 @@
 import type {
   ArtifactMap,
   ChangedFile,
+  FilePath,
   IssueSeverity,
+  ReviewAction,
   StageId,
   StringMap,
   TaskId,
+  TraceRef,
 } from "../types/common.js";
 
 export interface StageRunContext {
@@ -60,6 +63,61 @@ export interface ContractCheckResult {
   issues: ContractIssue[];
 }
 
+export interface WriteArtifactRequest {
+  taskId: TaskId;
+  stageId: StageId;
+  filePath: FilePath;
+  content: string;
+}
+
+export interface GetArtifactRequest {
+  taskId: TaskId;
+  stageId: StageId;
+  filePath: FilePath;
+}
+
+export interface ListArtifactRequest {
+  taskId: TaskId;
+  stageId: StageId;
+  rootDir: FilePath;
+}
+
+export interface IArtifactStore {
+  writeArtifact(request: WriteArtifactRequest): Promise<boolean>;
+  getArtifact(request: GetArtifactRequest): Promise<string>;
+  listArtifacts(query: ListArtifactRequest): Promise<string[]>;
+}
+
+export interface TraceEvent {
+  taskId: TaskId;
+  stageId?: StageId;
+  eventType: string;
+  summary: string;
+  metadata?: StringMap;
+}
+
+export interface ITraceRecorder {
+  recordTrace(event: TraceEvent): Promise<TraceRef>;
+}
+
+export interface ChangeReviewRequest {
+  taskId: TaskId;
+  stageId: StageId;
+  summary: string;
+  changedPaths: string[];
+  changedFiles: ChangedFile[];
+}
+
+export interface GateDecision {
+  action: ReviewAction;
+  summary: string;
+  comment?: string;
+}
+
+export interface IChangeGate {
+  review(changeRequest: ChangeReviewRequest): Promise<GateDecision>;
+}
+
 export interface IStageGenerator<TOutput extends StageOutput = StageOutput> {
   run(context: StageRunContext): Promise<TOutput>;
 }
@@ -76,7 +134,7 @@ export interface StageDefinition {
 }
 
 export interface StageRunnerSharedDependencies {
-  traceRecorder?: import("../../quality-gate/trace/trace-recorder.js").ITraceRecorder;
+  traceRecorder?: ITraceRecorder;
 }
 
 export interface IContractChecker {

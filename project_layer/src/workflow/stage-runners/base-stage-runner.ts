@@ -1,14 +1,16 @@
-import type { IArtifactStore } from "../../data/artifact-store/artifact-store.js";
 import type {
+  ChangeReviewRequest,
   ContractCheckResult,
+  GateDecision,
+  IArtifactStore,
+  IChangeGate,
   IContractChecker,
   IStageRunner,
+  ITraceRecorder,
   StageOutput,
   StageRunContext,
   StageRunnerSharedDependencies,
 } from "../../shared/contracts/pipeline.js";
-import type { ChangeReviewRequest, GateDecision, IChangeGate } from "../../quality-gate/change-gate/change-gate.js";
-import type { ITraceRecorder } from "../../quality-gate/trace/trace-recorder.js";
 
 export interface BaseStageRunnerDependencies extends StageRunnerSharedDependencies {
   changeGate?: IChangeGate;

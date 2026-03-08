@@ -1,5 +1,5 @@
 // Implementation generator module: public entry for implementation generation.
-import type { IArtifactStore } from "../../data/artifact-store/artifact-store.js";
+import type { IArtifactStore } from "../../shared/contracts/pipeline.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import type {
   IStageGenerator,
