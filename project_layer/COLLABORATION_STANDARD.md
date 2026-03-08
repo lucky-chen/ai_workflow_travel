@@ -29,9 +29,9 @@ This document defines the shared collaboration standard for all work under `proj
 - For test files, prefer one entry function plus multiple small test-case functions grouped by behavior.
 - New generated code should default to clear structure first, not just minimal line count.
 
-## 4. JIT Commit Rule
+## 4. Git Commit Rule
 
-- After each completed round of engineering file changes, Codex must create one JIT commit.
+- After each completed round of engineering file changes, Codex must create one git commit.
 - Commit messages must be written in English.
 - Human-authored commits must use the format: `[Human]: <summary>`
 - AI-authored commits must use the format: `[AI] <Model>: <summary>`
