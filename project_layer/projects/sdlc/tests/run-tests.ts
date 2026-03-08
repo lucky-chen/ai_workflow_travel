@@ -7,6 +7,7 @@ import { runCliTests } from "./cli.test.js";
 import { runImplementationContractTests } from "./implementation-contract.test.js";
 import { runImplementationPlanContractTests } from "./implementation-plan-contract.test.js";
 import { runImplementationPlanGeneratorTests } from "./implementation-plan-generator.test.js";
+import { runImplementationPlanStageRunnerTests } from "./implementation-plan-stage-runner.test.js";
 import { runImplementationGeneratorTests } from "./implementation-generator.test.js";
 import { runImplementationStageRunnerTests } from "./implementation-stage-runner.test.js";
 import { runHistoryStoreTests } from "./history-store.test.js";
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   await runImplementationContractTests();
   await runImplementationPlanContractTests();
   await runImplementationPlanGeneratorTests();
+  await runImplementationPlanStageRunnerTests();
   await runImplementationGeneratorTests();
   await runImplementationStageRunnerTests();
   await runLlmExecutorTests();

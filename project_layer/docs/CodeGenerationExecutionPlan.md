@@ -235,14 +235,14 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] real `ILlmExecutor`-based implementation-plan contract execution
   - [x] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
-- [ ] Batch 3: implementation plan stage runner flow
-  - [ ] `ImplementationPlanStageRunner`
-  - [ ] direct binding creation inside `ImplementationPlanStageRunner`
-  - [ ] `generate -> contract -> review` main flow
-  - [ ] persist accepted `workplan`
-  - [ ] implementation-plan trace recording in runner
-  - [ ] implementation-plan gate review flow
-  - [ ] focused tests for runner and stage flow
+- [x] Batch 3: implementation plan stage runner flow
+  - [x] `ImplementationPlanStageRunner`
+  - [x] direct binding creation inside `ImplementationPlanStageRunner`
+  - [x] `generate -> contract -> review` main flow
+  - [x] persist accepted `workplan`
+  - [x] implementation-plan trace recording in runner
+  - [x] implementation-plan gate review flow
+  - [x] focused tests for runner and stage flow
 - [ ] Batch 4: implementation-plan runtime alignment
   - [ ] handoff accepted `workplan` into `implementation_execution`
   - [ ] align implementation-plan output artifacts with implementation-execution input needs
