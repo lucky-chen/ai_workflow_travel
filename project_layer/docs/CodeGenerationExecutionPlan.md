@@ -201,41 +201,36 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 5. Deliver `implementation_plan_generation` and `implementation_step_execution` Stages
 
-Status:
-
-- [x] In progress
-
-Architecture modules in scope:
-
-- `Execution/ImplementationPlanGenerator`
-- `Contract/ImplementationPlanContract`
-- `Workflow/ImplementationPlanStageRunner`
-- `Execution/ImplementationGenerator`
-- `Contract/ImplementationContract`
-- `Workflow/ImplementationStageRunner`
-
-Already built:
-
-- [ ] `ImplementationPlanGenerator`
-- [ ] `ImplementationPlanContract`
-- [ ] `ImplementationPlanStageRunner`
-- [x] `ImplementationGenerator`
-- [x] implementation prompt builder
-- [x] change parsing
-- [x] planned change output
-- [x] `ImplementationContract`
-- [x] `ImplementationStageRunner`
-- [x] step-execution vertical slice
-- [x] runnable tests for the vertical slice
-
-Still missing:
-
-- [ ] Batch 4: implementation plan generation flow
+- [x] Step 5 is in progress
+- [x] Architecture modules in scope
+  - [ ] `Execution/ImplementationPlanGenerator`
+  - [ ] `Contract/ImplementationPlanContract`
+  - [ ] `Workflow/ImplementationPlanStageRunner`
+  - [x] `Execution/ImplementationGenerator`
+  - [x] `Contract/ImplementationContract`
+  - [x] `Workflow/ImplementationStageRunner`
+- [ ] Batch 1: implementation step-execution vertical slice
+  - [x] `ImplementationGenerator` prototype
+  - [x] implementation prompt builder prototype
+  - [x] change parsing
+  - [x] planned change output
+  - [x] runnable tests for the vertical slice
+- [ ] Batch 2: implementation contract and runner backbone
+  - [x] `ImplementationContract`
+  - [x] `ImplementationStageRunner`
+  - [x] step-execution vertical slice through `generate -> contract -> review -> apply`
+- [ ] Batch 3: implementation plan generation flow
   - [ ] generate ordered project-level `workplan`
   - [ ] load requirement, architecture, and all module-design documents as plan input
   - [ ] review generated `workplan`
   - [ ] persist accepted `workplan`
   - [ ] handoff accepted `workplan` into `implementation_step_execution`
+- [ ] Batch 4: implementation execution-context loading
+  - [ ] introduce workplan-aware execution-context loading for `ImplementationGenerator`
+  - [ ] load `implementation_workplan` and `current_step` as required runtime input
+  - [ ] load upstream `requirement_document` and `architecture_document` into implementation generation input
+  - [ ] load all relevant `module_design_documents` for the current execution step
+  - [ ] extend tests for execution-context loading and prompt input completeness
 - [ ] Batch 5: execution-environment contract validation
   - [ ] make `ImplementationContract` validate step-execution generated changes in a prepared execution environment
   - [ ] apply generated changes into prepared validation workspace before test execution
@@ -243,7 +238,6 @@ Still missing:
   - [ ] extend tests for prepared-environment success and failure cases
 - [ ] Batch 6: implementation step runner persistence and trace
   - [ ] persist implementation-stage artifacts after successful runner completion
-  - [ ] load `implementation_workplan` and `current_step` as step-execution runtime input
   - [ ] record trace for stage start
   - [ ] record trace for contract result
   - [ ] record trace for gate result
@@ -256,6 +250,10 @@ Still missing:
   - [ ] remove residual single-module execution assumptions
   - [ ] fully align implementation-plan and step-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes
+- [ ] Batch 8: implementation-step design and runtime alignment cleanup
+  - [ ] align `Execution/ImplementationGenerator` design doc with the current implementation transition state
+  - [ ] remove outdated single-module assumptions from docs and runtime naming
+  - [ ] update this execution plan after each completed implementation batch
 
 ### Step 6. Deliver `validation` Stage
 
