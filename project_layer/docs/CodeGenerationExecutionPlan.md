@@ -74,7 +74,7 @@ Still missing:
 - [x] `StageDefinition`
 - [x] `LaunchValidator`
 - [x] `BaseStageRunner`
-- [ ] Full generic pipeline orchestration
+- [x] Full generic pipeline orchestration
 - [x] Stage-to-stage continuation using `next_stage_id`
 - [x] Downstream input merge between stages
 - [ ] Retry/restart semantics

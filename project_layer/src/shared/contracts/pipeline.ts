@@ -24,6 +24,17 @@ export interface StageOutput<TArtifacts = unknown> {
   artifacts: TArtifacts;
 }
 
+export type TaskStatus = "pending" | "running" | "failed" | "completed";
+
+export interface TaskRecord {
+  taskId: TaskId;
+  startStageId: StageId;
+  currentStageId: StageId;
+  status: TaskStatus;
+  workspaceRoot: string;
+  lastOutput?: StageOutput;
+}
+
 export interface LaunchTaskRequest {
   startStageId: StageId;
   workspaceRoot: string;

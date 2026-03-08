@@ -4,6 +4,8 @@ import type {
   LaunchTaskRequest,
   StageOutput,
   StageRunContext,
+  TaskRecord,
+  TaskStatus,
 } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js";
 import type { ITraceRecorder } from "../../shared/contracts/trace.js";
@@ -21,7 +23,7 @@ export class PipelineService implements IPipeline {
   private readonly registry: StageRegistry;
   private readonly launchValidator: LaunchValidator;
   private readonly traceRecorder?: ITraceRecorder;
-  private readonly recentOutputs = new Map<TaskId, StageOutput>();
+  private readonly tasks = new Map<TaskId, TaskRecord>();
 
   constructor(dependencies: PipelineServiceDependencies) {
     this.registry = dependencies.registry;
@@ -31,7 +33,19 @@ export class PipelineService implements IPipeline {
 
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
     const taskId = this.createTaskId();
+    this.registry.validate();
     this.launchValidator.validate(request, this.registry);
+    this.tasks.set(taskId, {
+      taskId,
+      startStageId: request.startStageId,
+      currentStageId: request.startStageId,
+      status: "pending",
+      workspaceRoot: request.workspaceRoot,
+    });
+
+    this.updateTask(taskId, {
+      status: "running",
+    });
     await this.traceRecorder?.recordTrace({
       taskId,
       eventType: "task_started",
@@ -52,9 +66,15 @@ export class PipelineService implements IPipeline {
       };
 
       const output = await stage.runner.run(context);
-      this.recentOutputs.set(taskId, output);
+      this.updateTask(taskId, {
+        currentStageId,
+        lastOutput: output,
+      });
 
       if (this.resolveStageStatus(output) === "failed") {
+        this.updateTask(taskId, {
+          status: "failed",
+        });
         await this.traceRecorder?.recordTrace({
           taskId,
           stageId: currentStageId,
@@ -68,6 +88,12 @@ export class PipelineService implements IPipeline {
       currentStageId = stage.nextStageId ?? undefined;
     }
 
+    if (this.getTaskStatus(taskId) === "running") {
+      this.updateTask(taskId, {
+        status: "completed",
+      });
+    }
+
     await this.traceRecorder?.recordTrace({
       taskId,
       eventType: "task_finished",
@@ -78,11 +104,31 @@ export class PipelineService implements IPipeline {
   }
 
   getLastOutput(taskId: TaskId): StageOutput | undefined {
-    return this.recentOutputs.get(taskId);
+    return this.tasks.get(taskId)?.lastOutput;
+  }
+
+  getTaskStatus(taskId: TaskId): TaskStatus | undefined {
+    return this.tasks.get(taskId)?.status;
+  }
+
+  getTaskRecord(taskId: TaskId): TaskRecord | undefined {
+    return this.tasks.get(taskId);
   }
 
   private createTaskId(): TaskId {
     return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private updateTask(taskId: TaskId, updates: Partial<Omit<TaskRecord, "taskId">>): void {
+    const current = this.tasks.get(taskId);
+    if (!current) {
+      throw new Error(`Task "${taskId}" is not registered.`);
+    }
+
+    this.tasks.set(taskId, {
+      ...current,
+      ...updates,
+    });
   }
 
   private resolveStageStatus(output: StageOutput): "completed" | "failed" {

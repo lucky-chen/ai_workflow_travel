@@ -82,10 +82,28 @@ async function testSingleStageLaunch(): Promise<void> {
     "task_started",
     "task_finished",
   ]);
+  assert.equal(pipeline.getTaskStatus(taskId), "completed");
+  assert.deepEqual(pipeline.getTaskRecord(taskId), {
+    taskId,
+    startStageId: "implementation",
+    currentStageId: "implementation",
+    status: "completed",
+    workspaceRoot: "/workspace/demo",
+    lastOutput: {
+      stageId: "implementation",
+      status: "completed",
+      success: true,
+      summary: "Implementation stage executed.",
+      artifacts: {
+        changedFiles: [],
+      },
+    },
+  });
 }
 
 async function testMissingStageLaunch(): Promise<void> {
-  const emptyPipeline = new PipelineService({ registry: new StageRegistry() });
+  const emptyRegistry = new StageRegistry();
+  const emptyPipeline = new PipelineService({ registry: emptyRegistry });
   await assert.rejects(
     emptyPipeline.launchTask({
       startStageId: "missing-stage",
@@ -224,6 +242,8 @@ async function testStageContinuationAndMerge(): Promise<void> {
     "task_started",
     "task_finished",
   ]);
+  assert.equal(continuationPipeline.getTaskStatus(continuedTaskId), "completed");
+  assert.equal(continuationPipeline.getTaskRecord(continuedTaskId)?.currentStageId, "stage-b");
   continuationRegistry.validate();
 }
 
@@ -296,6 +316,8 @@ async function testFailureStopsContinuation(): Promise<void> {
     "stage_failed",
     "task_finished",
   ]);
+  assert.equal(failPipeline.getTaskStatus(failedTaskId), "failed");
+  assert.equal(failPipeline.getTaskRecord(failedTaskId)?.currentStageId, "fail-a");
 }
 
 async function testInvalidNextStageValidation(): Promise<void> {
@@ -309,6 +331,16 @@ async function testInvalidNextStageValidation(): Promise<void> {
   });
   assert.throws(
     () => invalidRegistry.validate(),
+    /references missing nextStageId "missing-stage"/,
+  );
+
+  const invalidPipeline = new PipelineService({ registry: invalidRegistry });
+  await assert.rejects(
+    invalidPipeline.launchTask({
+      startStageId: "stage-a",
+      workspaceRoot: "/workspace/demo",
+      inputArtifacts: {},
+    }),
     /references missing nextStageId "missing-stage"/,
   );
 }
