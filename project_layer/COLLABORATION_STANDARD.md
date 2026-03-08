@@ -26,4 +26,8 @@ This document defines the shared collaboration standard for all work under `proj
 
 - After each completed round of engineering file changes, Codex must create one JIT commit.
 - Commit messages must be written in English.
+- Human-authored commits must use the format: `[Human]: <summary>`
+- AI-authored commits must use the format: `[AI] <Model>: <summary>`
+- Example human commit: `[Human]: refine implementation stage plan`
+- Example AI commit: `[AI] gpt-5.4: add stage registry validation`
 - The commit message should be a concise summary of that round of changes.
