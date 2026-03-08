@@ -11,11 +11,13 @@ import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js"
 import type { ITraceRecorder } from "../../shared/contracts/trace.js";
 import { LaunchValidator } from "./launch-validator.js";
 import { StageRegistry } from "./stage-registry.js";
+import { TaskRuntimeStore } from "./task-runtime-store.js";
 
 export interface PipelineServiceDependencies {
   registry: StageRegistry;
   launchValidator?: LaunchValidator;
   traceRecorder?: ITraceRecorder;
+  taskRuntimeStore?: TaskRuntimeStore;
 }
 
 // Public API: workflow entry used by CLI or other callers to launch a task.
@@ -23,27 +25,22 @@ export class PipelineService implements IPipeline {
   private readonly registry: StageRegistry;
   private readonly launchValidator: LaunchValidator;
   private readonly traceRecorder?: ITraceRecorder;
-  private readonly tasks = new Map<TaskId, TaskRecord>();
+  private readonly taskRuntimeStore: TaskRuntimeStore;
 
   constructor(dependencies: PipelineServiceDependencies) {
     this.registry = dependencies.registry;
     this.launchValidator = dependencies.launchValidator ?? new LaunchValidator();
     this.traceRecorder = dependencies.traceRecorder;
+    this.taskRuntimeStore = dependencies.taskRuntimeStore ?? new TaskRuntimeStore();
   }
 
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
     const taskId = this.createTaskId();
     this.registry.validate();
     this.launchValidator.validate(request, this.registry);
-    this.tasks.set(taskId, {
-      taskId,
-      startStageId: request.startStageId,
-      currentStageId: request.startStageId,
-      status: "pending",
-      workspaceRoot: request.workspaceRoot,
-    });
+    this.taskRuntimeStore.createTask(taskId, request.startStageId, request.workspaceRoot);
 
-    this.updateTask(taskId, {
+    this.taskRuntimeStore.updateTask(taskId, {
       status: "running",
     });
     await this.traceRecorder?.recordTrace({
@@ -66,13 +63,13 @@ export class PipelineService implements IPipeline {
       };
 
       const output = await stage.runner.run(context);
-      this.updateTask(taskId, {
+      this.taskRuntimeStore.updateTask(taskId, {
         currentStageId,
         lastOutput: output,
       });
 
       if (this.resolveStageStatus(output) === "failed") {
-        this.updateTask(taskId, {
+        this.taskRuntimeStore.updateTask(taskId, {
           status: "failed",
         });
         await this.traceRecorder?.recordTrace({
@@ -89,7 +86,7 @@ export class PipelineService implements IPipeline {
     }
 
     if (this.getTaskStatus(taskId) === "running") {
-      this.updateTask(taskId, {
+      this.taskRuntimeStore.updateTask(taskId, {
         status: "completed",
       });
     }
@@ -104,31 +101,19 @@ export class PipelineService implements IPipeline {
   }
 
   getLastOutput(taskId: TaskId): StageOutput | undefined {
-    return this.tasks.get(taskId)?.lastOutput;
+    return this.taskRuntimeStore.getLastOutput(taskId);
   }
 
   getTaskStatus(taskId: TaskId): TaskStatus | undefined {
-    return this.tasks.get(taskId)?.status;
+    return this.taskRuntimeStore.getTaskStatus(taskId);
   }
 
   getTaskRecord(taskId: TaskId): TaskRecord | undefined {
-    return this.tasks.get(taskId);
+    return this.taskRuntimeStore.getTaskRecord(taskId);
   }
 
   private createTaskId(): TaskId {
     return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  }
-
-  private updateTask(taskId: TaskId, updates: Partial<Omit<TaskRecord, "taskId">>): void {
-    const current = this.tasks.get(taskId);
-    if (!current) {
-      throw new Error(`Task "${taskId}" is not registered.`);
-    }
-
-    this.tasks.set(taskId, {
-      ...current,
-      ...updates,
-    });
   }
 
   private resolveStageStatus(output: StageOutput): "completed" | "failed" {
