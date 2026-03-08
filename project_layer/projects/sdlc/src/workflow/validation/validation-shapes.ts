@@ -1,16 +1,9 @@
-import type { ArtifactMap } from "../types/common.js";
-import type { ContractIssue, StageOutput } from "./pipeline.js";
+import type { ArtifactMap } from "../../shared/types/common.js";
+import type { ContractIssue, StageOutput } from "../../shared/contracts/pipeline.js";
+import type { ShellResult } from "./shell-runner.js";
 
 export interface ValidationInputArtifacts {
   project_path: string;
-}
-
-export interface ShellTestResult {
-  passed: boolean;
-  summary: string;
-  command: string;
-  exit_code: number;
-  logs?: string;
 }
 
 export interface ValidationStageArtifacts {
@@ -38,20 +31,20 @@ export function parseValidationInputArtifacts(inputArtifacts: ArtifactMap): Vali
 
 export function buildValidationStageOutput(
   input: ValidationInputArtifacts,
-  shellTestResult: ShellTestResult,
+  shellResult: ShellResult,
   issues: ContractIssue[] = [],
 ): ValidationStageOutput {
   return {
     stageId: "validation",
-    success: shellTestResult.passed,
-    summary: shellTestResult.summary,
+    success: shellResult.passed,
+    summary: shellResult.summary,
     artifacts: {
       artifactKey: "validation_result",
       projectPath: input.project_path,
-      command: shellTestResult.command,
-      exitCode: shellTestResult.exit_code,
-      logs: shellTestResult.logs,
-      passed: shellTestResult.passed,
+      command: shellResult.command,
+      exitCode: shellResult.exit_code,
+      logs: shellResult.logs,
+      passed: shellResult.passed,
       issues,
     },
   };

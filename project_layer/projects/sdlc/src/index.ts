@@ -1,7 +1,6 @@
 // Project layer public exports: re-export shared contracts and module entry classes.
 // Public API: shared contracts consumed across modules.
 export * from "./shared/contracts/pipeline.js";
-export * from "./shared/contracts/validation.js";
 export * from "./shared/types/common.js";
 
 // Public API: module entry classes exposed to callers and composition roots.
@@ -28,3 +27,4 @@ export * from "./workflow/stage-runners/module-stage-runner.js";
 export * from "./workflow/stage-runners/requirement-stage-runner.js";
 export * from "./workflow/pipeline/pipeline.js";
 export * from "./workflow/validation/shell-runner.js";
+export * from "./workflow/validation/validation-shapes.js";

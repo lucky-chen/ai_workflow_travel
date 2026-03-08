@@ -1,15 +1,21 @@
 import { spawn } from "node:child_process";
 
-import type { ShellTestResult } from "../../shared/contracts/validation.js";
+export interface ShellResult {
+  passed: boolean;
+  summary: string;
+  command: string;
+  exit_code: number;
+  logs?: string;
+}
 
 export class ShellRunner {
-  async run(command: string): Promise<ShellTestResult> {
+  async run(command: string): Promise<ShellResult> {
     const trimmedCommand = command.trim();
     if (!trimmedCommand) {
       throw new Error("Shell command must not be empty.");
     }
 
-    return new Promise<ShellTestResult>((resolve, reject) => {
+    return new Promise<ShellResult>((resolve, reject) => {
       const child = spawn(trimmedCommand, {
         shell: true,
         stdio: ["ignore", "pipe", "pipe"],

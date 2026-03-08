@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   buildValidationStageOutput,
   parseValidationInputArtifacts,
-  type ShellTestResult,
-} from "../src/shared/contracts/validation.js";
+} from "../src/workflow/validation/validation-shapes.js";
+import type { ShellResult } from "../src/workflow/validation/shell-runner.js";
 
 export async function runValidationModelTests(): Promise<void> {
   await testParseValidationInputArtifactsRequiresProjectPath();
@@ -30,7 +30,7 @@ async function testParseValidationInputArtifactsReturnsNormalizedShape(): Promis
 }
 
 async function testBuildValidationStageOutputShapesValidationResult(): Promise<void> {
-  const shellTestResult: ShellTestResult = {
+  const shellResult: ShellResult = {
     passed: false,
     summary: "Validation failed: unit tests returned exit code 1.",
     command: "npm test",
@@ -40,7 +40,7 @@ async function testBuildValidationStageOutputShapesValidationResult(): Promise<v
 
   const output = buildValidationStageOutput(
     { project_path: "/tmp/validation-project" },
-    shellTestResult,
+    shellResult,
     [
       {
         checkItem: "shell_test_execution",
