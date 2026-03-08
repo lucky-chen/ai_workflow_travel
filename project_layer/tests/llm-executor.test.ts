@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import { ExecutionStrategySelector } from "../src/sdk/llm-executor/execution-strategy-selector.js";
 import { LlmExecutorService } from "../src/sdk/llm-executor/llm-executor.js";
 import type { FetchLike } from "../src/sdk/llm-executor/http-json-client.js";
+import { InMemoryLlmTraceRecorder } from "../src/sdk/llm-executor/llm-trace-recorder.js";
 
 export async function runLlmExecutorTests(): Promise<void> {
   await testExecutionStrategySelectorDefaultsToMock();
   await testExecutionStrategySelectorChoosesRealProvider();
   await testDefaultMockExecutor();
+  await testLlmTraceRecorderIntegration();
   await testCustomMockExecutor();
   await testRealExecutorRequiresProvider();
   await testRealExecutorRequiresApiKey();
@@ -16,6 +18,28 @@ export async function runLlmExecutorTests(): Promise<void> {
   await testOpenAiExecution();
   await testInvalidProviderResponse();
   await testHttpErrorResponse();
+}
+
+async function testLlmTraceRecorderIntegration(): Promise<void> {
+  const llmTraceRecorder = new InMemoryLlmTraceRecorder();
+  const executor = new LlmExecutorService({
+    mockContent: "trace-aware mock",
+    llmTraceRecorder,
+  });
+
+  const result = await executor.execute({
+    prompt: {
+      systemPrompt: "system",
+      userPrompt: "user",
+    },
+    responseFormat: "text",
+  });
+
+  assert.equal(result.content, "trace-aware mock");
+  assert.deepEqual(llmTraceRecorder.getEvents().map((entry) => entry.event.eventType), [
+    "execution_started",
+    "execution_finished",
+  ]);
 }
 
 async function testExecutionStrategySelectorDefaultsToMock(): Promise<void> {
