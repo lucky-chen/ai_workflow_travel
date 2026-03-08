@@ -14,7 +14,7 @@ import {
   type ContractSpec,
   type ContractExecutionResult,
   type SpecificContractSpec,
-} from "./document-stage-contract.js";
+} from "../document-stage-contract.js";
 
 const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
   process.cwd(),

@@ -1,7 +1,7 @@
-import type { IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
-import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
-import type { ArtifactMap } from "../../shared/types/common.js";
+import type { IStageGenerator, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
+import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
+import type { ArtifactMap } from "../shared/types/common.js";
 
 export abstract class DocumentStageGenerator implements IStageGenerator {
   constructor(

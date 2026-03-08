@@ -5,7 +5,7 @@ import type { StageOutput } from "../../shared/contracts/pipeline.js";
 import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
-import { DocumentStageGenerator } from "./document-stage-generator.js";
+import { DocumentStageGenerator } from "../document-stage-generator.js";
 
 const TECHNICAL_ARCHITECTURE_TEMPLATE_PATH = path.resolve(
   process.cwd(),

@@ -1,5 +1,5 @@
-import type { ContractCheckResult, IContractChecker, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
-import type { LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
+import type { ContractCheckResult, IContractChecker, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
+import type { LlmExecutionRequest } from "../sdk/llm-executor/llm-executor.js";
 
 export interface ContractSpec {
   document_contracts: DocumentContract[];
