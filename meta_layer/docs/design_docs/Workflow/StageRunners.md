@@ -7,7 +7,7 @@ Define the consolidated design of all concrete stage runner classes owned by `Wo
 This document is the single place for:
 
 - concrete runner class list per stage
-- runner inheritance from `BaseStageRunner`
+- runner inheritance from `BaseStageRunner` and stage-specific exceptions
 - stage-level dependency binding (`Execution/*`, `Contract/*`, `QualityGate/*`, `Data/*`)
 
 `BaseStageRunner` and shared contracts are defined in [Pipeline.md](./Pipeline.md). This document does not redefine them.
@@ -31,13 +31,14 @@ class ModuleStageRunner <<public>>
 class ImplementationPlanStageRunner <<public>>
 class ImplementationStageRunner <<public>>
 class ValidationStageRunner <<public>>
+interface IStageRunner <<from Pipeline>>
 
 BaseStageRunner <|-- RequirementStageRunner
 BaseStageRunner <|-- ArchitectureStageRunner
 BaseStageRunner <|-- ModuleStageRunner
 BaseStageRunner <|-- ImplementationPlanStageRunner
 BaseStageRunner <|-- ImplementationStageRunner
-BaseStageRunner <|-- ValidationStageRunner
+IStageRunner <|.. ValidationStageRunner
 
 RequirementStageRunner --> IStageGenerator
 ArchitectureStageRunner --> IStageGenerator
@@ -50,14 +51,12 @@ ArchitectureStageRunner --> IContractChecker
 ModuleStageRunner --> IContractChecker
 ImplementationPlanStageRunner --> IContractChecker
 ImplementationStageRunner --> IContractChecker
-ValidationStageRunner --> IContractChecker
 
 RequirementStageRunner --> IChangeGate
 ArchitectureStageRunner --> IChangeGate
 ModuleStageRunner --> IChangeGate
 ImplementationPlanStageRunner --> IChangeGate
 ImplementationStageRunner --> IChangeGate
-ValidationStageRunner --> IChangeGate
 
 RequirementStageRunner --> ITraceRecorder
 ArchitectureStageRunner --> ITraceRecorder
@@ -77,33 +76,49 @@ ValidationStageRunner --> IArtifactStore
 
 ### 2.2 Shared API
 
-```ts
-class RequirementStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): Promise<StageOutput>
+```plantuml
+@startuml
+interface IStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
-class ArchitectureStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): Promise<StageOutput>
+abstract class BaseStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
-class ModuleStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): Promise<StageOutput>
+class RequirementStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
-class ImplementationPlanStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): Promise<StageOutput>
+class ArchitectureStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
-class ImplementationStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): Promise<StageOutput>
+class ModuleStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
 }
 
-class ValidationStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): Promise<StageOutput>
+class ImplementationPlanStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
 }
+
+class ImplementationStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
+}
+
+class ValidationStageRunner {
+  +run(context: StageRunContext): Promise<StageOutput>
+}
+
+BaseStageRunner ..|> IStageRunner
+RequirementStageRunner --|> BaseStageRunner
+ArchitectureStageRunner --|> BaseStageRunner
+ModuleStageRunner --|> BaseStageRunner
+ImplementationPlanStageRunner --|> BaseStageRunner
+ImplementationStageRunner --|> BaseStageRunner
+ValidationStageRunner ..|> IStageRunner
+@enduml
 ```
-
-All runners keep the same public signature as `BaseStageRunner`.
 
 ## 3. Stage Binding
 
@@ -114,12 +129,13 @@ All runners keep the same public signature as `BaseStageRunner`.
 | `module_design` | `ModuleStageRunner` | `Execution/ModuleDesignGenerator.run` | `Contract/ModuleDesignContract.check` | `review_required` |
 | `implementation_plan` | `ImplementationPlanStageRunner` | `Execution/ImplementationPlanGenerator.run` | `Contract/ImplementationPlanContract.check` | `review_required` |
 | `implementation_execution` | `ImplementationStageRunner` | `Execution/ImplementationGenerator.run` | `Contract/ImplementationContract.check` | `review_required_per_step` |
-| `validation` | `ValidationStageRunner` | `none` | `Contract/ValidationContract.check` | `review_required_for_final_result` |
+| `validation` | `ValidationStageRunner` | `none` | `none` | `final_result_only` |
 
 Stage exceptions:
 
-- `validation` does not bind an execution module and uses `Contract/ValidationContract.check` as its validation confirmation input before gate review.
+- `validation` is a workflow-owned special runner and does not reuse the shared generator/contract runner binding model.
 - `validation` reads `inputArtifacts["project_path"]` as its only required runtime input.
+- `validation` exposes only trace/store as shared workflow-facing injected collaborators.
 
 ## 4. Runtime Responsibilities
 
@@ -132,6 +148,12 @@ For each stage runner:
 5. call `QualityGate/ChangeGate.review`
 6. call `IArtifactStore.writeArtifact` on pass
 7. return `StageOutput`
+
+Validation runner exception:
+
+- `ValidationStageRunner` does not follow the shared `generate -> contract -> review -> persist` sequence
+- `ValidationStageRunner` directly implements final-stage validation logic behind `run(context)`
+- `ValidationStageRunner` may still emit trace events and final artifacts through the shared pipeline-owned trace/store interfaces
 
 Persistence mapping rule for document stages:
 
@@ -167,3 +189,4 @@ Dependency rule:
 - concrete stage runners depend only on pipeline-owned collaboration interfaces such as `ITraceRecorder`, `IChangeGate`, and `IArtifactStore`
 - concrete stage runners may directly create stage-local generator and contract bindings inside the runner when the implementation stays within workflow-owned composition boundaries
 - stage runners should not rely on a separate application composition root for stage-local execution and contract binding
+- `ValidationStageRunner` is the exception: it directly implements `IStageRunner` and keeps only shared trace/store injection in its public design surface

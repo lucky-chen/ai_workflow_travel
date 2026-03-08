@@ -314,12 +314,13 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] `ValidationContract`
   - [ ] final workspace validation checks
   - [ ] final artifact completeness checks
-  - [ ] review whether `ValidationContract` needs prompt-shaped request and real `ILlmExecutor` execution tasks
+  - [ ] project-path loading and shell-test execution flow
+  - [ ] shell-test result to `ContractCheckResult` mapping
   - [ ] validation result builder
   - [ ] focused tests for contract success and failure
 - [ ] Batch 3: validation stage runner flow
   - [ ] `ValidationStageRunner`
-  - [ ] `contract -> review` main flow
+  - [ ] direct `run -> review` main flow
   - [ ] validation review flow
   - [ ] validation artifact persistence
   - [ ] validation trace flow

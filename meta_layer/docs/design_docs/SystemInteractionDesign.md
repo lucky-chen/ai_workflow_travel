@@ -109,13 +109,12 @@ Notes:
 - `Contract/ModuleDesignContract.check(context, output) -> check_result`
 - `Contract/ImplementationPlanContract.check(context, output) -> check_result`
 - `Contract/ImplementationContract.check(context, output) -> check_result`
-- `Contract/ValidationContract.check(context, output) -> check_result`
 
 Notes:
 
 - contract check is optional per stage.
-- validation stage uses `Contract/ValidationContract.check` as validation confirmation input.
-- validation stage reads `context.inputArtifacts["project_path"]` and runs a shell test script under that path.
+- validation stage is the exception and performs final validation directly inside `ValidationStageRunner.run(context)`.
+- validation stage reads `context.inputArtifacts["project_path"]` and runs final project validation against that path.
 - contract success does not replace review.
 
 ### 2.5 Review And Decision
