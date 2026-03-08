@@ -64,6 +64,11 @@ export interface IModelExecutionBackend {
   execute(request: LlmExecutionRequest): Promise<LlmExecutionResult>;
 }
 
+export interface CreateDefaultAgentOptions {
+  backend: IModelExecutionBackend;
+  traceRecorder?: import("./agent-trace-recorder.js").IAgentTraceRecorder;
+}
+
 export class DefaultPlanner implements IPlanner {
   async plan(_context: AgentContext): Promise<ExecutionPlan> {
     return {
@@ -154,4 +159,11 @@ export class DefaultAgent implements IAgent {
 function getRunId(context: AgentContext): string {
   const requestId = context.request.metadata?.requestId;
   return requestId && requestId.trim().length > 0 ? requestId : "agent-run";
+}
+
+export function createDefaultAgent(options: CreateDefaultAgentOptions): IAgent {
+  const planner = new DefaultPlanner();
+  const executor = new DefaultExecutor(options.backend);
+  const observer = new DefaultObserver();
+  return new DefaultAgent(planner, executor, observer, options.traceRecorder);
 }

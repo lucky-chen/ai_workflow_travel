@@ -1,7 +1,11 @@
 // LLM executor module: public entry for shared LLM execution.
 import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { StringMap } from "../../shared/types/common.js";
-import { createLlmExecutor } from "./llm-executor-factory.js";
+import {
+  type IAgent,
+} from "ai-meta-agent-agent-runtime";
+import { createLlmExecutorAgent } from "./llm-executor-factory.js";
+import { AgentTraceRecorderAdapter } from "./agent-trace-recorder-adapter.js";
 import type { LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
 
 export type { LlmExecutorMode, LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
@@ -30,12 +34,15 @@ export interface ILlmExecutor {
 
 // Public API: shared LLM execution entry used by generation and contract modules.
 export class LlmExecutorService implements ILlmExecutor {
-  private readonly executor: ILlmExecutor;
+  private readonly agent: IAgent;
   private readonly traceRecorder?: ITraceRecorder;
 
   constructor(dependencies: LlmExecutorServiceDependencies & { traceRecorder?: ITraceRecorder } = {}) {
-    this.executor = createLlmExecutor(dependencies);
     this.traceRecorder = dependencies.traceRecorder;
+    const agentTraceRecorder = this.traceRecorder
+      ? new AgentTraceRecorderAdapter(this.traceRecorder)
+      : undefined;
+    this.agent = createLlmExecutorAgent(dependencies, agentTraceRecorder);
   }
 
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
@@ -48,17 +55,23 @@ export class LlmExecutorService implements ILlmExecutor {
       },
     });
 
-    const result = await this.executor.execute(request);
+    const result = await this.agent.run({
+      request,
+      inputPayload: {
+        responseFormat: request.responseFormat,
+        metadata: request.metadata ?? {},
+      },
+    });
 
     await this.traceRecorder?.recordTrace({
       taskId: "llm-executor",
       eventType: "llm_execution_finished",
       summary: "LLM execution finished.",
       metadata: {
-        responseFormat: result.responseFormat,
+        responseFormat: result.result.responseFormat,
       },
     });
 
-    return result;
+    return result.result;
   }
 }

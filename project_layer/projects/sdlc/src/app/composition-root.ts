@@ -23,6 +23,7 @@ export function createApplicationServices(options: CompositionRootOptions = {}):
   const historyStore = new HistoryStoreService(options.historyStorageRoot);
   const traceRecorder = new TraceService(historyStore);
   const changeGate = new InMemoryChangeGate();
+
   const llmExecutor = new LlmExecutorService({
     ...options.llmExecutor,
     traceRecorder,

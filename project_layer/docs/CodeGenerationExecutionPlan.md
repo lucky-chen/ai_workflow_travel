@@ -95,9 +95,9 @@ This step delivers the shared runtime backbone used by all stages.
     - [x] trace checkpoints for plan, execution, and observation flow
     - [x] focused tests for single-pass runtime execution
   - [ ] Batch 3: llm executor integration
-    - [ ] composition binding between `LlmExecutor` and `AgentRuntime`
-    - [ ] `LlmExecutorService` integration through `AgentRuntime`
-    - [ ] integration tests for runtime path, trace, and `LlmExecutor`
+    - [x] composition binding between `LlmExecutor` and `AgentRuntime`
+    - [x] `LlmExecutorService` integration through `AgentRuntime`
+    - [x] integration tests for runtime path, trace, and `LlmExecutor`
 
 ### Step 2. Deliver `requirement_interpretation` Stage
 

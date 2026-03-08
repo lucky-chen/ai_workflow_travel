@@ -7,6 +7,7 @@ import { LlmExecutorService } from "../src/sdk/llm-executor/llm-executor.js";
 export async function runLlmExecutorTests(): Promise<void> {
   await testDefaultMockExecutor();
   await testLlmTraceRecorderIntegration();
+  await testLlmExecutorUsesAgentRuntimeTraceCheckpoints();
   await testCustomMockExecutor();
   await testRealExecutorRequiresProvider();
   await testRealExecutorRequiresApiKey();
@@ -35,8 +36,43 @@ async function testLlmTraceRecorderIntegration(): Promise<void> {
   assert.equal(result.content, "trace-aware mock");
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "llm_execution_started",
+    "agent_plan_created",
+    "agent_execution_started",
+    "agent_execution_finished",
+    "agent_observation_finished",
     "llm_execution_finished",
   ]);
+}
+
+async function testLlmExecutorUsesAgentRuntimeTraceCheckpoints(): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
+  const executor = new LlmExecutorService({
+    mockContent: "agent-runtime integrated",
+    traceRecorder,
+  });
+
+  const result = await executor.execute({
+    prompt: {
+      systemPrompt: "system",
+      userPrompt: "user",
+    },
+    responseFormat: "json",
+    metadata: {
+      requestId: "req-agent-runtime",
+    },
+  });
+
+  assert.equal(result.content, "agent-runtime integrated");
+  assert.deepEqual(
+    traceRecorder.getEvents().filter((entry) => entry.event.metadata?.runId === "req-agent-runtime")
+      .map((entry) => entry.event.eventType),
+    [
+      "agent_plan_created",
+      "agent_execution_started",
+      "agent_execution_finished",
+      "agent_observation_finished",
+    ],
+  );
 }
 
 async function testDefaultMockExecutor(): Promise<void> {

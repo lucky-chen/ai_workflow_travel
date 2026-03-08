@@ -1,7 +1,9 @@
-// LLM executor factory: selects a concrete executor implementation for the requested mode.
-import type { ILlmExecutor } from "./llm-executor.js";
+// LLM executor factory: builds the default agent runtime used by the SDLC-facing llm executor facade.
 import {
   ExecutionStrategySelector,
+  createDefaultAgent,
+  type IAgent,
+  type IAgentTraceRecorder,
   type ModelExecutionDependencies,
   type ModelExecutionMode,
   type RealProviderConfig,
@@ -14,7 +16,14 @@ export interface LlmExecutorServiceDependencies extends ModelExecutionDependenci
   realProvider?: RealProviderConfig;
 }
 
-export function createLlmExecutor(dependencies: LlmExecutorServiceDependencies = {}): ILlmExecutor {
+export function createLlmExecutorAgent(
+  dependencies: LlmExecutorServiceDependencies = {},
+  traceRecorder?: IAgentTraceRecorder,
+): IAgent {
   const selector = new ExecutionStrategySelector();
-  return selector.select(dependencies).executor;
+  const backend = selector.select(dependencies).executor;
+  return createDefaultAgent({
+    backend,
+    traceRecorder,
+  });
 }
