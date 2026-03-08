@@ -82,12 +82,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] `ExecutionStrategySelector`
   - [x] `ILlmTraceRecorder`
 - [ ] AgentRuntime backbone
-  - [ ] Batch 1: interfaces and skeleton
-    - [ ] `AgentRuntime` core interfaces (`IAgent`, `IPlanner`, `IExecutor`, `IObserver`)
-    - [ ] `SDK/AgentRuntime` module skeleton and runtime types
-    - [ ] SDK-owned agent trace abstraction and in-memory trace recorder
-    - [ ] minimal `DefaultPlanner` and `DefaultObserver`
-    - [ ] focused tests for interfaces, runtime types, and trace types
+  - [x] Batch 1: interfaces and skeleton
+    - [x] `AgentRuntime` core interfaces (`IAgent`, `IPlanner`, `IExecutor`, `IObserver`)
+    - [x] `SDK/AgentRuntime` module skeleton and runtime types
+    - [x] SDK-owned agent trace abstraction
+    - [x] minimal `DefaultPlanner` and `DefaultObserver`
+    - [x] focused tests for interfaces, runtime types, and trace types
   - [ ] Batch 2: single-pass runtime
     - [ ] `DefaultExecutor`
     - [ ] `DefaultAgent`

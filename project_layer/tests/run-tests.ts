@@ -1,4 +1,5 @@
 import { runArtifactStoreTests } from "./artifact-store.test.js";
+import { runAgentRuntimeTests } from "./agent-runtime.test.js";
 import { runChangeGateTests } from "./change-gate.test.js";
 import { runCliTests } from "./cli.test.js";
 import { runImplementationContractTests } from "./implementation-contract.test.js";
@@ -10,6 +11,7 @@ import { runPipelineTests } from "./pipeline.test.js";
 import { runTraceTests } from "./trace.test.js";
 
 async function main(): Promise<void> {
+  await runAgentRuntimeTests();
   await runArtifactStoreTests();
   await runChangeGateTests();
   await runCliTests();
