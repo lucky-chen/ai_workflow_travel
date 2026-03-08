@@ -7,6 +7,7 @@ export * from "./shared/types/common.js";
 export * from "./app/composition-root.js";
 export * from "./contract/architecture-design-contract/architecture-design-contract.js";
 export * from "./contract/implementation-contract/implementation-contract.js";
+export * from "./contract/implementation-plan-contract/implementation-plan-contract.js";
 export * from "./contract/module-design-contract/module-design-contract.js";
 export * from "./contract/requirement-contract/requirement-contract.js";
 export * from "./data/artifact-store/artifact-store.js";

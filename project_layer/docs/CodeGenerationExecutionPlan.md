@@ -229,12 +229,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] load requirement, architecture, and all module-design documents as plan input
   - [x] review generated `workplan`
   - [x] focused tests for workplan generation flow
-- [ ] Batch 2: implementation plan contract backbone
-  - [ ] `ImplementationPlanContract`
-  - [ ] implementation-plan contract-check prompt construction
-  - [ ] real `ILlmExecutor`-based implementation-plan contract execution
-  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
-  - [ ] focused tests for contract success and failure
+- [x] Batch 2: implementation plan contract backbone
+  - [x] `ImplementationPlanContract`
+  - [x] implementation-plan contract-check prompt construction
+  - [x] real `ILlmExecutor`-based implementation-plan contract execution
+  - [x] real `LlmExecutionResult` to `ContractCheckResult` mapping
+  - [x] focused tests for contract success and failure
 - [ ] Batch 3: implementation plan stage runner flow
   - [ ] `ImplementationPlanStageRunner`
   - [ ] direct binding creation inside `ImplementationPlanStageRunner`
