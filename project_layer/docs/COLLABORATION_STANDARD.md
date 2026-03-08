@@ -30,6 +30,13 @@ This document defines the shared collaboration standard for all work under `proj
 - For test files, prefer one entry function plus multiple small test-case functions grouped by behavior.
 - New generated code should default to clear structure first, not just minimal line count.
 
+## 3.2 Incremental Change Rule
+
+- If a requested change is too large, Codex must split it into multiple independent batches instead of submitting one large modification at once.
+- Each batch should remain independently understandable, reviewable, and verifiable.
+- Avoid mixing unrelated refactors, behavior changes, and architecture adjustments into the same batch when they can be separated.
+- Do not submit one oversized change set when the work can be delivered in smaller reviewable increments.
+
 ## 4. Git Commit Rule
 
 - After each completed round of engineering file changes, Codex must create one git commit.

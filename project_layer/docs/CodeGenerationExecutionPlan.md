@@ -38,60 +38,66 @@ The implementation should be delivered in this order:
 
 ### Step 1. Deliver Shared Workflow Backbone
 
-Status:
-
-- [x] Partially completed
-
 This step delivers the shared runtime backbone used by all stages.
 
-Architecture modules in scope:
-
-- `Interface/CLI`
-- `Workflow/Pipeline`
-- `Workflow/StageRunners`
-- `QualityGate/ChangeGate`
-- `QualityGate/Trace`
-- `Data/ArtifactStore`
-- `Data/HistoryStore`
-- `SDK/LlmExecutor`
-
-What to build:
-
-- [x] TypeScript project scaffold
-- [x] Shared contracts
-- [x] Local `ArtifactStore`
-- [x] Shared `LlmExecutor`
-- [x] Real OpenAI adapter
-- [x] Real DeepSeek adapter
-- [x] Minimal `Pipeline`
-- [x] Minimal `CLI`
-- [x] Minimal `Trace`
-- [x] Minimal `ChangeGate`
-
-Still missing:
-
-- [x] `StageRegistry`
-- [x] `StageDefinition`
-- [x] `LaunchValidator`
-- [x] `BaseStageRunner`
-- [x] Full generic pipeline orchestration
-- [x] Stage-to-stage continuation using `next_stage_id`
-- [x] Downstream input merge between stages
-- [x] Retry/restart semantics
-- [x] Trace persistence through `HistoryStore`
-- [x] Gate decision trace recording
-- [x] `ChangeReviewPresenter`
-- [x] Full CLI trace rendering
-- [x] Full CLI review interaction
-- [x] `LlmExecutor` strategy layer
-- [x] `ExecutionStrategySelector`
-- [ ] AgentRuntime core interfaces (`IAgent`, `IPlanner`, `IExecutor`, `IObserver`)
-- [ ] `SDK/AgentRuntime` module skeleton and runtime types
-- [ ] minimal single-pass `plan -> execute -> observe` runtime
-- [ ] SDK-owned agent trace abstraction
-- [ ] composition binding between `LlmExecutor` and `AgentRuntime`
-- [ ] tests for agent runtime path, trace, and `LlmExecutor` integration
-- [x] `ILlmTraceRecorder`
+- [x] Step 1 is partially completed
+- [x] Architecture modules in scope
+  - [x] `Interface/CLI`
+  - [x] `Workflow/Pipeline`
+  - [x] `Workflow/StageRunners`
+  - [x] `QualityGate/ChangeGate`
+  - [x] `QualityGate/Trace`
+  - [x] `Data/ArtifactStore`
+  - [x] `Data/HistoryStore`
+  - [x] `SDK/LlmExecutor`
+- [x] Foundation setup
+  - [x] TypeScript project scaffold
+  - [x] Shared contracts
+- [x] Data layer backbone
+  - [x] Local `ArtifactStore`
+  - [x] Trace persistence through `HistoryStore`
+- [x] Pipeline backbone
+  - [x] Minimal `Pipeline`
+  - [x] `StageRegistry`
+  - [x] `StageDefinition`
+  - [x] `LaunchValidator`
+  - [x] `BaseStageRunner`
+  - [x] Full generic pipeline orchestration
+  - [x] Stage-to-stage continuation using `next_stage_id`
+  - [x] Downstream input merge between stages
+  - [x] Retry/restart semantics
+- [x] CLI and review backbone
+  - [x] Minimal `CLI`
+  - [x] Minimal `ChangeGate`
+  - [x] Minimal `Trace`
+  - [x] Gate decision trace recording
+  - [x] `ChangeReviewPresenter`
+  - [x] Full CLI trace rendering
+  - [x] Full CLI review interaction
+- [x] LLM executor backbone
+  - [x] Shared `LlmExecutor`
+  - [x] Real OpenAI adapter
+  - [x] Real DeepSeek adapter
+  - [x] `LlmExecutor` strategy layer
+  - [x] `ExecutionStrategySelector`
+  - [x] `ILlmTraceRecorder`
+- [ ] AgentRuntime backbone
+  - [ ] Batch 1: interfaces and skeleton
+    - [ ] `AgentRuntime` core interfaces (`IAgent`, `IPlanner`, `IExecutor`, `IObserver`)
+    - [ ] `SDK/AgentRuntime` module skeleton and runtime types
+    - [ ] SDK-owned agent trace abstraction and in-memory trace recorder
+    - [ ] minimal `DefaultPlanner` and `DefaultObserver`
+    - [ ] focused tests for interfaces, runtime types, and trace types
+  - [ ] Batch 2: single-pass runtime
+    - [ ] `DefaultExecutor`
+    - [ ] `DefaultAgent`
+    - [ ] minimal single-pass `plan -> execute -> observe` runtime
+    - [ ] trace checkpoints for plan, execution, and observation flow
+    - [ ] focused tests for single-pass runtime execution
+  - [ ] Batch 3: llm executor integration
+    - [ ] composition binding between `LlmExecutor` and `AgentRuntime`
+    - [ ] `LlmExecutorService` integration through `AgentRuntime`
+    - [ ] integration tests for runtime path, trace, and `LlmExecutor`
 
 ### Step 2. Deliver `requirement_interpretation` Stage
 
