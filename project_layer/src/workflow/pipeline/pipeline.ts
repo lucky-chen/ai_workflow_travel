@@ -8,7 +8,7 @@ import type {
   TaskStatus,
 } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js";
-import type { ITraceRecorder } from "../../shared/contracts/trace.js";
+import type { ITraceRecorder } from "../../quality-gate/trace/trace-recorder.js";
 import { LaunchValidator } from "./launch-validator.js";
 import { StageRegistry } from "./stage-registry.js";
 import { TaskRuntimeStore } from "./task-runtime-store.js";

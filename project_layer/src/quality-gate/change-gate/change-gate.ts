@@ -1,10 +1,24 @@
 // Change gate module: returns a stable review decision for change requests.
-import type {
-  ChangeReviewRequest,
-  GateDecision,
-  IChangeGate,
-} from "../../shared/contracts/change-gate.js";
 import type { IReviewInteraction, ReviewSession } from "../../interface/cli/cli.js";
+import type { ChangedFile, ReviewAction, StageId, TaskId } from "../../shared/types/common.js";
+
+export interface ChangeReviewRequest {
+  taskId: TaskId;
+  stageId: StageId;
+  summary: string;
+  changedPaths: string[];
+  changedFiles: ChangedFile[];
+}
+
+export interface GateDecision {
+  action: ReviewAction;
+  summary: string;
+  comment?: string;
+}
+
+export interface IChangeGate {
+  review(changeRequest: ChangeReviewRequest): Promise<GateDecision>;
+}
 
 export interface InMemoryChangeGateDependencies {
   decision?: GateDecision;

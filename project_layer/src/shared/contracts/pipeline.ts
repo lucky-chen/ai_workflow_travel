@@ -76,7 +76,7 @@ export interface StageDefinition {
 }
 
 export interface StageRunnerSharedDependencies {
-  traceRecorder?: import("./trace.js").ITraceRecorder;
+  traceRecorder?: import("../../quality-gate/trace/trace-recorder.js").ITraceRecorder;
 }
 
 export interface IContractChecker {

@@ -2,8 +2,8 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import type { IPipeline, LaunchTaskRequest } from "../../shared/contracts/pipeline.js";
-import type { GateDecision } from "../../shared/contracts/change-gate.js";
-import type { TraceEvent } from "../../shared/contracts/trace.js";
+import type { GateDecision } from "../../quality-gate/change-gate/change-gate.js";
+import type { TraceEvent } from "../../quality-gate/trace/trace-recorder.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 
 export interface ParsedCommand {
