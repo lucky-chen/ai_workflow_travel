@@ -195,8 +195,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] class-diagram and section-contract alignment checks
   - [x] module dependency and responsibility consistency checks
   - [x] module-design contract-check prompt construction
-  - [ ] real `ILlmExecutor`-based module-design contract execution
-  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
+  - [x] real `ILlmExecutor`-based module-design contract execution
+  - [x] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
 - [ ] Batch 3: module-design stage runner flow
   - [ ] `ModuleStageRunner`

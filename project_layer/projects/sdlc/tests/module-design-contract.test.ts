@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ModuleDesignContract } from "../src/contract/module-design-contract/module-design-contract.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 
 export async function runModuleDesignContractTests(): Promise<void> {
   const workspaceRoot = await createTempDir("module-contract-");
@@ -11,6 +12,7 @@ export async function runModuleDesignContractTests(): Promise<void> {
     await testModuleDesignContractPassesForStructuredDocument(workspaceRoot);
     await testModuleDesignContractFailsForMissingSections(workspaceRoot);
     await testModuleDesignContractFailsForFormatAndConsistencyIssues(workspaceRoot);
+    await testModuleDesignContractRejectsInvalidLlmResult(workspaceRoot);
     await testModuleDesignContractLoadsTemplateContractSource();
     await testModuleDesignContractBuildsPromptRequest(workspaceRoot);
   } finally {
@@ -19,7 +21,7 @@ export async function runModuleDesignContractTests(): Promise<void> {
 }
 
 async function testModuleDesignContractPassesForStructuredDocument(workspaceRoot: string): Promise<void> {
-  const contract = new ModuleDesignContract();
+  const contract = new ModuleDesignContract(new ModuleDesignContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-1",
@@ -48,7 +50,7 @@ async function testModuleDesignContractPassesForStructuredDocument(workspaceRoot
 }
 
 async function testModuleDesignContractFailsForMissingSections(workspaceRoot: string): Promise<void> {
-  const contract = new ModuleDesignContract();
+  const contract = new ModuleDesignContract(new ModuleDesignContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-2",
@@ -78,7 +80,7 @@ async function testModuleDesignContractFailsForMissingSections(workspaceRoot: st
 }
 
 async function testModuleDesignContractFailsForFormatAndConsistencyIssues(workspaceRoot: string): Promise<void> {
-  const contract = new ModuleDesignContract();
+  const contract = new ModuleDesignContract(new ModuleDesignContractMockLlmExecutor());
   const brokenDocument = createModuleDesignDocument()
     .replace("# Workflow Design", "# Wrong Design")
     .replace(
@@ -118,6 +120,33 @@ async function testModuleDesignContractFailsForFormatAndConsistencyIssues(worksp
   assert.equal(result.issues.some((issue) => issue.message.includes("prose outside code blocks")), true);
   assert.equal(result.issues.some((issue) => issue.message.includes("should match module name")), true);
   assert.equal(result.issues.some((issue) => issue.message.includes("Role and Responsibilities")), true);
+}
+
+async function testModuleDesignContractRejectsInvalidLlmResult(workspaceRoot: string): Promise<void> {
+  const contract = new ModuleDesignContract(new InvalidJsonLlmExecutor());
+
+  await assert.rejects(
+    contract.check(
+      {
+        taskId: "task-invalid",
+        stageId: "module_design",
+        attempt: 1,
+        workspaceRoot,
+        inputArtifacts: {},
+      },
+      {
+        stageId: "module_design",
+        success: true,
+        summary: "Module design document generated.",
+        artifacts: {
+          artifactKey: "module_design_document",
+          moduleName: "Workflow",
+          content: createModuleDesignDocument(),
+        },
+      },
+    ),
+    /Unexpected token|must contain/,
+  );
 }
 
 async function testModuleDesignContractLoadsTemplateContractSource(): Promise<void> {
@@ -356,4 +385,174 @@ function createModuleDesignDocument(): string {
     "- keep runtime context minimal",
     "- avoid embedding module-internal execution logic here",
   ].join("\n");
+}
+
+class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    const payload = JSON.parse(request.prompt.userPrompt) as {
+      moduleName: string;
+      generatedResult: string;
+      contractSpec: {
+        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+        section_contracts: Array<{ section_id: string; title: string; severity: "low" | "medium" | "high" }>;
+      };
+    };
+    const content = payload.generatedResult;
+    const moduleName = payload.moduleName;
+    const contractSpec = payload.contractSpec;
+    const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
+
+    const requiredSections = ["2", "2.1", "3", "3.1", "4.1", "4.1.1", "4.1.2", "4.1.4", "4.2"];
+    for (const sectionId of requiredSections) {
+      const section = contractSpec.section_contracts.find((entry) => entry.section_id === sectionId);
+      if (!section) {
+        continue;
+      }
+
+      const headingCandidates = [
+        `## ${section.section_id}. ${section.title}`,
+        `### ${section.section_id}. ${section.title}`,
+        `#### ${section.section_id}. ${section.title}`,
+        `## ${section.section_id} ${section.title}`,
+        `### ${section.section_id} ${section.title}`,
+        `#### ${section.section_id} ${section.title}`,
+      ];
+      if (!headingCandidates.some((heading) => content.includes(heading))) {
+        issues.push({
+          checkItem: "document_structure_complete",
+          message: `Missing required section: ${headingCandidates[0]}`,
+          severity: section.severity,
+        });
+      }
+    }
+
+    const alignmentContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "section_contract_alignment",
+    );
+    if (!sectionContainsCodeBlock(content, "### 2.1 Class Diagram", "plantuml")) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
+        message: "Class Diagram section should include a PlantUML code block.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+    if (!sectionContainsCodeBlock(content, "### 3.1 Main Sequence Diagram", "plantuml")) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
+        message: "Main Sequence Diagram section should include a PlantUML code block.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+    if (!sectionContainsCodeBlock(content, "#### 4.1.2 Input Types", "ts")) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
+        message: "Input Types section should define input structure in a TypeScript code block.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+    if (!sectionContainsCodeBlock(content, "#### 4.1.4 Output Types", "ts")) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
+        message: "Output Types section should define output structure in a TypeScript code block.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+    if (hasNonCodeProse(extractSection(content, "#### 4.1.2 Input Types"))) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
+        message: "Input Types section should not describe structure with prose outside code blocks.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+    if (hasNonCodeProse(extractSection(content, "#### 4.1.4 Output Types"))) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
+        message: "Output Types section should not describe structure with prose outside code blocks.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
+
+    const consistencyContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "format_consistency",
+    );
+    if (!content.includes(`# ${moduleName} Design`)) {
+      issues.push({
+        checkItem: consistencyContract?.check_item ?? "format_consistency",
+        message: `Document title should match module name "${moduleName}".`,
+        severity: consistencyContract?.severity ?? "medium",
+      });
+    }
+    if (!extractSection(content, "### 1.2 Involved Modules").includes("This module design directly involves:")) {
+      issues.push({
+        checkItem: consistencyContract?.check_item ?? "format_consistency",
+        message: "Involved Modules section should explicitly list direct and collaborating modules.",
+        severity: consistencyContract?.severity ?? "medium",
+      });
+    }
+    if (!content.includes("### 2.2 Core Class Responsibilities")
+      || !content.includes("Role:")
+      || !content.includes("Responsibilities:")) {
+      issues.push({
+        checkItem: consistencyContract?.check_item ?? "format_consistency",
+        message: "Core Class Responsibilities section should include Role and Responsibilities blocks.",
+        severity: consistencyContract?.severity ?? "medium",
+      });
+    }
+    if (!/^\s*-\s+/m.test(extractSection(content, "## 4.2 Constraints"))) {
+      issues.push({
+        checkItem: consistencyContract?.check_item ?? "format_consistency",
+        message: "Constraints section should list explicit constraint bullets.",
+        severity: consistencyContract?.severity ?? "medium",
+      });
+    }
+
+    return {
+      content: JSON.stringify({
+        passed: issues.length === 0,
+        summary: issues.length === 0
+          ? "Module design document passed contract checks."
+          : "Module design document failed contract checks.",
+        issues,
+      }),
+      responseFormat: "json",
+    };
+  }
+}
+
+class InvalidJsonLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: "{not-json",
+      responseFormat: "json",
+    };
+  }
+}
+
+function extractSection(content: string, heading: string): string {
+  const startIndex = content.indexOf(heading);
+  if (startIndex < 0) {
+    return "";
+  }
+
+  const rest = content.slice(startIndex + heading.length);
+  const nextHeadingOffset = rest.search(/\n##?\s|\n###\s|\n####\s/);
+  if (nextHeadingOffset < 0) {
+    return rest.trim();
+  }
+
+  return rest.slice(0, nextHeadingOffset).trim();
+}
+
+function sectionContainsCodeBlock(content: string, heading: string, language: string): boolean {
+  const section = extractSection(content, heading);
+  return section.includes(`\`\`\`${language}`);
+}
+
+function hasNonCodeProse(sectionContent: string): boolean {
+  if (sectionContent.trim().length === 0) {
+    return false;
+  }
+
+  const stripped = sectionContent.replace(/```[\s\S]*?```/g, "").trim();
+  return stripped.length > 0;
 }
