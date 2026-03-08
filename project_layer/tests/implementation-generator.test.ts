@@ -5,7 +5,7 @@ import path from "node:path";
 import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.js";
 import { ImplementationGenerator } from "../src/execution/implementation-generator/implementation-generator.js";
 import { ProjectContextLoader } from "../src/execution/implementation-generator/project-context-loader.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/shared/contracts/llm-executor.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 import type { ProjectFile } from "../src/shared/types/common.js";
 
 export async function runImplementationGeneratorTests(): Promise<void> {

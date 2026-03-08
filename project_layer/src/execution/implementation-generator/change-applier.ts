@@ -1,7 +1,7 @@
 // Change applier: validates and applies generated file changes into the target workspace.
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { LlmExecutionResult } from "../../shared/contracts/llm-executor.js";
+import type { LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import type { ApplyResult, ParsedGenerationResult, ProjectContext } from "./types.js";
 

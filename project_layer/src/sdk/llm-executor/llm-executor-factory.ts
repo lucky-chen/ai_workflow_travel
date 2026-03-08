@@ -1,5 +1,5 @@
 // LLM executor factory: selects a concrete executor implementation for the requested mode.
-import type { ILlmExecutor } from "../../shared/contracts/llm-executor.js";
+import type { ILlmExecutor } from "./llm-executor.js";
 import { ExecutionStrategySelector } from "./execution-strategy-selector.js";
 import type { RealProviderConfig } from "./real-provider-config.js";
 

@@ -1,5 +1,5 @@
-import type { ILlmExecutor } from "../../shared/contracts/llm-executor.js";
 import { DeepSeekLlmExecutor } from "./deepseek-llm-executor.js";
+import type { ILlmExecutor } from "./llm-executor.js";
 import { MockLlmExecutor } from "./mock-llm-executor.js";
 import { OpenAiLlmExecutor } from "./openai-llm-executor.js";
 import type { LlmExecutorMode, LlmExecutorServiceDependencies } from "./llm-executor-factory.js";

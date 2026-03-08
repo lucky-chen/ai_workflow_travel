@@ -1,6 +1,6 @@
 // Implementation generator service: orchestrates loading, prompting, execution, and output shaping.
 import type { IArtifactStore } from "../../shared/contracts/artifact-store.js";
-import type { ILlmExecutor } from "../../shared/contracts/llm-executor.js";
+import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import type {
   IStageGenerator,
   ImplementationStageArtifacts,

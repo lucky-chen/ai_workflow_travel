@@ -3,7 +3,7 @@ import type {
   ILlmExecutor,
   LlmExecutionRequest,
   LlmExecutionResult,
-} from "../../shared/contracts/llm-executor.js";
+} from "./llm-executor.js";
 
 export class MockLlmExecutor implements ILlmExecutor {
   constructor(private readonly mockContent?: string) {}

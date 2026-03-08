@@ -8,7 +8,7 @@ import { ImplementationContractService } from "../src/contract/implementation-co
 import { InMemoryChangeGate } from "../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 import { ImplementationStageRunner } from "../src/workflow/stage-runners/implementation-stage-runner.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/shared/contracts/llm-executor.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 import type { IContractChecker, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
 
 export async function runImplementationStageRunnerTests(): Promise<void> {

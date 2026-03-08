@@ -3,7 +3,7 @@ import type {
   ILlmExecutor,
   LlmExecutionRequest,
   LlmExecutionResult,
-} from "../../shared/contracts/llm-executor.js";
+} from "./llm-executor.js";
 import { HttpJsonClient } from "./http-json-client.js";
 import type { RealProviderConfig } from "./real-provider-config.js";
 

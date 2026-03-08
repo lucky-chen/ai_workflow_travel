@@ -1,5 +1,5 @@
 // Implementation prompt builder: converts module design and project context into a stable LLM request.
-import type { LlmExecutionRequest } from "../../shared/contracts/llm-executor.js";
+import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
 import type { PromptBuildInput } from "./types.js";
 
 export class ImplementationPromptBuilder {
