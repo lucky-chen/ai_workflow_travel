@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 
 import {
+  DefaultAgent,
+  DefaultExecutor,
   DefaultObserver,
   DefaultPlanner,
   type AgentContext,
+  type IModelExecutionBackend,
 } from "../src/agent-runtime.js";
 import type {
   AgentTraceEvent,
@@ -13,6 +16,8 @@ import type {
 export async function runAgentRuntimeTests(): Promise<void> {
   await testDefaultPlannerBuildsDirectGenerationPlan();
   await testDefaultObserverAcceptsResult();
+  await testDefaultExecutorPassesRequestToBackend();
+  await testDefaultAgentRunsSinglePassAndRecordsTrace();
   await testAgentTraceRecorderContract();
 }
 
@@ -76,6 +81,54 @@ async function testAgentTraceRecorderContract(): Promise<void> {
   ]);
 }
 
+async function testDefaultExecutorPassesRequestToBackend(): Promise<void> {
+  const backend = new TestModelExecutionBackend({
+    content: "{\"summary\":\"backend\"}",
+    responseFormat: "json",
+  });
+  const executor = new DefaultExecutor(backend);
+  const context = createAgentContext();
+
+  const result = await executor.execute(context, {
+    mode: "direct_generation",
+    summary: "Use direct generation for the current request.",
+  });
+
+  assert.equal(result.result.content, "{\"summary\":\"backend\"}");
+  assert.equal(backend.requests.length, 1);
+  assert.deepEqual(backend.requests[0], context.request);
+}
+
+async function testDefaultAgentRunsSinglePassAndRecordsTrace(): Promise<void> {
+  const planner = new DefaultPlanner();
+  const observer = new DefaultObserver();
+  const backend = new TestModelExecutionBackend({
+    content: "{\"summary\":\"agent\"}",
+    responseFormat: "json",
+    metadata: {
+      requestId: "req-1",
+    },
+  });
+  const executor = new DefaultExecutor(backend);
+  const traceRecorder = new TestAgentTraceRecorder();
+  const agent = new DefaultAgent(planner, executor, observer, traceRecorder);
+
+  const result = await agent.run(createAgentContext());
+
+  assert.equal(result.result.content, "{\"summary\":\"agent\"}");
+  assert.equal(result.plan.mode, "direct_generation");
+  assert.equal(result.observation.accepted, true);
+  assert.deepEqual(
+    traceRecorder.getEvents().map((entry) => entry.event.eventType),
+    [
+      "agent_plan_created",
+      "agent_execution_started",
+      "agent_execution_finished",
+      "agent_observation_finished",
+    ],
+  );
+}
+
 function createAgentContext(): AgentContext {
   return {
     request: {
@@ -105,5 +158,20 @@ class TestAgentTraceRecorder implements IAgentTraceRecorder {
 
   getEvents(): Array<{ ref: string; event: AgentTraceEvent }> {
     return [...this.events];
+  }
+}
+
+class TestModelExecutionBackend implements IModelExecutionBackend {
+  readonly requests: AgentContext["request"][] = [];
+
+  constructor(private readonly result: {
+    content: string;
+    responseFormat: "text" | "json";
+    metadata?: Record<string, string>;
+  }) {}
+
+  async execute(request: AgentContext["request"]) {
+    this.requests.push(request);
+    return this.result;
   }
 }

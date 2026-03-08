@@ -60,6 +60,10 @@ export interface IObserver {
   ): Promise<ObservationResult>;
 }
 
+export interface IModelExecutionBackend {
+  execute(request: LlmExecutionRequest): Promise<LlmExecutionResult>;
+}
+
 export class DefaultPlanner implements IPlanner {
   async plan(_context: AgentContext): Promise<ExecutionPlan> {
     return {
@@ -80,4 +84,74 @@ export class DefaultObserver implements IObserver {
       summary: "Result accepted.",
     };
   }
+}
+
+export class DefaultExecutor implements IExecutor {
+  constructor(private readonly backend: IModelExecutionBackend) {}
+
+  async execute(context: AgentContext, _plan: ExecutionPlan): Promise<ExecutionResult> {
+    const result = await this.backend.execute(context.request);
+    return { result };
+  }
+}
+
+export class DefaultAgent implements IAgent {
+  constructor(
+    private readonly planner: IPlanner,
+    private readonly executor: IExecutor,
+    private readonly observer: IObserver,
+    private readonly traceRecorder?: import("./agent-trace-recorder.js").IAgentTraceRecorder,
+  ) {}
+
+  async run(context: AgentContext): Promise<AgentResult> {
+    const runId = getRunId(context);
+    const plan = await this.planner.plan(context);
+    await this.traceRecorder?.record({
+      runId,
+      eventType: "agent_plan_created",
+      summary: "Agent plan created.",
+      payload: {
+        mode: plan.mode,
+      },
+    });
+
+    await this.traceRecorder?.record({
+      runId,
+      eventType: "agent_execution_started",
+      summary: "Agent execution started.",
+      payload: {
+        mode: plan.mode,
+      },
+    });
+    const executionResult = await this.executor.execute(context, plan);
+    await this.traceRecorder?.record({
+      runId,
+      eventType: "agent_execution_finished",
+      summary: "Agent execution finished.",
+      payload: {
+        responseFormat: executionResult.result.responseFormat,
+      },
+    });
+
+    const observation = await this.observer.observe(context, plan, executionResult);
+    await this.traceRecorder?.record({
+      runId,
+      eventType: "agent_observation_finished",
+      summary: "Agent observation finished.",
+      payload: {
+        accepted: observation.accepted,
+      },
+    });
+
+    return {
+      result: executionResult.result,
+      plan,
+      observation,
+    };
+  }
+}
+
+function getRunId(context: AgentContext): string {
+  const requestId = context.request.metadata?.requestId;
+  return requestId && requestId.trim().length > 0 ? requestId : "agent-run";
 }

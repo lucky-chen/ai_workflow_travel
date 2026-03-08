@@ -89,11 +89,11 @@ This step delivers the shared runtime backbone used by all stages.
     - [x] minimal `DefaultPlanner` and `DefaultObserver`
     - [x] focused tests for interfaces, runtime types, and trace types in the standalone `project_layer/projects/agent_runtime` project
   - [ ] Batch 2: single-pass runtime
-    - [ ] `DefaultExecutor`
-    - [ ] `DefaultAgent`
-    - [ ] minimal single-pass `plan -> execute -> observe` runtime
-    - [ ] trace checkpoints for plan, execution, and observation flow
-    - [ ] focused tests for single-pass runtime execution
+    - [x] `DefaultExecutor`
+    - [x] `DefaultAgent`
+    - [x] minimal single-pass `plan -> execute -> observe` runtime
+    - [x] trace checkpoints for plan, execution, and observation flow
+    - [x] focused tests for single-pass runtime execution
   - [ ] Batch 3: llm executor integration
     - [ ] composition binding between `LlmExecutor` and `AgentRuntime`
     - [ ] `LlmExecutorService` integration through `AgentRuntime`
