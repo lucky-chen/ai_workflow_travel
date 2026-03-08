@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type {
@@ -8,7 +7,7 @@ import type {
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
 import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
-import type { ContractExecutionResult, ContractSpec, SpecificContractSpec } from "../document-stage-contract.js";
+import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
 
 const TECHNICAL_ARCHITECTURE_CONTRACT_PATH = path.resolve(
@@ -28,23 +27,12 @@ interface ArchitectureArtifacts {
 }
 
 export class ArchitectureDesignContract extends DocumentStageContract {
-  protected async loadSharedContract(): Promise<ContractSpec> {
-    const content = await readFile(TECHNICAL_ARCHITECTURE_CONTRACT_PATH, "utf8");
-    const parsed = JSON.parse(content) as ContractSpec;
-    return {
-      document_contracts: parsed.document_contracts,
-      section_contracts: parsed.section_contracts,
-      specific_contract: {},
-    };
+  protected getContractFilePath(): string {
+    return TECHNICAL_ARCHITECTURE_CONTRACT_PATH;
   }
 
-  protected async loadSpecificContract(): Promise<SpecificContractSpec> {
-    return {
-      specific_contract: {
-        source: "meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json",
-      },
-      stage: "architecture_design",
-    };
+  protected getStageId(): string {
+    return "architecture_design";
   }
 
   protected async buildCheckRequest(

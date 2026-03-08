@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type {
@@ -13,7 +12,6 @@ import {
   DocumentStageContract,
   type ContractSpec,
   type ContractExecutionResult,
-  type SpecificContractSpec,
 } from "../document-stage-contract.js";
 
 const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
@@ -28,25 +26,12 @@ const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
 );
 
 export class RequirementContract extends DocumentStageContract {
-  protected async loadSharedContract(): Promise<ContractSpec> {
-    const content = await readFile(REQUIREMENT_TEMPLATE_CONTRACT_PATH, "utf8");
-    const parsed = JSON.parse(content) as ContractSpec;
-    return {
-      document_contracts: parsed.document_contracts,
-      section_contracts: parsed.section_contracts,
-      specific_contract: {},
-    };
+  protected getContractFilePath(): string {
+    return REQUIREMENT_TEMPLATE_CONTRACT_PATH;
   }
 
-  protected async loadSpecificContract(): Promise<SpecificContractSpec> {
-    return {
-      document_contracts: [],
-      section_contracts: [],
-      specific_contract: {
-        source: "meta_layer/resources/contract/RequirementTemplate.contract.json",
-      },
-      stage: "requirement_interpretation",
-    };
+  protected getStageId(): string {
+    return "requirement_interpretation";
   }
 
   protected async buildCheckRequest(

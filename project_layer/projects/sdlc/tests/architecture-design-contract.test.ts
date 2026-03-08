@@ -126,20 +126,10 @@ async function testArchitectureContractFailsForPlaceholderAndBoundaryIssues(work
 async function testArchitectureContractLoadsTemplateContractSource(): Promise<void> {
   const contract = new ArchitectureDesignContract();
   const spec = await (contract as unknown as {
-    loadSharedContract(): Promise<{
+    loadSpecificContract(): Promise<{
       document_contracts: Array<{ check_item: string }>;
       section_contracts: Array<{ section_id: string }>;
       specific_contract?: Record<string, unknown>;
-    }>;
-    loadSpecificContract(): Promise<{
-      specific_contract?: { source?: string };
-      stage?: string;
-    }>;
-  }).loadSharedContract();
-  const specificSpec = await (contract as unknown as {
-    loadSpecificContract(): Promise<{
-      specific_contract?: { source?: string };
-      stage?: string;
     }>;
   }).loadSpecificContract();
   const rawSpec = JSON.parse(
@@ -162,65 +152,22 @@ async function testArchitectureContractLoadsTemplateContractSource(): Promise<vo
     spec.document_contracts.map((entry) => entry.check_item),
     rawSpec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(spec.specific_contract && Object.keys(spec.specific_contract).length, 0);
   assert.equal(
-    specificSpec.specific_contract?.source,
+    spec.specific_contract?.source,
     "meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json",
   );
-  assert.equal(specificSpec.stage, "architecture_design");
+  assert.equal(spec.specific_contract?.stage, "architecture_design");
 }
 
 async function testArchitectureContractBuildsPromptRequest(workspaceRoot: string): Promise<void> {
   const contract = new ArchitectureDesignContract();
-  const sharedSpec = await (contract as unknown as {
-    loadSharedContract(): Promise<{
-      document_contracts: Array<{ check_item: string }>;
-      section_contracts: Array<{ section_id: string }>;
-      specific_contract?: Record<string, unknown>;
-    }>;
+  const spec = await (contract as unknown as {
     loadSpecificContract(): Promise<{
-      specific_contract?: { source?: string };
-      stage?: string;
-    }>;
-    resolveContractRules(
-      sharedContract: {
-        document_contracts: Array<{ check_item: string }>;
-        section_contracts: Array<{ section_id: string }>;
-        specific_contract?: Record<string, unknown>;
-      },
-      specificContract: {
-        specific_contract?: { source?: string };
-        stage?: string;
-      },
-    ): {
       document_contracts: Array<{ check_item: string }>;
       section_contracts: Array<{ section_id: string }>;
       specific_contract?: { source?: string; stage?: string };
-    };
-  }).loadSharedContract();
-  const specificSpec = await (contract as unknown as {
-    loadSpecificContract(): Promise<{
-      specific_contract?: { source?: string };
-      stage?: string;
     }>;
   }).loadSpecificContract();
-  const spec = (contract as unknown as {
-    resolveContractRules(
-      sharedContract: {
-        document_contracts: Array<{ check_item: string }>;
-        section_contracts: Array<{ section_id: string }>;
-        specific_contract?: Record<string, unknown>;
-      },
-      specificContract: {
-        specific_contract?: { source?: string };
-        stage?: string;
-      },
-    ): {
-      document_contracts: Array<{ check_item: string }>;
-      section_contracts: Array<{ section_id: string }>;
-      specific_contract?: { source?: string; stage?: string };
-    };
-  }).resolveContractRules(sharedSpec, specificSpec);
 
   const request = await (contract as unknown as {
     buildCheckRequest(
@@ -288,7 +235,7 @@ async function testArchitectureContractBuildsPromptRequest(workspaceRoot: string
     "meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json",
   );
   assert.equal(payload.contractSpec.specific_contract?.stage, "architecture_design");
-  assert.equal(payload.contractSpec.section_contracts.length, sharedSpec.section_contracts.length);
+  assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
 }
 
 async function createTempDir(prefix: string): Promise<string> {

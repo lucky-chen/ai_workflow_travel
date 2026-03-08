@@ -79,10 +79,11 @@ participant RequirementContract
 participant ILlmExecutor
 
 RequirementStageRunner -> RequirementContract: check(context, output)
-RequirementContract -> RequirementContract: loadSharedContract()
-RequirementContract --> RequirementContract: shared_contract
 RequirementContract -> RequirementContract: loadSpecificContract()
-RequirementContract --> RequirementContract: specific_contract
+RequirementContract -> RequirementContract: loadContractFile()
+RequirementContract --> RequirementContract: base_contract_spec
+RequirementContract -> RequirementContract: refineLoadedContract()
+RequirementContract --> RequirementContract: contract_spec
 RequirementContract -> RequirementContract: buildCheckRequest(output, contract_spec)
 RequirementContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> RequirementContract: llm_result
@@ -109,8 +110,9 @@ RequirementContract --> RequirementStageRunner: contract_check_result
 
 Overridden methods:
 
-- `loadSharedContract()`
-- `loadSpecificContract()`
+- `getContractFilePath()`
+- `getStageId()`
+- `refineLoadedContract(baseSpec)`
 - `buildCheckRequest(output, contractSpec)`
 - `buildContractResult(result)`
 
@@ -127,6 +129,8 @@ Overridden methods:
 - check target is raw requirement-stage input or requirement-stage normalized document
 - check target field path is `output.artifacts.content`
 - contract source is `meta_layer/resources/contract/RequirementTemplate.contract.json`
+- shared parent logic injects `specific_contract.source` and `specific_contract.stage`
+- subclass may refine the loaded contract after file loading when later requirement-stage metadata is needed
 - contract-specific rules are requirement document structure rules, requirement scope consistency rules, and workflow/goal alignment rules
 - checker output is `ContractCheckResult`
 

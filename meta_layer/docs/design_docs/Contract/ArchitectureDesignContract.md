@@ -74,10 +74,11 @@ participant ArchitectureDesignContract
 participant ILlmExecutor
 
 ArchitectureStageRunner -> ArchitectureDesignContract: check(context, output)
-ArchitectureDesignContract -> ArchitectureDesignContract: loadSharedContract()
-ArchitectureDesignContract --> ArchitectureDesignContract: shared_contract
 ArchitectureDesignContract -> ArchitectureDesignContract: loadSpecificContract()
-ArchitectureDesignContract --> ArchitectureDesignContract: specific_contract
+ArchitectureDesignContract -> ArchitectureDesignContract: loadContractFile()
+ArchitectureDesignContract --> ArchitectureDesignContract: base_contract_spec
+ArchitectureDesignContract -> ArchitectureDesignContract: refineLoadedContract()
+ArchitectureDesignContract --> ArchitectureDesignContract: contract_spec
 ArchitectureDesignContract -> ArchitectureDesignContract: buildCheckRequest(output, contract_spec)
 ArchitectureDesignContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> ArchitectureDesignContract: llm_result
@@ -104,8 +105,9 @@ ArchitectureDesignContract --> ArchitectureStageRunner: contract_check_result
 
 Overridden methods:
 
-- `loadSharedContract()`
-- `loadSpecificContract()`
+- `getContractFilePath()`
+- `getStageId()`
+- `refineLoadedContract(baseSpec)`
 - `buildCheckRequest(output, contractSpec)`
 - `buildContractResult(result)`
 
@@ -123,6 +125,8 @@ Overridden methods:
 - check target is architecture-design-stage generated document
 - check target field path is `output.artifacts.content`
 - contract source is `meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json`
+- shared parent logic injects `specific_contract.source` and `specific_contract.stage`
+- subclass may refine the loaded contract after file loading when later architecture-stage metadata is needed
 - contract-specific rules are architecture document structure rules, section contract rules, and architecture module-boundary consistency rules
 - checker output is `ContractCheckResult`
 

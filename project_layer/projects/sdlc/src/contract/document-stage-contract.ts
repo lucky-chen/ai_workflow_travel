@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import type { ContractCheckResult, IContractChecker, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
 import type { LlmExecutionRequest } from "../sdk/llm-executor/llm-executor.js";
 
@@ -31,35 +33,33 @@ export interface ContractExecutionResult {
 
 export abstract class DocumentStageContract implements IContractChecker {
   async check(context: StageRunContext, output: StageOutput): Promise<ContractCheckResult> {
-    const sharedContract = await this.loadSharedContract();
-    const specificContract = await this.loadSpecificContract();
-    const contractSpec = this.resolveContractRules(sharedContract, specificContract);
+    const contractSpec = await this.loadSpecificContract();
     const request = await this.buildCheckRequest(context, output, contractSpec);
     const result = await this.executeCheck(request);
     return this.buildContractResult(result);
   }
 
-  protected abstract loadSharedContract(): Promise<ContractSpec>;
-  protected abstract loadSpecificContract(): Promise<SpecificContractSpec>;
+  protected abstract getContractFilePath(): string;
+  protected abstract getStageId(): string;
 
-  protected resolveContractRules(sharedContract: ContractSpec, specificContract: SpecificContractSpec): ContractSpec {
-    const specificDocumentContracts = Array.isArray(specificContract.document_contracts)
-      ? specificContract.document_contracts
-      : [];
-    const specificSectionContracts = Array.isArray(specificContract.section_contracts)
-      ? specificContract.section_contracts
-      : [];
-    const { document_contracts, section_contracts, specific_contract, ...remainingSpecificFields } = specificContract;
+  protected async refineLoadedContract(baseSpec: ContractSpec): Promise<ContractSpec> {
+    return baseSpec;
+  }
 
-    return {
-      document_contracts: [...sharedContract.document_contracts, ...specificDocumentContracts],
-      section_contracts: [...sharedContract.section_contracts, ...specificSectionContracts],
+  protected async loadSpecificContract(): Promise<ContractSpec> {
+    const content = await readFile(this.getContractFilePath(), "utf8");
+    const parsed = JSON.parse(content) as ContractSpec;
+    const baseSpec: ContractSpec = {
+      document_contracts: parsed.document_contracts,
+      section_contracts: parsed.section_contracts,
       specific_contract: {
-        ...(sharedContract.specific_contract ?? {}),
-        ...(specific_contract ?? {}),
-        ...remainingSpecificFields,
+        source: this.getContractFilePath().split("meta_layer/")[1]
+          ? `meta_layer/${this.getContractFilePath().split("meta_layer/")[1].replaceAll("\\", "/")}`
+          : this.getContractFilePath(),
+        stage: this.getStageId(),
       },
     };
+    return this.refineLoadedContract(baseSpec);
   }
 
   protected abstract buildCheckRequest(

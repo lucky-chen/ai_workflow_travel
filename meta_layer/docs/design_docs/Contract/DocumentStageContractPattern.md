@@ -5,8 +5,8 @@
 Define the shared runtime pattern used by document-oriented stages whose workflow shape is:
 
 1. receive document-stage input from the stage runner
-2. load shared document-stage contract rules
-3. merge specific contract rules
+2. load stage contract file through shared parent logic
+3. let the concrete subclass refine the loaded contract if needed
 4. build contract-check request
 5. call the shared llm execution interface
 6. convert model output into contract-check result
@@ -53,11 +53,11 @@ StageRunner -> ITraceRecorder: record stage start
 
 StageRunner -> DocumentStageContract: check(context, stage_output)
 DocumentStageContract -> ITraceRecorder: record contract start
-DocumentStageContract -> DocumentStageContract: loadSharedContract()
-DocumentStageContract --> DocumentStageContract: shared_contract
 DocumentStageContract -> DocumentStageContract: loadSpecificContract()
-DocumentStageContract --> DocumentStageContract: specific_contract
-DocumentStageContract -> DocumentStageContract: resolveContractRules()
+DocumentStageContract -> DocumentStageContract: loadContractFile()
+DocumentStageContract --> DocumentStageContract: base_contract_spec
+DocumentStageContract -> DocumentStageContract: refineLoadedContract()
+DocumentStageContract --> DocumentStageContract: contract_spec
 DocumentStageContract -> DocumentStageContract: buildCheckRequest()
 DocumentStageContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> DocumentStageContract: llm_result
@@ -99,12 +99,12 @@ abstract class DocumentStageContract implements IContractChecker {
     output: StageOutput,
   ): Promise<ContractCheckResult>
 
-  protected abstract loadSharedContract(): Promise<ContractSpec>
-  protected abstract loadSpecificContract(): Promise<ContractSpec>
-  protected resolveContractRules(
-    sharedContract: ContractSpec,
-    specificContract: ContractSpec,
-  ): ContractSpec
+  protected abstract getContractFilePath(): string
+  protected abstract getStageId(): string
+  protected async loadSpecificContract(): Promise<ContractSpec>
+  protected async refineLoadedContract(
+    baseSpec: ContractSpec,
+  ): Promise<ContractSpec>
   protected abstract buildCheckRequest(
     output: StageOutput,
     contractSpec: ContractSpec,
@@ -121,9 +121,10 @@ abstract class DocumentStageContract implements IContractChecker {
 Parent-class rule:
 
 - `check` is shared orchestration logic
-- `resolveContractRules` is shared merge logic
+- `loadSpecificContract` is shared contract-file loading logic
+- `refineLoadedContract` is the subclass extension point for post-load adjustments
 - `executeCheck` is shared llm execution logic
-- shared contract loading, specific contract loading, check-request building, and contract-result building are extension points left to concrete subclasses
+- contract file path, stage id, post-load refinement, check-request building, and contract-result building are extension points left to concrete subclasses
 - `ITraceRecorder` is a contract-internal collaboration dependency used by `check`
 - `IChangeGate` and `IArtifactStore` appear in this pattern as runner-side workflow collaboration points
 - gate review is triggered after `check` returns, but gate behavior is not implemented inside `DocumentStageContract`
@@ -146,7 +147,7 @@ DocumentStageContract --> ITraceRecorder
 ```
 
 - `DocumentStageContract` owns the shared check orchestration flow.
-- Shared contract loading, specific contract loading, rule resolution, check-request building, LLM execution, contract-result building, and contract trace recording are logical responsibilities inside that flow.
+- Shared contract-file loading, contract refinement, check-request building, LLM execution, contract-result building, and contract trace recording are logical responsibilities inside that flow.
 - gate review and artifact persistence stay runner-side workflow collaborations after `check` returns.
 
 ## 6. Shared Input And Output Boundaries
@@ -158,8 +159,8 @@ DocumentStageContract --> ITraceRecorder
 
 ### 6.2 Contract Rule Input
 
-- shared document-stage contract source
-- specific contract rule source
+- stage-specific contract file source
+- optional subclass refinement metadata
 
 Shared contract model:
 
@@ -255,7 +256,8 @@ Each concrete contract document should define only its own:
 
 - inheritance from `DocumentStageContract`
 - implementation class
-- specific contract rules added on top of the shared document-stage contract
+- stage contract file path and stage id
+- specific contract rules added through post-load refinement when needed
 - check target and contract source
 - record events or event metadata that differ from the shared pattern
 - review input/output restrictions
