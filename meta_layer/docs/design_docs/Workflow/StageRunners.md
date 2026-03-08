@@ -83,6 +83,10 @@ class ModuleStageRunner extends BaseStageRunner {
   run(context: StageRunContext): Promise<StageOutput>
 }
 
+class ImplementationPlanStageRunner extends BaseStageRunner {
+  run(context: StageRunContext): Promise<StageOutput>
+}
+
 class ImplementationStageRunner extends BaseStageRunner {
   run(context: StageRunContext): Promise<StageOutput>
 }
@@ -101,7 +105,8 @@ All runners keep the same public signature as `BaseStageRunner`.
 | `requirement_interpretation` | `RequirementStageRunner` | `Execution/RequirementGenerator.run` | `Contract/RequirementContract.check` | `review_required` |
 | `architecture_design` | `ArchitectureStageRunner` | `Execution/ArchitectureDesignGenerator.run` | `Contract/ArchitectureDesignContract.check` | `review_required` |
 | `module_design` | `ModuleStageRunner` | `Execution/ModuleDesignGenerator.run` | `Contract/ModuleDesignContract.check` | `review_required` |
-| `implementation` | `ImplementationStageRunner` | `Execution/ImplementationGenerator.run` | `Contract/ImplementationContract.check` | `review_required` |
+| `implementation_plan_generation` | `ImplementationPlanStageRunner` | `Execution/ImplementationPlanGenerator.run` | `Contract/ImplementationPlanContract.check` | `review_required` |
+| `implementation_step_execution` | `ImplementationStageRunner` | `Execution/ImplementationGenerator.run` | `Contract/ImplementationContract.check` | `review_required_per_step` |
 | `validation` | `ValidationStageRunner` | `none` | `Contract/ValidationContract.check` | `review_required_for_final_result` |
 
 Stage exceptions:
@@ -135,9 +140,14 @@ Persistence mapping rule for document stages:
   - read `StageOutput.artifacts.artifactKey == "module_design_document"`
   - persist content to `docs/module_design/{moduleName}.md`
   - pass accepted output downstream as `inputArtifacts["module_design_document"]`
-- `implementation`
+- `implementation_plan_generation`
+  - read `StageOutput.artifacts.artifactKey == "implementation_workplan"`
+  - persist content to `plans/implementation/{moduleName}.plan.json`
+  - pass accepted output downstream as `inputArtifacts["implementation_workplan"]`
+- `implementation_step_execution`
   - read `StageOutput.artifacts.generatedFiles`
   - persist each generated file to its `generatedFiles[*].path`
+  - use `inputArtifacts["current_step"]` plus review result for next-step transition
 - `validation`
   - read `inputArtifacts["project_path"]`
   - do not persist new artifacts by default

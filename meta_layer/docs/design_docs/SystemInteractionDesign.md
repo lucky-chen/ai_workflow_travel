@@ -17,10 +17,12 @@ Interface source index (single source of truth):
   - [Execution/RequirementGenerator.md](./Execution/RequirementGenerator.md)
   - [Execution/ArchitectureDesignGenerator.md](./Execution/ArchitectureDesignGenerator.md)
   - [Execution/ModuleDesignGenerator.md](./Execution/ModuleDesignGenerator.md)
+  - [Execution/ImplementationPlanGenerator.md](./Execution/ImplementationPlanGenerator.md)
   - [Execution/ImplementationGenerator.md](./Execution/ImplementationGenerator.md)
 - `Contract/*` stage check interfaces:
   - [Contract/ArchitectureDesignContract.md](./Contract/ArchitectureDesignContract.md)
   - [Contract/ModuleDesignContract.md](./Contract/ModuleDesignContract.md)
+  - [Contract/ImplementationPlanContract.md](./Contract/ImplementationPlanContract.md)
   - [Contract/ImplementationContract.md](./Contract/ImplementationContract.md)
   - [Contract/ValidationContract.md](./Contract/ValidationContract.md)
 - `QualityGate/*` decision and trace interfaces:
@@ -75,6 +77,7 @@ Notes:
 - `Execution/RequirementGenerator.run(context) -> stage_output`
 - `Execution/ArchitectureDesignGenerator.run(context) -> stage_output`
 - `Execution/ModuleDesignGenerator.run(context) -> stage_output`
+- `Execution/ImplementationPlanGenerator.run(context) -> stage_output`
 - `Execution/ImplementationGenerator.run(context) -> stage_output`
 
 Notes:
@@ -102,6 +105,7 @@ Notes:
 - `Contract/RequirementContract.check(context, output) -> check_result`
 - `Contract/ArchitectureDesignContract.check(context, output) -> check_result`
 - `Contract/ModuleDesignContract.check(context, output) -> check_result`
+- `Contract/ImplementationPlanContract.check(context, output) -> check_result`
 - `Contract/ImplementationContract.check(context, output) -> check_result`
 - `Contract/ValidationContract.check(context, output) -> check_result`
 
@@ -145,8 +149,13 @@ Stage-to-stage artifact mapping:
 - `module_design`
   - generator output: `artifacts.artifactKey == "module_design_document"`
   - downstream handoff: `inputArtifacts["module_design_document"]`
-- `implementation`
+- `implementation_plan_generation`
+  - generator output: `artifacts.artifactKey == "implementation_workplan"`
+  - downstream handoff: `inputArtifacts["implementation_workplan"]`
+- `implementation_step_execution`
   - generator output: `artifacts.generatedFiles`
+  - runtime input: `inputArtifacts["implementation_workplan"]`
+  - runtime input: `inputArtifacts["current_step"]`
   - accepted files are persisted to their generated paths
 - `validation`
   - runtime input: `inputArtifacts["project_path"]`
@@ -167,7 +176,11 @@ Gate review-request mapping by stage:
   - review summary source: `output.summary`
   - review path: `docs/module_design/{moduleName}.md`
   - review content source: `output.artifacts.content`
-- `implementation`
+- `implementation_plan_generation`
+  - review summary source: `output.summary`
+  - review path: `plans/implementation/{moduleName}.plan.json`
+  - review content source: generated workplan
+- `implementation_step_execution`
   - review summary source: `output.summary`
   - review paths: `output.artifacts.generatedFiles[*].path`
   - review content source: `output.artifacts.generatedFiles[*].content`

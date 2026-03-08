@@ -1,5 +1,9 @@
 # Code Generation Execution Plan
 
+Template source:
+
+- `meta_layer/resources/template/CodeGenerationExecutionPlanTemplate.md`
+
 ## 1. Purpose
 
 This document is the implementation plan for building `project_layer` from zero to the complete workflow defined by:
@@ -29,7 +33,7 @@ The implementation should be delivered in this order:
 2. `requirement_interpretation` stage
 3. `architecture_design` stage
 4. `module_design` stage
-5. `implementation` stage
+5. `implementation_plan_generation` and `implementation_step_execution` stages
 6. `validation` stage
 7. runtime and design-doc alignment
 8. agent capability extension
@@ -195,7 +199,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] align trace and review semantics with shared runner behavior
   - [ ] confirm handoff contract into `implementation`
 
-### Step 5. Deliver `implementation` Stage
+### Step 5. Deliver `implementation_plan_generation` and `implementation_step_execution` Stages
 
 Status:
 
@@ -203,12 +207,18 @@ Status:
 
 Architecture modules in scope:
 
+- `Execution/ImplementationPlanGenerator`
+- `Contract/ImplementationPlanContract`
+- `Workflow/ImplementationPlanStageRunner`
 - `Execution/ImplementationGenerator`
 - `Contract/ImplementationContract`
 - `Workflow/ImplementationStageRunner`
 
 Already built:
 
+- [ ] `ImplementationPlanGenerator`
+- [ ] `ImplementationPlanContract`
+- [ ] `ImplementationPlanStageRunner`
 - [x] `ImplementationGenerator`
 - [x] implementation prompt builder
 - [x] change parsing
@@ -220,22 +230,27 @@ Already built:
 
 Still missing:
 
-- [ ] Batch 4: execution-environment contract validation
+- [ ] Batch 4: implementation plan generation flow
+  - [ ] generate ordered `workplan`
+  - [ ] review generated `workplan`
+  - [ ] persist accepted `workplan`
+  - [ ] handoff accepted `workplan` into `implementation_step_execution`
+- [ ] Batch 5: execution-environment contract validation
   - [ ] make `ImplementationContract` validate generated changes in a prepared execution environment
   - [ ] apply generated changes into prepared validation workspace before test execution
   - [ ] isolate validation workspace lifecycle from user workspace
   - [ ] extend tests for prepared-environment success and failure cases
-- [ ] Batch 5: implementation runner persistence and trace
+- [ ] Batch 6: implementation step runner persistence and trace
   - [ ] persist implementation-stage artifacts after successful runner completion
   - [ ] record trace for stage start
   - [ ] record trace for contract result
   - [ ] record trace for gate result
   - [ ] record trace for final apply result
   - [ ] extend tests for artifact persistence and trace flow
-- [ ] Batch 6: review and runtime semantics alignment
+- [ ] Batch 7: step review and runtime semantics alignment
   - [ ] support review `comment`
-  - [ ] align apply/reject behavior with shared review semantics
-  - [ ] fully align implementation runtime semantics with design docs
+  - [ ] align per-step review outcomes with next-step transition semantics
+  - [ ] fully align implementation-plan and step-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes
 
 ### Step 6. Deliver `validation` Stage
