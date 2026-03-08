@@ -31,7 +31,7 @@ async function testArchitectureStageRunnerPersistsAcceptedDocument(
   const changeGate = new InMemoryChangeGate();
   const content = createArchitectureDocument();
   const runner = new ArchitectureStageRunner({
-    llmExecutor: new MockLlmExecutor(content),
+    llmExecutor: new ArchitectureStageRunnerLlmExecutor(content),
     artifactStore,
     traceRecorder,
     changeGate,
@@ -71,7 +71,7 @@ async function testArchitectureStageRunnerRejectStopsPersistence(
   workspaceRoot: string,
 ): Promise<void> {
   const runner = new ArchitectureStageRunner({
-    llmExecutor: new MockLlmExecutor(createArchitectureDocument()),
+    llmExecutor: new ArchitectureStageRunnerLlmExecutor(createArchitectureDocument()),
     artifactStore,
     changeGate: new InMemoryChangeGate({
       decision: {
@@ -108,7 +108,7 @@ async function testArchitectureStageRunnerContractFailure(
   workspaceRoot: string,
 ): Promise<void> {
   const runner = new ArchitectureStageRunner({
-    llmExecutor: new MockLlmExecutor("# 1. Purpose\nBroken output"),
+    llmExecutor: new ArchitectureStageRunnerLlmExecutor("# 1. Purpose\nBroken output"),
     artifactStore,
     changeGate: new InMemoryChangeGate(),
   });
@@ -133,13 +133,36 @@ async function createTempDir(prefix: string): Promise<string> {
   return mkdtemp(path.join(tempRoot, prefix));
 }
 
-class MockLlmExecutor implements ILlmExecutor {
+class ArchitectureStageRunnerLlmExecutor implements ILlmExecutor {
   constructor(private readonly content: string) {}
 
-  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    if (request.metadata?.checkType === "contract") {
+      const passed = this.content.includes("## 4.2 Layers or Partitions");
+      return {
+        content: JSON.stringify({
+          passed,
+          summary: passed
+            ? "Architecture design document passed contract checks."
+            : "Architecture design document failed contract checks.",
+          issues: passed ? [] : [
+            {
+              checkItem: "document_structure_complete",
+              message: "Missing required architecture sections.",
+              severity: "high",
+            },
+          ],
+        }),
+        responseFormat: "json",
+      };
+    }
+
     return {
       content: this.content,
       responseFormat: "text",
+      metadata: {
+        ...(request.metadata ?? {}),
+      },
     };
   }
 }

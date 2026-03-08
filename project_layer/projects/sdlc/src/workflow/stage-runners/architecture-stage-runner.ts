@@ -26,7 +26,7 @@ const ARCHITECTURE_ARTIFACT_PATH = "docs/architecture/TechnicalArchitecture.md";
 
 export class ArchitectureStageRunner extends BaseStageRunner {
   private readonly generator: ArchitectureDesignGenerator;
-  private readonly contractChecker = new ArchitectureDesignContract();
+  private readonly contractChecker: ArchitectureDesignContract;
 
   constructor(private readonly dependencies: ArchitectureStageRunnerDependencies) {
     super(dependencies);
@@ -34,6 +34,7 @@ export class ArchitectureStageRunner extends BaseStageRunner {
       llmExecutor: dependencies.llmExecutor,
       traceRecorder: dependencies.traceRecorder,
     });
+    this.contractChecker = new ArchitectureDesignContract(dependencies.llmExecutor);
   }
 
   async run(

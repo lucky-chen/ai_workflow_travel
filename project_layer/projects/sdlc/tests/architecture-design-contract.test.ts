@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ArchitectureDesignContract } from "../src/contract/architecture-design-contract/architecture-design-contract.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 
 export async function runArchitectureDesignContractTests(): Promise<void> {
   const workspaceRoot = await createTempDir("architecture-contract-");
@@ -11,6 +12,7 @@ export async function runArchitectureDesignContractTests(): Promise<void> {
     await testArchitectureContractPassesForStructuredDocument(workspaceRoot);
     await testArchitectureContractFailsForMissingSections(workspaceRoot);
     await testArchitectureContractFailsForPlaceholderAndBoundaryIssues(workspaceRoot);
+    await testArchitectureContractRejectsInvalidLlmResult(workspaceRoot);
     await testArchitectureContractLoadsTemplateContractSource();
     await testArchitectureContractBuildsPromptRequest(workspaceRoot);
   } finally {
@@ -19,7 +21,7 @@ export async function runArchitectureDesignContractTests(): Promise<void> {
 }
 
 async function testArchitectureContractPassesForStructuredDocument(workspaceRoot: string): Promise<void> {
-  const contract = new ArchitectureDesignContract();
+  const contract = new ArchitectureDesignContract(new ArchitectureContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-1",
@@ -47,7 +49,7 @@ async function testArchitectureContractPassesForStructuredDocument(workspaceRoot
 }
 
 async function testArchitectureContractFailsForMissingSections(workspaceRoot: string): Promise<void> {
-  const contract = new ArchitectureDesignContract();
+  const contract = new ArchitectureDesignContract(new ArchitectureContractMockLlmExecutor());
   const result = await contract.check(
     {
       taskId: "task-2",
@@ -76,7 +78,7 @@ async function testArchitectureContractFailsForMissingSections(workspaceRoot: st
 }
 
 async function testArchitectureContractFailsForPlaceholderAndBoundaryIssues(workspaceRoot: string): Promise<void> {
-  const contract = new ArchitectureDesignContract();
+  const contract = new ArchitectureDesignContract(new ArchitectureContractMockLlmExecutor());
   const brokenDocument = createArchitectureDocument()
     .replace("- Workflow -> Contract", "- Workflow -> Database")
     .replace(
@@ -120,6 +122,32 @@ async function testArchitectureContractFailsForPlaceholderAndBoundaryIssues(work
   assert.equal(
     result.issues.some((issue) => issue.message.includes("Core Modules section should list the major modules")),
     true,
+  );
+}
+
+async function testArchitectureContractRejectsInvalidLlmResult(workspaceRoot: string): Promise<void> {
+  const contract = new ArchitectureDesignContract(new InvalidJsonLlmExecutor());
+
+  await assert.rejects(
+    contract.check(
+      {
+        taskId: "task-invalid",
+        stageId: "architecture_design",
+        attempt: 1,
+        workspaceRoot,
+        inputArtifacts: {},
+      },
+      {
+        stageId: "architecture_design",
+        success: true,
+        summary: "Architecture document generated.",
+        artifacts: {
+          artifactKey: "architecture_document",
+          content: createArchitectureDocument(),
+        },
+      },
+    ),
+    /Unexpected token|must contain/,
   );
 }
 
@@ -381,4 +409,119 @@ function createArchitectureDocument(): string {
     "- How validation workspaces should be isolated for implementation stages.",
     "- How UI evolution should expose the same stage trace semantics as the CLI.",
   ].join("\n");
+}
+
+class ArchitectureContractMockLlmExecutor implements ILlmExecutor {
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    const payload = JSON.parse(request.prompt.userPrompt) as {
+      generatedResult: string;
+      contractSpec: {
+        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+        section_contracts: Array<{ section_id: string; title: string; severity: "low" | "medium" | "high" }>;
+      };
+    };
+    const content = payload.generatedResult;
+    const contractSpec = payload.contractSpec;
+    const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
+
+    for (const section of contractSpec.section_contracts.filter((entry) => !entry.section_id.includes("."))) {
+      const headingCandidates = [`# ${section.section_id}. ${section.title}`, `# ${section.section_id} ${section.title}`];
+      if (!headingCandidates.some((heading) => content.includes(heading))) {
+        issues.push({
+          checkItem: "document_structure_complete",
+          message: `Missing required heading for section ${section.section_id}: ${section.title}`,
+          severity: "high",
+        });
+      }
+    }
+
+    const levelContract = contractSpec.document_contracts.find((entry) => entry.check_item === "architecture_level_consistency");
+    if (/{[^}]+}/.test(content)) {
+      issues.push({
+        checkItem: levelContract?.check_item ?? "architecture_level_consistency",
+        message: "Architecture document still contains unresolved template placeholders.",
+        severity: levelContract?.severity ?? "high",
+      });
+    }
+    if (/\bclass\s+[A-Z]\w*/i.test(content) || /\bAPI endpoint\b/i.test(content)) {
+      issues.push({
+        checkItem: levelContract?.check_item ?? "architecture_level_consistency",
+        message: "Architecture document appears to contain implementation-level detail.",
+        severity: levelContract?.severity ?? "high",
+      });
+    }
+
+    const crossSectionContract = contractSpec.document_contracts.find((entry) => entry.check_item === "cross_section_alignment");
+    const layersSection = extractSection(content, "# 4.2 Layers or Partitions");
+    if (!/^\s*-\s+/m.test(layersSection)) {
+      issues.push({
+        checkItem: crossSectionContract?.check_item ?? "cross_section_alignment",
+        message: "Layers or Partitions section should list architecture partitions.",
+        severity: crossSectionContract?.severity ?? "high",
+      });
+    }
+    if (!extractSection(content, "# 4.3 Allowed Dependencies").includes("ALLOW:")) {
+      issues.push({
+        checkItem: crossSectionContract?.check_item ?? "cross_section_alignment",
+        message: "Allowed Dependencies section should declare ALLOW dependency rules.",
+        severity: crossSectionContract?.severity ?? "high",
+      });
+    }
+
+    const layerNames = [...layersSection.matchAll(/^\s*-\s+([^:\n]+):/gm)].map((match) => match[1].trim());
+    const dependencyNodes = [...extractSection(content, "# 4.3 Allowed Dependencies").matchAll(/-\s+([^-\n]+?)\s*->\s*([^\n]+)/g)]
+      .flatMap((match) => [match[1].trim(), match[2].trim()]);
+    const unknownDependencyNodes = dependencyNodes.filter((name) => !layerNames.includes(name));
+    if (unknownDependencyNodes.length > 0) {
+      issues.push({
+        checkItem: crossSectionContract?.check_item ?? "cross_section_alignment",
+        message: `Allowed Dependencies references undefined layers or partitions: ${unknownDependencyNodes.join(", ")}`,
+        severity: crossSectionContract?.severity ?? "high",
+      });
+    }
+
+    const coreModules = [...extractSection(content, "## 5.2 Core Modules").matchAll(/^\s*-\s+([^:\n]+):/gm)];
+    if (coreModules.length < 3) {
+      issues.push({
+        checkItem: crossSectionContract?.check_item ?? "cross_section_alignment",
+        message: "Core Modules section should list the major modules needed to understand the architecture.",
+        severity: crossSectionContract?.severity ?? "high",
+      });
+    }
+
+    return {
+      content: JSON.stringify({
+        passed: issues.length === 0,
+        summary: issues.length === 0
+          ? "Architecture design document passed contract checks."
+          : "Architecture design document failed contract checks.",
+        issues,
+      }),
+      responseFormat: "json",
+    };
+  }
+}
+
+class InvalidJsonLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: "{not-json",
+      responseFormat: "json",
+    };
+  }
+}
+
+function extractSection(content: string, heading: string): string {
+  const startIndex = content.indexOf(heading);
+  if (startIndex < 0) {
+    return "";
+  }
+
+  const rest = content.slice(startIndex + heading.length);
+  const nextHeadingOffset = rest.search(/\n# /);
+  if (nextHeadingOffset < 0) {
+    return rest;
+  }
+
+  return rest.slice(0, nextHeadingOffset);
 }

@@ -160,8 +160,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] architecture section-contract alignment checks
   - [x] architecture module-boundary consistency checks
   - [x] architecture contract-check prompt construction
-  - [ ] real `ILlmExecutor`-based architecture contract execution
-  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
+  - [x] real `ILlmExecutor`-based architecture contract execution
+  - [x] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
 - [x] Batch 3: architecture stage runner flow
   - [x] `ArchitectureStageRunner`

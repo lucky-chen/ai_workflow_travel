@@ -56,7 +56,7 @@ async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: s
           stageId: "architecture_design",
           launchRequirements: ["requirement_document"],
           runner: new ArchitectureStageRunner({
-            llmExecutor: new MockTextLlmExecutor(createArchitectureDocument()),
+            llmExecutor: new ArchitecturePipelineLlmExecutor(createArchitectureDocument()),
             artifactStore,
             traceRecorder,
           }),
@@ -127,6 +127,31 @@ class ApproveRequirementContractLlmExecutor implements ILlmExecutor {
         issues: [],
       }),
       responseFormat: "json",
+    };
+  }
+}
+
+class ArchitecturePipelineLlmExecutor implements ILlmExecutor {
+  constructor(private readonly content: string) {}
+
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    if (request.metadata?.checkType === "contract") {
+      return {
+        content: JSON.stringify({
+          passed: true,
+          summary: "Architecture design document passed contract checks.",
+          issues: [],
+        }),
+        responseFormat: "json",
+      };
+    }
+
+    return {
+      content: this.content,
+      responseFormat: "text",
+      metadata: {
+        ...(request.metadata ?? {}),
+      },
     };
   }
 }
