@@ -1,25 +1,31 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { RequirementContract } from "../src/contract/requirement-contract/requirement-contract.js";
 
 export async function runRequirementContractTests(): Promise<void> {
-  await testRequirementContractPassesForStructuredDocument();
-  await testRequirementContractFailsForMissingSections();
-  await testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail();
-  await testRequirementContractLoadsTemplateContractSource();
-  await testRequirementContractBuildsPromptRequest();
+  const workspaceRoot = await createTempDir("requirement-contract-");
+
+  try {
+    await testRequirementContractPassesForStructuredDocument(workspaceRoot);
+    await testRequirementContractFailsForMissingSections(workspaceRoot);
+    await testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(workspaceRoot);
+    await testRequirementContractLoadsTemplateContractSource();
+    await testRequirementContractBuildsPromptRequest(workspaceRoot);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
 }
 
-async function testRequirementContractPassesForStructuredDocument(): Promise<void> {
+async function testRequirementContractPassesForStructuredDocument(workspaceRoot: string): Promise<void> {
   const contract = new RequirementContract();
   const result = await contract.check(
     {
       taskId: "task-1",
       stageId: "requirement_interpretation",
       attempt: 1,
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     },
     {
@@ -40,14 +46,14 @@ async function testRequirementContractPassesForStructuredDocument(): Promise<voi
   });
 }
 
-async function testRequirementContractFailsForMissingSections(): Promise<void> {
+async function testRequirementContractFailsForMissingSections(workspaceRoot: string): Promise<void> {
   const contract = new RequirementContract();
   const result = await contract.check(
     {
       taskId: "task-2",
       stageId: "requirement_interpretation",
       attempt: 1,
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     },
     {
@@ -69,14 +75,16 @@ async function testRequirementContractFailsForMissingSections(): Promise<void> {
   );
 }
 
-async function testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(): Promise<void> {
+async function testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(
+  workspaceRoot: string,
+): Promise<void> {
   const contract = new RequirementContract();
   const result = await contract.check(
     {
       taskId: "task-3",
       stageId: "requirement_interpretation",
       attempt: 1,
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     },
     {
@@ -146,7 +154,7 @@ async function testRequirementContractLoadsTemplateContractSource(): Promise<voi
   assert.equal(specificSpec.stage, "requirement_interpretation");
 }
 
-async function testRequirementContractBuildsPromptRequest(): Promise<void> {
+async function testRequirementContractBuildsPromptRequest(workspaceRoot: string): Promise<void> {
   const contract = new RequirementContract();
   const sharedSpec = await (contract as unknown as {
     loadSharedContract(): Promise<{
@@ -231,7 +239,7 @@ async function testRequirementContractBuildsPromptRequest(): Promise<void> {
       taskId: "task-4",
       stageId: "requirement_interpretation",
       attempt: 1,
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     },
     {
@@ -269,6 +277,12 @@ async function testRequirementContractBuildsPromptRequest(): Promise<void> {
   assert.equal(payload.contractSpec.specific_contract?.source, "meta_layer/resources/contract/RequirementTemplate.contract.json");
   assert.equal(payload.contractSpec.specific_contract?.stage, "requirement_interpretation");
   assert.equal(payload.contractSpec.section_contracts.length, sharedSpec.section_contracts.length);
+}
+
+async function createTempDir(prefix: string): Promise<string> {
+  const tempRoot = path.resolve(process.cwd(), "dist", "tmp");
+  await mkdir(tempRoot, { recursive: true });
+  return mkdtemp(path.join(tempRoot, prefix));
 }
 
 function createRequirementDocument(): string {

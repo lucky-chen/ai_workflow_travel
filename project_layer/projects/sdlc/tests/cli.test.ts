@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import path from "node:path";
 
 import {
   CLIService,
@@ -10,28 +12,34 @@ import {
 import type { IPipeline, LaunchTaskRequest } from "../src/shared/contracts/pipeline.js";
 
 export async function runCliTests(): Promise<void> {
-  await testCommandParser();
-  await testRequestMapper();
-  await testCliRunSuccess();
-  await testCliRunMissingWorkspace();
-  await testReviewInteractionApply();
-  await testReviewInteractionReject();
-  await testReviewInteractionComment();
+  const workspaceRoot = await createTempDir("cli-workspace-");
+
+  try {
+    await testCommandParser(workspaceRoot);
+    await testRequestMapper(workspaceRoot);
+    await testCliRunSuccess(workspaceRoot);
+    await testCliRunMissingWorkspace();
+    await testReviewInteractionApply();
+    await testReviewInteractionReject();
+    await testReviewInteractionComment();
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
 }
 
-async function testCommandParser(): Promise<void> {
+async function testCommandParser(workspaceRoot: string): Promise<void> {
   const parser = new DefaultCLICommandParser();
-  assert.deepEqual(parser.parse(["generate", "--module", "implementation", "--input", "module.md", "--workspace", "./demo"]), {
+  assert.deepEqual(parser.parse(["generate", "--module", "implementation", "--input", "module.md", "--workspace", workspaceRoot]), {
     command: "generate",
     options: {
       module: "implementation",
       input: "module.md",
-      workspace: "./demo",
+      workspace: workspaceRoot,
     },
   });
 }
 
-async function testRequestMapper(): Promise<void> {
+async function testRequestMapper(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     mapper.map({
@@ -39,12 +47,12 @@ async function testRequestMapper(): Promise<void> {
       options: {
         module: "implementation",
         input: "module.md",
-        workspace: "./demo",
+        workspace: workspaceRoot,
       },
     }),
     {
       startStageId: "implementation",
-      workspaceRoot: "./demo",
+      workspaceRoot,
       inputArtifacts: {
         moduleDesign: "module.md",
       },
@@ -52,7 +60,7 @@ async function testRequestMapper(): Promise<void> {
   );
 }
 
-async function testCliRunSuccess(): Promise<void> {
+async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
   const parser = new DefaultCLICommandParser();
   const mapper = new DefaultCLIRequestMapper();
   const rendered: string[] = [];
@@ -84,13 +92,13 @@ async function testCliRunSuccess(): Promise<void> {
     "--input",
     "module.md",
     "--workspace",
-    "./demo",
+    workspaceRoot,
   ]);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(capturedRequest, {
     startStageId: "implementation",
-    workspaceRoot: "./demo",
+    workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module.md",
     },
@@ -185,4 +193,10 @@ async function testReviewInteractionComment(): Promise<void> {
     summary: "User requested changes before apply.",
     comment: "Please regenerate the service layer.",
   });
+}
+
+async function createTempDir(prefix: string): Promise<string> {
+  const tempRoot = path.resolve(process.cwd(), "dist", "tmp");
+  await mkdir(tempRoot, { recursive: true });
+  return mkdtemp(path.join(tempRoot, prefix));
 }

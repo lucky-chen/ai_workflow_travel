@@ -9,18 +9,21 @@ import { RequirementStageRunner } from "../src/workflow/stage-runners/requiremen
 
 export async function runRequirementStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("requirement-stage-runner-");
+  const workspaceRoot = await createTempDir("requirement-workspace-");
   const artifactStore = new ArtifactStoreService(storageRoot);
 
   try {
-    await testRequirementStageRunnerPersistsAcceptedDocument(artifactStore);
-    await testRequirementStageRunnerRejectStopsPersistence(artifactStore);
+    await testRequirementStageRunnerPersistsAcceptedDocument(artifactStore, workspaceRoot);
+    await testRequirementStageRunnerRejectStopsPersistence(artifactStore, workspaceRoot);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
+    await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 
 async function testRequirementStageRunnerPersistsAcceptedDocument(
   artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
 ): Promise<void> {
   const traceRecorder = new InMemoryTraceRecorder();
   const changeGate = new InMemoryChangeGate();
@@ -35,7 +38,7 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(
     taskId: "task-1",
     stageId: "requirement_interpretation",
     attempt: 1,
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       requirement_document: content,
     },
@@ -60,6 +63,7 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(
 
 async function testRequirementStageRunnerRejectStopsPersistence(
   artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
 ): Promise<void> {
   const runner = new RequirementStageRunner({
     artifactStore,
@@ -76,7 +80,7 @@ async function testRequirementStageRunnerRejectStopsPersistence(
       taskId: "task-2",
       stageId: "requirement_interpretation",
       attempt: 1,
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {
         requirement_document: createRequirementDocument(),
       },

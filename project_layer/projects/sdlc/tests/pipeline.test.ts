@@ -10,19 +10,25 @@ import { StageRegistry } from "../src/workflow/pipeline/stage-registry.js";
 import type { IStageRunner, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
 
 export async function runPipelineTests(): Promise<void> {
-  await testSingleStageLaunch();
-  await testMissingStageLaunch();
-  await testMissingRequiredArtifact();
-  await testDuplicateStageRegistration();
-  await testStageContinuationAndMerge();
-  await testFailureStopsContinuation();
-  await testInvalidNextStageValidation();
-  await testStageEntryRetrySemantics();
-  await testStageEntryFromSpecifiedStage();
-  await testRequirementStageHandoffIntoArchitectureStage();
+  const workspaceRoot = await createTempDir("pipeline-workspace-");
+
+  try {
+    await testSingleStageLaunch(workspaceRoot);
+    await testMissingStageLaunch(workspaceRoot);
+    await testMissingRequiredArtifact(workspaceRoot);
+    await testDuplicateStageRegistration();
+    await testStageContinuationAndMerge(workspaceRoot);
+    await testFailureStopsContinuation(workspaceRoot);
+    await testInvalidNextStageValidation(workspaceRoot);
+    await testStageEntryRetrySemantics(workspaceRoot);
+    await testStageEntryFromSpecifiedStage(workspaceRoot);
+    await testRequirementStageHandoffIntoArchitectureStage(workspaceRoot);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
 }
 
-async function testSingleStageLaunch(): Promise<void> {
+async function testSingleStageLaunch(workspaceRoot: string): Promise<void> {
   let receivedContext: StageRunContext | undefined;
   const implementationStage: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -55,7 +61,7 @@ async function testSingleStageLaunch(): Promise<void> {
 
   const taskId = await pipeline.launchTask({
     startStageId: "implementation",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",
     },
@@ -69,7 +75,7 @@ async function testSingleStageLaunch(): Promise<void> {
     taskId,
     stageId: "implementation",
     attempt: 1,
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",
     },
@@ -97,7 +103,7 @@ async function testSingleStageLaunch(): Promise<void> {
     currentStageId: "implementation",
     attempt: 1,
     status: "completed",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",
     },
@@ -113,20 +119,20 @@ async function testSingleStageLaunch(): Promise<void> {
   });
 }
 
-async function testMissingStageLaunch(): Promise<void> {
+async function testMissingStageLaunch(workspaceRoot: string): Promise<void> {
   const emptyRegistry = new StageRegistry();
   const emptyPipeline = new PipelineService({ registry: emptyRegistry });
   await assert.rejects(
     emptyPipeline.launchTask({
       startStageId: "missing-stage",
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     }),
     /No stage definition registered/,
   );
 }
 
-async function testMissingRequiredArtifact(): Promise<void> {
+async function testMissingRequiredArtifact(workspaceRoot: string): Promise<void> {
   const implementationStage = createCompletedStage("Implementation stage executed.");
   const pipeline = new PipelineService({
     registry: createRegistry({
@@ -140,7 +146,7 @@ async function testMissingRequiredArtifact(): Promise<void> {
   await assert.rejects(
     pipeline.launchTask({
       startStageId: "implementation",
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     }),
     /Missing required input artifact "moduleDesign"/,
@@ -168,7 +174,7 @@ async function testDuplicateStageRegistration(): Promise<void> {
   );
 }
 
-async function testStageContinuationAndMerge(): Promise<void> {
+async function testStageContinuationAndMerge(workspaceRoot: string): Promise<void> {
   const continuedContexts: StageRunContext[] = [];
   const stageA: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -217,7 +223,7 @@ async function testStageContinuationAndMerge(): Promise<void> {
   });
   const continuedTaskId = await continuationPipeline.launchTask({
     startStageId: "stage-a",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       sourceDoc: "source.md",
     },
@@ -228,7 +234,7 @@ async function testStageContinuationAndMerge(): Promise<void> {
     taskId: continuedTaskId,
     stageId: "stage-a",
     attempt: 1,
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       sourceDoc: "source.md",
     },
@@ -238,7 +244,7 @@ async function testStageContinuationAndMerge(): Promise<void> {
     taskId: continuedTaskId,
     stageId: "stage-b",
     attempt: 1,
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       sourceDoc: "source.md",
       generatedSpec: "generated-spec.md",
@@ -261,7 +267,7 @@ async function testStageContinuationAndMerge(): Promise<void> {
   continuationRegistry.validate();
 }
 
-async function testFailureStopsContinuation(): Promise<void> {
+async function testFailureStopsContinuation(workspaceRoot: string): Promise<void> {
   const stoppedContexts: StageRunContext[] = [];
   const failStageA: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -309,7 +315,7 @@ async function testFailureStopsContinuation(): Promise<void> {
   });
   const failedTaskId = await failPipeline.launchTask({
     startStageId: "fail-a",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       sourceDoc: "source.md",
     },
@@ -334,7 +340,7 @@ async function testFailureStopsContinuation(): Promise<void> {
   assert.equal(failPipeline.getTaskRecord(failedTaskId)?.currentStageId, "fail-a");
 }
 
-async function testInvalidNextStageValidation(): Promise<void> {
+async function testInvalidNextStageValidation(workspaceRoot: string): Promise<void> {
   const implementationStage = createCompletedStage("Implementation stage executed.");
   const invalidRegistry = new StageRegistry();
   invalidRegistry.register({
@@ -352,14 +358,14 @@ async function testInvalidNextStageValidation(): Promise<void> {
   await assert.rejects(
     invalidPipeline.launchTask({
       startStageId: "stage-a",
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {},
     }),
     /references missing nextStageId "missing-stage"/,
   );
 }
 
-async function testStageEntryRetrySemantics(): Promise<void> {
+async function testStageEntryRetrySemantics(workspaceRoot: string): Promise<void> {
   const invocationContexts: StageRunContext[] = [];
   let shouldFail = true;
   const retryingStage: IStageRunner = {
@@ -396,7 +402,7 @@ async function testStageEntryRetrySemantics(): Promise<void> {
 
   const taskId = await pipeline.launchTask({
     startStageId: "implementation",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",
     },
@@ -409,7 +415,7 @@ async function testStageEntryRetrySemantics(): Promise<void> {
     taskId,
     triggerReason: "stage_entry",
     startStageId: "implementation",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",
     },
@@ -421,7 +427,7 @@ async function testStageEntryRetrySemantics(): Promise<void> {
   assert.equal(pipeline.getTaskStatus(taskId), "completed");
 }
 
-async function testStageEntryFromSpecifiedStage(): Promise<void> {
+async function testStageEntryFromSpecifiedStage(workspaceRoot: string): Promise<void> {
   const invocationContexts: StageRunContext[] = [];
   const stageA: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -469,7 +475,7 @@ async function testStageEntryFromSpecifiedStage(): Promise<void> {
 
   const taskId = await pipeline.launchTask({
     startStageId: "stage-a",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       sourceDoc: "source.md",
     },
@@ -479,7 +485,7 @@ async function testStageEntryFromSpecifiedStage(): Promise<void> {
     taskId,
     triggerReason: "stage_entry",
     startStageId: "stage-b",
-    workspaceRoot: "/workspace/demo",
+    workspaceRoot,
     inputArtifacts: {
       generatedSpec: "generated-spec.md",
     },
@@ -490,7 +496,7 @@ async function testStageEntryFromSpecifiedStage(): Promise<void> {
   assert.equal(invocationContexts[2]?.attempt, 2);
 }
 
-async function testRequirementStageHandoffIntoArchitectureStage(): Promise<void> {
+async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: string): Promise<void> {
   const storageRoot = await createTempDir("pipeline-requirement-");
   const artifactStore = new ArtifactStoreService(storageRoot);
   const invocationContexts: StageRunContext[] = [];
@@ -527,7 +533,7 @@ async function testRequirementStageHandoffIntoArchitectureStage(): Promise<void>
 
     const taskId = await pipeline.launchTask({
       startStageId: "requirement_interpretation",
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {
         requirement_document: createRequirementDocument(),
       },
@@ -538,7 +544,7 @@ async function testRequirementStageHandoffIntoArchitectureStage(): Promise<void>
       taskId,
       stageId: "architecture_design",
       attempt: 1,
-      workspaceRoot: "/workspace/demo",
+      workspaceRoot,
       inputArtifacts: {
         requirement_document: "docs/requirements/Requirement.md",
       },
