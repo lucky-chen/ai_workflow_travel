@@ -301,15 +301,15 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 7. Deliver `validation` Stage
 
-- [ ] Step 7 is not started
+- [ ] Step 7 is in progress
 - [ ] Architecture modules in scope
   - [ ] `Contract/ValidationContract`
   - [ ] `Workflow/ValidationStageRunner`
-- [ ] Batch 1: validation input and result model
-  - [ ] final validation input shape
-  - [ ] validation-stage output shape
-  - [ ] validation summary and issue model
-  - [ ] minimal tests for validation input and output shaping
+- [x] Batch 1: validation input and result model
+  - [x] final validation input shape
+  - [x] validation-stage output shape
+  - [x] validation summary and issue model
+  - [x] minimal tests for validation input and output shaping
 - [ ] Batch 2: validation contract backbone
   - [ ] `ValidationContract`
   - [ ] final workspace validation checks

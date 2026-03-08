@@ -1,6 +1,7 @@
 // Project layer public exports: re-export shared contracts and module entry classes.
 // Public API: shared contracts consumed across modules.
 export * from "./shared/contracts/pipeline.js";
+export * from "./shared/contracts/validation.js";
 export * from "./shared/types/common.js";
 
 // Public API: module entry classes exposed to callers and composition roots.
