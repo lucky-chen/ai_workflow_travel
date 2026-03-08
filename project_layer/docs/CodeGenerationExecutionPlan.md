@@ -84,10 +84,10 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] AgentRuntime backbone
   - [x] Batch 1: interfaces and skeleton
     - [x] `AgentRuntime` core interfaces (`IAgent`, `IPlanner`, `IExecutor`, `IObserver`)
-    - [x] `SDK/AgentRuntime` module skeleton and runtime types
+    - [x] `SDK/AgentRuntime` module skeleton and runtime types in the standalone `project_layer/projects/agent_runtime` project
     - [x] SDK-owned agent trace abstraction
     - [x] minimal `DefaultPlanner` and `DefaultObserver`
-    - [x] focused tests for interfaces, runtime types, and trace types
+    - [x] focused tests for interfaces, runtime types, and trace types in the standalone `project_layer/projects/agent_runtime` project
   - [ ] Batch 2: single-pass runtime
     - [ ] `DefaultExecutor`
     - [ ] `DefaultAgent`
