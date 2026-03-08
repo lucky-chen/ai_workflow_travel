@@ -15,20 +15,11 @@ This plan is organized to match:
 
 ## 1.1 Collaboration Rule
 
-The following collaboration rule applies to all implementation work under this plan:
+All implementation work under this plan must follow the shared collaboration standard:
 
-- Before making any code change, Codex must first provide a short change plan for review.
-- The change plan must include:
-  - target
-  - involved files
-  - specific change items
-  - risks or open questions
-  - expected validation method
-- Codex may start file edits only after the user explicitly approves the plan.
-- Reading code, reading documents, and doing analysis do not require approval.
-- Any file edit requires plan review and approval first.
-- After each completed chunk of implementation work, Codex must automatically update this plan and check off the corresponding completed items.
-- Only tasks that are actually implemented and verified may be checked off.
+- `project_layer/COLLABORATION_STANDARD.md`
+
+This plan keeps only delivery status and implementation scope. Collaboration behavior is defined in the shared standard document.
 
 ## 2. Workflow Delivery Order
 

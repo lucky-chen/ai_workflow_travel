@@ -1,0 +1,29 @@
+# Collaboration Standard
+
+This document defines the shared collaboration standard for all work under `project_layer`.
+
+## 1. Change Plan First
+
+- Before making any code change, Codex must first provide a short change plan for review.
+- The change plan must include:
+  - target
+  - involved files
+  - specific change items
+  - risks or open questions
+  - expected validation method
+- Codex may start file edits only after the user explicitly approves the plan.
+
+## 2. Work That Does Not Require Approval
+
+- Reading code, reading documents, and doing analysis do not require approval.
+
+## 3. Plan Maintenance
+
+- After each completed chunk of implementation work, Codex must automatically update the execution plan and check off the corresponding completed items.
+- Only tasks that are actually implemented and verified may be checked off.
+
+## 4. JIT Commit Rule
+
+- After each completed round of engineering file changes, Codex must create one JIT commit.
+- Commit messages must be written in English.
+- The commit message should be a concise summary of that round of changes.
