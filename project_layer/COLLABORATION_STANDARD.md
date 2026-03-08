@@ -22,6 +22,13 @@ This document defines the shared collaboration standard for all work under `proj
 - After each completed chunk of implementation work, Codex must automatically update the execution plan and check off the corresponding completed items.
 - Only tasks that are actually implemented and verified may be checked off.
 
+## 3.1 Code Organization Standard
+
+- All generated code must follow the same readability and maintainability standard used during manual refactoring.
+- Avoid placing multiple unrelated behaviors into one oversized function when they can be expressed as small focused functions.
+- For test files, prefer one entry function plus multiple small test-case functions grouped by behavior.
+- New generated code should default to clear structure first, not just minimal line count.
+
 ## 4. JIT Commit Rule
 
 - After each completed round of engineering file changes, Codex must create one JIT commit.

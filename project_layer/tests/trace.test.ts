@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 
 export async function runTraceTests(): Promise<void> {
+  await testTraceRecorderAssignsStableRefs();
+}
+
+async function testTraceRecorderAssignsStableRefs(): Promise<void> {
   const recorder = new InMemoryTraceRecorder();
 
   const ref1 = await recorder.recordTrace({

@@ -4,6 +4,18 @@ import { LlmExecutorService } from "../src/sdk/llm-executor/llm-executor.js";
 import type { FetchLike } from "../src/sdk/llm-executor/http-json-client.js";
 
 export async function runLlmExecutorTests(): Promise<void> {
+  await testDefaultMockExecutor();
+  await testCustomMockExecutor();
+  await testRealExecutorRequiresProvider();
+  await testRealExecutorRequiresApiKey();
+  await testRealExecutorRequiresModel();
+  await testDeepSeekExecution();
+  await testOpenAiExecution();
+  await testInvalidProviderResponse();
+  await testHttpErrorResponse();
+}
+
+async function testDefaultMockExecutor(): Promise<void> {
   const mockExecutor = new LlmExecutorService();
   const mockResult = await mockExecutor.execute({
     prompt: {
@@ -19,7 +31,9 @@ export async function runLlmExecutorTests(): Promise<void> {
   assert.equal(mockResult.responseFormat, "json");
   assert.deepEqual(mockResult.metadata, { requestId: "req-1" });
   assert.equal(typeof mockResult.content, "string");
+}
 
+async function testCustomMockExecutor(): Promise<void> {
   const customMockExecutor = new LlmExecutorService({
     mode: "mock",
     mockContent: JSON.stringify({
@@ -42,12 +56,16 @@ export async function runLlmExecutorTests(): Promise<void> {
       changed_files: [{ path: "a.ts", operation: "create", content: "export {};\n" }],
     }),
   );
+}
 
+async function testRealExecutorRequiresProvider(): Promise<void> {
   await assert.rejects(
     async () => new LlmExecutorService({ mode: "real" }),
     /provider is required/,
   );
+}
 
+async function testRealExecutorRequiresApiKey(): Promise<void> {
   const missingApiKeyExecutor = new LlmExecutorService({
     mode: "real",
     realProvider: {
@@ -65,7 +83,9 @@ export async function runLlmExecutorTests(): Promise<void> {
     }),
     /API key is required/,
   );
+}
 
+async function testRealExecutorRequiresModel(): Promise<void> {
   const missingModelExecutor = new LlmExecutorService({
     mode: "real",
     realProvider: {
@@ -83,7 +103,9 @@ export async function runLlmExecutorTests(): Promise<void> {
     }),
     /Model is required/,
   );
+}
 
+async function testDeepSeekExecution(): Promise<void> {
   const realExecutor = new LlmExecutorService({
     mode: "real",
     realProvider: {
@@ -115,7 +137,9 @@ export async function runLlmExecutorTests(): Promise<void> {
   });
   assert.equal(realResult.content, "deepseek ok");
   assert.deepEqual(realResult.metadata, { requestId: "req-real" });
+}
 
+async function testOpenAiExecution(): Promise<void> {
   const openAiExecutor = new LlmExecutorService({
     mode: "real",
     realProvider: {
@@ -142,7 +166,9 @@ export async function runLlmExecutorTests(): Promise<void> {
     responseFormat: "text",
   });
   assert.equal(openAiResult.content, "openai ok");
+}
 
+async function testInvalidProviderResponse(): Promise<void> {
   const invalidResponseExecutor = new LlmExecutorService({
     mode: "real",
     realProvider: {
@@ -162,7 +188,9 @@ export async function runLlmExecutorTests(): Promise<void> {
     }),
     /did not include choices\[0\]\.message\.content/,
   );
+}
 
+async function testHttpErrorResponse(): Promise<void> {
   const httpErrorExecutor = new LlmExecutorService({
     mode: "real",
     realProvider: {

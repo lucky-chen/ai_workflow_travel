@@ -6,8 +6,17 @@ import { StageRegistry } from "../src/workflow/pipeline/stage-registry.js";
 import type { IStageRunner, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
 
 export async function runPipelineTests(): Promise<void> {
-  let receivedContext: StageRunContext | undefined;
+  await testSingleStageLaunch();
+  await testMissingStageLaunch();
+  await testMissingRequiredArtifact();
+  await testDuplicateStageRegistration();
+  await testStageContinuationAndMerge();
+  await testFailureStopsContinuation();
+  await testInvalidNextStageValidation();
+}
 
+async function testSingleStageLaunch(): Promise<void> {
+  let receivedContext: StageRunContext | undefined;
   const implementationStage: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
       receivedContext = context;
@@ -73,7 +82,9 @@ export async function runPipelineTests(): Promise<void> {
     "task_started",
     "task_finished",
   ]);
+}
 
+async function testMissingStageLaunch(): Promise<void> {
   const emptyPipeline = new PipelineService({ registry: new StageRegistry() });
   await assert.rejects(
     emptyPipeline.launchTask({
@@ -83,6 +94,18 @@ export async function runPipelineTests(): Promise<void> {
     }),
     /No stage definition registered/,
   );
+}
+
+async function testMissingRequiredArtifact(): Promise<void> {
+  const implementationStage = createCompletedStage("Implementation stage executed.");
+  const pipeline = new PipelineService({
+    registry: createRegistry({
+      stageId: "implementation",
+      launchRequirements: ["moduleDesign"],
+      runner: implementationStage,
+      nextStageId: null,
+    }),
+  });
 
   await assert.rejects(
     pipeline.launchTask({
@@ -92,7 +115,10 @@ export async function runPipelineTests(): Promise<void> {
     }),
     /Missing required input artifact "moduleDesign"/,
   );
+}
 
+async function testDuplicateStageRegistration(): Promise<void> {
+  const implementationStage = createCompletedStage("Implementation stage executed.");
   const duplicateRegistry = new StageRegistry();
   duplicateRegistry.register({
     stageId: "implementation",
@@ -110,7 +136,9 @@ export async function runPipelineTests(): Promise<void> {
       }),
     /Stage definition already registered/,
   );
+}
 
+async function testStageContinuationAndMerge(): Promise<void> {
   const continuedContexts: StageRunContext[] = [];
   const stageA: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -197,7 +225,9 @@ export async function runPipelineTests(): Promise<void> {
     "task_finished",
   ]);
   continuationRegistry.validate();
+}
 
+async function testFailureStopsContinuation(): Promise<void> {
   const stoppedContexts: StageRunContext[] = [];
   const failStageA: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -266,7 +296,10 @@ export async function runPipelineTests(): Promise<void> {
     "stage_failed",
     "task_finished",
   ]);
+}
 
+async function testInvalidNextStageValidation(): Promise<void> {
+  const implementationStage = createCompletedStage("Implementation stage executed.");
   const invalidRegistry = new StageRegistry();
   invalidRegistry.register({
     stageId: "stage-a",
@@ -278,4 +311,34 @@ export async function runPipelineTests(): Promise<void> {
     () => invalidRegistry.validate(),
     /references missing nextStageId "missing-stage"/,
   );
+}
+
+function createCompletedStage(summary: string): IStageRunner {
+  return {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary,
+        artifacts: {
+          changedFiles: [],
+        },
+      };
+    },
+  };
+}
+
+function createRegistry(...definitions: Array<{
+  stageId: string;
+  launchRequirements: string[];
+  runner: IStageRunner;
+  nextStageId: string | null;
+}>): StageRegistry {
+  const registry = new StageRegistry();
+  for (const definition of definitions) {
+    registry.register(definition);
+  }
+
+  return registry;
 }

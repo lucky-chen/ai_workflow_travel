@@ -5,6 +5,12 @@ import path from "node:path";
 import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.js";
 
 export async function runArtifactStoreTests(): Promise<void> {
+  await testWriteAndReadArtifact();
+  await testListArtifactsWithinRoot();
+  await testListArtifactsOnMissingRoot();
+}
+
+async function testWriteAndReadArtifact(): Promise<void> {
   const storageRoot = await createTempDir("artifact-store-");
 
   try {
@@ -43,11 +49,13 @@ export async function runArtifactStoreTests(): Promise<void> {
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
   }
+}
 
-  const listStorageRoot = await createTempDir("artifact-store-");
+async function testListArtifactsWithinRoot(): Promise<void> {
+  const storageRoot = await createTempDir("artifact-store-");
 
   try {
-    const store = new ArtifactStoreService(listStorageRoot);
+    const store = new ArtifactStoreService(storageRoot);
     await store.writeArtifact({
       taskId: "task-2",
       stageId: "module-design",
@@ -75,13 +83,15 @@ export async function runArtifactStoreTests(): Promise<void> {
 
     assert.deepEqual(artifacts, ["a.md", "nested/b.md"]);
   } finally {
-    await rm(listStorageRoot, { recursive: true, force: true });
+    await rm(storageRoot, { recursive: true, force: true });
   }
+}
 
-  const missingRootStorage = await createTempDir("artifact-store-");
+async function testListArtifactsOnMissingRoot(): Promise<void> {
+  const storageRoot = await createTempDir("artifact-store-");
 
   try {
-    const store = new ArtifactStoreService(missingRootStorage);
+    const store = new ArtifactStoreService(storageRoot);
 
     const artifacts = await store.listArtifacts({
       taskId: "task-3",
@@ -91,7 +101,7 @@ export async function runArtifactStoreTests(): Promise<void> {
 
     assert.deepEqual(artifacts, []);
   } finally {
-    await rm(missingRootStorage, { recursive: true, force: true });
+    await rm(storageRoot, { recursive: true, force: true });
   }
 }
 

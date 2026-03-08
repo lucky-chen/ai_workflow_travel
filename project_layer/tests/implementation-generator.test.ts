@@ -27,86 +27,93 @@ export async function runImplementationGeneratorTests(): Promise<void> {
   await writeFile(path.join(workspaceRoot, "dist", "ignored.txt"), "ignored\n", "utf8");
 
   try {
-    const generator = new ImplementationGenerator(
-      {
-        artifactStore,
-        llmExecutor: new MockLlmExecutor({
-          summary: "Applied implementation updates.",
-          changed_files: [
-            {
-              path: "src/generated.ts",
-              operation: "create",
-              content: "export const generated = true;\n",
-            },
-            {
-              path: "src/existing.ts",
-              operation: "update",
-              content: "export const value = 2;\n",
-            },
-            {
-              path: "obsolete.txt",
-              operation: "delete",
-            },
-          ],
-        }),
-      },
-    );
-
-    const output = await generator.run({
-      taskId: "task-1",
-      stageId: "implementation",
-      workspaceRoot,
-      inputArtifacts: {
-        moduleDesign: "module-design.md",
-      },
-      params: {
-        moduleDesignStageId: "module-design",
-      },
-    });
-
-    assert.equal(output.stageId, "implementation");
-    assert.equal(output.success, true);
-    assert.equal(output.summary, "Applied implementation updates.");
-    assert.deepEqual(output.artifacts.changedFiles, [
-      {
-        path: "src/generated.ts",
-        operation: "create",
-        content: "export const generated = true;\n",
-      },
-      {
-        path: "src/existing.ts",
-        operation: "update",
-        content: "export const value = 2;\n",
-      },
-      {
-        path: "obsolete.txt",
-        operation: "delete",
-        content: undefined,
-      },
-    ]);
-
-    await assert.rejects(access(path.join(workspaceRoot, "src", "generated.ts")));
-    assert.equal(
-      await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"),
-      "export const value = 1;\n",
-    );
-    assert.equal(await readFile(path.join(workspaceRoot, "obsolete.txt"), "utf8"), "to be deleted\n");
-
-    const projectContextLoader = new ProjectContextLoader();
-    const projectContext = await projectContextLoader.loadProjectContext({
-      taskId: "task-1",
-      stageId: "implementation",
-      workspaceRoot,
-      inputArtifacts: {
-        moduleDesign: "module-design.md",
-      },
-    });
-    assert.equal(projectContext.relevantFiles.some((file: ProjectFile) => file.path === "dist/ignored.txt"), false);
-
+    await testImplementationGeneratorProducesPlannedChanges(artifactStore, workspaceRoot);
+    await testProjectContextLoaderIgnoresDistFiles(workspaceRoot);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
   }
+}
+
+async function testImplementationGeneratorProducesPlannedChanges(
+  artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
+): Promise<void> {
+  const generator = new ImplementationGenerator({
+    artifactStore,
+    llmExecutor: new MockLlmExecutor({
+      summary: "Applied implementation updates.",
+      changed_files: [
+        {
+          path: "src/generated.ts",
+          operation: "create",
+          content: "export const generated = true;\n",
+        },
+        {
+          path: "src/existing.ts",
+          operation: "update",
+          content: "export const value = 2;\n",
+        },
+        {
+          path: "obsolete.txt",
+          operation: "delete",
+        },
+      ],
+    }),
+  });
+
+  const output = await generator.run({
+    taskId: "task-1",
+    stageId: "implementation",
+    workspaceRoot,
+    inputArtifacts: {
+      moduleDesign: "module-design.md",
+    },
+    params: {
+      moduleDesignStageId: "module-design",
+    },
+  });
+
+  assert.equal(output.stageId, "implementation");
+  assert.equal(output.success, true);
+  assert.equal(output.summary, "Applied implementation updates.");
+  assert.deepEqual(output.artifacts.changedFiles, [
+    {
+      path: "src/generated.ts",
+      operation: "create",
+      content: "export const generated = true;\n",
+    },
+    {
+      path: "src/existing.ts",
+      operation: "update",
+      content: "export const value = 2;\n",
+    },
+    {
+      path: "obsolete.txt",
+      operation: "delete",
+      content: undefined,
+    },
+  ]);
+
+  await assert.rejects(access(path.join(workspaceRoot, "src", "generated.ts")));
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"),
+    "export const value = 1;\n",
+  );
+  assert.equal(await readFile(path.join(workspaceRoot, "obsolete.txt"), "utf8"), "to be deleted\n");
+}
+
+async function testProjectContextLoaderIgnoresDistFiles(workspaceRoot: string): Promise<void> {
+  const projectContextLoader = new ProjectContextLoader();
+  const projectContext = await projectContextLoader.loadProjectContext({
+    taskId: "task-1",
+    stageId: "implementation",
+    workspaceRoot,
+    inputArtifacts: {
+      moduleDesign: "module-design.md",
+    },
+  });
+  assert.equal(projectContext.relevantFiles.some((file: ProjectFile) => file.path === "dist/ignored.txt"), false);
 }
 
 async function createTempDir(prefix: string): Promise<string> {
