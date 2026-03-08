@@ -11,6 +11,7 @@ export * from "./contract/requirement-contract/requirement-contract.js";
 export * from "./data/artifact-store/artifact-store.js";
 export * from "./execution/architecture-design-generator/architecture-design-generator.js";
 export * from "./execution/implementation-generator/implementation-generator.js";
+export * from "./execution/module-design-generator/module-design-generator.js";
 export * from "./execution/requirement-generator/requirement-generator.js";
 export * from "./interface/cli/cli.js";
 export * from "./quality-gate/change-gate/change-gate.js";
