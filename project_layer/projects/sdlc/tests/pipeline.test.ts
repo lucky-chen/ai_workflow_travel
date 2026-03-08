@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import path from "node:path";
 
+import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.js";
+import { RequirementStageRunner } from "../src/workflow/stage-runners/requirement-stage-runner.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 import { PipelineService } from "../src/workflow/pipeline/pipeline.js";
 import { StageRegistry } from "../src/workflow/pipeline/stage-registry.js";
@@ -15,6 +19,7 @@ export async function runPipelineTests(): Promise<void> {
   await testInvalidNextStageValidation();
   await testStageEntryRetrySemantics();
   await testStageEntryFromSpecifiedStage();
+  await testRequirementStageHandoffIntoArchitectureStage();
 }
 
 async function testSingleStageLaunch(): Promise<void> {
@@ -485,6 +490,65 @@ async function testStageEntryFromSpecifiedStage(): Promise<void> {
   assert.equal(invocationContexts[2]?.attempt, 2);
 }
 
+async function testRequirementStageHandoffIntoArchitectureStage(): Promise<void> {
+  const storageRoot = await createTempDir("pipeline-requirement-");
+  const artifactStore = new ArtifactStoreService(storageRoot);
+  const invocationContexts: StageRunContext[] = [];
+  const architectureStage: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Architecture stage completed.",
+        artifacts: {},
+      };
+    },
+  };
+
+  try {
+    const pipeline = new PipelineService({
+      registry: createRegistry(
+        {
+          stageId: "requirement_interpretation",
+          launchRequirements: ["requirement_document"],
+          runner: new RequirementStageRunner({ artifactStore }),
+          nextStageId: "architecture_design",
+        },
+        {
+          stageId: "architecture_design",
+          launchRequirements: ["requirement_document"],
+          runner: architectureStage,
+          nextStageId: null,
+        },
+      ),
+    });
+
+    const taskId = await pipeline.launchTask({
+      startStageId: "requirement_interpretation",
+      workspaceRoot: "/workspace/demo",
+      inputArtifacts: {
+        requirement_document: createRequirementDocument(),
+      },
+    });
+
+    assert.equal(invocationContexts.length, 1);
+    assert.deepEqual(invocationContexts[0], {
+      taskId,
+      stageId: "architecture_design",
+      attempt: 1,
+      workspaceRoot: "/workspace/demo",
+      inputArtifacts: {
+        requirement_document: "docs/requirements/Requirement.md",
+      },
+      params: undefined,
+    });
+  } finally {
+    await rm(storageRoot, { recursive: true, force: true });
+  }
+}
+
 function createCompletedStage(summary: string): IStageRunner {
   return {
     async run(context: StageRunContext): Promise<StageOutput> {
@@ -513,4 +577,81 @@ function createRegistry(...definitions: Array<{
   }
 
   return registry;
+}
+
+async function createTempDir(prefix: string): Promise<string> {
+  const tempRoot = path.resolve(process.cwd(), "dist", "tmp");
+  await mkdir(tempRoot, { recursive: true });
+  return mkdtemp(path.join(tempRoot, prefix));
+}
+
+function createRequirementDocument(): string {
+  return [
+    "# 1. Background",
+    "- Users lose time coordinating requirement changes.",
+    "- Product teams need a stable requirement baseline.",
+    "- The platform should improve alignment before implementation.",
+    "",
+    "# 2. User Scenarios",
+    "## 2.1 Product Managers",
+    "Need to turn rough product requests into stable requirement documents.",
+    "## 2.2 Engineers",
+    "Need requirement documents that are explicit enough for downstream design.",
+    "## 2.3 Delivery Team",
+    "Need shared understanding before architecture and module design begin.",
+    "",
+    "# 3. Product Goals",
+    "Deliver a stable requirement baseline for downstream stages.",
+    "- Reduce ambiguity before architecture design starts.",
+    "- Keep the document focused on product intent.",
+    "- Make downstream handoff predictable.",
+    "",
+    "# 4. Core Problems and Product Abilities",
+    "## 4.1 Requirement ambiguity",
+    "- problem: teams interpret rough requests differently.",
+    "- ability: the product structures requirement content into a stable template.",
+    "",
+    "# 5. User Workflow",
+    "## 5.1 Standard Flow",
+    "### 5.1.1 Draft input",
+    "User provides initial requirement context.",
+    "### 5.1.2 Requirement normalization",
+    "System organizes the requirement into the standard document.",
+    "## 5.2 Resume Support Entry Points",
+    "- confirmed requirement draft",
+    "  resume when the requirement is already reviewed.",
+    "## 5.3 Failure Handling",
+    "- request clarification when key requirement context is missing.",
+    "",
+    "# 6. Inputs and Outputs",
+    "## 6.1 Inputs",
+    "- raw requirement input",
+    "## 6.2 Prerequisites",
+    "- confirmed product context",
+    "## 6.3 Outputs",
+    "- requirement document for downstream stages",
+    "",
+    "# 7 Scope and Non-Goals",
+    "## 7.1 V1: MVP",
+    "- normalize requirement content and support review.",
+    "## 7.2 V2: Available",
+    "- compare revisions and support incremental updates.",
+    "## 7.3 V3: General",
+    "- broaden support for more product workflows.",
+    "",
+    "# 8. Success Criteria",
+    "## 8.1 V1",
+    "- requirement document passes contract review.",
+    "## 8.2 V2",
+    "- downstream architecture generation needs fewer manual fixes.",
+    "## 8.3 V3",
+    "- teams adopt the workflow consistently.",
+    "",
+    "# 9. Risks",
+    "- users may provide underspecified requests.",
+    "",
+    "# 10. Constraints",
+    "## 10.1 Timeline",
+    "- review points must remain explicit.",
+  ].join("\n");
 }

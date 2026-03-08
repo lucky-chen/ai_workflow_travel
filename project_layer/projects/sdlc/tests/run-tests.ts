@@ -7,6 +7,9 @@ import { runImplementationStageRunnerTests } from "./implementation-stage-runner
 import { runHistoryStoreTests } from "./history-store.test.js";
 import { runLlmExecutorTests } from "./llm-executor.test.js";
 import { runPipelineTests } from "./pipeline.test.js";
+import { runRequirementContractTests } from "./requirement-contract.test.js";
+import { runRequirementGeneratorTests } from "./requirement-generator.test.js";
+import { runRequirementStageRunnerTests } from "./requirement-stage-runner.test.js";
 import { runTraceTests } from "./trace.test.js";
 
 async function main(): Promise<void> {
@@ -19,6 +22,9 @@ async function main(): Promise<void> {
   await runImplementationStageRunnerTests();
   await runLlmExecutorTests();
   await runPipelineTests();
+  await runRequirementContractTests();
+  await runRequirementGeneratorTests();
+  await runRequirementStageRunnerTests();
   await runTraceTests();
   process.stdout.write("All tests passed.\n");
 }

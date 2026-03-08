@@ -22,6 +22,7 @@ export interface PipelineServiceDependencies {
 
 // Public API: workflow entry used by CLI or other callers to launch a task.
 export class PipelineService implements IPipeline {
+  private static readonly NON_FORWARD_ARTIFACT_KEYS = new Set(["artifactKey", "content", "summary"]);
   private readonly registry: StageRegistry;
   private readonly launchValidator: LaunchValidator;
   private readonly traceRecorder?: ITraceRecorder;
@@ -151,7 +152,8 @@ export class PipelineService implements IPipeline {
     }
 
     const nextEntries = Object.entries(output.artifacts as Record<string, unknown>).filter(
-      (_entry): _entry is [string, string] => typeof _entry[1] === "string",
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" && !PipelineService.NON_FORWARD_ARTIFACT_KEYS.has(entry[0]),
     );
 
     if (nextEntries.length === 0) {

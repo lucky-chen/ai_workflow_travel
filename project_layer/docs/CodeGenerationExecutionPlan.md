@@ -105,35 +105,35 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 2. Deliver `requirement_interpretation` Stage
 
-- [ ] Step 2 is not started
-- [ ] Architecture modules in scope
-  - [ ] `Execution/RequirementGenerator`
-  - [ ] `Contract/RequirementContract`
-  - [ ] `Workflow/RequirementStageRunner`
-- [ ] Batch 1: requirement generation backbone
-  - [ ] define requirement-stage upstream input shape
-  - [ ] define requirement-stage review/check input shape
-  - [ ] `RequirementGenerator` empty implementation placeholder
-  - [ ] confirm `RequirementGenerator -> RequirementContract` runtime handoff
-- [ ] Batch 2: requirement contract backbone
-  - [ ] `RequirementContract`
-  - [ ] requirement document structure checks
-  - [ ] requirement document contract-alignment checks
-  - [ ] stable contract result mapping
-  - [ ] focused tests for contract success and failure
-- [ ] Batch 3: requirement stage runner flow
-  - [ ] `RequirementStageRunner`
-  - [ ] direct binding creation inside `RequirementStageRunner`
-  - [ ] `generate -> contract -> review` main flow
-  - [ ] requirement artifact persistence in runner
-  - [ ] requirement trace recording in runner
-  - [ ] requirement gate review flow
-  - [ ] focused tests for runner and stage flow
-- [ ] Batch 4: requirement-stage runtime alignment
-  - [ ] align stage input artifact shape with workflow contracts
-  - [ ] align generated artifact naming with downstream stage expectations
-  - [ ] align trace and review semantics with shared runner behavior
-  - [ ] confirm handoff contract into `architecture_design`
+- [x] Step 2 is completed
+- [x] Architecture modules in scope
+  - [x] `Execution/RequirementGenerator`
+  - [x] `Contract/RequirementContract`
+  - [x] `Workflow/RequirementStageRunner`
+- [x] Batch 1: requirement generation backbone
+  - [x] define requirement-stage upstream input shape
+  - [x] define requirement-stage review/check input shape
+  - [x] `RequirementGenerator` empty implementation placeholder
+  - [x] confirm `RequirementGenerator -> RequirementContract` runtime handoff
+- [x] Batch 2: requirement contract backbone
+  - [x] `RequirementContract`
+  - [x] requirement document structure checks
+  - [x] requirement document contract-alignment checks
+  - [x] stable contract result mapping
+  - [x] focused tests for contract success and failure
+- [x] Batch 3: requirement stage runner flow
+  - [x] `RequirementStageRunner`
+  - [x] direct binding creation inside `RequirementStageRunner`
+  - [x] `generate -> contract -> review` main flow
+  - [x] requirement artifact persistence in runner
+  - [x] requirement trace recording in runner
+  - [x] requirement gate review flow
+  - [x] focused tests for runner and stage flow
+- [x] Batch 4: requirement-stage runtime alignment
+  - [x] align stage input artifact shape with workflow contracts
+  - [x] align generated artifact naming with downstream stage expectations
+  - [x] align trace and review semantics with shared runner behavior
+  - [x] confirm handoff contract into `architecture_design`
 
 ### Step 3. Deliver `architecture_design` Stage
 
