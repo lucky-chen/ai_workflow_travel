@@ -198,14 +198,14 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] real `ILlmExecutor`-based module-design contract execution
   - [x] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
-- [ ] Batch 3: module-design stage runner flow
-  - [ ] `ModuleStageRunner`
-  - [ ] direct binding creation inside `ModuleStageRunner`
-  - [ ] `generate -> contract -> review` main flow
-  - [ ] module-design artifact persistence in runner
-  - [ ] module-design trace recording in runner
-  - [ ] module-design gate review flow
-  - [ ] focused tests for runner and stage flow
+- [x] Batch 3: module-design stage runner flow
+  - [x] `ModuleStageRunner`
+  - [x] direct binding creation inside `ModuleStageRunner`
+  - [x] `generate -> contract -> review` main flow
+  - [x] module-design artifact persistence in runner
+  - [x] module-design trace recording in runner
+  - [x] module-design gate review flow
+  - [x] focused tests for runner and stage flow
 - [ ] Batch 4: module-design runtime alignment
   - [ ] load architecture-stage artifacts as generation input
   - [ ] align output artifacts with implementation-stage needs

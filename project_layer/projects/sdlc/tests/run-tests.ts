@@ -11,6 +11,7 @@ import { runHistoryStoreTests } from "./history-store.test.js";
 import { runLlmExecutorTests } from "./llm-executor.test.js";
 import { runModuleDesignContractTests } from "./module-design-contract.test.js";
 import { runModuleDesignGeneratorTests } from "./module-design-generator.test.js";
+import { runModuleStageRunnerTests } from "./module-stage-runner.test.js";
 import { runPipelineCoreTests } from "./pipeline-core.test.js";
 import { runPipelineHandoffTests } from "./pipeline-handoff.test.js";
 import { runPipelineStageEntryTests } from "./pipeline-stage-entry.test.js";
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   await runLlmExecutorTests();
   await runModuleDesignContractTests();
   await runModuleDesignGeneratorTests();
+  await runModuleStageRunnerTests();
   await runPipelineCoreTests(pipelineWorkspaceRoot);
   await runPipelineStageEntryTests(pipelineWorkspaceRoot);
   await runPipelineHandoffTests(pipelineWorkspaceRoot);

@@ -20,5 +20,6 @@ export * from "./quality-gate/trace/trace-recorder.js";
 export * from "./sdk/llm-executor/llm-executor.js";
 export * from "./workflow/stage-runners/implementation-stage-runner.js";
 export * from "./workflow/stage-runners/architecture-stage-runner.js";
+export * from "./workflow/stage-runners/module-stage-runner.js";
 export * from "./workflow/stage-runners/requirement-stage-runner.js";
 export * from "./workflow/pipeline/pipeline.js";
