@@ -25,6 +25,7 @@ This module design collaborates with:
 Its core functions are:
 
 - check implementation-plan-stage generated workplan output
+- check whether the workplan stays aligned with requirement, architecture, and module-design inputs
 - return structured `ContractCheckResult`
 
 `ImplementationPlanContract` does not decide workflow progression, gate approval, or artifact persistence.
@@ -66,7 +67,11 @@ ImplementationPlanContract --> ImplementationPlanStageRunner: contract_check_res
 
 ### 4.1 Check Target Rule
 
-- check target field path is `output.artifacts.steps`
+- check target field path is `output.artifacts.content`
+- alignment context sources are:
+  - `context.inputArtifacts["requirement_document"]`
+  - `context.inputArtifacts["architecture_document"]`
+  - `context.inputArtifacts["module_design_documents"]`
 
 ### 4.2 Review Input Rule
 
@@ -75,12 +80,12 @@ ChangeReviewRequest {
   taskId: context.taskId
   stageId: "implementation_plan_generation"
   summary: output.summary
-  changedPaths: ["plans/implementation/{moduleName}.plan.json"]
+  changedPaths: ["plans/implementation/ImplementationWorkPlan.md"]
   changedFiles: [
     {
-      path: "plans/implementation/{moduleName}.plan.json",
+      path: "plans/implementation/ImplementationWorkPlan.md",
       operation: "create_or_update",
-      content: output.summary,
+      content: output.artifacts.content,
     },
   ]
 }
@@ -88,5 +93,5 @@ ChangeReviewRequest {
 
 ### 4.3 Persistence Limit
 
-- `ImplementationPlanStageRunner` persists accepted output to `plans/implementation/{moduleName}.plan.json`
+- `ImplementationPlanStageRunner` persists accepted output to `plans/implementation/ImplementationWorkPlan.md`
 - downstream `ImplementationGenerator` receives accepted output through `inputArtifacts["implementation_workplan"]`

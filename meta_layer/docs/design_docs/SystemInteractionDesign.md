@@ -58,6 +58,7 @@ Placeholder note:
 
 - `Execution/RequirementGenerator` is a required empty implementation; it stays bound to the requirement stage, returns pass-through requirement-stage output, and does not follow the shared document-stage generator pattern.
 - `Execution/ArchitectureDesignGenerator` and `Execution/ModuleDesignGenerator` follow the shared document-stage generator pattern.
+- `Execution/ImplementationPlanGenerator` follows the shared document-stage generator pattern.
 - `Execution/ImplementationGenerator` is an independent execution module and does not follow the document-stage generator pattern.
 
 ## 2. API List By Interaction Step
@@ -89,6 +90,7 @@ Notes:
 
 - `Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ModuleDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
+- `Execution/ImplementationPlanGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ImplementationGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Contract/* -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Other eligible modules -> SDK/LlmExecutor.execute(request) -> llm_result`
@@ -148,7 +150,7 @@ Stage-to-stage artifact mapping:
   - downstream handoff: `inputArtifacts["architecture_document"]`
 - `module_design`
   - generator output: `artifacts.artifactKey == "module_design_document"`
-  - downstream handoff: `inputArtifacts["module_design_document"]`
+  - downstream aggregation: `inputArtifacts["module_design_documents"]`
 - `implementation_plan_generation`
   - generator output: `artifacts.artifactKey == "implementation_workplan"`
   - downstream handoff: `inputArtifacts["implementation_workplan"]`
@@ -156,6 +158,9 @@ Stage-to-stage artifact mapping:
   - generator output: `artifacts.generatedFiles`
   - runtime input: `inputArtifacts["implementation_workplan"]`
   - runtime input: `inputArtifacts["current_step"]`
+  - runtime input: `inputArtifacts["requirement_document"]`
+  - runtime input: `inputArtifacts["architecture_document"]`
+  - runtime input: `inputArtifacts["module_design_documents"]`
   - accepted files are persisted to their generated paths
 - `validation`
   - runtime input: `inputArtifacts["project_path"]`
@@ -178,8 +183,8 @@ Gate review-request mapping by stage:
   - review content source: `output.artifacts.content`
 - `implementation_plan_generation`
   - review summary source: `output.summary`
-  - review path: `plans/implementation/{moduleName}.plan.json`
-  - review content source: generated workplan
+  - review path: `plans/implementation/ImplementationWorkPlan.md`
+  - review content source: `output.artifacts.content`
 - `implementation_step_execution`
   - review summary source: `output.summary`
   - review paths: `output.artifacts.generatedFiles[*].path`

@@ -13,6 +13,7 @@ This pattern is the shared design reference for:
 
 - `Execution/ArchitectureDesignGenerator`
 - `Execution/ModuleDesignGenerator`
+- `Execution/ImplementationPlanGenerator`
 
 This pattern does not apply to:
 

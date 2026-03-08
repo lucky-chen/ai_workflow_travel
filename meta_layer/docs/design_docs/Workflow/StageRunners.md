@@ -28,41 +28,48 @@ interface IArtifactStore <<from Pipeline>>
 class RequirementStageRunner <<public>>
 class ArchitectureStageRunner <<public>>
 class ModuleStageRunner <<public>>
+class ImplementationPlanStageRunner <<public>>
 class ImplementationStageRunner <<public>>
 class ValidationStageRunner <<public>>
 
 BaseStageRunner <|-- RequirementStageRunner
 BaseStageRunner <|-- ArchitectureStageRunner
 BaseStageRunner <|-- ModuleStageRunner
+BaseStageRunner <|-- ImplementationPlanStageRunner
 BaseStageRunner <|-- ImplementationStageRunner
 BaseStageRunner <|-- ValidationStageRunner
 
 RequirementStageRunner --> IStageGenerator
 ArchitectureStageRunner --> IStageGenerator
 ModuleStageRunner --> IStageGenerator
+ImplementationPlanStageRunner --> IStageGenerator
 ImplementationStageRunner --> IStageGenerator
 
 RequirementStageRunner --> IContractChecker
 ArchitectureStageRunner --> IContractChecker
 ModuleStageRunner --> IContractChecker
+ImplementationPlanStageRunner --> IContractChecker
 ImplementationStageRunner --> IContractChecker
 ValidationStageRunner --> IContractChecker
 
 RequirementStageRunner --> IChangeGate
 ArchitectureStageRunner --> IChangeGate
 ModuleStageRunner --> IChangeGate
+ImplementationPlanStageRunner --> IChangeGate
 ImplementationStageRunner --> IChangeGate
 ValidationStageRunner --> IChangeGate
 
 RequirementStageRunner --> ITraceRecorder
 ArchitectureStageRunner --> ITraceRecorder
 ModuleStageRunner --> ITraceRecorder
+ImplementationPlanStageRunner --> ITraceRecorder
 ImplementationStageRunner --> ITraceRecorder
 ValidationStageRunner --> ITraceRecorder
 
 RequirementStageRunner --> IArtifactStore
 ArchitectureStageRunner --> IArtifactStore
 ModuleStageRunner --> IArtifactStore
+ImplementationPlanStageRunner --> IArtifactStore
 ImplementationStageRunner --> IArtifactStore
 ValidationStageRunner --> IArtifactStore
 @enduml
@@ -139,10 +146,10 @@ Persistence mapping rule for document stages:
 - `module_design`
   - read `StageOutput.artifacts.artifactKey == "module_design_document"`
   - persist content to `docs/module_design/{moduleName}.md`
-  - pass accepted output downstream as `inputArtifacts["module_design_document"]`
+  - aggregate accepted outputs downstream as `inputArtifacts["module_design_documents"]`
 - `implementation_plan_generation`
   - read `StageOutput.artifacts.artifactKey == "implementation_workplan"`
-  - persist content to `plans/implementation/{moduleName}.plan.json`
+  - persist content to `plans/implementation/ImplementationWorkPlan.md`
   - pass accepted output downstream as `inputArtifacts["implementation_workplan"]`
 - `implementation_step_execution`
   - read `StageOutput.artifacts.generatedFiles`

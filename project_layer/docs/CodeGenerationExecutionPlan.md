@@ -231,7 +231,8 @@ Already built:
 Still missing:
 
 - [ ] Batch 4: implementation plan generation flow
-  - [ ] generate ordered `workplan`
+  - [ ] generate ordered project-level `workplan`
+  - [ ] load requirement, architecture, and all module-design documents as plan input
   - [ ] review generated `workplan`
   - [ ] persist accepted `workplan`
   - [ ] handoff accepted `workplan` into `implementation_step_execution`
@@ -249,7 +250,8 @@ Still missing:
   - [ ] extend tests for artifact persistence and trace flow
 - [ ] Batch 7: step review and runtime semantics alignment
   - [ ] support review `comment`
-  - [ ] align per-step review outcomes with next-step transition semantics
+  - [ ] align plan-step review outcomes with next-step transition semantics
+  - [ ] align step execution input with workplan-driven context loading
   - [ ] fully align implementation-plan and step-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes
 
