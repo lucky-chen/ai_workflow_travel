@@ -38,7 +38,7 @@ Its core functions are:
 ```plantuml
 @startuml
 interface ICLI {
-  +run(argv: string[]): int
+  +run(argv: string[]): number
 }
 
 class CLIService {
@@ -54,7 +54,7 @@ class CLIRequestMapper
 class TraceViewer
 
 interface IPipeline {
-  +launchTask(request: LaunchTaskRequest): TaskId
+  +launchTask(request: LaunchTaskRequest): Promise<TaskId>
 }
 
 interface IReviewInteraction {
@@ -197,7 +197,7 @@ interface ICLI {
 ```ts
 interface ParsedCommand {
   command: string
-  options: Record<string, string>
+  options: Record<string, string | string[]>
 }
 
 interface CLICommandParser {
@@ -212,8 +212,9 @@ type TaskId = string
 
 interface LaunchTaskRequest {
   start_stage: string
-  input_refs: Record<string, string>
-  target_module?: string
+  input_refs: Record<string, string | string[]>
+  target_step?: string
+  project_path?: string
 }
 
 interface CLIRequestMapper {
@@ -221,7 +222,7 @@ interface CLIRequestMapper {
 }
 
 interface IPipeline {
-  launchTask(request: LaunchTaskRequest): TaskId
+  launchTask(request: LaunchTaskRequest): Promise<TaskId>
 }
 ```
 
@@ -230,7 +231,10 @@ interface IPipeline {
 ```ts
 interface ReviewSession {
   review_id: string
+  task_id: string
+  stage_id: string
   change_request_summary: string
+  comment?: string
 }
 
 interface GateDecision {
@@ -276,8 +280,19 @@ meta-layer task start --stage module_design --input architecture_design=artifact
 # start module design for one specific module only
 meta-layer task start --stage module_design --input architecture_design=artifacts/architecture_design.json --module user_service
 
-# start directly from implementation stage with upstream module design artifact
-meta-layer task start --stage implementation --input module_design=artifacts/module_design.json
+# start implementation plan generation with requirement, architecture, and all module-design docs
+meta-layer task start \
+  --stage implementation_plan_generation \
+  --input requirement_document=docs/requirements/Requirement.md \
+  --input architecture_document=docs/architecture/TechnicalArchitecture.md \
+  --input module_design_documents=docs/module_design/*.md
+
+# start implementation step execution with accepted workplan and current step
+meta-layer task start \
+  --stage implementation_step_execution \
+  --input implementation_workplan=plans/implementation/ImplementationWorkPlan.md \
+  --input current_step=step_1 \
+  --project-path ./project_layer
 
 # review a pending change
 meta-layer review --review-id review_123
@@ -293,3 +308,5 @@ meta-layer trace --task-id task_123
 - `CLI` must not implement gate decision logic itself.
 - `CLI` should convert user input into stable upstream requests.
 - `CLI` should present progress and results in a stable command-line format.
+- `CLI` should support both workplan-level review and per-step review.
+- `CLI` should support runtime inputs required by implementation plan generation and implementation step execution, including `implementation_workplan`, `current_step`, and `project_path`.
