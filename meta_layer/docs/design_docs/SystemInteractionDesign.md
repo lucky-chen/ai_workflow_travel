@@ -55,7 +55,8 @@ This document does not define detailed request fields, response fields, or stora
 
 Placeholder note:
 
-- `Execution/RequirementGenerator` and `Execution/ModuleDesignGenerator` are approved reuse placeholders with explicit `CODEGEN_REUSE_SPEC`; codegen should resolve them via their declared reuse source and overrides, not treat them as missing design.
+- `Execution/RequirementGenerator` is an approved empty placeholder; codegen should not expand it into a full generation path unless explicitly requested.
+- `Execution/ModuleDesignGenerator` is an approved reuse placeholder with explicit `CODEGEN_REUSE_SPEC`; codegen should resolve it via its declared reuse source and overrides, not treat it as missing design.
 
 ## 2. API List By Interaction Step
 
@@ -71,7 +72,6 @@ Notes:
 
 ### 2.2 Execute Stage
 
-- `Execution/RequirementGenerator.run(context) -> stage_output`
 - `Execution/ArchitectureDesignGenerator.run(context) -> stage_output`
 - `Execution/ModuleDesignGenerator.run(context) -> stage_output`
 - `Execution/ImplementationGenerator.run(context) -> stage_output`
@@ -79,11 +79,11 @@ Notes:
 Notes:
 
 - `Pipeline` depends on shared stage APIs (`run` for execution modules, `check` for contract modules).
+- `requirement_interpretation` currently skips execution and enters contract check directly with loaded raw requirement input.
 - which concrete execution module is used is decided by stage registration, not by hard-coded pipeline logic.
 
 ### 2.3 Shared LLM Execution
 
-- `Execution/RequirementGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ModuleDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ImplementationGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`

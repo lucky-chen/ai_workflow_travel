@@ -91,7 +91,8 @@ Responsibilities:
 Ownership rule:
 
 - `IArtifactStore` is owned by `Workflow/Pipeline` as a cross-module collaboration interface.
-- `Data/ArtifactStore` implements this interface and is bound through the application composition root.
+- `Data/ArtifactStore` implements this interface.
+- workflow assembly code or concrete stage runners may bind this implementation depending on whether the storage dependency is shared or stage-local.
 
 ## 3. Core Runtime Flow
 

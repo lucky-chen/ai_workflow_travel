@@ -98,13 +98,16 @@ All runners keep the same public signature as `BaseStageRunner`.
 
 | stage_id | runner_class | execution_binding | contract_binding | gate_policy |
 | --- | --- | --- | --- | --- |
-| `requirement_interpretation` | `RequirementStageRunner` | `Execution/RequirementGenerator.run` | `Contract/RequirementContract.check` | `review_required` |
+| `requirement_interpretation` | `RequirementStageRunner` | `none` | `Contract/RequirementContract.check` | `review_required` |
 | `architecture_design` | `ArchitectureStageRunner` | `Execution/ArchitectureDesignGenerator.run` | `Contract/ArchitectureDesignContract.check` | `review_required` |
 | `module_design` | `ModuleStageRunner` | `Execution/ModuleDesignGenerator.run` | `Contract/ModuleDesignContract.check` | `review_required` |
 | `implementation` | `ImplementationStageRunner` | `Execution/ImplementationGenerator.run` | `Contract/ImplementationContract.check` | `review_required` |
 | `validation` | `ValidationStageRunner` | `none` | `Contract/ValidationContract.check` | `review_required_for_final_result` |
 
-Validation stage exception: it does not bind an execution module and uses `Contract/ValidationContract.check` as its validation confirmation input before gate review.
+Stage exceptions:
+
+- `requirement_interpretation` currently skips execution binding and sends loaded raw requirement input directly into `Contract/RequirementContract.check` before gate review.
+- `validation` does not bind an execution module and uses `Contract/ValidationContract.check` as its validation confirmation input before gate review.
 
 ## 4. Runtime Responsibilities
 
@@ -112,13 +115,14 @@ For each stage runner:
 
 1. record stage start trace
 2. call bound `Execution/*` run when execution binding is defined
-3. call bound `Contract/*` check when enabled for that stage
-4. call `QualityGate/ChangeGate.review`
-5. call `IArtifactStore.create` on pass
-6. return `StageOutput`
+3. load upstream review/check input directly when the stage has no execution binding
+4. call bound `Contract/*` check when enabled for that stage
+5. call `QualityGate/ChangeGate.review`
+6. call `IArtifactStore.create` on pass
+7. return `StageOutput`
 
 Dependency rule:
 
 - concrete stage runners depend only on pipeline-owned collaboration interfaces such as `ITraceRecorder`, `IChangeGate`, and `IArtifactStore`
-- concrete stage runners must not directly reference external module implementation files for cross-module collaboration
-- all concrete bindings are completed outside runners in the application composition root
+- concrete stage runners may directly create stage-local generator and contract bindings inside the runner when the implementation stays within workflow-owned composition boundaries
+- stage runners should not rely on a separate application composition root for stage-local execution and contract binding

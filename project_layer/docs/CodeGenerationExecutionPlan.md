@@ -88,88 +88,112 @@ This step delivers the shared runtime backbone used by all stages.
     - [x] SDK-owned agent trace abstraction
     - [x] minimal `DefaultPlanner` and `DefaultObserver`
     - [x] focused tests for interfaces, runtime types, and trace types in the standalone `project_layer/projects/agent_runtime` project
-  - [ ] Batch 2: single-pass runtime
+  - [x] Batch 2: single-pass runtime
     - [x] `DefaultExecutor`
     - [x] `DefaultAgent`
     - [x] minimal single-pass `plan -> execute -> observe` runtime
     - [x] trace checkpoints for plan, execution, and observation flow
     - [x] focused tests for single-pass runtime execution
-  - [ ] Batch 3: llm executor integration
+  - [x] Batch 3: llm executor integration
     - [x] composition binding between `LlmExecutor` and `AgentRuntime`
     - [x] `LlmExecutorService` integration through `AgentRuntime`
     - [x] integration tests for runtime path, trace, and `LlmExecutor`
 
 ### Step 2. Deliver `requirement_interpretation` Stage
 
-Status:
-
-- [ ] Not started
-
-Architecture modules in scope:
-
-- `Execution/RequirementGenerator`
-- `Contract/RequirementContract`
-- `Workflow/RequirementStageRunner`
-
-What to build:
-
-- [ ] `RequirementGenerator`
-- [ ] prompt builder for requirement interpretation
-- [ ] stage output builder
-- [ ] `RequirementContract`
-- [ ] `RequirementStageRunner`
-- [ ] artifact persistence in runner
-- [ ] trace recording in runner
-- [ ] gate review flow in runner
-- [ ] tests for generator, contract, runner, and stage flow
+- [ ] Step 2 is not started
+- [ ] Architecture modules in scope
+  - [ ] `Execution/RequirementGenerator`
+  - [ ] `Contract/RequirementContract`
+  - [ ] `Workflow/RequirementStageRunner`
+- [ ] Batch 1: requirement generation backbone
+  - [ ] define requirement-stage upstream input shape
+  - [ ] define requirement-stage review/check input shape
+  - [ ] `RequirementGenerator` empty implementation placeholder
+  - [ ] confirm this stage skips generation and goes directly to contract check
+- [ ] Batch 2: requirement contract backbone
+  - [ ] `RequirementContract`
+  - [ ] requirement document structure checks
+  - [ ] requirement document contract-alignment checks
+  - [ ] contract result builder for requirement-stage validation
+  - [ ] focused tests for contract success and failure
+- [ ] Batch 3: requirement stage runner flow
+  - [ ] `RequirementStageRunner`
+  - [ ] direct binding creation inside `RequirementStageRunner`
+  - [ ] `load/check -> review` main flow
+  - [ ] requirement artifact persistence in runner
+  - [ ] requirement trace recording in runner
+  - [ ] requirement gate review flow
+  - [ ] focused tests for runner and stage flow
+- [ ] Batch 4: requirement-stage runtime alignment
+  - [ ] align stage input artifact shape with workflow contracts
+  - [ ] align generated artifact naming with downstream stage expectations
+  - [ ] align trace and review semantics with shared runner behavior
+  - [ ] confirm handoff contract into `architecture_design`
 
 ### Step 3. Deliver `architecture_design` Stage
 
-Status:
-
-- [ ] Not started
-
-Architecture modules in scope:
-
-- `Execution/ArchitectureDesignGenerator`
-- `Contract/ArchitectureDesignContract`
-- `Workflow/ArchitectureStageRunner`
-
-What to build:
-
-- [ ] `ArchitectureDesignGenerator`
-- [ ] architecture prompt builder
-- [ ] stage output builder
-- [ ] `ArchitectureDesignContract`
-- [ ] `ArchitectureStageRunner`
-- [ ] artifact persistence in runner
-- [ ] trace recording in runner
-- [ ] gate review flow in runner
-- [ ] tests for generator, contract, runner, and stage flow
+- [ ] Step 3 is not started
+- [ ] Architecture modules in scope
+  - [ ] `Execution/ArchitectureDesignGenerator`
+  - [ ] `Contract/ArchitectureDesignContract`
+  - [ ] `Workflow/ArchitectureStageRunner`
+- [ ] Batch 1: architecture generation backbone
+  - [ ] architecture design prompt builder
+  - [ ] architecture-stage output builder
+  - [ ] `ArchitectureDesignGenerator` implementation
+  - [ ] minimal tests for prompt building and output shaping
+- [ ] Batch 2: architecture contract backbone
+  - [ ] `ArchitectureDesignContract`
+  - [ ] architecture document structure checks
+  - [ ] architecture section-contract alignment checks
+  - [ ] architecture module-boundary consistency checks
+  - [ ] focused tests for contract success and failure
+- [ ] Batch 3: architecture stage runner flow
+  - [ ] `ArchitectureStageRunner`
+  - [ ] direct binding creation inside `ArchitectureStageRunner`
+  - [ ] `generate -> contract -> review` main flow
+  - [ ] architecture artifact persistence in runner
+  - [ ] architecture trace recording in runner
+  - [ ] architecture gate review flow
+  - [ ] focused tests for runner and stage flow
+- [ ] Batch 4: architecture-stage runtime alignment
+  - [ ] load requirement-stage artifacts as generation input
+  - [ ] align output artifacts with module-design stage needs
+  - [ ] align trace and review semantics with shared runner behavior
+  - [ ] confirm handoff contract into `module_design`
 
 ### Step 4. Deliver `module_design` Stage
 
-Status:
-
-- [ ] Not started
-
-Architecture modules in scope:
-
-- `Execution/ModuleDesignGenerator`
-- `Contract/ModuleDesignContract`
-- `Workflow/ModuleStageRunner`
-
-What to build:
-
-- [ ] `ModuleDesignGenerator`
-- [ ] module design prompt builder
-- [ ] stage output builder
-- [ ] `ModuleDesignContract`
-- [ ] `ModuleStageRunner`
-- [ ] artifact persistence in runner
-- [ ] trace recording in runner
-- [ ] gate review flow in runner
-- [ ] tests for generator, contract, runner, and stage flow
+- [ ] Step 4 is not started
+- [ ] Architecture modules in scope
+  - [ ] `Execution/ModuleDesignGenerator`
+  - [ ] `Contract/ModuleDesignContract`
+  - [ ] `Workflow/ModuleStageRunner`
+- [ ] Batch 1: module-design generation backbone
+  - [ ] module design prompt builder
+  - [ ] module-design stage output builder
+  - [ ] `ModuleDesignGenerator` implementation
+  - [ ] minimal tests for prompt building and output shaping
+- [ ] Batch 2: module-design contract backbone
+  - [ ] `ModuleDesignContract`
+  - [ ] module design document structure checks
+  - [ ] class-diagram and section-contract alignment checks
+  - [ ] module dependency and responsibility consistency checks
+  - [ ] focused tests for contract success and failure
+- [ ] Batch 3: module-design stage runner flow
+  - [ ] `ModuleStageRunner`
+  - [ ] direct binding creation inside `ModuleStageRunner`
+  - [ ] `generate -> contract -> review` main flow
+  - [ ] module-design artifact persistence in runner
+  - [ ] module-design trace recording in runner
+  - [ ] module-design gate review flow
+  - [ ] focused tests for runner and stage flow
+- [ ] Batch 4: module-design runtime alignment
+  - [ ] load architecture-stage artifacts as generation input
+  - [ ] align output artifacts with implementation-stage needs
+  - [ ] align trace and review semantics with shared runner behavior
+  - [ ] confirm handoff contract into `implementation`
 
 ### Step 5. Deliver `implementation` Stage
 
@@ -196,85 +220,125 @@ Already built:
 
 Still missing:
 
-- [ ] make `ImplementationContract` validate generated changes in a prepared execution environment
-- [ ] persist implementation-stage artifacts after successful runner completion
-- [ ] record trace for stage start
-- [ ] record trace for contract result
-- [ ] record trace for gate result
-- [ ] record trace for final apply result
-- [ ] support review `comment`
-- [ ] fully align implementation runtime semantics with design docs
+- [ ] Batch 4: execution-environment contract validation
+  - [ ] make `ImplementationContract` validate generated changes in a prepared execution environment
+  - [ ] apply generated changes into prepared validation workspace before test execution
+  - [ ] isolate validation workspace lifecycle from user workspace
+  - [ ] extend tests for prepared-environment success and failure cases
+- [ ] Batch 5: implementation runner persistence and trace
+  - [ ] persist implementation-stage artifacts after successful runner completion
+  - [ ] record trace for stage start
+  - [ ] record trace for contract result
+  - [ ] record trace for gate result
+  - [ ] record trace for final apply result
+  - [ ] extend tests for artifact persistence and trace flow
+- [ ] Batch 6: review and runtime semantics alignment
+  - [ ] support review `comment`
+  - [ ] align apply/reject behavior with shared review semantics
+  - [ ] fully align implementation runtime semantics with design docs
+  - [ ] extend tests for comment-aware review outcomes
 
 ### Step 6. Deliver `validation` Stage
 
-Status:
-
-- [ ] Not started
-
-Architecture modules in scope:
-
-- `Contract/ValidationContract`
-- `Workflow/ValidationStageRunner`
-
-What to build:
-
-- [ ] final validation input shape
-- [ ] `ValidationContract`
-- [ ] `ValidationStageRunner`
-- [ ] validation review flow
-- [ ] validation artifact persistence
-- [ ] validation trace flow
-- [ ] validation tests
+- [ ] Step 6 is not started
+- [ ] Architecture modules in scope
+  - [ ] `Contract/ValidationContract`
+  - [ ] `Workflow/ValidationStageRunner`
+- [ ] Batch 1: validation input and result model
+  - [ ] final validation input shape
+  - [ ] validation-stage output shape
+  - [ ] validation summary and issue model
+  - [ ] minimal tests for validation input and output shaping
+- [ ] Batch 2: validation contract backbone
+  - [ ] `ValidationContract`
+  - [ ] final workspace validation checks
+  - [ ] final artifact completeness checks
+  - [ ] validation result builder
+  - [ ] focused tests for contract success and failure
+- [ ] Batch 3: validation stage runner flow
+  - [ ] `ValidationStageRunner`
+  - [ ] `contract -> review` main flow
+  - [ ] validation review flow
+  - [ ] validation artifact persistence
+  - [ ] validation trace flow
+  - [ ] focused tests for runner and stage flow
+- [ ] Batch 4: validation-stage runtime alignment
+  - [ ] load implementation-stage artifacts as validation input
+  - [ ] align validation completion semantics with pipeline task completion
+  - [ ] align validation review semantics with CLI presentation
+  - [ ] confirm final-stage completion behavior
 
 ### Step 7. Align Runtime Semantics With Design Docs
 
-Status:
-
-- [ ] Not started
-
-This step fixes the gap between implemented runtime behavior and the design documents.
-
-Documents and modules to align:
-
-- `Execution/ImplementationGenerator`
-- `Contract/ImplementationContract`
-- `Workflow/Pipeline`
-- `Workflow/StageRunners`
-- `QualityGate/ChangeGate`
-- `QualityGate/Trace`
-- `Interface/CLI`
-
-What to align:
-
-- [ ] implementation runtime semantics
-- [ ] contract runtime semantics
-- [ ] pipeline generic orchestration semantics
-- [ ] stage-runner shared behavior model
-- [ ] trace persistence semantics
-- [ ] gate presenter and review semantics
-- [ ] CLI interaction semantics
-- [ ] sequence diagrams affected by runtime changes
+- [ ] Step 7 is not started
+- [ ] Documents and modules in scope
+  - [ ] `Execution/ImplementationGenerator`
+  - [ ] `Contract/ImplementationContract`
+  - [ ] `Workflow/Pipeline`
+  - [ ] `Workflow/StageRunners`
+  - [ ] `QualityGate/ChangeGate`
+  - [ ] `QualityGate/Trace`
+  - [ ] `Interface/CLI`
+- [ ] Batch 1: runtime gap inventory
+  - [ ] compare implemented behavior with architecture documents
+  - [ ] compare implemented behavior with module design documents
+  - [ ] identify semantic mismatches in stage transitions and contracts
+  - [ ] record required code and document updates
+- [ ] Batch 2: pipeline and stage-runner alignment
+  - [ ] align pipeline generic orchestration semantics
+  - [ ] align stage-runner shared behavior model
+  - [ ] align stage continuation and retry semantics
+  - [ ] extend tests for orchestration behavior
+- [ ] Batch 3: contract, trace, and gate alignment
+  - [ ] align implementation runtime semantics
+  - [ ] align contract runtime semantics
+  - [ ] align trace persistence semantics
+  - [ ] align gate presenter and review semantics
+  - [ ] extend tests for contract, trace, and review flows
+- [ ] Batch 4: CLI and document synchronization
+  - [ ] align CLI interaction semantics
+  - [ ] update sequence diagrams affected by runtime changes
+  - [ ] update plan status to reflect true implementation state
+  - [ ] confirm docs and runnable behavior are consistent
 
 ### Step 8. Extend Toward Agent Capabilities
 
-Status:
-
-- [ ] Not started
-
-Architecture modules in scope:
-
-- `SDK/LlmExecutor`
-- workflow automation on top of completed stages
-
-What to build:
-
-- [ ] `ExecutionStrategySelector`
-- [ ] `IAgent`
-- [ ] `IPlanner`
-- [ ] `IExecutor`
-- [ ] `IObserver`
-- [ ] `SDK/AgentRuntime` implementation aligned with `meta_layer/docs/design_docs/SDK/AgentRuntime.md`
-- [ ] richer workflow automation after core stages are complete
+- [ ] Step 8 is not started
+- [ ] Architecture modules in scope
+  - [ ] `SDK/AgentRuntime`
+  - [ ] `SDK/LlmExecutor`
+  - [ ] workflow automation on top of completed stages
+- [ ] Batch 1: AgentRuntime V2 session-aware runtime
+  - [ ] `AgentSession` and `AgentMessage` runtime types
+  - [ ] `IAgentSessionStore`
+  - [ ] session load/save flow in `IAgent`
+  - [ ] session-aware trace metadata
+  - [ ] tests for session creation, load, update, and save
+- [ ] Batch 2: AgentRuntime V2 memory support
+  - [ ] `AgentMemory` runtime model
+  - [ ] memory update rules across agent runs
+  - [ ] memory-aware planner inputs
+  - [ ] memory-aware executor inputs
+  - [ ] tests for memory persistence and memory-driven execution
+- [ ] Batch 3: AgentRuntime V2 MCP support
+  - [ ] `IMcpGateway`
+  - [ ] MCP request/result types
+  - [ ] tool-capable execution plan steps
+  - [ ] executor support for MCP tool calls
+  - [ ] trace events for tool call and tool result
+  - [ ] tests for MCP-enabled execution
+- [ ] Batch 4: AgentRuntime V2 multi-turn semantics
+  - [ ] step-based execution plan model
+  - [ ] richer `ObservationResult` decisions (`accept` / `continue` / `abort`)
+  - [ ] bounded multi-iteration agent loop
+  - [ ] stop-condition and continuation policies
+  - [ ] tests for multi-turn continuation and stop conditions
+- [ ] Batch 5: SDLC integration on top of AgentRuntime V2
+  - [ ] `LlmExecutor` adaptation to session-aware runtime
+  - [ ] MCP-enabled llm execution facade path
+  - [ ] workflow-stage integration points for agent-assisted execution
+  - [ ] richer workflow automation after core stages are complete
+  - [ ] integration tests across `SDK/LlmExecutor` and `SDK/AgentRuntime`
 
 ## 4. Current Status Summary
 

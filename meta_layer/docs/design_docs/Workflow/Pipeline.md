@@ -34,7 +34,7 @@ Its core functions are:
 
 `Workflow/Pipeline` does not know business-stage semantics.
 
-`Workflow/Pipeline` also owns the shared collaboration interfaces used across module boundaries in the workflow runtime. External modules implement these interfaces, and concrete bindings are completed in the application composition root.
+`Workflow/Pipeline` also owns the shared collaboration interfaces used across module boundaries in the workflow runtime. External modules implement these interfaces, and concrete bindings may be created either in workflow assembly code or inside stage runners when the binding stays stage-local.
 
 ## 2. Core Classes
 
@@ -186,7 +186,8 @@ Ownership rule:
 - `ITraceRecorder`, `IChangeGate`, and `IArtifactStore` are pipeline-owned collaboration interfaces.
 - `QualityGate/*` and `Data/*` modules implement these interfaces when they provide workflow-facing capabilities.
 - `Pipeline` and stage runners depend only on these interfaces and do not directly depend on external module implementation files.
-- Concrete bindings are completed in the application composition root.
+- Shared workflow-wide bindings may be completed in workflow assembly code.
+- Stage-local execution and contract bindings may be created inside concrete stage runners.
 
 ### 2.8 StageRunner Implementation Model
 
@@ -202,6 +203,7 @@ Design pattern:
 - child runners bind stage-specific capability dependencies:
   - bind stage execution capability through `IStageGenerator` when execution binding is defined
   - bind stage check capability through `IContractChecker` when contract binding is defined
+  - stage-local bindings may be created directly inside the concrete runner
   - unbound capabilities are skipped by runner behavior
   - concrete stage runner implementations are defined in [StageRunners.md](./StageRunners.md), not in `Pipeline`
 
@@ -451,12 +453,13 @@ interface IArtifactStore {
 }
 ```
 
-`Workflow/Pipeline` owns these adapter interfaces (`IArtifactStore`, `IChangeGate`, `IContractChecker`, `ITraceRecorder`) and binds external module implementations through dependency injection.
+`Workflow/Pipeline` owns these adapter interfaces (`IArtifactStore`, `IChangeGate`, `IContractChecker`, `ITraceRecorder`) and depends on external module implementations through stable collaboration boundaries.
 
 Binding rule:
 
 - external modules implement pipeline-owned collaboration interfaces instead of owning cross-module workflow interfaces themselves
-- application startup or equivalent composition root is the only place that binds these interfaces to concrete implementations
+- shared workflow-level bindings may be assembled at application startup
+- stage-local bindings may be created inside concrete stage runners when that keeps the workflow simpler and remains within pipeline-owned boundaries
 
 Artifact persistence mapping rule:
 

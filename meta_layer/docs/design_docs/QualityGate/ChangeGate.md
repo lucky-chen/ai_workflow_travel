@@ -125,7 +125,8 @@ Responsibilities:
 Ownership rule:
 
 - `IChangeGate` is owned by `Workflow/Pipeline` as a cross-module collaboration interface.
-- `QualityGate/ChangeGate` implements this interface and is bound through the application composition root.
+- `QualityGate/ChangeGate` implements this interface.
+- workflow assembly code or concrete stage runners may bind this implementation depending on whether the gate dependency is shared or stage-local.
 
 ## 3. Core Runtime Flow
 
