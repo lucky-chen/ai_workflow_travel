@@ -22,6 +22,7 @@ import { runPipelineStageEntryTests } from "./pipeline-stage-entry.test.js";
 import { runRequirementContractTests } from "./requirement-contract.test.js";
 import { runRequirementGeneratorTests } from "./requirement-generator.test.js";
 import { runRequirementStageRunnerTests } from "./requirement-stage-runner.test.js";
+import { runShellRunnerTests } from "./shell-runner.test.js";
 import { createTempDir } from "./pipeline-test-helpers.js";
 import { runTraceTests } from "./trace.test.js";
 import { runValidationModelTests } from "./validation-model.test.js";
@@ -52,6 +53,7 @@ async function main(): Promise<void> {
   await runRequirementContractTests();
   await runRequirementGeneratorTests();
   await runRequirementStageRunnerTests();
+  await runShellRunnerTests();
   await runTraceTests();
   await runValidationModelTests();
   process.stdout.write("All tests passed.\n");

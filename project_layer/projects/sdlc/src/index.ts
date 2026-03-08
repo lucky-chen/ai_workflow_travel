@@ -27,3 +27,4 @@ export * from "./workflow/stage-runners/architecture-stage-runner.js";
 export * from "./workflow/stage-runners/module-stage-runner.js";
 export * from "./workflow/stage-runners/requirement-stage-runner.js";
 export * from "./workflow/pipeline/pipeline.js";
+export * from "./workflow/validation/shell-runner.js";

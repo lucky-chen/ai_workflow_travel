@@ -310,11 +310,11 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] validation summary and issue model
   - [x] minimal tests for validation input and output shaping
 - [ ] Batch 2: validation execution backbone
-  - [ ] final workspace validation checks
-  - [ ] final artifact completeness checks
-  - [ ] project-path loading and shell-test execution flow
-  - [ ] shell-test result shaping
-  - [ ] focused tests for validation execution success and failure
+  - [x] final workspace validation checks
+  - [x] final artifact completeness checks
+  - [x] project-path loading and shell-test execution flow
+  - [x] shell-test result shaping
+  - [x] focused tests for validation execution success and failure
 - [ ] Batch 3: validation stage runner flow
   - [ ] `ValidationStageRunner`
   - [ ] direct `run -> review` main flow
