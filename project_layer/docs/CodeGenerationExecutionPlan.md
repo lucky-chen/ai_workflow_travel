@@ -163,7 +163,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] real `ILlmExecutor`-based architecture contract execution
   - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] focused tests for contract success and failure
-- [ ] Batch 3: architecture stage runner flow
+- [x] Batch 3: architecture stage runner flow
   - [x] `ArchitectureStageRunner`
   - [x] direct binding creation inside `ArchitectureStageRunner`
   - [x] `generate -> contract -> review` main flow
@@ -171,7 +171,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] architecture trace recording in runner
   - [x] architecture gate review flow
   - [x] focused tests for runner and stage flow
-- [ ] Batch 4: architecture-stage runtime alignment
+- [x] Batch 4: architecture-stage runtime alignment
   - [x] load requirement-stage artifacts as generation input
   - [x] align output artifacts with module-design stage needs
   - [x] align trace and review semantics with shared runner behavior
@@ -184,7 +184,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] `Execution/ModuleDesignGenerator`
   - [x] `Contract/ModuleDesignContract`
   - [ ] `Workflow/ModuleStageRunner`
-- [ ] Batch 1: module-design generation backbone
+- [x] Batch 1: module-design generation backbone
   - [x] module design prompt builder
   - [x] module-design stage output builder
   - [x] `ModuleDesignGenerator` implementation
@@ -231,7 +231,9 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 2: implementation contract and runner backbone
   - [x] `ImplementationContract`
   - [x] `ImplementationStageRunner`
-  - [ ] review whether `ImplementationContract` needs prompt-shaped request and real `ILlmExecutor` execution tasks
+  - [ ] implementation contract-check prompt construction
+  - [ ] real `ILlmExecutor`-based implementation contract execution
+  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] step-execution vertical slice through `generate -> contract -> review -> apply`
 - [ ] Batch 3: implementation plan generation flow
   - [ ] generate ordered project-level `workplan`
