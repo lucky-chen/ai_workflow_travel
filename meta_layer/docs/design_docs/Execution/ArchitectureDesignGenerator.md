@@ -15,18 +15,19 @@ This module design directly involves:
 This module design collaborates with:
 
 - `Workflow/Pipeline`
-- `Data/ArtifactStore`
+- `SDK/LlmExecutor`
 
 ### 1.3 Core Functions
 
-`Execution/ArchitectureDesignGenerator` is the architecture-design generation module.
+`Execution/ArchitectureDesignGenerator` is the architecture-design document generation module.
 
 Its core functions are:
 
-- load the upstream requirement document
-- load the required technical architecture template
-- call the LLM execution capability to generate an architecture design document from the requirement document according to the template
-- return the generated result in a structured `StageOutput`
+- follow the shared flow defined in [DocumentStageGeneratorPattern.md](./DocumentStageGeneratorPattern.md)
+- load requirement-stage file content
+- load the architecture template file content
+- generate one architecture-design file content from the two inputs
+- return structured `StageOutput`
 
 `ArchitectureDesignGenerator` does not decide workflow progression, contract validity, or gate approval result.
 
@@ -37,281 +38,119 @@ Its core functions are:
 ```plantuml
 @startuml
 interface IStageGenerator <<from Workflow/Pipeline>>
+interface ILlmExecutor
+abstract class DocumentStageGenerator <<from DocumentStageGeneratorPattern>>
 
-class ArchitectureDesignGenerator <<public>> {
-  +run(context: StageRunContext): StageOutput
-}
+class ArchitectureDesignGenerator
 
-class ArchitectureDesignGeneratorService <<internal>> {
-  -requirementDocLoader: RequirementDocLoader
-  -architectureTemplateLoader: ArchitectureTemplateLoader
-  -promptBuilder: ArchitecturePromptBuilder
-  -llmExecutor: ILlmExecutor
-  -outputBuilder: StageOutputBuilder
-}
-
-class RequirementDocLoader {
-  -artifactStore: IArtifactStore
-}
-
-class ArchitectureTemplateLoader
-class ArchitecturePromptBuilder
-class StageOutputBuilder
-
-interface ILlmExecutor {
-  +execute(request: LlmExecutionRequest): LlmExecutionResult
-}
-
-interface IArtifactStore <<from Data/ArtifactStore>>
-
-IStageGenerator <|.. ArchitectureDesignGenerator
-ArchitectureDesignGenerator <|-- ArchitectureDesignGeneratorService
-ArchitectureDesignGeneratorService --> RequirementDocLoader
-ArchitectureDesignGeneratorService --> ArchitectureTemplateLoader
-ArchitectureDesignGeneratorService --> ArchitecturePromptBuilder
-ArchitectureDesignGeneratorService --> ILlmExecutor
-ArchitectureDesignGeneratorService --> StageOutputBuilder
-RequirementDocLoader --> IArtifactStore
+IStageGenerator <|.. DocumentStageGenerator
+DocumentStageGenerator <|-- ArchitectureDesignGenerator
+ArchitectureDesignGenerator --> ILlmExecutor
 @enduml
 ```
 
-### 2.2 `ArchitectureDesignGeneratorService`
+### 2.2 `ArchitectureDesignGenerator`
 
 Role:
 
-- internal implementation class
-- owns architecture design generation orchestration
+- architecture-stage generator implementation entry
 
 Responsibilities:
 
-- implement internal stage run orchestration behind `ArchitectureDesignGenerator`
-- load the upstream requirement document
-- load the required technical architecture template
-- build prompt input from the requirement document and template
-- call shared `ILlmExecutor`
-- convert generation result into structured `StageOutput`
-
-### 2.3 `RequirementDocLoader`
-
-Role:
-
-- upstream requirement document loading component
-
-Responsibilities:
-
-- read the requirement document from `IArtifactStore`
-
-### 2.4 `ArchitectureTemplateLoader`
-
-Role:
-
-- architecture template loading component
-
-Responsibilities:
-
-- load the required technical architecture template
-- return stable template content for generation
-
-### 2.5 `ArchitecturePromptBuilder`
-
-Role:
-
-- prompt construction component
-
-Responsibilities:
-
-- transform the requirement document and architecture template into architecture-design generation input
-- keep prompt structure aligned with the architecture template
-- produce a stable `LlmExecutionRequest` for this stage
-
-### 2.6 `ILlmExecutor`
-
-Role:
-
-- shared llm execution interface
-
-Responsibilities:
-
-- accept prompt-based execution request
-- return normalized model result
-- isolate agent design and model selection details from the generator service
-
-### 2.7 `StageOutputBuilder`
-
-Role:
-
-- structured output conversion component
-
-Responsibilities:
-
-- convert model output into `StageOutput`
-- keep returned file structure stable
-
-### 2.8 `ArchitectureDesignGenerator`
-
-Role:
-
-- public external API class for this module
-- module entry point exposed to stage runners
-
-Responsibilities:
-
-- expose `run` to the stage runner or equivalent caller
+- expose `run(context): Promise<StageOutput>`
+- keep architecture-stage generation entry stable for `ArchitectureStageRunner`
+- load requirement document input
+- load architecture template
+- build architecture generation request
+- convert generation result into `StageOutput`
 
 ## 3. Core Runtime Flow
 
-### 3.1 Main Flow
+### 3.1 Main Sequence Diagram
 
 ```plantuml
 @startuml
-participant Caller as "IStageRunner or other caller"
-participant ArchitectureDesignGenerator as "Execution/ArchitectureDesignGenerator"
-participant ArchitectureDesignGeneratorService
-participant RequirementDocLoader
+participant ArchitectureStageRunner
+participant ArchitectureDesignGenerator
+participant UpstreamRequirementDocLoader
 participant ArchitectureTemplateLoader
 participant ArchitecturePromptBuilder
-participant ILlmExecutor as "SDK/ILlmExecutor"
-participant StageOutputBuilder
-participant IArtifactStore
+participant ILlmExecutor
+participant ArchitectureDesignOutputBuilder
 
-Caller -> ArchitectureDesignGenerator: run(stage_run_context)
-ArchitectureDesignGenerator -> ArchitectureDesignGeneratorService: run(stage_run_context)
-ArchitectureDesignGeneratorService -> RequirementDocLoader: loadRequirementDoc(stage_run_context)
-RequirementDocLoader -> IArtifactStore: getArtifact(ref)
-IArtifactStore --> RequirementDocLoader: requirement_doc
-RequirementDocLoader --> ArchitectureDesignGeneratorService: requirement_doc
-ArchitectureDesignGeneratorService -> ArchitectureTemplateLoader: loadTemplate()
-ArchitectureTemplateLoader --> ArchitectureDesignGeneratorService: architecture_template
-ArchitectureDesignGeneratorService -> ArchitecturePromptBuilder: build(requirement_doc, architecture_template)
-ArchitecturePromptBuilder --> ArchitectureDesignGeneratorService: llm_execution_request
-ArchitectureDesignGeneratorService -> ILlmExecutor: execute(llm_execution_request)
-ILlmExecutor --> ArchitectureDesignGeneratorService: llm_execution_result
-ArchitectureDesignGeneratorService -> StageOutputBuilder: build(llm_execution_result)
-StageOutputBuilder --> ArchitectureDesignGeneratorService: stage_output
-ArchitectureDesignGeneratorService --> Caller: stage_output
+ArchitectureStageRunner -> ArchitectureDesignGenerator: run(context)
+ArchitectureDesignGenerator -> UpstreamRequirementDocLoader: loadInputDocument(context.inputArtifacts)
+UpstreamRequirementDocLoader --> ArchitectureDesignGenerator: upstream_requirement_doc
+ArchitectureDesignGenerator -> ArchitectureTemplateLoader: loadTemplate()
+ArchitectureTemplateLoader --> ArchitectureDesignGenerator: template
+ArchitectureDesignGenerator -> ArchitecturePromptBuilder: build(upstream_requirement_doc, template)
+ArchitecturePromptBuilder --> ArchitectureDesignGenerator: llm_request
+ArchitectureDesignGenerator -> ILlmExecutor: execute(llm_request)
+ILlmExecutor --> ArchitectureDesignGenerator: llm_result
+ArchitectureDesignGenerator -> ArchitectureDesignOutputBuilder: build(llm_result)
+ArchitectureDesignOutputBuilder --> ArchitectureDesignGenerator: stage_output
+ArchitectureDesignGenerator --> ArchitectureStageRunner: stage_output
 @enduml
 ```
 
 ## 4. Detailed Design
 
-### 4.1 Core APIs And Fields
+### 4.1 Implementation Binding
 
-#### 4.1.1 Public API
+- Parent class: `DocumentStageGenerator`
+- Implementation class: `ArchitectureDesignGenerator` extends `DocumentStageGenerator`
+- Bound by: `ArchitectureStageRunner`
+
+`ArchitectureStageRunner` binds:
+
+- `ArchitectureDesignGenerator`
+- `ArchitectureDesignContract`
+- `ITraceRecorder`
+- `IChangeGate`
+
+Overridden methods:
+
+- `loadInputDocument(inputArtifacts)`
+- `loadTemplate()`
+- `buildPrompt(inputDocument, template)`
+- `buildStageOutput(result)`
+
+### 4.2 Stage-Specific Runtime Rules
+
+#### 4.2.1 Input
+
+- upstream file content source is `StageRunContext.inputArtifacts["requirement_document"]`
+- input loader reads the requirement document content directly from runner-provided input artifacts
+
+#### 4.2.2 Template
+
+- template file content source is `meta_layer/resources/template/TechnicalArchitectureTemplate.md`
+
+#### 4.2.3 Prompt
+
+- prompt must combine requirement input and architecture template
+- prompt must keep output aligned with the architecture template structure
+
+#### 4.2.4 Output
+
+- output is one generated architecture-design file content
+- `StageOutput` wraps that file content as architecture-design-stage document artifact
+- output artifact shape is:
 
 ```ts
-class ArchitectureDesignGenerator implements IStageGenerator {
-  run(context: StageRunContext): StageOutput
-}
-```
-
-`IStageGenerator` is the shared contract defined in [Pipeline.md](../Workflow/Pipeline.md). This module does not redefine it. `ArchitectureDesignGenerator` is the only public generator API and implements `IStageGenerator`.
-
-#### 4.1.2 Stage Input Types
-
-```ts
-type ArtifactRef = string
-
-interface RequirementDoc {
+interface ArchitectureDesignArtifacts {
+  artifactKey: "architecture_document"
   content: string
 }
-
-interface ArchitectureTemplate {
-  content: string
-}
 ```
 
-`StageRunContext` is defined by the upstream workflow contract and is reused here directly.
-
-#### 4.1.3 Prompt Construction
-
-```ts
-interface PromptBuildInput {
-  requirement_doc: RequirementDoc
-  architecture_template: ArchitectureTemplate
-}
-
-interface PromptInput {
-  system_prompt: string
-  user_prompt: string
-}
-
-interface ArchitecturePromptBuilder {
-  build(input: PromptBuildInput): LlmExecutionRequest
-}
-
-interface LlmExecutionRequest {
-  prompt: PromptInput
-}
-```
-
-Prompt construction rules:
-
-- `system_prompt` defines generator role, output boundary, and document quality constraints.
-- `user_prompt` contains the requirement document content and the required architecture template.
-- the prompt builder should keep output structure aligned with the architecture template instead of relying on free-form generation.
-
-#### 4.1.4 LLM Invocation
-
-```ts
-interface LlmExecutionResult {
-  content: string
-}
-
-interface ILlmExecutor {
-  execute(request: LlmExecutionRequest): LlmExecutionResult
-}
-```
-
-LLM invocation rules:
-
-- the generator service only calls `ILlmExecutor.execute`; it does not embed agent or model invocation logic directly.
-- agent design and model selection are defined in [LlmExecutor.md](../SDK/LlmExecutor.md).
-- the LLM execution result is treated as raw generated document content before `StageOutputBuilder` converts it into structured output.
-
-#### 4.1.5 Output Types
-
-```ts
-
-interface ArchitectureStageArtifacts {
-  files: GeneratedFile[]
-}
-
-interface GeneratedFile {
-  file_name: string
-  content: string
-}
-
-interface StageOutputBuilder {
-  build(result: LlmExecutionResult): StageOutput
-}
-```
-
-`StageOutput` is the shared workflow output class defined in [Pipeline.md](../Workflow/Pipeline.md). This module only defines `ArchitectureStageArtifacts` as the stage-specific payload carried in `StageOutput.artifacts`.
-
-#### 4.1.6 Storage Dependency Types
-
-```ts
-interface ArtifactContent {
-  format: string
-  body: string
-}
-```
-
-`IArtifactStore` is reused from [ArtifactStore.md](../Data/ArtifactStore.md). This module does not redefine that interface.
-
-### 4.2 Suggested Output Shape
-
-```text
-StageOutput
-  architecture_design.md
-```
-
-The exact file set may expand later, but V1 should at least produce one architecture design document artifact.
+- downstream `ModuleDesignGenerator` reads this output through `inputArtifacts["architecture_document"]`
+- final persistence path is resolved by `ArchitectureStageRunner` after gate approval:
+  - `docs/architecture/TechnicalArchitecture.md`
 
 ### 4.3 Constraints
 
-- `ArchitectureDesignGenerator` must not decide whether the generated output passes contract checks.
-- `ArchitectureDesignGenerator` must not decide whether the generated output is approved.
-- `ArchitectureDesignGenerator` should read the requirement document from upstream artifact input.
-- `ArchitectureDesignGenerator` should load the required architecture template as generation constraint.
-- `ArchitectureDesignGenerator` should return structured generated files as `StageOutput`.
+- reuse the shared flow from [DocumentStageGeneratorPattern.md](./DocumentStageGeneratorPattern.md)
+- keep shared orchestration in parent `DocumentStageGenerator.run`
+- keep architecture-stage implementation names owned by this module
+- do not redefine workflow-owned shared interfaces from [Pipeline.md](../Workflow/Pipeline.md)

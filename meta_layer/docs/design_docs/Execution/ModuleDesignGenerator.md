@@ -1,42 +1,174 @@
 <!--
-ARCHITECTURE_DECISION:
-- This document is intentionally a placeholder by design.
-- Detailed module-internal design is intentionally deferred.
-- For architecture/module-design reviews, do NOT flag this file as "missing detailed design".
-- This is an accepted and expected state in the current phase.
--->
-<!--
-CODEGEN_REUSE_SPEC:
-- status: approved_placeholder
-- reuse_source: ./ArchitectureDesignGenerator.md
-- generation_policy: reuse_source_with_overrides
-- public_entry_class: ModuleDesignGenerator
-- internal_impl_class: ModuleDesignGeneratorService
-- shared_interface: IStageGenerator
-- run_signature: run(context: StageRunContext): StageOutput
-- do_not_flag_missing_detail: true
+AI_EDIT_PROTECTION:
+- This file is protected.
+- Do not modify this file unless the user explicitly requests changes to this exact file.
 -->
 
 # ModuleDesignGenerator Design
 
-`Execution/ModuleDesignGenerator` reuses the same design structure and stage execution pattern as [ArchitectureDesignGenerator.md](./ArchitectureDesignGenerator.md).
+## 1. Goal
 
-## Reuse Contract
+### 1.1 Purpose
 
-- Public entry class: `ModuleDesignGenerator` implements `IStageGenerator`
-- Internal implementation class: `ModuleDesignGeneratorService` extends `ModuleDesignGenerator`
-- Method signature: `run(context: StageRunContext): StageOutput`
-- All omitted internals are inherited from the reuse source unless explicitly overridden below.
+Define the module design of `Execution/ModuleDesignGenerator`.
 
-## Required Overrides
+### 1.2 Involved Modules
 
-- Input target override:
-  - source document focus is approved architecture design output.
-- Prompt target override:
-  - generation target is module-level design outputs.
-- Output artifact override:
-  - output files are module design artifacts, not architecture-design artifacts.
+This module design directly involves:
 
-## Codegen Note
+- `Execution/ModuleDesignGenerator`
 
-For code generation, treat this document as a resolved variant of `ArchitectureDesignGenerator.md` using the overrides above.
+This module design collaborates with:
+
+- `Workflow/Pipeline`
+- `SDK/LlmExecutor`
+
+### 1.3 Core Functions
+
+`Execution/ModuleDesignGenerator` is the module-design document generation module.
+
+Its core functions are:
+
+- follow the shared flow defined in [DocumentStageGeneratorPattern.md](./DocumentStageGeneratorPattern.md)
+- load architecture-stage file content
+- load the module-design template file content
+- generate one module-design file content from the two inputs
+- return structured `StageOutput`
+
+`ModuleDesignGenerator` does not decide workflow progression, contract validity, or gate approval result.
+
+## 2. Core Classes
+
+### 2.1 Class Diagram
+
+```plantuml
+@startuml
+interface IStageGenerator <<from Workflow/Pipeline>>
+interface ILlmExecutor
+abstract class DocumentStageGenerator <<from DocumentStageGeneratorPattern>>
+
+class ModuleDesignGenerator
+
+IStageGenerator <|.. DocumentStageGenerator
+DocumentStageGenerator <|-- ModuleDesignGenerator
+ModuleDesignGenerator --> ILlmExecutor
+@enduml
+```
+
+### 2.2 `ModuleDesignGenerator`
+
+Role:
+
+- module-design-stage generator implementation entry
+
+Responsibilities:
+
+- expose `run(context): Promise<StageOutput>`
+- keep module-design-stage generation entry stable for `ModuleStageRunner`
+- load architecture-design document input
+- load module-design template
+- build generation request
+- convert generation result into `StageOutput`
+
+## 3. Core Runtime Flow
+
+### 3.1 Main Sequence Diagram
+
+```plantuml
+@startuml
+participant ModuleStageRunner
+participant ModuleDesignGenerator
+participant UpstreamDesignDocLoader
+participant ModuleDesignTemplateLoader
+participant ModuleDesignPromptBuilder
+participant ILlmExecutor
+participant ModuleDesignOutputBuilder
+
+ModuleStageRunner -> ModuleDesignGenerator: run(context)
+ModuleDesignGenerator -> UpstreamDesignDocLoader: loadInputDocument(context.inputArtifacts)
+UpstreamDesignDocLoader --> ModuleDesignGenerator: upstream_design_doc
+ModuleDesignGenerator -> ModuleDesignTemplateLoader: loadTemplate()
+ModuleDesignTemplateLoader --> ModuleDesignGenerator: template
+ModuleDesignGenerator -> ModuleDesignPromptBuilder: build(upstream_design_doc, template)
+ModuleDesignPromptBuilder --> ModuleDesignGenerator: llm_request
+ModuleDesignGenerator -> ILlmExecutor: execute(llm_request)
+ILlmExecutor --> ModuleDesignGenerator: llm_result
+ModuleDesignGenerator -> ModuleDesignOutputBuilder: build(llm_result)
+ModuleDesignOutputBuilder --> ModuleDesignGenerator: stage_output
+ModuleDesignGenerator --> ModuleStageRunner: stage_output
+@enduml
+```
+
+## 4. Detailed Design
+
+### 4.1 Implementation Binding
+
+- Parent class: `DocumentStageGenerator`
+- Implementation class: `ModuleDesignGenerator` extends `DocumentStageGenerator`
+- Bound by: `ModuleStageRunner`
+
+`ModuleStageRunner` binds:
+
+- `ModuleDesignGenerator`
+- `ModuleDesignContract`
+- `ITraceRecorder`
+- `IChangeGate`
+
+Overridden methods:
+
+- `loadInputDocument(inputArtifacts)`
+- `loadTemplate()`
+- `buildPrompt(inputDocument, template)`
+- `buildStageOutput(result)`
+
+### 4.2 Stage-Specific Runtime Rules
+
+#### 4.2.1 Input
+
+- upstream file content source is:
+  - `StageRunContext.inputArtifacts["architecture_document"]`
+  - `StageRunContext.inputArtifacts["module_descriptors"]`
+- input loader reads the architecture document content and module descriptor payload directly from runner-provided input artifacts
+
+#### 4.2.1.1 Module Descriptor Shape
+
+```ts
+interface ModuleDescriptor {
+  name: string
+  responsibilities: string[]
+}
+```
+
+#### 4.2.2 Template
+
+- template file content source is `meta_layer/resources/template/ModuleDesignTemplate.md`
+
+#### 4.2.3 Prompt
+
+- prompt must combine architecture-design input and module-design template
+- prompt must keep output aligned with the module-design template structure
+
+#### 4.2.4 Output
+
+- output is generated module-design file content for the requested module
+- `StageOutput` wraps that file content as module-design-stage document artifact
+- output artifact shape is:
+
+```ts
+interface ModuleDesignArtifacts {
+  artifactKey: "module_design_document"
+  moduleName: string
+  content: string
+}
+```
+
+- downstream `ImplementationGenerator` reads this output through `inputArtifacts["module_design_document"]`
+- final persistence paths are resolved by `ModuleStageRunner` after gate approval:
+  - `docs/module_design/{moduleName}.md`
+
+### 4.3 Constraints
+
+- reuse the shared flow from [DocumentStageGeneratorPattern.md](./DocumentStageGeneratorPattern.md)
+- keep shared orchestration in parent `DocumentStageGenerator.run`
+- keep module-design-stage implementation names owned by this module
+- do not redefine workflow-owned shared interfaces from [Pipeline.md](../Workflow/Pipeline.md)

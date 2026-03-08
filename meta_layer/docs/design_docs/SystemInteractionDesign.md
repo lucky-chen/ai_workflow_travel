@@ -54,8 +54,9 @@ This document does not define detailed request fields, response fields, or stora
 
 Placeholder note:
 
-- `Execution/RequirementGenerator` is an approved empty implementation placeholder; it stays bound to the requirement stage but may keep pass-through generation behavior unless explicitly expanded later.
-- `Execution/ModuleDesignGenerator` is an approved reuse placeholder with explicit `CODEGEN_REUSE_SPEC`; codegen should resolve it via its declared reuse source and overrides, not treat it as missing design.
+- `Execution/RequirementGenerator` is a required empty implementation; it stays bound to the requirement stage, returns pass-through requirement-stage output, and does not follow the shared document-stage generator pattern.
+- `Execution/ArchitectureDesignGenerator` and `Execution/ModuleDesignGenerator` follow the shared document-stage generator pattern.
+- `Execution/ImplementationGenerator` is an independent execution module and does not follow the document-stage generator pattern.
 
 ## 2. API List By Interaction Step
 
@@ -83,7 +84,6 @@ Notes:
 
 ### 2.3 Shared LLM Execution
 
-- `Execution/RequirementGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ModuleDesignGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
 - `Execution/ImplementationGenerator -> SDK/LlmExecutor.execute(request) -> llm_result`
@@ -109,6 +109,7 @@ Notes:
 
 - contract check is optional per stage.
 - validation stage uses `Contract/ValidationContract.check` as validation confirmation input.
+- validation stage reads `context.inputArtifacts["project_path"]` and runs a shell test script under that path.
 - contract success does not replace review.
 
 ### 2.5 Review And Decision
@@ -132,6 +133,47 @@ Notes:
 ## 3. End-to-End Stage Collaboration
 
 Stage composition mapping and per-stage runner flow are defined in [Workflow/StageRunners.md](./Workflow/StageRunners.md) as the single source of truth.
+
+Stage-to-stage artifact mapping:
+
+- `requirement_interpretation`
+  - generator output: `artifacts.artifactKey == "requirement_document"`
+  - downstream handoff: `inputArtifacts["requirement_document"]`
+- `architecture_design`
+  - generator output: `artifacts.artifactKey == "architecture_document"`
+  - downstream handoff: `inputArtifacts["architecture_document"]`
+- `module_design`
+  - generator output: `artifacts.artifactKey == "module_design_document"`
+  - downstream handoff: `inputArtifacts["module_design_document"]`
+- `implementation`
+  - generator output: `artifacts.generatedFiles`
+  - accepted files are persisted to their generated paths
+- `validation`
+  - runtime input: `inputArtifacts["project_path"]`
+  - `project_path` is provided as an external runtime input and is not derived from implementation-stage generated files
+  - validation does not depend on upstream generated file arrays as direct contract input
+
+Gate review-request mapping by stage:
+
+- `requirement_interpretation`
+  - review summary source: `output.summary`
+  - review path: `docs/requirements/Requirement.md`
+  - review content source: `output.artifacts.content`
+- `architecture_design`
+  - review summary source: `output.summary`
+  - review path: `docs/architecture/TechnicalArchitecture.md`
+  - review content source: `output.artifacts.content`
+- `module_design`
+  - review summary source: `output.summary`
+  - review path: `docs/module_design/{moduleName}.md`
+  - review content source: `output.artifacts.content`
+- `implementation`
+  - review summary source: `output.summary`
+  - review paths: `output.artifacts.generatedFiles[*].path`
+  - review content source: `output.artifacts.generatedFiles[*].content`
+- `validation`
+  - review summary source: contract check summary
+  - review content source: shell test result
 
 ### 3.3 Failure And Retry Semantics
 

@@ -38,22 +38,22 @@ Its core functions are:
 ```plantuml
 @startuml
 interface IContractChecker <<from Workflow/Pipeline>>
-interface ArchitectureDesignContract
 interface ILlmExecutor
+abstract class DocumentStageContract <<from DocumentStageContractPattern>>
 
-class ArchitectureDesignContractService
+class ArchitectureDesignContract
 class GeneratedResultLoader
 class ContractSpecLoader
 class ArchitectureContractPromptBuilder
 class ContractResultBuilder
 
-IContractChecker <|-- ArchitectureDesignContract
-ArchitectureDesignContract <|.. ArchitectureDesignContractService
-ArchitectureDesignContractService --> GeneratedResultLoader
-ArchitectureDesignContractService --> ContractSpecLoader
-ArchitectureDesignContractService --> ArchitectureContractPromptBuilder
-ArchitectureDesignContractService --> ILlmExecutor
-ArchitectureDesignContractService --> ContractResultBuilder
+IContractChecker <|.. DocumentStageContract
+DocumentStageContract <|-- ArchitectureDesignContract
+ArchitectureDesignContract --> GeneratedResultLoader
+ArchitectureDesignContract --> ContractSpecLoader
+ArchitectureDesignContract --> ArchitectureContractPromptBuilder
+ArchitectureDesignContract --> ILlmExecutor
+ArchitectureDesignContract --> ContractResultBuilder
 @enduml
 ```
 
@@ -61,22 +61,12 @@ ArchitectureDesignContractService --> ContractResultBuilder
 
 Role:
 
-- architecture-stage contract-check interface
+- architecture-stage contract-check implementation entry
 
 Responsibilities:
 
 - expose `check(context, output)`
 - keep architecture-stage contract entry stable for `ArchitectureStageRunner`
-
-### 2.3 `ArchitectureDesignContractService`
-
-Role:
-
-- module implementation entry
-
-Responsibilities:
-
-- orchestrate architecture-stage contract check flow
 - load generated document result
 - load contract specification
 - build contract-check request
@@ -90,7 +80,6 @@ Responsibilities:
 @startuml
 participant ArchitectureStageRunner
 participant ArchitectureDesignContract
-participant ArchitectureDesignContractService
 participant GeneratedResultLoader
 participant ContractSpecLoader
 participant ArchitectureContractPromptBuilder
@@ -98,18 +87,17 @@ participant ILlmExecutor
 participant ContractResultBuilder
 
 ArchitectureStageRunner -> ArchitectureDesignContract: check(context, output)
-ArchitectureDesignContract -> ArchitectureDesignContractService: check(context, output)
-ArchitectureDesignContractService -> GeneratedResultLoader: loadGeneratedResult(output)
-GeneratedResultLoader --> ArchitectureDesignContractService: generated_result
-ArchitectureDesignContractService -> ContractSpecLoader: loadSpec()
-ContractSpecLoader --> ArchitectureDesignContractService: contract_spec
-ArchitectureDesignContractService -> ArchitectureContractPromptBuilder: build(generated_result, contract_spec)
-ArchitectureContractPromptBuilder --> ArchitectureDesignContractService: llm_request
-ArchitectureDesignContractService -> ILlmExecutor: execute(llm_request)
-ILlmExecutor --> ArchitectureDesignContractService: llm_result
-ArchitectureDesignContractService -> ContractResultBuilder: build(llm_result)
-ContractResultBuilder --> ArchitectureDesignContractService: contract_check_result
-ArchitectureDesignContractService --> ArchitectureStageRunner: contract_check_result
+ArchitectureDesignContract -> GeneratedResultLoader: loadGeneratedResult(output)
+GeneratedResultLoader --> ArchitectureDesignContract: generated_result
+ArchitectureDesignContract -> ContractSpecLoader: loadSpec()
+ContractSpecLoader --> ArchitectureDesignContract: contract_spec
+ArchitectureDesignContract -> ArchitectureContractPromptBuilder: build(generated_result, contract_spec)
+ArchitectureContractPromptBuilder --> ArchitectureDesignContract: llm_request
+ArchitectureDesignContract -> ILlmExecutor: execute(llm_request)
+ILlmExecutor --> ArchitectureDesignContract: llm_result
+ArchitectureDesignContract -> ContractResultBuilder: build(llm_result)
+ContractResultBuilder --> ArchitectureDesignContract: contract_check_result
+ArchitectureDesignContract --> ArchitectureStageRunner: contract_check_result
 @enduml
 ```
 
@@ -117,8 +105,8 @@ ArchitectureDesignContractService --> ArchitectureStageRunner: contract_check_re
 
 ### 4.1 Implementation Binding
 
-- Implementation interface: `ArchitectureDesignContract` extends `IContractChecker`
-- Implementation class: `ArchitectureDesignContractService` implements `ArchitectureDesignContract`
+- Parent class: `DocumentStageContract`
+- Implementation class: `ArchitectureDesignContract` extends `DocumentStageContract`
 - Bound by: `ArchitectureStageRunner`
 
 `ArchitectureStageRunner` binds:
@@ -128,6 +116,13 @@ ArchitectureDesignContractService --> ArchitectureStageRunner: contract_check_re
 - `ITraceRecorder`
 - `IChangeGate`
 - `IArtifactStore`
+
+Overridden methods:
+
+- `loadSharedContract()`
+- `loadSpecificContract()`
+- `buildCheckRequest(output, contractSpec)`
+- `buildContractResult(result)`
 
 ### 4.2 Stage-Specific Runtime Rules
 
@@ -141,6 +136,7 @@ ArchitectureDesignContractService --> ArchitectureStageRunner: contract_check_re
 #### 4.2.2 Check
 
 - check target is architecture-design-stage generated document
+- check target field path is `output.artifacts.content`
 - contract source is `meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json`
 - contract-specific rules are architecture document structure rules, section contract rules, and architecture module-boundary consistency rules
 - checker output is `ContractCheckResult`
@@ -157,12 +153,33 @@ ArchitectureDesignContractService --> ArchitectureStageRunner: contract_check_re
 - review input must contain architecture-design-stage document summary and artifacts only
 - review output is limited to `GateDecision`
 
+Recommended review-request mapping:
+
+```ts
+ChangeReviewRequest {
+  taskId: context.taskId
+  stageId: "architecture_design"
+  summary: output.summary
+  changedPaths: ["docs/architecture/TechnicalArchitecture.md"]
+  changedFiles: [
+    {
+      path: "docs/architecture/TechnicalArchitecture.md",
+      operation: "create_or_update",
+      content: output.artifacts.content,
+    },
+  ]
+}
+```
+
 #### 4.2.5 Persistence Limit
 
 - only accepted architecture-design-stage artifacts may be persisted for downstream stages
+- `ArchitectureStageRunner` persists accepted output to `docs/architecture/TechnicalArchitecture.md`
+- downstream `ModuleDesignGenerator` receives the persisted content through `inputArtifacts["architecture_document"]`
 
 ### 4.3 Constraints
 
 - reuse the shared flow from [DocumentStageContractPattern.md](./DocumentStageContractPattern.md)
+- keep shared orchestration in parent `DocumentStageContract.check`
 - keep architecture-stage implementation names owned by this module
 - do not redefine workflow-owned shared interfaces from [Pipeline.md](../Workflow/Pipeline.md)

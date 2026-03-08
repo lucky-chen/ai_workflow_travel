@@ -43,22 +43,22 @@ Its core functions are:
 ```plantuml
 @startuml
 interface IContractChecker <<from Workflow/Pipeline>>
-interface ModuleDesignContract
 interface ILlmExecutor
+abstract class DocumentStageContract <<from DocumentStageContractPattern>>
 
-class ModuleDesignContractService
+class ModuleDesignContract
 class GeneratedResultLoader
 class ContractSpecLoader
 class ModuleDesignContractPromptBuilder
 class ContractResultBuilder
 
-IContractChecker <|-- ModuleDesignContract
-ModuleDesignContract <|.. ModuleDesignContractService
-ModuleDesignContractService --> GeneratedResultLoader
-ModuleDesignContractService --> ContractSpecLoader
-ModuleDesignContractService --> ModuleDesignContractPromptBuilder
-ModuleDesignContractService --> ILlmExecutor
-ModuleDesignContractService --> ContractResultBuilder
+IContractChecker <|.. DocumentStageContract
+DocumentStageContract <|-- ModuleDesignContract
+ModuleDesignContract --> GeneratedResultLoader
+ModuleDesignContract --> ContractSpecLoader
+ModuleDesignContract --> ModuleDesignContractPromptBuilder
+ModuleDesignContract --> ILlmExecutor
+ModuleDesignContract --> ContractResultBuilder
 @enduml
 ```
 
@@ -66,22 +66,12 @@ ModuleDesignContractService --> ContractResultBuilder
 
 Role:
 
-- module-design-stage contract-check interface
+- module-design-stage contract-check implementation entry
 
 Responsibilities:
 
 - expose `check(context, output)`
 - keep module-design-stage contract entry stable for `ModuleStageRunner`
-
-### 2.3 `ModuleDesignContractService`
-
-Role:
-
-- module implementation entry
-
-Responsibilities:
-
-- orchestrate module-design-stage contract check flow
 - load generated document result
 - load contract specification
 - build contract-check request
@@ -95,7 +85,6 @@ Responsibilities:
 @startuml
 participant ModuleStageRunner
 participant ModuleDesignContract
-participant ModuleDesignContractService
 participant GeneratedResultLoader
 participant ContractSpecLoader
 participant ModuleDesignContractPromptBuilder
@@ -103,18 +92,17 @@ participant ILlmExecutor
 participant ContractResultBuilder
 
 ModuleStageRunner -> ModuleDesignContract: check(context, output)
-ModuleDesignContract -> ModuleDesignContractService: check(context, output)
-ModuleDesignContractService -> GeneratedResultLoader: loadGeneratedResult(output)
-GeneratedResultLoader --> ModuleDesignContractService: generated_result
-ModuleDesignContractService -> ContractSpecLoader: loadSpec()
-ContractSpecLoader --> ModuleDesignContractService: contract_spec
-ModuleDesignContractService -> ModuleDesignContractPromptBuilder: build(generated_result, contract_spec)
-ModuleDesignContractPromptBuilder --> ModuleDesignContractService: llm_request
-ModuleDesignContractService -> ILlmExecutor: execute(llm_request)
-ILlmExecutor --> ModuleDesignContractService: llm_result
-ModuleDesignContractService -> ContractResultBuilder: build(llm_result)
-ContractResultBuilder --> ModuleDesignContractService: contract_check_result
-ModuleDesignContractService --> ModuleStageRunner: contract_check_result
+ModuleDesignContract -> GeneratedResultLoader: loadGeneratedResult(output)
+GeneratedResultLoader --> ModuleDesignContract: generated_result
+ModuleDesignContract -> ContractSpecLoader: loadSpec()
+ContractSpecLoader --> ModuleDesignContract: contract_spec
+ModuleDesignContract -> ModuleDesignContractPromptBuilder: build(generated_result, contract_spec)
+ModuleDesignContractPromptBuilder --> ModuleDesignContract: llm_request
+ModuleDesignContract -> ILlmExecutor: execute(llm_request)
+ILlmExecutor --> ModuleDesignContract: llm_result
+ModuleDesignContract -> ContractResultBuilder: build(llm_result)
+ContractResultBuilder --> ModuleDesignContract: contract_check_result
+ModuleDesignContract --> ModuleStageRunner: contract_check_result
 @enduml
 ```
 
@@ -122,8 +110,8 @@ ModuleDesignContractService --> ModuleStageRunner: contract_check_result
 
 ### 4.1 Implementation Binding
 
-- Implementation interface: `ModuleDesignContract` extends `IContractChecker`
-- Implementation class: `ModuleDesignContractService` implements `ModuleDesignContract`
+- Parent class: `DocumentStageContract`
+- Implementation class: `ModuleDesignContract` extends `DocumentStageContract`
 - Bound by: `ModuleStageRunner`
 
 `ModuleStageRunner` binds:
@@ -133,6 +121,13 @@ ModuleDesignContractService --> ModuleStageRunner: contract_check_result
 - `ITraceRecorder`
 - `IChangeGate`
 - `IArtifactStore`
+
+Overridden methods:
+
+- `loadSharedContract()`
+- `loadSpecificContract()`
+- `buildCheckRequest(output, contractSpec)`
+- `buildContractResult(result)`
 
 ### 4.2 Stage-Specific Runtime Rules
 
@@ -146,6 +141,7 @@ ModuleDesignContractService --> ModuleStageRunner: contract_check_result
 #### 4.2.2 Check
 
 - check target is module-design-stage generated document
+- check target field path is `output.artifacts.content`
 - contract source is `meta_layer/resources/contract/ModuleDesignTemplate.contract.json`
 - contract-specific rules are module document structure rules, class-diagram consistency rules, and module dependency/responsibility consistency rules
 - checker output is `ContractCheckResult`
@@ -162,12 +158,33 @@ ModuleDesignContractService --> ModuleStageRunner: contract_check_result
 - review input must contain module-design-stage document summary and artifacts only
 - review output is limited to `GateDecision`
 
+Recommended review-request mapping:
+
+```ts
+ChangeReviewRequest {
+  taskId: context.taskId
+  stageId: "module_design"
+  summary: output.summary
+  changedPaths: [`docs/module_design/${output.artifacts.moduleName}.md`]
+  changedFiles: [
+    {
+      path: `docs/module_design/${output.artifacts.moduleName}.md`,
+      operation: "create_or_update",
+      content: output.artifacts.content,
+    },
+  ]
+}
+```
+
 #### 4.2.5 Persistence Limit
 
 - only accepted module-design-stage artifacts may be persisted for downstream stages
+- `ModuleStageRunner` persists accepted output to `docs/module_design/{moduleName}.md`
+- downstream `ImplementationGenerator` receives accepted output through `inputArtifacts["module_design_document"]`
 
 ### 4.3 Constraints
 
 - reuse the shared flow from [DocumentStageContractPattern.md](./DocumentStageContractPattern.md)
+- keep shared orchestration in parent `DocumentStageContract.check`
 - keep module-design-stage implementation names owned by this module
 - do not redefine workflow-owned shared interfaces from [Pipeline.md](../Workflow/Pipeline.md)

@@ -23,8 +23,8 @@ This module design collaborates with:
 
 Its core functions are:
 
-- read validation stage output data
-- evaluate output against validation contract rules
+- read the target project path from validation-stage input
+- execute one shell test script under that project path
 - return structured `ContractCheckResult`
 
 `ValidationContract` does not decide workflow progression, gate approval, or artifact persistence.
@@ -35,30 +35,25 @@ Its core functions are:
 
 ```plantuml
 @startuml
-interface IValidationContract {
-  +check(context: StageRunContext, output: StageOutput): ContractCheckResult
-}
-
-class ValidationContractService {
-  -validationResultLoader: ValidationResultLoader
-  -validationRuleLoader: ValidationRuleLoader
+class ValidationContract {
+  -projectPathLoader: ProjectPathLoader
+  -shellTestRunner: ShellTestRunner
   -resultBuilder: ContractResultBuilder
 }
 
-class ValidationResultLoader
-class ValidationRuleLoader
+class ProjectPathLoader
+class ShellTestRunner
 class ContractResultBuilder
 
 interface IContractChecker <<from Workflow/Pipeline>>
-IContractChecker <|-- IValidationContract
-IValidationContract <|.. ValidationContractService
-ValidationContractService --> ValidationResultLoader
-ValidationContractService --> ValidationRuleLoader
-ValidationContractService --> ContractResultBuilder
+IContractChecker <|.. ValidationContract
+ValidationContract --> ProjectPathLoader
+ValidationContract --> ShellTestRunner
+ValidationContract --> ContractResultBuilder
 @enduml
 ```
 
-### 2.2 `ValidationContractService`
+### 2.2 `ValidationContract`
 
 Role:
 
@@ -68,30 +63,31 @@ Role:
 Responsibilities:
 
 - accept contract check request
-- load validation-stage output content
-- load validation contract rules
-- evaluate contract items
+- load the target project path
+- execute one shell test script under that project path
 - build and return structured `ContractCheckResult`
 
-### 2.3 `ValidationResultLoader`
+### 2.3 `ProjectPathLoader`
 
 Role:
 
-- validation output loading component
+- project path loading component
 
 Responsibilities:
 
-- read required validation output data from `StageOutput`
+- read required project path from validation-stage input
+- resolve the shell test execution target path
 
-### 2.4 `ValidationRuleLoader`
+### 2.4 `ShellTestRunner`
 
 Role:
 
-- contract rule loading component
+- shell test execution component
 
 Responsibilities:
 
-- load validation contract rule set
+- run one shell test script under the target project path
+- return normalized shell execution result
 
 ### 2.5 `ContractResultBuilder`
 
@@ -104,17 +100,6 @@ Responsibilities:
 - convert evaluation result into `ContractCheckResult`
 - keep pass/fail output structure stable
 
-### 2.6 `IValidationContract`
-
-Role:
-
-- public contract-check interface of this module
-
-Responsibilities:
-
-- expose shared `check(context, output)` API
-- stay compatible with `IContractChecker`
-
 ## 3. Core Runtime Flow
 
 ### 3.1 Main Sequence Diagram
@@ -122,22 +107,19 @@ Responsibilities:
 ```plantuml
 @startuml
 participant Caller as "IStageRunner or other caller"
-participant IValidationContract as "Contract/IValidationContract"
-participant ValidationContractService
-participant ValidationResultLoader
-participant ValidationRuleLoader
+participant ValidationContract
+participant ProjectPathLoader
+participant ShellTestRunner
 participant ContractResultBuilder
 
-Caller -> IValidationContract: check(stage_run_context, stage_output)
-IValidationContract -> ValidationContractService: check(stage_run_context, stage_output)
-ValidationContractService -> ValidationResultLoader: load(stage_output)
-ValidationResultLoader --> ValidationContractService: validation_result
-ValidationContractService -> ValidationRuleLoader: loadRules()
-ValidationRuleLoader --> ValidationContractService: validation_rules
-ValidationContractService -> ValidationContractService: evaluate(validation_result, validation_rules)
-ValidationContractService -> ContractResultBuilder: build(evaluation_result)
-ContractResultBuilder --> ValidationContractService: contract_check_result
-ValidationContractService --> Caller: contract_check_result
+Caller -> ValidationContract: check(stage_run_context, stage_output)
+ValidationContract -> ProjectPathLoader: load(stage_run_context)
+ProjectPathLoader --> ValidationContract: project_path
+ValidationContract -> ShellTestRunner: run(project_path)
+ShellTestRunner --> ValidationContract: shell_test_result
+ValidationContract -> ContractResultBuilder: build(shell_test_result)
+ContractResultBuilder --> ValidationContract: contract_check_result
+ValidationContract --> Caller: contract_check_result
 @enduml
 ```
 
@@ -148,47 +130,87 @@ ValidationContractService --> Caller: contract_check_result
 #### 4.1.1 Public API
 
 ```ts
-interface IValidationContract extends IContractChecker {}
-
-class ValidationContractService implements IValidationContract {
-  check(context: StageRunContext, output: StageOutput): ContractCheckResult
+class ValidationContract implements IContractChecker {
+  check(
+    context: StageRunContext,
+    output: StageOutput,
+  ): Promise<ContractCheckResult>
 }
 ```
 
-`IContractChecker` is the shared checker interface defined in [Pipeline.md](../Workflow/Pipeline.md). This module extends that shared interface and uses `check` as the only pipeline-facing API.
+`IContractChecker` is the shared checker interface defined in [Pipeline.md](../Workflow/Pipeline.md). `ValidationContract` implements that shared interface and uses `check` as the only pipeline-facing API.
 
 #### 4.1.2 Input Types
 
 ```ts
-interface ValidationResult {
+interface ValidationInputArtifacts {
+  project_path: string
+}
+
+interface ShellTestResult {
   passed: boolean
   summary: string
-  passed_commands: string[]
-  failed_commands: string[]
+  command: string
+  exit_code: number
   logs?: string
 }
 
-interface ValidationRule {
-  rule_id: string
-  description: string
-  severity: string
+interface ShellTestRunner {
+  run(projectPath: string): Promise<ShellTestResult>
 }
 ```
 
 `StageRunContext` and `StageOutput` are defined by upstream workflow contracts and are reused directly.
+
+Validation input source:
+
+- `StageRunContext.inputArtifacts["project_path"]`
+
+Validation input rule:
+
+- `ValidationContract` uses `context.inputArtifacts["project_path"]` as its only business validation input
+- `output` is accepted only to stay compatible with the shared `IContractChecker.check(context, output)` signature
 
 #### 4.1.3 Return Type
 
 ```ts
 interface ContractCheckResult {
   passed: boolean
+  summary: string
+  issues: ContractIssue[]
 }
 ```
 
 ### 4.2 Constraints
 
-- `ValidationContract` only evaluates validation-stage output against contract rules.
-- `ValidationContract` must not execute validation scripts directly.
+- `ValidationContract` validates the incoming project path by executing one shell test script.
 - `ValidationContract` must not decide workflow progression.
 - `ValidationContract` must not decide gate approval.
 - `ValidationContract` must not persist artifacts or traces directly.
+
+Check target rule:
+
+- check target field path is `context.inputArtifacts["project_path"]`
+- shell test execution runs under the resolved project path
+
+### 4.3 Review Input / Output Limit
+
+- review input must contain validation summary and shell test result only
+- review output is limited to `GateDecision`
+
+Recommended review-request mapping:
+
+```ts
+ChangeReviewRequest {
+  taskId: context.taskId
+  stageId: "validation"
+  summary: contractCheckResult.summary
+  changedPaths: []
+  changedFiles: []
+}
+```
+
+Validation review note:
+
+- validation gate review is result-oriented rather than file-change-oriented
+- runner should pass shell test summary and logs through review summary/comment fields instead of fabricating changed file content

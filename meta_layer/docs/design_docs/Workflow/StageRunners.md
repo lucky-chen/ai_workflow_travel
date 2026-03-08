@@ -72,23 +72,23 @@ ValidationStageRunner --> IArtifactStore
 
 ```ts
 class RequirementStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 
 class ArchitectureStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 
 class ModuleStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 
 class ImplementationStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 
 class ValidationStageRunner extends BaseStageRunner {
-  run(context: StageRunContext): StageOutput
+  run(context: StageRunContext): Promise<StageOutput>
 }
 ```
 
@@ -107,6 +107,7 @@ All runners keep the same public signature as `BaseStageRunner`.
 Stage exceptions:
 
 - `validation` does not bind an execution module and uses `Contract/ValidationContract.check` as its validation confirmation input before gate review.
+- `validation` reads `inputArtifacts["project_path"]` as its only required runtime input.
 
 ## 4. Runtime Responsibilities
 
@@ -117,8 +118,29 @@ For each stage runner:
 3. load upstream review/check input directly when the stage has no execution binding
 4. call bound `Contract/*` check when enabled for that stage
 5. call `QualityGate/ChangeGate.review`
-6. call `IArtifactStore.create` on pass
+6. call `IArtifactStore.writeArtifact` on pass
 7. return `StageOutput`
+
+Persistence mapping rule for document stages:
+
+- `requirement_interpretation`
+  - read `StageOutput.artifacts.artifactKey == "requirement_document"`
+  - persist content to `docs/requirements/Requirement.md`
+  - pass persisted content downstream as `inputArtifacts["requirement_document"]`
+- `architecture_design`
+  - read `StageOutput.artifacts.artifactKey == "architecture_document"`
+  - persist content to `docs/architecture/TechnicalArchitecture.md`
+  - pass persisted content downstream as `inputArtifacts["architecture_document"]`
+- `module_design`
+  - read `StageOutput.artifacts.artifactKey == "module_design_document"`
+  - persist content to `docs/module_design/{moduleName}.md`
+  - pass accepted output downstream as `inputArtifacts["module_design_document"]`
+- `implementation`
+  - read `StageOutput.artifacts.generatedFiles`
+  - persist each generated file to its `generatedFiles[*].path`
+- `validation`
+  - read `inputArtifacts["project_path"]`
+  - do not persist new artifacts by default
 
 Dependency rule:
 

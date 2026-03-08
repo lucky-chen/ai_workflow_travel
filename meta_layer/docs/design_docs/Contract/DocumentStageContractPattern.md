@@ -4,13 +4,17 @@
 
 Define the shared runtime pattern used by document-oriented stages whose workflow shape is:
 
-1. generate or load document input
+1. receive document-stage input from the stage runner
 2. load shared document-stage contract rules
 3. merge specific contract rules
-4. check the document against the resolved contract rules
-5. record key runtime events
-6. send review input to `QualityGate/ChangeGate`
-7. persist accepted artifacts for downstream stages
+4. build contract-check request
+5. call the shared llm execution interface
+6. convert model output into contract-check result
+7. record key runtime events
+8. send review input to `QualityGate/ChangeGate`
+9. persist accepted artifacts for downstream stages
+
+In this pattern, `DocumentStageContract` owns the contract-check flow and contract-internal trace recording. Gate review and artifact persistence remain runner-side workflow steps that collaborate with the contract result.
 
 This pattern is the shared design reference for:
 
@@ -18,13 +22,19 @@ This pattern is the shared design reference for:
 - `Contract/ArchitectureDesignContract`
 - `Contract/ModuleDesignContract`
 
+Each concrete module should use one contract class as the module entry and orchestration owner.
+
 ## 2. Shared Binding
 
 `DocumentStageRunner`-style stages bind:
 
-- `IStageGenerator` when the stage has generation behavior
+- `DocumentStageContract`
 - `IContractChecker`
+- `ILlmExecutor`
 - `ITraceRecorder`
+
+Runner-side workflow collaboration after `check`:
+
 - `IChangeGate`
 - `IArtifactStore`
 
@@ -33,28 +43,27 @@ This pattern is the shared design reference for:
 ```plantuml
 @startuml
 participant StageRunner
-participant IStageGenerator
-participant IContractChecker
+participant DocumentStageContract
+participant ILlmExecutor
 participant ITraceRecorder
 participant IChangeGate
 participant IArtifactStore
 
 StageRunner -> ITraceRecorder: record stage start
 
-alt generation enabled
-  StageRunner -> IStageGenerator: run(context)
-  IStageGenerator --> StageRunner: stage_output
-else load existing input
-  StageRunner --> StageRunner: build stage_output from loaded input
-end
-
-StageRunner -> IContractChecker: loadSharedContract()
-IContractChecker --> StageRunner: shared_contract
-StageRunner -> IContractChecker: loadSpecificContract()
-IContractChecker --> StageRunner: specific_contract
-StageRunner -> IContractChecker: check(context, stage_output)
-IContractChecker --> StageRunner: contract_check_result
-StageRunner -> ITraceRecorder: record contract result
+StageRunner -> DocumentStageContract: check(context, stage_output)
+DocumentStageContract -> ITraceRecorder: record contract start
+DocumentStageContract -> DocumentStageContract: loadSharedContract()
+DocumentStageContract --> DocumentStageContract: shared_contract
+DocumentStageContract -> DocumentStageContract: loadSpecificContract()
+DocumentStageContract --> DocumentStageContract: specific_contract
+DocumentStageContract -> DocumentStageContract: resolveContractRules()
+DocumentStageContract -> DocumentStageContract: buildCheckRequest()
+DocumentStageContract -> ILlmExecutor: execute(llm_request)
+ILlmExecutor --> DocumentStageContract: llm_result
+DocumentStageContract -> DocumentStageContract: buildContractResult()
+DocumentStageContract -> ITraceRecorder: record contract result
+DocumentStageContract --> StageRunner: contract_check_result
 
 StageRunner -> IChangeGate: review(review_input)
 IChangeGate --> StageRunner: gate_decision
@@ -71,67 +80,84 @@ end
 
 Reuse the shared workflow interfaces defined in [Pipeline.md](../Workflow/Pipeline.md):
 
-- `IStageGenerator`
+- `DocumentStageContract`
 - `IContractChecker`
+- `ILlmExecutor`
 - `ITraceRecorder`
+
+Runner-side workflow collaboration interfaces referenced by this pattern:
+
 - `IChangeGate`
 - `IArtifactStore`
+
+Parent-class method model:
+
+```ts
+abstract class DocumentStageContract implements IContractChecker {
+  async check(
+    context: StageRunContext,
+    output: StageOutput,
+  ): Promise<ContractCheckResult>
+
+  protected abstract loadSharedContract(): Promise<ContractSpec>
+  protected abstract loadSpecificContract(): Promise<ContractSpec>
+  protected resolveContractRules(
+    sharedContract: ContractSpec,
+    specificContract: ContractSpec,
+  ): ContractSpec
+  protected abstract buildCheckRequest(
+    output: StageOutput,
+    contractSpec: ContractSpec,
+  ): LlmExecutionRequest
+  protected async executeCheck(
+    request: LlmExecutionRequest,
+  ): Promise<LlmExecutionResult>
+  protected abstract buildContractResult(
+    result: LlmExecutionResult,
+  ): ContractCheckResult
+}
+```
+
+Parent-class rule:
+
+- `check` is shared orchestration logic
+- `resolveContractRules` is shared merge logic
+- `executeCheck` is shared llm execution logic
+- shared contract loading, specific contract loading, check-request building, and contract-result building are extension points left to concrete subclasses
+- `ITraceRecorder` is a contract-internal collaboration dependency used by `check`
+- `IChangeGate` and `IArtifactStore` appear in this pattern as runner-side workflow collaboration points
+- gate review is triggered after `check` returns, but gate behavior is not implemented inside `DocumentStageContract`
 
 ## 5. Shared Responsibilities
 
 ```plantuml
 @startuml
-abstract class DocumentStageRunner
+abstract class DocumentStageContract
+interface IContractChecker
+interface ILlmExecutor
+interface ITraceRecorder
+interface IChangeGate
+interface IArtifactStore
 
-class GenerationOrLoad {
-  +prepareDocumentInput(): StageOutput
-  +keepStableStageOutputShape(): void
-}
-
-class ContractCheck {
-  +loadSharedContract(): void
-  +loadSpecificContract(): void
-  +checkStageOutput(): ContractCheckResult
-  +resolveContractRules(): void
-}
-
-class RecordFlow {
-  +recordStageStart(): void
-  +recordContractResult(): void
-  +recordGateResult(): void
-  +recordFinalResult(): void
-}
-
-class ReviewFlow {
-  +buildReviewInput(): ChangeReviewRequest
-  +receiveGateDecision(): GateDecision
-}
-
-class PersistenceFlow {
-  +persistAcceptedArtifacts(): void
-  +keepStableArtifactNaming(): void
-}
-
-DocumentStageRunner --> GenerationOrLoad
-DocumentStageRunner --> ContractCheck
-DocumentStageRunner --> RecordFlow
-DocumentStageRunner --> ReviewFlow
-DocumentStageRunner --> PersistenceFlow
+IContractChecker <|.. DocumentStageContract
+DocumentStageContract --> ILlmExecutor
+DocumentStageContract --> ITraceRecorder
 @enduml
 ```
 
+- `DocumentStageContract` owns the shared check orchestration flow.
+- Shared contract loading, specific contract loading, rule resolution, check-request building, LLM execution, contract-result building, and contract trace recording are logical responsibilities inside that flow.
+- gate review and artifact persistence stay runner-side workflow collaborations after `check` returns.
+
 ## 6. Shared Input And Output Boundaries
 
-### 6.1 Generation Input
-
-- upstream stage artifacts
-- current stage params
-- workspace context when needed
-
-### 6.2 Contract Input
+### 6.1 Contract Input
 
 - `StageRunContext`
 - document-oriented `StageOutput`
+
+### 6.2 Contract Rule Input
+
 - shared document-stage contract source
 - specific contract rule source
 
@@ -204,13 +230,20 @@ issues:
 3. ...
 ```
 
-### 6.3 Review Input
+### 6.3 LLM Check Input / Output
+
+- input: `LlmExecutionRequest`
+- output: `LlmExecutionResult`
+- the parent class owns the shared llm call path
+- concrete subclasses own the concrete prompt input and result interpretation
+
+### 6.4 Review Input
 
 - stage summary
 - reviewable files or document content
 - changed paths when the stage output is file-based
 
-### 6.4 Review Output
+### 6.5 Review Output
 
 - `GateDecision.action`
 - `GateDecision.summary`
@@ -220,8 +253,8 @@ issues:
 
 Each concrete contract document should define only its own:
 
-- implementation interface and implementation class
-- generation rule or no-generation rule
+- inheritance from `DocumentStageContract`
+- implementation class
 - specific contract rules added on top of the shared document-stage contract
 - check target and contract source
 - record events or event metadata that differ from the shared pattern
