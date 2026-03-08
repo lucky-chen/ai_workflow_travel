@@ -10,6 +10,16 @@ import {
 import type { IPipeline, LaunchTaskRequest } from "../src/shared/contracts/pipeline.js";
 
 export async function runCliTests(): Promise<void> {
+  await testCommandParser();
+  await testRequestMapper();
+  await testCliRunSuccess();
+  await testCliRunMissingWorkspace();
+  await testReviewInteractionApply();
+  await testReviewInteractionReject();
+  await testReviewInteractionComment();
+}
+
+async function testCommandParser(): Promise<void> {
   const parser = new DefaultCLICommandParser();
   assert.deepEqual(parser.parse(["generate", "--module", "implementation", "--input", "module.md", "--workspace", "./demo"]), {
     command: "generate",
@@ -19,7 +29,9 @@ export async function runCliTests(): Promise<void> {
       workspace: "./demo",
     },
   });
+}
 
+async function testRequestMapper(): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     mapper.map({
@@ -38,7 +50,11 @@ export async function runCliTests(): Promise<void> {
       },
     },
   );
+}
 
+async function testCliRunSuccess(): Promise<void> {
+  const parser = new DefaultCLICommandParser();
+  const mapper = new DefaultCLIRequestMapper();
   const rendered: string[] = [];
   const traceViewer: ConsoleTraceViewer = {
     renderStatus(message: string): void {
@@ -84,12 +100,29 @@ export async function runCliTests(): Promise<void> {
     "status:Task launched: task-cli-1",
     "result:Completed command: generate",
   ]);
+}
 
+async function testCliRunMissingWorkspace(): Promise<void> {
+  const parser = new DefaultCLICommandParser();
+  const mapper = new DefaultCLIRequestMapper();
+  const traceViewer: ConsoleTraceViewer = {
+    renderStatus(): void {},
+    renderTrace(): void {},
+    renderResult(): void {},
+  };
+  const pipeline: IPipeline = {
+    async launchTask(): Promise<string> {
+      return "task-cli-1";
+    },
+  };
+  const cli = new CLIService(parser, mapper, pipeline, traceViewer);
   await assert.rejects(
     async () => cli.run(["generate", "--module", "implementation", "--input", "module.md"]),
     /Missing required option: --workspace/,
   );
+}
 
+async function testReviewInteractionApply(): Promise<void> {
   const reviewOutput: string[] = [];
   const reviewInteraction = new ConsoleReviewInteraction({
     async ask(): Promise<string> {
@@ -111,7 +144,9 @@ export async function runCliTests(): Promise<void> {
     summary: "User approved the change set.",
   });
   assert.equal(reviewOutput.some((line) => line.includes("Review generated changes.")), true);
+}
 
+async function testReviewInteractionReject(): Promise<void> {
   const rejectInteraction = new ConsoleReviewInteraction({
     async ask(): Promise<string> {
       return "reject";
@@ -127,7 +162,9 @@ export async function runCliTests(): Promise<void> {
     action: "reject",
     summary: "User rejected the change set.",
   });
+}
 
+async function testReviewInteractionComment(): Promise<void> {
   const commentInteraction = new ConsoleReviewInteraction({
     async ask(prompt: string): Promise<string> {
       if (prompt.includes("Apply changes?")) {
