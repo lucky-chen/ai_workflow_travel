@@ -48,22 +48,24 @@ This document defines the shared collaboration standard for all work under `proj
 - Commit details must start from the second line and describe the scope of the current change.
 - Commit details must explicitly follow this format:
   - `Target: <target>`
-  - `Items:`
+  - `Change items:`
   - `1. <item one>`
   - `2. <item two>`
+  - `3. <item three>`
+- `Target:` and `Change items:` must be on separate lines.
 - Add more numbered items when needed.
 - Example human commit:
   - first line: `[Human]: refine implementation stage plan`
   - details:
     - `Target: execution plan management`
-    - `Items:`
+    - `Change items:`
     - `1. Update plan scope.`
     - `2. Update step tracking.`
 - Example AI commit:
   - first line: `[AI] gpt-5.4: add stage registry validation`
   - details:
     - `Target: pipeline stage registry`
-    - `Items:`
+    - `Change items:`
     - `1. Cover duplicate registration.`
     - `2. Cover next stage validation in pipeline flow.`
 - The commit message should be a concise summary of that round of changes.
