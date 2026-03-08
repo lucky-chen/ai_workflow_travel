@@ -9,13 +9,17 @@ import { runImplementationGeneratorTests } from "./implementation-generator.test
 import { runImplementationStageRunnerTests } from "./implementation-stage-runner.test.js";
 import { runHistoryStoreTests } from "./history-store.test.js";
 import { runLlmExecutorTests } from "./llm-executor.test.js";
-import { runPipelineTests } from "./pipeline.test.js";
+import { runPipelineCoreTests } from "./pipeline-core.test.js";
+import { runPipelineHandoffTests } from "./pipeline-handoff.test.js";
+import { runPipelineStageEntryTests } from "./pipeline-stage-entry.test.js";
 import { runRequirementContractTests } from "./requirement-contract.test.js";
 import { runRequirementGeneratorTests } from "./requirement-generator.test.js";
 import { runRequirementStageRunnerTests } from "./requirement-stage-runner.test.js";
+import { createTempDir } from "./pipeline-test-helpers.js";
 import { runTraceTests } from "./trace.test.js";
 
 async function main(): Promise<void> {
+  const pipelineWorkspaceRoot = await createTempDir("pipeline-workspace-");
   await runArtifactStoreTests();
   await runArchitectureDesignGeneratorTests();
   await runArchitectureDesignContractTests();
@@ -27,7 +31,9 @@ async function main(): Promise<void> {
   await runImplementationGeneratorTests();
   await runImplementationStageRunnerTests();
   await runLlmExecutorTests();
-  await runPipelineTests();
+  await runPipelineCoreTests(pipelineWorkspaceRoot);
+  await runPipelineStageEntryTests(pipelineWorkspaceRoot);
+  await runPipelineHandoffTests(pipelineWorkspaceRoot);
   await runRequirementContractTests();
   await runRequirementGeneratorTests();
   await runRequirementStageRunnerTests();
