@@ -31,18 +31,27 @@ export class InMemoryChangeGate implements IChangeGate {
   }
 }
 
-export class InteractiveChangeGate implements IChangeGate {
-  private reviewCounter = 0;
-
-  constructor(private readonly reviewInteraction: IReviewInteraction) {}
-
-  async review(changeRequest: ChangeReviewRequest): Promise<GateDecision> {
-    this.reviewCounter += 1;
-    const reviewSession: ReviewSession = {
-      reviewId: `review-${this.reviewCounter}`,
+export class ChangeReviewPresenter {
+  present(reviewId: string, changeRequest: ChangeReviewRequest): ReviewSession {
+    return {
+      reviewId,
       summary: changeRequest.summary,
       changedFiles: changeRequest.changedFiles,
     };
+  }
+}
+
+export class InteractiveChangeGate implements IChangeGate {
+  private reviewCounter = 0;
+
+  constructor(
+    private readonly reviewInteraction: IReviewInteraction,
+    private readonly reviewPresenter: ChangeReviewPresenter = new ChangeReviewPresenter(),
+  ) {}
+
+  async review(changeRequest: ChangeReviewRequest): Promise<GateDecision> {
+    this.reviewCounter += 1;
+    const reviewSession = this.reviewPresenter.present(`review-${this.reviewCounter}`, changeRequest);
 
     return this.reviewInteraction.waitForReview(reviewSession);
   }
