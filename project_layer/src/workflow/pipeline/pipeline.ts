@@ -35,10 +35,29 @@ export class PipelineService implements IPipeline {
   }
 
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
-    const taskId = this.createTaskId();
+    const triggerReason = request.triggerReason ?? "new_run";
+    const taskId = triggerReason === "stage_entry" ? request.taskId ?? this.createTaskId() : this.createTaskId();
     this.registry.validate();
     this.launchValidator.validate(request, this.registry);
-    this.taskRuntimeStore.createTask(taskId, request.startStageId, request.workspaceRoot);
+
+    if (triggerReason === "new_run" || !this.getTaskRecord(taskId)) {
+      this.taskRuntimeStore.createTask(taskId, request.startStageId, request.workspaceRoot, request.inputArtifacts);
+    } else {
+      const existingTask = this.getTaskRecord(taskId);
+      if (!existingTask) {
+        throw new Error(`Task "${taskId}" is not registered.`);
+      }
+
+      this.taskRuntimeStore.updateTask(taskId, {
+        startStageId: request.startStageId,
+        currentStageId: request.startStageId,
+        attempt: existingTask.attempt + 1,
+        status: "pending",
+        workspaceRoot: request.workspaceRoot,
+        inputArtifacts: request.inputArtifacts,
+        lastOutput: undefined,
+      });
+    }
 
     this.taskRuntimeStore.updateTask(taskId, {
       status: "running",
@@ -57,6 +76,7 @@ export class PipelineService implements IPipeline {
       const context: StageRunContext = {
         taskId,
         stageId: currentStageId,
+        attempt: this.getTaskRecord(taskId)?.attempt ?? 1,
         workspaceRoot: request.workspaceRoot,
         inputArtifacts: currentInputArtifacts,
         params: request.params,
@@ -65,6 +85,7 @@ export class PipelineService implements IPipeline {
       const output = await stage.runner.run(context);
       this.taskRuntimeStore.updateTask(taskId, {
         currentStageId,
+        inputArtifacts: currentInputArtifacts,
         lastOutput: output,
       });
 

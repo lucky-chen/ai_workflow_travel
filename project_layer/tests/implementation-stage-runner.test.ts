@@ -164,6 +164,7 @@ function createRunContext(taskId: string, workspaceRoot: string): StageRunContex
   return {
     taskId,
     stageId: "implementation",
+    attempt: 1,
     workspaceRoot,
     inputArtifacts: { moduleDesign: "module-design.md" },
     params: {

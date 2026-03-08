@@ -11,6 +11,7 @@ import type {
 export interface StageRunContext {
   taskId: TaskId;
   stageId: StageId;
+  attempt: number;
   workspaceRoot: string;
   inputArtifacts: ArtifactMap;
   params?: StringMap;
@@ -30,13 +31,17 @@ export interface TaskRecord {
   taskId: TaskId;
   startStageId: StageId;
   currentStageId: StageId;
+  attempt: number;
   status: TaskStatus;
   workspaceRoot: string;
+  inputArtifacts: ArtifactMap;
   lastOutput?: StageOutput;
 }
 
 export interface LaunchTaskRequest {
   startStageId: StageId;
+  taskId?: TaskId;
+  triggerReason?: "new_run" | "stage_entry";
   workspaceRoot: string;
   inputArtifacts: ArtifactMap;
   params?: StringMap;

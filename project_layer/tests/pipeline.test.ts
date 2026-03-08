@@ -13,6 +13,8 @@ export async function runPipelineTests(): Promise<void> {
   await testStageContinuationAndMerge();
   await testFailureStopsContinuation();
   await testInvalidNextStageValidation();
+  await testStageEntryRetrySemantics();
+  await testStageEntryFromSpecifiedStage();
 }
 
 async function testSingleStageLaunch(): Promise<void> {
@@ -61,6 +63,7 @@ async function testSingleStageLaunch(): Promise<void> {
   assert.deepEqual(receivedContext, {
     taskId,
     stageId: "implementation",
+    attempt: 1,
     workspaceRoot: "/workspace/demo",
     inputArtifacts: {
       moduleDesign: "module-design.md",
@@ -87,8 +90,12 @@ async function testSingleStageLaunch(): Promise<void> {
     taskId,
     startStageId: "implementation",
     currentStageId: "implementation",
+    attempt: 1,
     status: "completed",
     workspaceRoot: "/workspace/demo",
+    inputArtifacts: {
+      moduleDesign: "module-design.md",
+    },
     lastOutput: {
       stageId: "implementation",
       status: "completed",
@@ -215,6 +222,7 @@ async function testStageContinuationAndMerge(): Promise<void> {
   assert.deepEqual(continuedContexts[0], {
     taskId: continuedTaskId,
     stageId: "stage-a",
+    attempt: 1,
     workspaceRoot: "/workspace/demo",
     inputArtifacts: {
       sourceDoc: "source.md",
@@ -224,6 +232,7 @@ async function testStageContinuationAndMerge(): Promise<void> {
   assert.deepEqual(continuedContexts[1], {
     taskId: continuedTaskId,
     stageId: "stage-b",
+    attempt: 1,
     workspaceRoot: "/workspace/demo",
     inputArtifacts: {
       sourceDoc: "source.md",
@@ -343,6 +352,137 @@ async function testInvalidNextStageValidation(): Promise<void> {
     }),
     /references missing nextStageId "missing-stage"/,
   );
+}
+
+async function testStageEntryRetrySemantics(): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  let shouldFail = true;
+  const retryingStage: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      if (shouldFail) {
+        return {
+          stageId: context.stageId,
+          status: "failed",
+          success: false,
+          summary: "First attempt failed.",
+          artifacts: {},
+        };
+      }
+
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Retry succeeded.",
+        artifacts: {},
+      };
+    },
+  };
+
+  const pipeline = new PipelineService({
+    registry: createRegistry({
+      stageId: "implementation",
+      launchRequirements: ["moduleDesign"],
+      runner: retryingStage,
+      nextStageId: null,
+    }),
+  });
+
+  const taskId = await pipeline.launchTask({
+    startStageId: "implementation",
+    workspaceRoot: "/workspace/demo",
+    inputArtifacts: {
+      moduleDesign: "module-design.md",
+    },
+  });
+
+  assert.equal(pipeline.getTaskStatus(taskId), "failed");
+  shouldFail = false;
+
+  await pipeline.launchTask({
+    taskId,
+    triggerReason: "stage_entry",
+    startStageId: "implementation",
+    workspaceRoot: "/workspace/demo",
+    inputArtifacts: {
+      moduleDesign: "module-design.md",
+    },
+  });
+
+  assert.equal(invocationContexts.length, 2);
+  assert.equal(invocationContexts[0]?.attempt, 1);
+  assert.equal(invocationContexts[1]?.attempt, 2);
+  assert.equal(pipeline.getTaskStatus(taskId), "completed");
+}
+
+async function testStageEntryFromSpecifiedStage(): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  const stageA: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage A completed.",
+        artifacts: {
+          generatedSpec: "generated-spec.md",
+        },
+      };
+    },
+  };
+  const stageB: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage B completed.",
+        artifacts: {},
+      };
+    },
+  };
+
+  const pipeline = new PipelineService({
+    registry: createRegistry(
+      {
+        stageId: "stage-a",
+        launchRequirements: ["sourceDoc"],
+        runner: stageA,
+        nextStageId: "stage-b",
+      },
+      {
+        stageId: "stage-b",
+        launchRequirements: ["generatedSpec"],
+        runner: stageB,
+        nextStageId: null,
+      },
+    ),
+  });
+
+  const taskId = await pipeline.launchTask({
+    startStageId: "stage-a",
+    workspaceRoot: "/workspace/demo",
+    inputArtifacts: {
+      sourceDoc: "source.md",
+    },
+  });
+
+  await pipeline.launchTask({
+    taskId,
+    triggerReason: "stage_entry",
+    startStageId: "stage-b",
+    workspaceRoot: "/workspace/demo",
+    inputArtifacts: {
+      generatedSpec: "generated-spec.md",
+    },
+  });
+
+  assert.equal(invocationContexts.length, 3);
+  assert.equal(invocationContexts[2]?.stageId, "stage-b");
+  assert.equal(invocationContexts[2]?.attempt, 2);
 }
 
 function createCompletedStage(summary: string): IStageRunner {

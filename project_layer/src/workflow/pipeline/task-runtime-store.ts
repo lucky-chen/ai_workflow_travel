@@ -1,16 +1,18 @@
 import type { StageOutput, TaskRecord, TaskStatus } from "../../shared/contracts/pipeline.js";
-import type { StageId, TaskId } from "../../shared/types/common.js";
+import type { ArtifactMap, StageId, TaskId } from "../../shared/types/common.js";
 
 export class TaskRuntimeStore {
   private readonly tasks = new Map<TaskId, TaskRecord>();
 
-  createTask(taskId: TaskId, startStageId: StageId, workspaceRoot: string): void {
+  createTask(taskId: TaskId, startStageId: StageId, workspaceRoot: string, inputArtifacts: ArtifactMap): void {
     this.tasks.set(taskId, {
       taskId,
       startStageId,
       currentStageId: startStageId,
+      attempt: 1,
       status: "pending",
       workspaceRoot,
+      inputArtifacts,
     });
   }
 

@@ -65,6 +65,7 @@ async function testImplementationGeneratorProducesPlannedChanges(
   const output = await generator.run({
     taskId: "task-1",
     stageId: "implementation",
+    attempt: 1,
     workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",
@@ -108,6 +109,7 @@ async function testProjectContextLoaderIgnoresDistFiles(workspaceRoot: string): 
   const projectContext = await projectContextLoader.loadProjectContext({
     taskId: "task-1",
     stageId: "implementation",
+    attempt: 1,
     workspaceRoot,
     inputArtifacts: {
       moduleDesign: "module-design.md",

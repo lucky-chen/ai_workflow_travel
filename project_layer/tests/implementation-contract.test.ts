@@ -25,6 +25,7 @@ async function testImplementationContractSuccess(
     {
       taskId: "task-1",
       stageId: "implementation",
+      attempt: 1,
       workspaceRoot,
       inputArtifacts: {},
       params: {
@@ -57,6 +58,7 @@ async function testImplementationContractFailure(
     {
       taskId: "task-2",
       stageId: "implementation",
+      attempt: 1,
       workspaceRoot,
       inputArtifacts: {},
       params: {

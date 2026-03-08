@@ -77,7 +77,7 @@ Still missing:
 - [x] Full generic pipeline orchestration
 - [x] Stage-to-stage continuation using `next_stage_id`
 - [x] Downstream input merge between stages
-- [ ] Retry/restart semantics
+- [x] Retry/restart semantics
 - [x] Trace persistence through `HistoryStore`
 - [x] Gate decision trace recording
 - [x] `ChangeReviewPresenter`
