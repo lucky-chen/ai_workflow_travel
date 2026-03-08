@@ -167,10 +167,10 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] architecture gate review flow
   - [x] focused tests for runner and stage flow
 - [ ] Batch 4: architecture-stage runtime alignment
-  - [ ] load requirement-stage artifacts as generation input
-  - [ ] align output artifacts with module-design stage needs
-  - [ ] align trace and review semantics with shared runner behavior
-  - [ ] confirm handoff contract into `module_design`
+  - [x] load requirement-stage artifacts as generation input
+  - [x] align output artifacts with module-design stage needs
+  - [x] align trace and review semantics with shared runner behavior
+  - [x] confirm handoff contract into `module_design`
 
 ### Step 4. Deliver `module_design` Stage
 

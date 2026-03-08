@@ -3,10 +3,12 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.js";
+import { ArchitectureStageRunner } from "../src/workflow/stage-runners/architecture-stage-runner.js";
 import { RequirementStageRunner } from "../src/workflow/stage-runners/requirement-stage-runner.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
 import { PipelineService } from "../src/workflow/pipeline/pipeline.js";
 import { StageRegistry } from "../src/workflow/pipeline/stage-registry.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../src/sdk/llm-executor/llm-executor.js";
 import type { IStageRunner, StageOutput, StageRunContext } from "../src/shared/contracts/pipeline.js";
 
 export async function runPipelineTests(): Promise<void> {
@@ -499,15 +501,16 @@ async function testStageEntryFromSpecifiedStage(workspaceRoot: string): Promise<
 async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: string): Promise<void> {
   const storageRoot = await createTempDir("pipeline-requirement-");
   const artifactStore = new ArtifactStoreService(storageRoot);
+  const traceRecorder = new InMemoryTraceRecorder();
   const invocationContexts: StageRunContext[] = [];
-  const architectureStage: IStageRunner = {
+  const moduleDesignStage: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
       invocationContexts.push(context);
       return {
         stageId: context.stageId,
         status: "completed",
         success: true,
-        summary: "Architecture stage completed.",
+        summary: "Module design stage completed.",
         artifacts: {},
       };
     },
@@ -515,17 +518,28 @@ async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: s
 
   try {
     const pipeline = new PipelineService({
+      traceRecorder,
       registry: createRegistry(
         {
           stageId: "requirement_interpretation",
           launchRequirements: ["requirement_document"],
-          runner: new RequirementStageRunner({ artifactStore }),
+          runner: new RequirementStageRunner({ artifactStore, traceRecorder }),
           nextStageId: "architecture_design",
         },
         {
           stageId: "architecture_design",
           launchRequirements: ["requirement_document"],
-          runner: architectureStage,
+          runner: new ArchitectureStageRunner({
+            llmExecutor: new MockTextLlmExecutor(createArchitectureDocument()),
+            artifactStore,
+            traceRecorder,
+          }),
+          nextStageId: "module_design",
+        },
+        {
+          stageId: "module_design",
+          launchRequirements: ["architecture_document"],
+          runner: moduleDesignStage,
           nextStageId: null,
         },
       ),
@@ -542,14 +556,40 @@ async function testRequirementStageHandoffIntoArchitectureStage(workspaceRoot: s
     assert.equal(invocationContexts.length, 1);
     assert.deepEqual(invocationContexts[0], {
       taskId,
-      stageId: "architecture_design",
+      stageId: "module_design",
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
         requirement_document: "docs/requirements/Requirement.md",
+        architecture_document: "docs/architecture/TechnicalArchitecture.md",
       },
       params: undefined,
     });
+    assert.equal(
+      await artifactStore.getArtifact({
+        taskId,
+        stageId: "architecture_design",
+        filePath: "docs/architecture/TechnicalArchitecture.md",
+      }),
+      createArchitectureDocument(),
+    );
+    assert.deepEqual(
+      traceRecorder.getEvents().map((entry) => entry.event.eventType),
+      [
+        "task_started",
+        "stage_started",
+        "contract_checked",
+        "gate_reviewed",
+        "artifact_persisted",
+        "stage_started",
+        "generation_started",
+        "generation_finished",
+        "contract_checked",
+        "gate_reviewed",
+        "artifact_persisted",
+        "task_finished",
+      ],
+    );
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
   }
@@ -659,5 +699,155 @@ function createRequirementDocument(): string {
     "# 10. Constraints",
     "## 10.1 Timeline",
     "- review points must remain explicit.",
+  ].join("\n");
+}
+
+class MockTextLlmExecutor implements ILlmExecutor {
+  constructor(private readonly content: string) {}
+
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: this.content,
+      responseFormat: "text",
+    };
+  }
+}
+
+function createArchitectureDocument(): string {
+  return [
+    "# 1. Purpose",
+    "Define the overall technical architecture of the AI SDLC platform.",
+    "- Team members: provide a shared high-level baseline for the team.",
+    "- Senior engineers: review architecture direction and boundaries.",
+    "- Junior engineers: understand system and module structure for later design and implementation.",
+    "",
+    "# 2. Scope",
+    "This document defines the overall architecture boundary of the platform.",
+    "It does not define module internals or implementation details.",
+    "## 2.1 In Scope",
+    "- Overall workflow from requirement input to design generation, implementation generation, review, validation, and acceptance.",
+    "- Major modules and their responsibilities at architecture level.",
+    "- Collaboration boundaries and dependency direction between major parts of the system.",
+    "## 2.2 Out of Scope",
+    "- Detailed module internals and implementation logic.",
+    "- Detailed API contracts, prompt content, and parameter definitions inside each module.",
+    "- Database schema details and storage-level design.",
+    "",
+    "# 3. Design Drivers",
+    "## 3.1 end-to-end workflow support",
+    "The architecture must support the full flow from requirement input to design generation, implementation generation, review, validation, and acceptance.",
+    "## 3.2 requirement interpretation as stable upstream input",
+    "Requirement documents written in natural language must be checked and stabilized before they are used as downstream input.",
+    "## 3.3 design doc interpretation as stable upstream input",
+    "Design outputs generated in upstream stages must be checked and stabilized before they are used as downstream input.",
+    "## 3.4 human-in-the-loop control",
+    "Important changes must remain human-reviewable and require users to confirm.",
+    "## 3.5 Validation visibility",
+    "The system must provide validation or test feedback for generated outputs.",
+    "## 3.6 evolution from CLI to UI",
+    "The platform is CLI-only in the current scope and future evolution should preserve workflow separation.",
+    "## 3.7 execution transparency and stage traceability",
+    "Users need stage status and important changes to remain visible and traceable.",
+    "## 3.8 incremental update on requirement changes",
+    "Requirement changes are frequent, so the architecture should support downstream updates.",
+    "## 3.9 Stage-level launch flexibility",
+    "The architecture should support launching from a selected stage when required inputs are available.",
+    "",
+    "# 4. Architecture Design",
+    "## 4.1 Architecture Style",
+    "The system adopts a layered modular monolith architecture.",
+    "## 4.2 Layers or Partitions",
+    "- Interface Layer: handles CLI entry and user confirmation.",
+    "- Workflow: orchestrates stage execution and handoff.",
+    "- Execution: generates stage artifacts.",
+    "- Contract: checks generated artifacts against stage contracts.",
+    "- Quality Gate: manages review, trace, and gate decisions.",
+    "- Data: stores artifacts, history, and runtime state.",
+    "## 4.3 Allowed Dependencies",
+    "ALLOW:",
+    "- Interface Layer -> Workflow",
+    "- Workflow -> Execution",
+    "- Workflow -> Contract",
+    "- Workflow -> Quality Gate",
+    "- Workflow -> Data",
+    "- Execution -> Data",
+    "- Contract -> Data",
+    "- Quality Gate -> Data",
+    "## 4.4 High-level Diagram",
+    "```text",
+    "[Interface Layer] -> [Workflow] -> [Execution]",
+    "                         |            |",
+    "                         v            v",
+    "                    [Contract]   [Quality Gate]",
+    "                         \\            /",
+    "                          v          v",
+    "                            [Data]",
+    "```",
+    "## 4.5 Runtime Topology",
+    "- CLI Process: hosts interface, workflow, execution, contract, and quality-gate modules in one runtime.",
+    "- Shared Storage: persists artifacts, history, and trace records.",
+    "",
+    "# 5. System Flow",
+    "## 5.1 Main Flow",
+    "```text",
+    "[User] -> [Workflow] -> [Execution] -> [Contract] -> [Quality Gate] -> [Data]",
+    "```",
+    "1. User starts or resumes a stage.",
+    "2. Workflow loads required upstream artifacts and invokes execution.",
+    "3. Contract checks generated output and quality gate decides review outcome.",
+    "The flow keeps generation, checking, review, and persistence explicit.",
+    "## 5.2 Core Modules",
+    "- Interface Layer: handles CLI entry and user confirmation.",
+    "- Workflow: orchestrates stage execution.",
+    "- Execution: generates stage artifacts.",
+    "- Contract: validates generated artifacts.",
+    "- Quality Gate: manages review and trace.",
+    "- Data: persists artifacts and history.",
+    "## 5.3 Interaction Model",
+    "Modules collaborate through stage-oriented inputs, outputs, checks, and review decisions.",
+    "### 5.3.1 Start Task",
+    "Workflow creates runtime context and resolves stage entry.",
+    "### 5.3.2 Generate Or Update Stage Artifact",
+    "Execution produces or updates the stage artifact from upstream inputs.",
+    "### 5.3.3 Check Stage Result",
+    "Contract validates structure and stage boundaries.",
+    "### 5.3.4 Review And Decision",
+    "Quality Gate evaluates the change summary and returns a decision.",
+    "### 5.3.5 Store Artifact And History",
+    "Data modules persist accepted artifacts and task history.",
+    "## 5.4 Key Considerations",
+    "- keep stage boundaries explicit",
+    "- keep downstream input stable after contract checks",
+    "",
+    "# 6. Non-Functional Considerations",
+    "## 6.1 High Availability",
+    "Current scope does not require distributed availability; correctness and reviewability are higher priority.",
+    "## 6.2 High Scalability",
+    "The architecture should keep module boundaries clear so background execution can evolve later.",
+    "## 6.3 High Performance",
+    "The architecture should preserve bounded stage work and visible progress instead of hiding long-running work.",
+    "",
+    "# 7. Design Documents",
+    "## 7.1 Design Document Categories",
+    "- Requirement document: stable product intent for downstream stages.",
+    "- Architecture document: overall system structure and boundaries.",
+    "- Module design document: module responsibilities and interfaces.",
+    "- Implementation document: code-generation workplan and implementation result.",
+    "## 7.2 Design Document Breakdown",
+    "The workflow documents each recurring stage shape explicitly.",
+    "### 7.2.1 Start Task",
+    "Capture task entry, resume point, and required inputs.",
+    "### 7.2.2 Generate Or Update Stage Artifact",
+    "Describe how generation updates the stage artifact.",
+    "### 7.2.3 Check Stage Result",
+    "Describe contract checks and stabilization rules.",
+    "### 7.2.4 Review And Decision",
+    "Describe review inputs, gate semantics, and acceptance points.",
+    "### 7.2.5 Store Artifact And History",
+    "Describe persistence of accepted artifacts and task history.",
+    "",
+    "# 8. Open Issues",
+    "- How validation workspaces should be isolated for implementation stages.",
+    "- How UI evolution should expose the same stage trace semantics as the CLI.",
   ].join("\n");
 }
