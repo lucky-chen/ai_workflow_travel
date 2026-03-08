@@ -83,8 +83,8 @@ Still missing:
 - [x] `ChangeReviewPresenter`
 - [x] Full CLI trace rendering
 - [x] Full CLI review interaction
-- [ ] `LlmExecutor` strategy layer
-- [ ] `ExecutionStrategySelector`
+- [x] `LlmExecutor` strategy layer
+- [x] `ExecutionStrategySelector`
 - [ ] `IAgent`
 - [ ] `IPlanner`
 - [ ] `IExecutor`
