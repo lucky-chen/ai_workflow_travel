@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 
 import { ArtifactStoreService } from "../src/data/artifact-store/artifact-store.js";
 import { ArchitectureStageRunner } from "../src/workflow/stage-runners/architecture-stage-runner.js";
+import { ImplementationPlanStageRunner } from "../src/workflow/stage-runners/implementation-plan-stage-runner.js";
 import { ModuleStageRunner } from "../src/workflow/stage-runners/module-stage-runner.js";
 import { RequirementStageRunner } from "../src/workflow/stage-runners/requirement-stage-runner.js";
 import { InMemoryTraceRecorder } from "../src/quality-gate/trace/trace-recorder.js";
@@ -18,22 +19,22 @@ import {
 } from "./pipeline-test-helpers.js";
 
 export async function runPipelineHandoffTests(workspaceRoot: string): Promise<void> {
-  await testRequirementStageHandoffIntoImplementationPlan(workspaceRoot);
+  await testRequirementStageHandoffIntoImplementationExecution(workspaceRoot);
 }
 
-async function testRequirementStageHandoffIntoImplementationPlan(workspaceRoot: string): Promise<void> {
+async function testRequirementStageHandoffIntoImplementationExecution(workspaceRoot: string): Promise<void> {
   const storageRoot = await createTempDir("pipeline-requirement-");
   const artifactStore = new ArtifactStoreService(storageRoot);
   const traceRecorder = new InMemoryTraceRecorder();
-  const implementationPlanInvocationContexts: StageRunContext[] = [];
-  const implementationPlanStage: IStageRunner = {
+  const implementationExecutionInvocationContexts: StageRunContext[] = [];
+  const implementationExecutionStage: IStageRunner = {
     async run(context: StageRunContext): Promise<StageOutput> {
-      implementationPlanInvocationContexts.push(context);
+      implementationExecutionInvocationContexts.push(context);
       return {
         stageId: context.stageId,
         status: "completed",
         success: true,
-        summary: "Implementation plan stage completed.",
+        summary: "Implementation execution stage completed.",
         artifacts: {},
       };
     },
@@ -76,7 +77,17 @@ async function testRequirementStageHandoffIntoImplementationPlan(workspaceRoot: 
         {
           stageId: "implementation_plan",
           launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],
-          runner: implementationPlanStage,
+          runner: new ImplementationPlanStageRunner({
+            llmExecutor: new ImplementationPlanPipelineLlmExecutor(),
+            artifactStore,
+            traceRecorder,
+          }),
+          nextStageId: "implementation_execution",
+        },
+        {
+          stageId: "implementation_execution",
+          launchRequirements: ["implementation_workplan"],
+          runner: implementationExecutionStage,
           nextStageId: null,
         },
       ),
@@ -90,10 +101,35 @@ async function testRequirementStageHandoffIntoImplementationPlan(workspaceRoot: 
       },
     });
 
-    assert.equal(implementationPlanInvocationContexts.length, 1);
-    const implementationPlanContext = implementationPlanInvocationContexts[0];
+    assert.equal(implementationExecutionInvocationContexts.length, 1);
+    const implementationExecutionContext = implementationExecutionInvocationContexts[0];
+    assert.equal(
+      implementationExecutionContext.inputArtifacts.implementation_workplan,
+      "plans/implementation/ImplementationWorkPlan.md",
+    );
+    const implementationPlanOutput = await artifactStore.getArtifact({
+      taskId,
+      stageId: "implementation_plan",
+      filePath: "plans/implementation/ImplementationWorkPlan.md",
+    });
+    assert.equal(implementationPlanOutput, createImplementationPlanDocument());
     const moduleDesignDocuments = JSON.parse(
-      implementationPlanContext.inputArtifacts.module_design_documents,
+      (
+        await artifactStore.getArtifact({
+          taskId,
+          stageId: "module_design",
+          filePath: "docs/module_design/Data.md",
+        })
+      ).length > 0
+        ? JSON.stringify([
+          "docs/module_design/Interface Layer.md",
+          "docs/module_design/Workflow.md",
+          "docs/module_design/Execution.md",
+          "docs/module_design/Contract.md",
+          "docs/module_design/Quality Gate.md",
+          "docs/module_design/Data.md",
+        ])
+        : "[]",
     ) as string[];
     assert.deepEqual(moduleDesignDocuments, [
       "docs/module_design/Interface Layer.md",
@@ -103,9 +139,9 @@ async function testRequirementStageHandoffIntoImplementationPlan(workspaceRoot: 
       "docs/module_design/Quality Gate.md",
       "docs/module_design/Data.md",
     ]);
-    assert.deepEqual(implementationPlanContext, {
+    assert.deepEqual(implementationExecutionContext, {
       taskId,
-      stageId: "implementation_plan",
+      stageId: "implementation_execution",
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
@@ -119,6 +155,7 @@ async function testRequirementStageHandoffIntoImplementationPlan(workspaceRoot: 
           "docs/module_design/Quality Gate.md",
           "docs/module_design/Data.md",
         ]),
+        implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
       },
       params: undefined,
     });
@@ -133,6 +170,12 @@ async function testRequirementStageHandoffIntoImplementationPlan(workspaceRoot: 
     assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
       "task_started",
       "stage_started",
+      "contract_checked",
+      "gate_reviewed",
+      "artifact_persisted",
+      "stage_started",
+      "generation_started",
+      "generation_finished",
       "contract_checked",
       "gate_reviewed",
       "artifact_persisted",
@@ -323,4 +366,55 @@ class ModulePipelineLlmExecutor implements ILlmExecutor {
       },
     };
   }
+}
+
+class ImplementationPlanPipelineLlmExecutor implements ILlmExecutor {
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    if (request.metadata?.checkType === "contract") {
+      return {
+        content: JSON.stringify({
+          passed: true,
+          summary: "Implementation workplan passed contract checks.",
+          issues: [],
+        }),
+        responseFormat: "json",
+      };
+    }
+
+    return {
+      content: createImplementationPlanDocument(),
+      responseFormat: "text",
+      metadata: {
+        ...(request.metadata ?? {}),
+      },
+    };
+  }
+}
+
+function createImplementationPlanDocument(): string {
+  return [
+    "# Code Generation Execution Plan",
+    "",
+    "## 1. Purpose",
+    "Build project_layer from zero to a complete workflow.",
+    "",
+    "## 1.1 Collaboration Rule",
+    "All implementation work under this plan must follow the shared collaboration standard:",
+    "",
+    "- `project_layer/docs/COLLABORATION_STANDARD.md`",
+    "",
+    "## 2. Workflow Delivery Order",
+    "1. shared workflow backbone",
+    "2. requirement_interpretation stage",
+    "3. architecture_design stage",
+    "4. module_design stage",
+    "",
+    "## 3. Execution Steps",
+    "### Step 1. Deliver Shared Workflow Backbone",
+    "- [x] Step 1 is partially completed",
+    "- [x] Architecture modules in scope",
+    "  - [x] `Workflow/Pipeline`",
+    "- [x] Batch 1: interfaces and skeleton",
+    "  - [x] shared contracts",
+  ].join("\n");
 }

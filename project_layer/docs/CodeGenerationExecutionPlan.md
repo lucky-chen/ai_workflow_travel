@@ -243,11 +243,11 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] implementation-plan trace recording in runner
   - [x] implementation-plan gate review flow
   - [x] focused tests for runner and stage flow
-- [ ] Batch 4: implementation-plan runtime alignment
-  - [ ] handoff accepted `workplan` into `implementation_execution`
-  - [ ] align implementation-plan output artifacts with implementation-execution input needs
-  - [ ] align trace and review semantics with shared runner behavior
-  - [ ] focused tests for handoff and runtime alignment
+- [x] Batch 4: implementation-plan runtime alignment
+  - [x] handoff accepted `workplan` into `implementation_execution`
+  - [x] align implementation-plan output artifacts with implementation-execution input needs
+  - [x] align trace and review semantics with shared runner behavior
+  - [x] focused tests for handoff and runtime alignment
 
 ### Step 6. Deliver `implementation_execution` Stage
 
