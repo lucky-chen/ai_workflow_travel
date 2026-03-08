@@ -1,9 +1,13 @@
 import type { ContractCheckResult, IContractChecker, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
+import type { LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
 
 export interface ContractSpec {
   document_contracts: DocumentContract[];
   section_contracts: SectionContract[];
+  specific_contract?: Record<string, unknown>;
 }
+
+export type SpecificContractSpec = Partial<ContractSpec> & Record<string, unknown>;
 
 export interface DocumentContract {
   check_item: string;
@@ -17,11 +21,6 @@ export interface SectionContract {
   checkitems: string[];
   severity: "low" | "medium" | "high";
   expected_format?: string;
-}
-
-export interface ContractCheckRequest {
-  generatedResult: string;
-  contractSpec: ContractSpec;
 }
 
 export interface ContractExecutionResult {
@@ -41,12 +40,25 @@ export abstract class DocumentStageContract implements IContractChecker {
   }
 
   protected abstract loadSharedContract(): Promise<ContractSpec>;
-  protected abstract loadSpecificContract(): Promise<ContractSpec>;
+  protected abstract loadSpecificContract(): Promise<SpecificContractSpec>;
 
-  protected resolveContractRules(sharedContract: ContractSpec, specificContract: ContractSpec): ContractSpec {
+  protected resolveContractRules(sharedContract: ContractSpec, specificContract: SpecificContractSpec): ContractSpec {
+    const specificDocumentContracts = Array.isArray(specificContract.document_contracts)
+      ? specificContract.document_contracts
+      : [];
+    const specificSectionContracts = Array.isArray(specificContract.section_contracts)
+      ? specificContract.section_contracts
+      : [];
+    const { document_contracts, section_contracts, specific_contract, ...remainingSpecificFields } = specificContract;
+
     return {
-      document_contracts: [...sharedContract.document_contracts, ...specificContract.document_contracts],
-      section_contracts: [...sharedContract.section_contracts, ...specificContract.section_contracts],
+      document_contracts: [...sharedContract.document_contracts, ...specificDocumentContracts],
+      section_contracts: [...sharedContract.section_contracts, ...specificSectionContracts],
+      specific_contract: {
+        ...(sharedContract.specific_contract ?? {}),
+        ...(specific_contract ?? {}),
+        ...remainingSpecificFields,
+      },
     };
   }
 
@@ -54,18 +66,17 @@ export abstract class DocumentStageContract implements IContractChecker {
     context: StageRunContext,
     output: StageOutput,
     contractSpec: ContractSpec,
-  ): Promise<ContractCheckRequest>;
+  ): Promise<LlmExecutionRequest>;
 
   protected async executeCheck(
-    request: ContractCheckRequest,
+    request: LlmExecutionRequest,
   ): Promise<ContractExecutionResult> {
-    return this.checkAgainstContractSpec(request.generatedResult, request.contractSpec);
+    return this.checkAgainstPromptRequest(request);
   }
 
   protected abstract buildContractResult(result: ContractExecutionResult): ContractCheckResult;
 
-  protected abstract checkAgainstContractSpec(
-    generatedResult: string,
-    contractSpec: ContractSpec,
+  protected abstract checkAgainstPromptRequest(
+    request: LlmExecutionRequest,
   ): ContractExecutionResult;
 }

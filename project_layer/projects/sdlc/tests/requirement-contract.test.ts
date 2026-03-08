@@ -9,6 +9,7 @@ export async function runRequirementContractTests(): Promise<void> {
   await testRequirementContractFailsForMissingSections();
   await testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail();
   await testRequirementContractLoadsTemplateContractSource();
+  await testRequirementContractBuildsPromptRequest();
 }
 
 async function testRequirementContractPassesForStructuredDocument(): Promise<void> {
@@ -103,7 +104,22 @@ async function testRequirementContractFailsForTemplatePlaceholdersAndImplementat
 async function testRequirementContractLoadsTemplateContractSource(): Promise<void> {
   const contract = new RequirementContract();
   const spec = await (contract as unknown as {
-    loadSpecificContract(): Promise<{ document_contracts: Array<{ check_item: string }> }>;
+    loadSharedContract(): Promise<{
+      document_contracts: Array<{ check_item: string }>;
+      section_contracts: Array<{ section_id: string }>;
+      specific_contract?: { source?: string; stage?: string };
+    }>;
+    loadSpecificContract(): Promise<{
+      specific_contract?: { source?: string; stage?: string };
+    }>;
+  }).loadSharedContract();
+  const specificSpec = await (contract as unknown as {
+    loadSpecificContract(): Promise<{
+      document_contracts?: Array<{ check_item: string }>;
+      section_contracts?: Array<{ section_id: string }>;
+      specific_contract?: { source?: string; stage?: string };
+      stage?: string;
+    }>;
   }).loadSpecificContract();
   const rawSpec = JSON.parse(
     await readFile(
@@ -125,6 +141,134 @@ async function testRequirementContractLoadsTemplateContractSource(): Promise<voi
     spec.document_contracts.map((entry) => entry.check_item),
     rawSpec.document_contracts.map((entry) => entry.check_item),
   );
+  assert.equal(spec.specific_contract && Object.keys(spec.specific_contract).length, 0);
+  assert.equal(specificSpec.specific_contract?.source, "meta_layer/resources/contract/RequirementTemplate.contract.json");
+  assert.equal(specificSpec.stage, "requirement_interpretation");
+}
+
+async function testRequirementContractBuildsPromptRequest(): Promise<void> {
+  const contract = new RequirementContract();
+  const sharedSpec = await (contract as unknown as {
+    loadSharedContract(): Promise<{
+      document_contracts: Array<{ check_item: string }>;
+      section_contracts: Array<{ section_id: string }>;
+      specific_contract?: Record<string, unknown>;
+    }>;
+    loadSpecificContract(): Promise<{
+      document_contracts?: Array<{ check_item: string }>;
+      section_contracts?: Array<{ section_id: string }>;
+      specific_contract?: { source?: string };
+      stage?: string;
+    }>;
+    resolveContractRules(
+      sharedContract: {
+        document_contracts: Array<{ check_item: string }>;
+        section_contracts: Array<{ section_id: string }>;
+        specific_contract?: Record<string, unknown>;
+      },
+      specificContract: {
+        document_contracts?: Array<{ check_item: string }>;
+        section_contracts?: Array<{ section_id: string }>;
+        specific_contract?: { source?: string };
+        stage?: string;
+      },
+    ): {
+      document_contracts: Array<{ check_item: string }>;
+      section_contracts: Array<{ section_id: string }>;
+      specific_contract?: { source?: string; stage?: string };
+    };
+  }).loadSharedContract();
+  const specificSpec = await (contract as unknown as {
+    loadSpecificContract(): Promise<{
+      document_contracts?: Array<{ check_item: string }>;
+      section_contracts?: Array<{ section_id: string }>;
+      specific_contract?: { source?: string };
+      stage?: string;
+    }>;
+  }).loadSpecificContract();
+  const spec = (contract as unknown as {
+    resolveContractRules(
+      sharedContract: {
+        document_contracts: Array<{ check_item: string }>;
+        section_contracts: Array<{ section_id: string }>;
+        specific_contract?: Record<string, unknown>;
+      },
+      specificContract: {
+        document_contracts?: Array<{ check_item: string }>;
+        section_contracts?: Array<{ section_id: string }>;
+        specific_contract?: { source?: string };
+        stage?: string;
+      },
+    ): {
+      document_contracts: Array<{ check_item: string }>;
+      section_contracts: Array<{ section_id: string }>;
+      specific_contract?: { source?: string; stage?: string };
+    };
+  }).resolveContractRules(sharedSpec, specificSpec);
+  const request = await (contract as unknown as {
+    buildCheckRequest(
+      context: {
+        taskId: string;
+        stageId: string;
+        attempt: number;
+        workspaceRoot: string;
+        inputArtifacts: Record<string, string>;
+      },
+      output: {
+        stageId: string;
+        success: boolean;
+        summary: string;
+        artifacts: { artifactKey: "requirement_document"; content: string };
+      },
+      contractSpec: unknown,
+    ): Promise<{
+      prompt: { systemPrompt: string; userPrompt: string };
+      responseFormat: "json";
+      metadata?: Record<string, string>;
+    }>;
+  }).buildCheckRequest(
+    {
+      taskId: "task-4",
+      stageId: "requirement_interpretation",
+      attempt: 1,
+      workspaceRoot: "/workspace/demo",
+      inputArtifacts: {},
+    },
+    {
+      stageId: "requirement_interpretation",
+      success: true,
+      summary: "Requirement document loaded.",
+      artifacts: {
+        artifactKey: "requirement_document",
+        content: createRequirementDocument(),
+      },
+    },
+    spec,
+  );
+
+  const payload = JSON.parse(request.prompt.userPrompt) as {
+    target: string;
+    generatedResult: string;
+    contractSpec: {
+      document_contracts: Array<{ check_item: string }>;
+      section_contracts: Array<{ section_id: string }>;
+      specific_contract?: { source?: string; stage?: string };
+    };
+  };
+
+  assert.equal(request.responseFormat, "json");
+  assert.equal(request.metadata?.stage, "requirement_interpretation");
+  assert.equal(request.metadata?.checkType, "contract");
+  assert.equal(request.prompt.systemPrompt.includes("Return JSON"), true);
+  assert.equal(payload.target, "requirement_contract_check");
+  assert.equal(payload.generatedResult.includes("# 1. Background"), true);
+  assert.deepEqual(
+    payload.contractSpec.document_contracts.map((entry) => entry.check_item),
+    spec.document_contracts.map((entry) => entry.check_item),
+  );
+  assert.equal(payload.contractSpec.specific_contract?.source, "meta_layer/resources/contract/RequirementTemplate.contract.json");
+  assert.equal(payload.contractSpec.specific_contract?.stage, "requirement_interpretation");
+  assert.equal(payload.contractSpec.section_contracts.length, sharedSpec.section_contracts.length);
 }
 
 function createRequirementDocument(): string {

@@ -7,12 +7,13 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
+import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
 import type { RequirementArtifacts } from "../../execution/requirement-generator/requirement-generator.js";
 import {
   DocumentStageContract,
   type ContractSpec,
-  type ContractCheckRequest,
   type ContractExecutionResult,
+  type SpecificContractSpec,
 } from "./document-stage-contract.js";
 
 const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
@@ -28,26 +29,65 @@ const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
 
 export class RequirementContract extends DocumentStageContract {
   protected async loadSharedContract(): Promise<ContractSpec> {
+    const content = await readFile(REQUIREMENT_TEMPLATE_CONTRACT_PATH, "utf8");
+    const parsed = JSON.parse(content) as ContractSpec;
     return {
-      document_contracts: [],
-      section_contracts: [],
+      document_contracts: parsed.document_contracts,
+      section_contracts: parsed.section_contracts,
+      specific_contract: {},
     };
   }
 
-  protected async loadSpecificContract(): Promise<ContractSpec> {
-    const content = await readFile(REQUIREMENT_TEMPLATE_CONTRACT_PATH, "utf8");
-    return JSON.parse(content) as ContractSpec;
+  protected async loadSpecificContract(): Promise<SpecificContractSpec> {
+    return {
+      document_contracts: [],
+      section_contracts: [],
+      specific_contract: {
+        source: "meta_layer/resources/contract/RequirementTemplate.contract.json",
+      },
+      stage: "requirement_interpretation",
+    };
   }
 
   protected async buildCheckRequest(
     _context: StageRunContext,
     output: StageOutput,
     contractSpec: ContractSpec,
-  ): Promise<ContractCheckRequest> {
+  ): Promise<LlmExecutionRequest> {
     const requirementOutput = output as StageOutput<RequirementArtifacts>;
+    const generatedResult = requirementOutput.artifacts.content.trim();
+
     return {
-      generatedResult: requirementOutput.artifacts.content.trim(),
-      contractSpec,
+      prompt: {
+        systemPrompt:
+          "You check whether a requirement document satisfies the provided contract spec. " +
+          "Return JSON with passed, summary, and issues only.",
+        userPrompt: JSON.stringify(
+          {
+            target: "requirement_contract_check",
+            generatedResult,
+            contractSpec,
+            requiredOutputShape: {
+              passed: "boolean",
+              summary: "string",
+              issues: [
+                {
+                  checkItem: "string",
+                  message: "string",
+                  severity: "low | medium | high",
+                },
+              ],
+            },
+          },
+          null,
+          2,
+        ),
+      },
+      responseFormat: "json",
+      metadata: {
+        stage: "requirement_interpretation",
+        checkType: "contract",
+      },
     };
   }
 
@@ -59,10 +99,13 @@ export class RequirementContract extends DocumentStageContract {
     };
   }
 
-  protected checkAgainstContractSpec(
-    generatedResult: string,
-    contractSpec: ContractSpec,
-  ): ContractExecutionResult {
+  protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
+    const promptPayload = JSON.parse(request.prompt.userPrompt) as {
+      generatedResult: string;
+      contractSpec: ContractSpec;
+    };
+    const generatedResult = promptPayload.generatedResult;
+    const contractSpec = promptPayload.contractSpec;
     const issues: ContractIssue[] = [];
 
     if (generatedResult.length === 0) {
@@ -79,7 +122,8 @@ export class RequirementContract extends DocumentStageContract {
 
     return {
       passed: issues.length === 0,
-      summary: issues.length === 0 ? "Requirement document passed contract checks." : "Requirement document failed contract checks.",
+      summary:
+        issues.length === 0 ? "Requirement document passed contract checks." : "Requirement document failed contract checks.",
       issues,
     };
   }
