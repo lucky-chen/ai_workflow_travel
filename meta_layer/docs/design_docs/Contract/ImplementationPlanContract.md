@@ -78,7 +78,7 @@ ImplementationPlanContract --> ImplementationPlanStageRunner: contract_check_res
 ```ts
 ChangeReviewRequest {
   taskId: context.taskId
-  stageId: "implementation_plan_generation"
+  stageId: "implementation_plan"
   summary: output.summary
   changedPaths: ["plans/implementation/ImplementationWorkPlan.md"]
   changedFiles: [

@@ -151,10 +151,10 @@ Stage-to-stage artifact mapping:
 - `module_design`
   - generator output: `artifacts.artifactKey == "module_design_document"`
   - downstream aggregation: `inputArtifacts["module_design_documents"]`
-- `implementation_plan_generation`
+- `implementation_plan`
   - generator output: `artifacts.artifactKey == "implementation_workplan"`
   - downstream handoff: `inputArtifacts["implementation_workplan"]`
-- `implementation_step_execution`
+- `implementation_execution`
   - generator output: `artifacts.generatedFiles`
   - runtime input: `inputArtifacts["implementation_workplan"]`
   - runtime input: `inputArtifacts["current_step"]`
@@ -181,11 +181,11 @@ Gate review-request mapping by stage:
   - review summary source: `output.summary`
   - review path: `docs/module_design/{moduleName}.md`
   - review content source: `output.artifacts.content`
-- `implementation_plan_generation`
+- `implementation_plan`
   - review summary source: `output.summary`
   - review path: `plans/implementation/ImplementationWorkPlan.md`
   - review content source: `output.artifacts.content`
-- `implementation_step_execution`
+- `implementation_execution`
   - review summary source: `output.summary`
   - review paths: `output.artifacts.generatedFiles[*].path`
   - review content source: `output.artifacts.generatedFiles[*].content`

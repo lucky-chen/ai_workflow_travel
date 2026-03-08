@@ -282,14 +282,14 @@ meta-layer task start --stage module_design --input architecture_design=artifact
 
 # start implementation plan generation with requirement, architecture, and all module-design docs
 meta-layer task start \
-  --stage implementation_plan_generation \
+  --stage implementation_plan \
   --input requirement_document=docs/requirements/Requirement.md \
   --input architecture_document=docs/architecture/TechnicalArchitecture.md \
   --input module_design_documents=docs/module_design/*.md
 
-# start implementation step execution with accepted workplan and current step
+# start implementation execution with accepted workplan and current step
 meta-layer task start \
-  --stage implementation_step_execution \
+  --stage implementation_execution \
   --input implementation_workplan=plans/implementation/ImplementationWorkPlan.md \
   --input current_step=step_1 \
   --project-path ./project_layer
@@ -309,4 +309,4 @@ meta-layer trace --task-id task_123
 - `CLI` should convert user input into stable upstream requests.
 - `CLI` should present progress and results in a stable command-line format.
 - `CLI` should support both workplan-level review and per-step review.
-- `CLI` should support runtime inputs required by implementation plan generation and implementation step execution, including `implementation_workplan`, `current_step`, and `project_path`.
+- `CLI` should support runtime inputs required by `implementation_plan` and `implementation_execution`, including `implementation_workplan`, `current_step`, and `project_path`.

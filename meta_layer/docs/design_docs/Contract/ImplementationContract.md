@@ -248,7 +248,7 @@ Recommended review-request mapping:
 ```ts
 ChangeReviewRequest {
   taskId: context.taskId
-  stageId: "implementation_step_execution"
+  stageId: "implementation_execution"
   summary: output.summary
   changedPaths: output.artifacts.generatedFiles.map((file) => file.path)
   changedFiles: output.artifacts.generatedFiles.map((file) => ({
