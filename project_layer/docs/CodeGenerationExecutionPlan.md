@@ -389,12 +389,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] pin implementation failure paths so reject and wait reviews never emit completion semantics
 ### Step 9. Align CLI And MCP Runtime Baseline
 
-- [x] Step 9 is in progress
-- [ ] Documents and modules in scope
-  - [ ] `Interface/CLI`
-  - [ ] `SDK/AgentRuntime`
-  - [ ] `SDK/LlmExecutor`
-  - [ ] runtime-to-document synchronization
+- [x] Step 9 is completed
+- [x] Documents and modules in scope
+  - [x] `Interface/CLI`
+  - [x] `SDK/AgentRuntime`
+  - [x] `SDK/LlmExecutor`
+  - [x] runtime-to-document synchronization
 - [x] Batch 1: CLI launch baseline
   - [x] align CLI interaction semantics
   - [x] converge CLI launch input to `workspace` as the single project root input
@@ -402,7 +402,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] remove explicit CLI artifact-path arguments from the baseline launch flow
   - [x] support `init` to copy bundled SDLC resources into `workspace/sdlc/resources`
   - [x] cover workspace-rooted launch behavior in CLI tests
-- [ ] Batch 2: workspace path and artifact layout alignment
+- [x] Batch 2: workspace path and artifact layout alignment
   - [x] make stage input loading resolve required artifacts from the workspace directory layout instead of explicit CLI artifact arguments
   - [x] make template and contract loading prefer `workspace/sdlc/resources` and fall back to bundled `dist/resources`
   - [x] move `implementation_workplan` off the hard-coded `plans/implementation/...` path and resolve it from a runner-owned `workspaceRoot` convention
@@ -410,7 +410,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] pin `implementation_execution` generated code target to `workspace/src`
   - [x] converge validation runtime input from `project_path` into `workspace`
   - [x] extend runner and validation tests for the new workspace-rooted path rules
-- [ ] Batch 3: design-doc and sequence synchronization
+- [x] Batch 3: design-doc and sequence synchronization
   - [x] sync `Interface/CLI.md` with workspace-rooted launch semantics and runtime-inline review behavior
   - [x] sync `Workflow/StageRunners.md` with `workspace/sdlc/docs`, `workspace/src`, and workspace-rooted validation semantics
   - [x] sync `SystemInteractionDesign.md` with workspace-driven input loading and output path conventions
@@ -418,7 +418,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] update sequence diagrams affected by runtime changes
   - [x] update plan status to reflect true implementation state
   - [x] confirm docs and runnable behavior are consistent
-- [ ] Batch 4: MCP baseline alignment
+- [x] Batch 4: MCP baseline alignment
   - [x] sync MCP baseline design intent across `SDK/AgentRuntime`, `SDK/LlmExecutor`, and `SystemInteractionDesign`
   - [x] expand `SDK/AgentRuntime` design to cover MCP baseline plus the forward-compatible session/memory/multi-turn evolution model
   - [x] add MCP protocol support to `AgentRuntime`
@@ -433,7 +433,7 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 10. Validate Baseline With `hello-service`
 
-- [ ] Step 10 is not started
+- [x] Step 10 is in progress
 - [ ] Architecture modules in scope
   - [ ] `SDK/AgentRuntime`
   - [ ] `SDK/LlmExecutor`
@@ -494,8 +494,8 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 6 is in progress
 - [x] Step 7 is completed
 - [x] Step 8 is in progress
-- [ ] Step 9 is not started
-- [ ] Step 10 is not started
+- [x] Step 9 is completed
+- [x] Step 10 is in progress
 - [ ] Step 11 is not started
 
 ## 5. Verification Rule
