@@ -9,6 +9,7 @@ import type {
 import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
+import type { ImplementationWorkPlan, ImplementationWorkPlanBatch, ImplementationWorkPlanStatus, ImplementationWorkPlanStep } from "../../shared/contracts/implementation-workplan.js";
 
 const IMPLEMENTATION_PLAN_CONTRACT_PATH = path.resolve(
   process.cwd(),
@@ -27,6 +28,68 @@ interface ImplementationPlanArtifacts {
 }
 
 export class ImplementationPlanContract extends DocumentStageContract {
+  parseWorkPlan(content: string): ImplementationWorkPlan {
+    const lines = content.split(/\r?\n/);
+    const steps: ImplementationWorkPlanStep[] = [];
+    let currentStep: ImplementationWorkPlanStep | undefined;
+    let currentBatch: ImplementationWorkPlanBatch | undefined;
+
+    for (const line of lines) {
+      const stepHeadingMatch = line.match(/^### Step (\d+)\.\s+Deliver\s+(.+)$/);
+      if (stepHeadingMatch) {
+        currentStep = {
+          stepId: `step-${stepHeadingMatch[1]}`,
+          title: stepHeadingMatch[2].trim(),
+          status: "not_started",
+          architectureModulesInScope: [],
+          batches: [],
+        };
+        steps.push(currentStep);
+        currentBatch = undefined;
+        continue;
+      }
+
+      if (!currentStep) {
+        continue;
+      }
+
+      const stepStatusMatch = line.match(/^- \[( |x)\]\s*`?Step \d+ is (.+?)`?$/);
+      if (stepStatusMatch) {
+        currentStep.status = this.parseStatus(stepStatusMatch[1], stepStatusMatch[2]);
+        continue;
+      }
+
+      const moduleMatch = line.match(/^  - \[( |x)\]\s*`?(.+?)`?$/);
+      if (moduleMatch && !currentBatch) {
+        currentStep.architectureModulesInScope.push(moduleMatch[2].trim());
+        continue;
+      }
+
+      const batchMatch = line.match(/^- \[( |x)\]\s*Batch (\d+):\s*(.+)$/);
+      if (batchMatch) {
+        currentBatch = {
+          batchId: `batch-${batchMatch[2]}`,
+          title: batchMatch[3].trim(),
+          status: batchMatch[1] === "x" ? "completed" : "not_started",
+          tasks: [],
+        };
+        currentStep.batches.push(currentBatch);
+        continue;
+      }
+
+      const taskMatch = line.match(/^  - \[( |x)\]\s*(.+)$/);
+      if (taskMatch && currentBatch) {
+        currentBatch.tasks.push(taskMatch[2].trim());
+      }
+    }
+
+    if (steps.length === 0 || steps.some((step) => step.batches.length === 0)) {
+      throw new Error("Implementation workplan markdown could not be parsed into a valid structured workplan.");
+    }
+
+    return { steps };
+  }
+
   protected getContractFilePath(): string {
     return IMPLEMENTATION_PLAN_CONTRACT_PATH;
   }
@@ -204,5 +267,13 @@ export class ImplementationPlanContract extends DocumentStageContract {
         severity: executionContract?.severity ?? "high",
       });
     }
+  }
+
+  private parseStatus(marker: string, label: string): ImplementationWorkPlanStatus {
+    if (marker !== "x") {
+      return "not_started";
+    }
+
+    return label.includes("partially completed") ? "in_progress" : "completed";
   }
 }

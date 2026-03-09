@@ -39,7 +39,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
 
   async run(
     context: StageRunContext,
-  ): Promise<StageOutput<ImplementationPlanArtifacts & { implementation_workplan: string }>> {
+  ): Promise<StageOutput<ImplementationPlanArtifacts & { implementation_workplan: string; parsed_implementation_workplan: string }>> {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ImplementationPlanArtifacts>;
@@ -56,12 +56,14 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
 
     await this.persistAcceptedArtifact(context, output.artifacts.content);
     await this.recordPersistenceResult(context, gateDecision);
+    const parsedWorkplan = this.contractChecker.parseWorkPlan(output.artifacts.content);
 
     return {
       ...output,
       artifacts: {
         ...output.artifacts,
         implementation_workplan: IMPLEMENTATION_PLAN_ARTIFACT_PATH,
+        parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
       },
     };
   }

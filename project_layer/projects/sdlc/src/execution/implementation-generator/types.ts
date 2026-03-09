@@ -1,5 +1,6 @@
 // Implementation generator types: local models used by the implementation generation workflow.
 import type { ChangedFile, ProjectFile } from "../../shared/types/common.js";
+import type { ImplementationWorkPlan, ImplementationWorkPlanBatch } from "../../shared/contracts/implementation-workplan.js";
 
 export interface ModuleDesignDoc {
   moduleName: string;
@@ -11,16 +12,6 @@ export interface ProjectContext {
   relevantFiles: ProjectFile[];
 }
 
-export interface ImplementationWorkPlanInput {
-  ref: string;
-  content: string;
-}
-
-export interface CurrentStepInput {
-  stepId: string;
-  raw: string;
-}
-
 export interface UpstreamImplementationContext {
   requirementDocument: string;
   architectureDocument: string;
@@ -28,8 +19,9 @@ export interface UpstreamImplementationContext {
 }
 
 export interface PreparedStepContext {
-  workplan: ImplementationWorkPlanInput;
-  currentStep: CurrentStepInput;
+  workplanRef: string;
+  workplan: ImplementationWorkPlan;
+  currentBatch: ImplementationWorkPlanBatch;
   upstreamContext: UpstreamImplementationContext;
 }
 

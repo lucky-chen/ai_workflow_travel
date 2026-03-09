@@ -10,6 +10,7 @@ export async function runImplementationPlanContractTests(): Promise<void> {
 
   try {
     await testImplementationPlanContractPassesForStructuredWorkplan(workspaceRoot);
+    await testImplementationPlanContractParsesStructuredWorkplan();
     await testImplementationPlanContractFailsForMissingSections(workspaceRoot);
     await testImplementationPlanContractFailsForBrokenStepStructure(workspaceRoot);
     await testImplementationPlanContractRejectsInvalidLlmResult(workspaceRoot);
@@ -32,6 +33,20 @@ async function testImplementationPlanContractPassesForStructuredWorkplan(workspa
     summary: "Implementation workplan passed contract checks.",
     issues: [],
   });
+}
+
+async function testImplementationPlanContractParsesStructuredWorkplan(): Promise<void> {
+  const contract = new ImplementationPlanContract();
+  const parsed = contract.parseWorkPlan(createImplementationPlanDocument());
+
+  assert.equal(parsed.steps[0]?.stepId, "step-1");
+  assert.equal(parsed.steps[0]?.title, "Shared Workflow Backbone");
+  assert.equal(parsed.steps[0]?.status, "in_progress");
+  assert.deepEqual(parsed.steps[0]?.architectureModulesInScope, ["Workflow/Pipeline"]);
+  assert.equal(parsed.steps[0]?.batches[0]?.batchId, "batch-1");
+  assert.equal(parsed.steps[0]?.batches[0]?.title, "interfaces and skeleton");
+  assert.equal(parsed.steps[0]?.batches[0]?.status, "completed");
+  assert.deepEqual(parsed.steps[0]?.batches[0]?.tasks, ["shared contracts"]);
 }
 
 async function testImplementationPlanContractFailsForMissingSections(workspaceRoot: string): Promise<void> {

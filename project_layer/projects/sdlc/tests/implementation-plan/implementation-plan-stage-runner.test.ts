@@ -46,6 +46,12 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
   });
 
   assert.equal(output.artifacts.implementation_workplan, "plans/implementation/ImplementationWorkPlan.md");
+  assert.equal(typeof output.artifacts.parsed_implementation_workplan, "string");
+  const parsedWorkplan = JSON.parse(output.artifacts.parsed_implementation_workplan) as {
+    steps: Array<{ stepId: string; batches: Array<{ batchId: string }> }>;
+  };
+  assert.equal(parsedWorkplan.steps[0]?.stepId, "step-1");
+  assert.equal(parsedWorkplan.steps[0]?.batches[0]?.batchId, "batch-1");
   assert.equal(
     await artifactStore.getArtifact({
       taskId: "task-1",
@@ -201,5 +207,6 @@ function createImplementationPlanDocument(): string {
     "  - [x] `Workflow/Pipeline`",
     "- [x] Batch 1: interfaces and skeleton",
     "  - [x] shared contracts",
+    "  - [x] stage registry",
   ].join("\n");
 }

@@ -53,7 +53,7 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
       taskId,
       stageId: "implementation_plan",
       filePath: "plans/implementation/ImplementationWorkPlan.md",
-      content: "# Implementation Workplan\n\n## Step 1\n- id: step-1\n",
+      content: createImplementationWorkplanDocument(),
     });
   }
 
@@ -115,7 +115,7 @@ async function testImplementationStageRunnerApply(
   assert.deepEqual(gitCommitter.calls, [
     {
       workspaceRoot,
-      stepId: "step-1",
+      stepId: "batch-1",
     },
   ]);
   const updatedWorkplan = await artifactStore.getArtifact({
@@ -124,7 +124,7 @@ async function testImplementationStageRunnerApply(
     filePath: "plans/implementation/ImplementationWorkPlan.md",
   });
   assert.equal(updatedWorkplan.includes("## 4. Implementation Execution State"), true);
-  assert.equal(updatedWorkplan.includes("- [x] step-1"), true);
+  assert.equal(updatedWorkplan.includes("- [x] batch-1"), true);
   assert.equal(
     await readFile(path.join(workspaceRoot, "plans", "implementation", "ImplementationWorkPlan.md"), "utf8"),
     updatedWorkplan,
@@ -271,6 +271,7 @@ function createRunContext(
     requirement_document: "# requirement",
     architecture_document: "# architecture",
     implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
+    parsed_implementation_workplan: JSON.stringify(createParsedWorkplan()),
     current_step: "step-1",
   };
 
@@ -331,4 +332,50 @@ class MockImplementationGitCommitter implements IImplementationGitCommitter {
   async commit(context: { workspaceRoot: string; stepId: string }): Promise<void> {
     this.calls.push(context);
   }
+}
+
+function createParsedWorkplan() {
+  return {
+    steps: [
+      {
+        stepId: "step-1",
+        title: "Shared Workflow Backbone",
+        status: "in_progress",
+        architectureModulesInScope: ["Workflow/Pipeline"],
+        batches: [
+          {
+            batchId: "batch-1",
+            title: "interfaces and skeleton",
+            status: "completed",
+            tasks: ["shared contracts"],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function createImplementationWorkplanDocument(): string {
+  return [
+    "# Code Generation Execution Plan",
+    "",
+    "## 1. Purpose",
+    "Build project_layer from zero to a complete workflow.",
+    "",
+    "## 1.1 Collaboration Rule",
+    "All implementation work under this plan must follow the shared collaboration standard:",
+    "",
+    "- `project_layer/docs/COLLABORATION_STANDARD.md`",
+    "",
+    "## 2. Workflow Delivery Order",
+    "1. shared workflow backbone",
+    "",
+    "## 3. Execution Steps",
+    "### Step 1. Deliver Shared Workflow Backbone",
+    "- [x] Step 1 is partially completed",
+    "- [x] Architecture modules in scope",
+    "  - [x] `Workflow/Pipeline`",
+    "- [x] Batch 1: interfaces and skeleton",
+    "  - [x] shared contracts",
+  ].join("\n");
 }

@@ -7,6 +7,7 @@ import { ImplementationGenerator } from "../../src/execution/implementation-gene
 import { ProjectContextLoader } from "../../src/execution/implementation-generator/project-context-loader.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import type { ProjectFile } from "../../src/shared/types/common.js";
+import type { ImplementationWorkPlan } from "../../src/shared/contracts/implementation-workplan.js";
 
 export async function runImplementationGeneratorTests(): Promise<void> {
   const storageRoot = await createTempDir("implementation-generator-");
@@ -71,13 +72,13 @@ async function testImplementationGeneratorProducesPlannedChanges(
     workspaceRoot,
     inputArtifacts: {
       prepared_step_context: JSON.stringify({
-        workplan: {
-          ref: "plans/implementation/ImplementationWorkPlan.md",
-          content: "# plan",
-        },
-        currentStep: {
-          stepId: "step-1",
-          raw: "step-1",
+        workplanRef: "plans/implementation/ImplementationWorkPlan.md",
+        workplan: createParsedWorkplan(),
+        currentBatch: {
+          batchId: "batch-1",
+          title: "interfaces and skeleton",
+          status: "completed",
+          tasks: ["shared contracts"],
         },
         upstreamContext: {
           requirementDocument: "# requirement",
@@ -122,16 +123,18 @@ async function testImplementationGeneratorProducesPlannedChanges(
   assert.equal(await readFile(path.join(workspaceRoot, "obsolete.txt"), "utf8"), "to be deleted\n");
 
   const requestPayload = JSON.parse(llmExecutor.getLastRequest()!.prompt.userPrompt) as {
-    workplan: { ref: string; content: string };
-    currentStep: { stepId: string };
+    workplanRef: string;
+    workplan: { steps: Array<{ stepId: string }> };
+    currentBatch: { batchId: string };
     upstreamContext: {
       requirementDocument: string;
       architectureDocument: string;
       moduleDesignDocuments: Array<{ moduleName: string; content: string }>;
     };
   };
-  assert.equal(requestPayload.workplan.ref, "plans/implementation/ImplementationWorkPlan.md");
-  assert.equal(requestPayload.currentStep.stepId, "step-1");
+  assert.equal(requestPayload.workplanRef, "plans/implementation/ImplementationWorkPlan.md");
+  assert.equal(requestPayload.workplan.steps[0]?.stepId, "step-1");
+  assert.equal(requestPayload.currentBatch.batchId, "batch-1");
   assert.equal(requestPayload.upstreamContext.requirementDocument, "# requirement");
   assert.equal(requestPayload.upstreamContext.architectureDocument, "# architecture");
   assert.deepEqual(requestPayload.upstreamContext.moduleDesignDocuments, [
@@ -140,6 +143,27 @@ async function testImplementationGeneratorProducesPlannedChanges(
       content: "# module design",
     },
   ]);
+}
+
+function createParsedWorkplan(): ImplementationWorkPlan {
+  return {
+    steps: [
+      {
+        stepId: "step-1",
+        title: "Shared Workflow Backbone",
+        status: "in_progress",
+        architectureModulesInScope: ["Workflow/Pipeline"],
+        batches: [
+          {
+            batchId: "batch-1",
+            title: "interfaces and skeleton",
+            status: "completed",
+            tasks: ["shared contracts"],
+          },
+        ],
+      },
+    ],
+  };
 }
 
 async function testImplementationGeneratorRequiresPreparedStepContext(

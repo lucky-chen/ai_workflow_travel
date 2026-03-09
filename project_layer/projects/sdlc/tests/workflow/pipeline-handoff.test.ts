@@ -113,6 +113,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       implementationExecutionContext.inputArtifacts.implementation_workplan,
       "plans/implementation/ImplementationWorkPlan.md",
     );
+    assert.equal(typeof implementationExecutionContext.inputArtifacts.parsed_implementation_workplan, "string");
     const implementationPlanOutput = await artifactStore.getArtifact({
       taskId,
       stageId: "implementation_plan",
@@ -162,6 +163,24 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
           "docs/module_design/Data.md",
         ]),
         implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
+        parsed_implementation_workplan: JSON.stringify({
+          steps: [
+            {
+              stepId: "step-1",
+              title: "Shared Workflow Backbone",
+              status: "in_progress",
+              architectureModulesInScope: ["Workflow/Pipeline"],
+              batches: [
+                {
+                  batchId: "batch-1",
+                  title: "interfaces and skeleton",
+                  status: "completed",
+                  tasks: ["shared contracts"],
+                },
+              ],
+            },
+          ],
+        }),
       },
       params: undefined,
     });

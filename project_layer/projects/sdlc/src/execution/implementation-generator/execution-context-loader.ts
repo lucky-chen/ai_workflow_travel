@@ -29,16 +29,17 @@ export class ExecutionContextLoader {
 
     const candidate = value as Partial<PreparedStepContext>;
     return Boolean(
-      candidate.workplan
-      && typeof candidate.workplan.ref === "string"
-      && candidate.workplan.ref.length > 0
-      && typeof candidate.workplan.content === "string"
-      && candidate.workplan.content.length > 0
-      && candidate.currentStep
-      && typeof candidate.currentStep.stepId === "string"
-      && candidate.currentStep.stepId.length > 0
-      && typeof candidate.currentStep.raw === "string"
-      && candidate.currentStep.raw.length > 0
+      typeof candidate.workplanRef === "string"
+      && candidate.workplanRef.length > 0
+      && candidate.workplan
+      && Array.isArray(candidate.workplan.steps)
+      && candidate.workplan.steps.length > 0
+      && candidate.currentBatch
+      && typeof candidate.currentBatch.batchId === "string"
+      && candidate.currentBatch.batchId.length > 0
+      && typeof candidate.currentBatch.title === "string"
+      && candidate.currentBatch.title.length > 0
+      && Array.isArray(candidate.currentBatch.tasks)
       && candidate.upstreamContext
       && typeof candidate.upstreamContext.requirementDocument === "string"
       && candidate.upstreamContext.requirementDocument.length > 0

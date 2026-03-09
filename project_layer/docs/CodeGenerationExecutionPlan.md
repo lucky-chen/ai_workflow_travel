@@ -273,14 +273,14 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] keep `ImplementationContract.check(...)` scoped to generated-result validation only
 - [x] Batch 3: implementation execution-context loading
   - [x] validate `implementation_workplan` and the current execution batch input before generator execution in `ImplementationStageRunner.run(...)`
-  - [ ] make `ImplementationPlanContract` parse accepted `implementation_workplan` markdown into a structured workplan
+  - [x] make `ImplementationPlanContract` parse accepted `implementation_workplan` markdown into a structured workplan
   - [x] assemble the current execution batch context inside `ImplementationStageRunner`
-  - [ ] pass the contract-produced structured workplan into `ImplementationGenerator`
+  - [x] pass the contract-produced structured workplan into `ImplementationGenerator`
   - [x] load upstream `requirement_document` and `architecture_document` into implementation generation input
   - [x] load all relevant `module_design_documents` for the current execution batch
   - [x] pass runner-prepared batch context into `ImplementationGenerator`
-  - [ ] extend tests for explicit workplan-batch context before generator execution
-  - [ ] extend tests for parsed workplan handoff and prompt input completeness
+  - [x] extend tests for explicit workplan-batch context before generator execution
+  - [x] extend tests for parsed workplan handoff and prompt input completeness
 - [x] Batch 4: execution-environment contract validation
   - [x] apply generated changes into the target project workspace before test execution
   - [x] make `ImplementationContract` validate the applied implementation-execution result by running the configured test script in the target project workspace

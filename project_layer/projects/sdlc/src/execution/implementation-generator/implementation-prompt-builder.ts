@@ -12,8 +12,9 @@ export class ImplementationPromptBuilder {
         userPrompt: JSON.stringify(
           {
             target: "implementation",
+            workplanRef: input.preparedStepContext.workplanRef,
             workplan: input.preparedStepContext.workplan,
-            currentStep: input.preparedStepContext.currentStep,
+            currentBatch: input.preparedStepContext.currentBatch,
             upstreamContext: input.preparedStepContext.upstreamContext,
             projectContext: {
               rootPath: input.projectContext.rootPath,
