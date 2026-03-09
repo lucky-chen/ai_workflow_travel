@@ -389,18 +389,33 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] pin implementation failure paths so reject and wait reviews never emit completion semantics
 ### Step 9. Align CLI And MCP Runtime Baseline
 
-- [ ] Step 9 is not started
+- [x] Step 9 is in progress
 - [ ] Documents and modules in scope
   - [ ] `Interface/CLI`
   - [ ] `SDK/AgentRuntime`
   - [ ] `SDK/LlmExecutor`
   - [ ] runtime-to-document synchronization
-- [ ] Batch 1: CLI baseline alignment
-  - [ ] align CLI interaction semantics
+- [ ] Batch 1: CLI launch baseline
+  - [x] align CLI interaction semantics
+  - [ ] converge CLI launch input to `workspace` as the single project root input
+  - [ ] keep review as runtime-inline CLI interaction and do not introduce a standalone `review` command
+  - [ ] remove explicit CLI artifact-path arguments from the baseline launch flow
+  - [ ] cover workspace-rooted launch behavior in CLI tests
+- [ ] Batch 2: workspace path and artifact layout alignment
+  - [ ] make stage input loading resolve required artifacts from the workspace directory layout instead of explicit CLI artifact arguments
+  - [ ] redirect document-stage outputs into `workspace/docs/generated`
+  - [ ] pin `implementation_execution` generated code target to `workspace/src`
+  - [ ] converge validation runtime input from `project_path` into `workspace`
+  - [ ] extend runner and validation tests for the new workspace-rooted path rules
+- [ ] Batch 3: design-doc and sequence synchronization
+  - [ ] sync `Interface/CLI.md` with workspace-rooted launch semantics and runtime-inline review behavior
+  - [ ] sync `Workflow/StageRunners.md` with `workspace/docs/generated`, `workspace/src`, and workspace-rooted validation semantics
+  - [ ] sync `SystemInteractionDesign.md` with workspace-driven input loading and output path conventions
+  - [ ] sync architecture-level path semantics only where the current architecture doc still reflects the old layout assumptions
   - [ ] update sequence diagrams affected by runtime changes
   - [ ] update plan status to reflect true implementation state
   - [ ] confirm docs and runnable behavior are consistent
-- [ ] Batch 2: MCP baseline alignment
+- [ ] Batch 4: MCP baseline alignment
   - [ ] add MCP protocol support to `AgentRuntime`
   - [ ] add file read/write as the default MCP-backed tool capability
   - [ ] promote MCP support into stable runtime planning, execution, and trace semantics
@@ -421,8 +436,10 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] `hello-service` verification target
 - [ ] Batch 1: hello-service end-to-end baseline verification
   - [ ] create or prepare one minimal `hello-service` target
-  - [ ] verify the MCP-enabled runtime can read and write project files through the default file tool
-  - [ ] verify the baseline execution path against a minimal service change
+  - [ ] verify the CLI can launch from `workspace` without explicit artifact path arguments
+  - [ ] verify document artifacts are produced under `workspace/docs/generated`
+  - [ ] verify `implementation_execution` targets `workspace/src`
+  - [ ] verify validation runs against `workspace`
   - [ ] capture validation evidence for the runnable backbone
   - [ ] record scope limits and follow-up gaps before broader agent capability expansion
 
