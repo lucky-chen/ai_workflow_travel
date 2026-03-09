@@ -76,6 +76,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     );
     await this.gitCommitter.commit({
       workspaceRoot: context.workspaceRoot,
+      stepId: this.parseCurrentExecutionPointer(preparedContext.inputArtifacts.current_step).stepId,
       batchId: preparedStepContext.currentBatch.batchId,
     });
 

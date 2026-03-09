@@ -127,6 +127,7 @@ async function testImplementationStageRunnerApply(
   assert.deepEqual(gitCommitter.calls, [
     {
       workspaceRoot,
+      stepId: "step-1",
       batchId: "batch-1",
     },
   ]);
@@ -480,9 +481,9 @@ class MockLlmExecutor implements ILlmExecutor {
 }
 
 class MockImplementationGitCommitter implements IImplementationGitCommitter {
-  readonly calls: Array<{ workspaceRoot: string; batchId: string }> = [];
+  readonly calls: Array<{ workspaceRoot: string; stepId: string; batchId: string }> = [];
 
-  async commit(context: { workspaceRoot: string; batchId: string }): Promise<void> {
+  async commit(context: { workspaceRoot: string; stepId: string; batchId: string }): Promise<void> {
     this.calls.push(context);
   }
 }
