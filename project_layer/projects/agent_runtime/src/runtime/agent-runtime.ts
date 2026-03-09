@@ -7,6 +7,8 @@ import { DefaultPlanner } from "./default-planner.js";
 import type { IAgent, IMcpGateway, IModelExecutionBackend } from "./agent-runtime-types.js";
 
 export * from "./agent-runtime-types.js";
+export { AgentTraceApi } from "./agent-trace-api.js";
+export * from "./agent-trace-events.js";
 export { DefaultAgent } from "./default-agent.js";
 export { DefaultPlanner } from "./default-planner.js";
 export { DefaultObserver } from "./default-observer.js";
