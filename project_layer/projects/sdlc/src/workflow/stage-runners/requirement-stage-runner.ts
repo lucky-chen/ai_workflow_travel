@@ -4,6 +4,7 @@ import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import { RequirementContract } from "../../contract/requirement-contract/requirement-contract.js";
 import { RequirementGenerator, type RequirementArtifacts } from "../../execution/requirement-generator/requirement-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
+import { resolveRequirementArtifactPath } from "./stage-artifact-paths.js";
 
 export interface RequirementStageRunnerDependencies extends BaseStageRunnerDependencies {
   artifactStore: IArtifactStore;
@@ -11,8 +12,6 @@ export interface RequirementStageRunnerDependencies extends BaseStageRunnerDepen
   traceRecorder?: ITraceRecorder;
   changeGate?: IChangeGate;
 }
-
-const REQUIREMENT_ARTIFACT_PATH = "docs/requirements/Requirement.md";
 
 export class RequirementStageRunner extends BaseStageRunner {
   private readonly generator = new RequirementGenerator();
@@ -33,19 +32,20 @@ export class RequirementStageRunner extends BaseStageRunner {
       throw new Error(`Requirement contract failed: ${contractResult.summary}`);
     }
 
+    const artifactPath = resolveRequirementArtifactPath(context.workspaceRoot);
     const gateDecision = await this.reviewChanges(this.buildReviewRequest(context, output.artifacts.content));
     if (gateDecision.action !== "apply") {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
-    await this.persistAcceptedArtifact(context, output.artifacts.content);
-    await this.recordPersistenceResult(context, gateDecision);
+    await this.persistAcceptedArtifact(context, artifactPath, output.artifacts.content);
+    await this.recordPersistenceResult(context, gateDecision, artifactPath);
 
     return {
       ...output,
       artifacts: {
         ...output.artifacts,
-        requirement_document: REQUIREMENT_ARTIFACT_PATH,
+        requirement_document: artifactPath,
       },
     };
   }
@@ -57,14 +57,15 @@ export class RequirementStageRunner extends BaseStageRunner {
     changedPaths: string[];
     changedFiles: ChangedFile[];
   } {
+    const artifactPath = resolveRequirementArtifactPath(context.workspaceRoot);
     return {
       taskId: context.taskId,
       stageId: context.stageId,
       summary: "Requirement document ready for review.",
-      changedPaths: [REQUIREMENT_ARTIFACT_PATH],
+      changedPaths: [artifactPath],
       changedFiles: [
         {
-          path: REQUIREMENT_ARTIFACT_PATH,
+          path: artifactPath,
           operation: "update",
           content,
         },
@@ -72,7 +73,7 @@ export class RequirementStageRunner extends BaseStageRunner {
     };
   }
 
-  private async persistAcceptedArtifact(context: StageRunContext, content: string): Promise<void> {
+  private async persistAcceptedArtifact(context: StageRunContext, artifactPath: string, content: string): Promise<void> {
     if (!this.artifactStore) {
       throw new Error("RequirementStageRunner requires an artifactStore.");
     }
@@ -80,16 +81,20 @@ export class RequirementStageRunner extends BaseStageRunner {
     await this.artifactStore.writeArtifact({
       taskId: context.taskId,
       stageId: context.stageId,
-      filePath: REQUIREMENT_ARTIFACT_PATH,
+      filePath: artifactPath,
       content,
     });
   }
 
-  private async recordPersistenceResult(context: StageRunContext, gateDecision: GateDecision): Promise<void> {
+  private async recordPersistenceResult(
+    context: StageRunContext,
+    gateDecision: GateDecision,
+    artifactPath: string,
+  ): Promise<void> {
     await super.recordSharedPersistenceResult(
       context,
-      REQUIREMENT_ARTIFACT_PATH,
-      `Accepted requirement artifact persisted to ${REQUIREMENT_ARTIFACT_PATH}.`,
+      artifactPath,
+      `Accepted requirement artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
   }

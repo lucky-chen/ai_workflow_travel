@@ -14,6 +14,7 @@ import {
   type ArchitectureDesignArtifacts,
 } from "../../execution/architecture-design-generator/architecture-design-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
+import { resolveArchitectureArtifactPath } from "./stage-artifact-paths.js";
 
 export interface ArchitectureStageRunnerDependencies extends BaseStageRunnerDependencies {
   llmExecutor: ILlmExecutor;
@@ -21,8 +22,6 @@ export interface ArchitectureStageRunnerDependencies extends BaseStageRunnerDepe
   traceRecorder?: ITraceRecorder;
   changeGate?: IChangeGate;
 }
-
-const ARCHITECTURE_ARTIFACT_PATH = "docs/architecture/TechnicalArchitecture.md";
 
 export class ArchitectureStageRunner extends BaseStageRunner {
   private readonly generator: ArchitectureDesignGenerator;
@@ -49,19 +48,20 @@ export class ArchitectureStageRunner extends BaseStageRunner {
       throw new Error(`Architecture contract failed: ${contractResult.summary}`);
     }
 
+    const artifactPath = resolveArchitectureArtifactPath(context.workspaceRoot);
     const gateDecision = await this.reviewChanges(this.buildReviewRequest(context, output.artifacts.content));
     if (gateDecision.action !== "apply") {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
-    await this.persistAcceptedArtifact(context, output.artifacts.content);
-    await this.recordPersistenceResult(context, gateDecision);
+    await this.persistAcceptedArtifact(context, artifactPath, output.artifacts.content);
+    await this.recordPersistenceResult(context, gateDecision, artifactPath);
 
     return {
       ...output,
       artifacts: {
         ...output.artifacts,
-        architecture_document: ARCHITECTURE_ARTIFACT_PATH,
+        architecture_document: artifactPath,
       },
     };
   }
@@ -73,14 +73,15 @@ export class ArchitectureStageRunner extends BaseStageRunner {
     changedPaths: string[];
     changedFiles: ChangedFile[];
   } {
+    const artifactPath = resolveArchitectureArtifactPath(context.workspaceRoot);
     return {
       taskId: context.taskId,
       stageId: context.stageId,
       summary: "Architecture design document ready for review.",
-      changedPaths: [ARCHITECTURE_ARTIFACT_PATH],
+      changedPaths: [artifactPath],
       changedFiles: [
         {
-          path: ARCHITECTURE_ARTIFACT_PATH,
+          path: artifactPath,
           operation: "update",
           content,
         },
@@ -88,7 +89,7 @@ export class ArchitectureStageRunner extends BaseStageRunner {
     };
   }
 
-  private async persistAcceptedArtifact(context: StageRunContext, content: string): Promise<void> {
+  private async persistAcceptedArtifact(context: StageRunContext, artifactPath: string, content: string): Promise<void> {
     if (!this.artifactStore) {
       throw new Error("ArchitectureStageRunner requires an artifactStore.");
     }
@@ -96,16 +97,20 @@ export class ArchitectureStageRunner extends BaseStageRunner {
     await this.artifactStore.writeArtifact({
       taskId: context.taskId,
       stageId: context.stageId,
-      filePath: ARCHITECTURE_ARTIFACT_PATH,
+      filePath: artifactPath,
       content,
     });
   }
 
-  private async recordPersistenceResult(context: StageRunContext, gateDecision: GateDecision): Promise<void> {
+  private async recordPersistenceResult(
+    context: StageRunContext,
+    gateDecision: GateDecision,
+    artifactPath: string,
+  ): Promise<void> {
     await super.recordSharedPersistenceResult(
       context,
-      ARCHITECTURE_ARTIFACT_PATH,
-      `Accepted architecture artifact persisted to ${ARCHITECTURE_ARTIFACT_PATH}.`,
+      artifactPath,
+      `Accepted architecture artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
   }

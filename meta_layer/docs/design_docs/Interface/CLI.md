@@ -214,7 +214,6 @@ interface LaunchTaskRequest {
   start_stage: string
   input_refs: Record<string, string | string[]>
   target_step?: string
-  project_path?: string
 }
 
 interface CLIRequestMapper {
@@ -268,31 +267,20 @@ interface TraceViewer {
 ### 4.2 Example Commands
 
 ```text
-# start from the default first stage
-meta-layer task start --input requirement=docs/Requirement.md
+# initialize bundled resources into the workspace
+meta-layer init --workspace ./hello-service
 
 # start directly from architecture design stage
-meta-layer task start --stage architecture_design --input requirement=artifacts/requirement.json
-
-# start directly from module design stage with upstream architecture artifact
-meta-layer task start --stage module_design --input architecture_design=artifacts/architecture_design.json
+meta-layer generate --stage architecture_design --workspace ./hello-service
 
 # start module design for one specific module only
-meta-layer task start --stage module_design --input architecture_design=artifacts/architecture_design.json --module user_service
+meta-layer generate --stage module_design --workspace ./hello-service --target-module user_service
 
-# start implementation plan generation with requirement, architecture, and all module-design docs
-meta-layer task start \
-  --stage implementation_plan \
-  --input requirement_document=docs/requirements/Requirement.md \
-  --input architecture_document=docs/architecture/TechnicalArchitecture.md \
-  --input module_design_documents=docs/module_design/*.md
+# start implementation plan generation from workspace-managed docs
+meta-layer generate --stage implementation_plan --workspace ./hello-service
 
-# start implementation execution with accepted workplan and current step
-meta-layer task start \
-  --stage implementation_execution \
-  --input implementation_workplan=plans/implementation/ImplementationWorkPlan.md \
-  --input current_step='{"stepId":"step-1","batchId":"batch-1"}' \
-  --project-path ./project_layer
+# run final validation against the workspace root
+meta-layer generate --stage validation --workspace ./hello-service
 
 # review a pending change
 meta-layer review --review-id review_123
@@ -309,4 +297,7 @@ meta-layer trace --task-id task_123
 - `CLI` should convert user input into stable upstream requests.
 - `CLI` should present progress and results in a stable command-line format.
 - `CLI` should support both workplan-level review and per-step review.
-- `CLI` should support runtime inputs required by `implementation_plan` and `implementation_execution`, including `implementation_workplan`, `current_step`, and `project_path`.
+- `CLI` should treat `workspace` as the single user-provided project root.
+- `CLI` should read document-stage upstream inputs from `workspace/sdlc/docs/...`.
+- `CLI` should bootstrap reusable runtime resources into `workspace/sdlc/resources`.
+- `CLI` should treat validation as a workspace-rooted run and should not require a separate `project_path`.

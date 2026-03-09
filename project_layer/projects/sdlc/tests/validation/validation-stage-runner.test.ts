@@ -34,7 +34,7 @@ async function testValidationStageRunnerPassesWithoutOptionalCollaborators(): Pr
     }),
   });
 
-  const output = await runner.run(createContext({ project_path: "/tmp/project" }));
+  const output = await runner.run(createContext());
 
   assert.deepEqual(output, {
     stageId: "validation",
@@ -42,7 +42,7 @@ async function testValidationStageRunnerPassesWithoutOptionalCollaborators(): Pr
     summary: 'Shell command passed: cd "/tmp/project" && npm test',
     artifacts: {
       artifactKey: "validation_result",
-      projectPath: "/tmp/project",
+      projectPath: "/tmp/validation-workspace",
       command: 'cd "/tmp/project" && npm test',
       exitCode: 0,
       logs: "ok",
@@ -69,10 +69,7 @@ async function testValidationStageRunnerRejectsOnGateDecision(): Promise<void> {
 
   await assert.rejects(
     runner.run(
-      createContext(
-        { project_path: "/tmp/project" },
-        { validationCommand: "custom validation" },
-      ),
+      createContext({ validationCommand: "custom validation" }),
     ),
     /Validation review ended with action "reject"\./,
   );
@@ -99,10 +96,7 @@ async function testValidationStageRunnerRecordsReviewCommentInTrace(): Promise<v
 
   await assert.rejects(
     runner.run(
-      createContext(
-        { project_path: "/tmp/project" },
-        { validationCommand: "custom validation" },
-      ),
+      createContext({ validationCommand: "custom validation" }),
     ),
     /Validation review ended with action "wait"\./,
   );
@@ -132,10 +126,7 @@ async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(
   });
 
   const output = await runner.run(
-    createContext(
-      { project_path: "/tmp/project" },
-      { validationCommand: "custom validation" },
-    ),
+    createContext({ validationCommand: "custom validation" }),
   );
 
   assert.equal(output.artifacts.command, "custom validation");
@@ -155,16 +146,13 @@ async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(
   ]);
 }
 
-function createContext(
-  inputArtifacts: Record<string, string>,
-  params?: Record<string, string>,
-) {
+function createContext(params?: Record<string, string>) {
   return {
     taskId: "task-validation",
     stageId: "validation",
     attempt: 1,
     workspaceRoot: "/tmp/validation-workspace",
-    inputArtifacts,
+    inputArtifacts: {},
     params,
   };
 }

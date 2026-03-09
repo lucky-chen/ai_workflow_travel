@@ -4,6 +4,11 @@ import path from "node:path";
 
 import { ImplementationPlanGenerator } from "../../src/execution/implementation-plan-generator/implementation-plan-generator.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveModuleDesignArtifactPath,
+  resolveRequirementArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationPlanGeneratorTests(): Promise<void> {
   const workspaceRoot = await createTempDir("implementation-plan-generator-");
@@ -30,11 +35,11 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     attempt: 1,
     workspaceRoot,
     inputArtifacts: {
-      requirement_document: "docs/requirements/Requirement.md",
-      architecture_document: "docs/architecture/TechnicalArchitecture.md",
+      requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+      architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
       module_design_documents: JSON.stringify([
-        "docs/module_design/Workflow.md",
-        "docs/module_design/Data.md",
+        resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
+        resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
       ]),
     },
   });
@@ -61,11 +66,11 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     template: string;
   };
   assert.equal(payload.target, "implementation_plan");
-  assert.equal(payload.requirementDocument, "docs/requirements/Requirement.md");
-  assert.equal(payload.architectureDocument, "docs/architecture/TechnicalArchitecture.md");
+  assert.equal(payload.requirementDocument, resolveRequirementArtifactPath("/tmp/workspace"));
+  assert.equal(payload.architectureDocument, resolveArchitectureArtifactPath("/tmp/workspace"));
   assert.deepEqual(payload.moduleDesignDocuments, [
-    "docs/module_design/Workflow.md",
-    "docs/module_design/Data.md",
+    resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
+    resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);
   assert.equal(payload.template.includes("# Code Generation Execution Plan Template"), true);
 }
@@ -80,8 +85,8 @@ async function testImplementationPlanGeneratorRequiresRequirementDocument(worksp
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
-        architecture_document: "docs/architecture/TechnicalArchitecture.md",
-        module_design_documents: JSON.stringify(["docs/module_design/Workflow.md"]),
+        architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
+        module_design_documents: JSON.stringify([resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow")]),
       },
     }),
     /Missing required input artifact "requirement_document"\./,
@@ -98,8 +103,8 @@ async function testImplementationPlanGeneratorRequiresArchitectureDocument(works
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
-        requirement_document: "docs/requirements/Requirement.md",
-        module_design_documents: JSON.stringify(["docs/module_design/Workflow.md"]),
+        requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+        module_design_documents: JSON.stringify([resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow")]),
       },
     }),
     /Missing required input artifact "architecture_document"\./,
@@ -116,8 +121,8 @@ async function testImplementationPlanGeneratorRequiresModuleDesignDocuments(work
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
-        requirement_document: "docs/requirements/Requirement.md",
-        architecture_document: "docs/architecture/TechnicalArchitecture.md",
+        requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+        architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
       },
     }),
     /Missing required input artifact "module_design_documents"\./,
@@ -134,8 +139,8 @@ async function testImplementationPlanGeneratorRejectsInvalidModuleDesignDocument
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
-        requirement_document: "docs/requirements/Requirement.md",
-        architecture_document: "docs/architecture/TechnicalArchitecture.md",
+        requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+        architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
         module_design_documents: "{invalid-json",
       },
     }),
@@ -153,9 +158,9 @@ async function testImplementationPlanGeneratorRejectsInvalidModuleDesignDocument
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
-        requirement_document: "docs/requirements/Requirement.md",
-        architecture_document: "docs/architecture/TechnicalArchitecture.md",
-        module_design_documents: JSON.stringify({ path: "docs/module_design/Workflow.md" }),
+        requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+        architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
+        module_design_documents: JSON.stringify({ path: resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow") }),
       },
     }),
     /Input artifact "module_design_documents" must contain a non-empty string array\./,

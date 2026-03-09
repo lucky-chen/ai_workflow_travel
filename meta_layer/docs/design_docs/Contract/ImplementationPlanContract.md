@@ -113,10 +113,10 @@ ChangeReviewRequest {
   taskId: context.taskId
   stageId: "implementation_plan"
   summary: output.summary
-  changedPaths: ["plans/implementation/ImplementationWorkPlan.md"]
+  changedPaths: ["sdlc/docs/CodeGenerationExecutionPlan.md"]
   changedFiles: [
     {
-      path: "plans/implementation/ImplementationWorkPlan.md",
+      path: "sdlc/docs/CodeGenerationExecutionPlan.md",
       operation: "create_or_update",
       content: output.artifacts.content,
     },
@@ -126,6 +126,6 @@ ChangeReviewRequest {
 
 ### 4.3 Persistence Limit
 
-- `ImplementationPlanStageRunner` persists accepted output to `plans/implementation/ImplementationWorkPlan.md`
+- `ImplementationPlanStageRunner` persists accepted output to `sdlc/docs/CodeGenerationExecutionPlan.md`
 - downstream `ImplementationGenerator` receives the accepted workplan through `inputArtifacts["implementation_workplan"]`
 - downstream runtime also receives the parsed `ImplementationWorkPlan` structure prepared by `ImplementationPlanContract`

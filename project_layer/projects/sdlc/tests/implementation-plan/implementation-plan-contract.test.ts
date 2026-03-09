@@ -4,6 +4,11 @@ import path from "node:path";
 
 import { ImplementationPlanContract } from "../../src/contract/implementation-plan-contract/implementation-plan-contract.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveModuleDesignArtifactPath,
+  resolveRequirementArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationPlanContractTests(): Promise<void> {
   const workspaceRoot = await createTempDir("implementation-plan-contract-");
@@ -183,11 +188,11 @@ async function testImplementationPlanContractBuildsPromptRequest(workspaceRoot: 
   assert.equal(request.prompt.systemPrompt.includes("Return JSON"), true);
   assert.equal(payload.target, "implementation_plan_contract_check");
   assert.equal(payload.generatedResult.includes("# Code Generation Execution Plan"), true);
-  assert.equal(payload.upstreamContext.requirement_document, "docs/requirements/Requirement.md");
-  assert.equal(payload.upstreamContext.architecture_document, "docs/architecture/TechnicalArchitecture.md");
+  assert.equal(payload.upstreamContext.requirement_document, resolveRequirementArtifactPath("/tmp/workspace"));
+  assert.equal(payload.upstreamContext.architecture_document, resolveArchitectureArtifactPath("/tmp/workspace"));
   assert.deepEqual(payload.upstreamContext.module_design_documents, [
-    "docs/module_design/Workflow.md",
-    "docs/module_design/Data.md",
+    resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
+    resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);
 }
 
@@ -198,11 +203,11 @@ function createContext(workspaceRoot: string) {
     attempt: 1,
     workspaceRoot,
     inputArtifacts: {
-      requirement_document: "docs/requirements/Requirement.md",
-      architecture_document: "docs/architecture/TechnicalArchitecture.md",
+      requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+      architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
       module_design_documents: JSON.stringify([
-        "docs/module_design/Workflow.md",
-        "docs/module_design/Data.md",
+        resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
+        resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
       ]),
     },
   };

@@ -14,6 +14,7 @@ import {
   type ImplementationPlanArtifacts,
 } from "../../execution/implementation-plan-generator/implementation-plan-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
+import { resolveImplementationPlanArtifactPath } from "./stage-artifact-paths.js";
 
 export interface ImplementationPlanStageRunnerDependencies extends BaseStageRunnerDependencies {
   llmExecutor: ILlmExecutor;
@@ -21,8 +22,6 @@ export interface ImplementationPlanStageRunnerDependencies extends BaseStageRunn
   traceRecorder?: ITraceRecorder;
   changeGate?: IChangeGate;
 }
-
-const IMPLEMENTATION_PLAN_ARTIFACT_PATH = "plans/implementation/ImplementationWorkPlan.md";
 
 export class ImplementationPlanStageRunner extends BaseStageRunner {
   private readonly generator: ImplementationPlanGenerator;
@@ -53,20 +52,21 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
       throw new Error(`Implementation plan contract failed: ${contractResult.summary}`);
     }
 
+    const artifactPath = resolveImplementationPlanArtifactPath(context.workspaceRoot);
     const gateDecision = await this.reviewChanges(this.buildReviewRequest(context, output.artifacts.content));
     if (gateDecision.action !== "apply") {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
-    await this.persistAcceptedArtifact(context, output.artifacts.content);
-    await this.recordPersistenceResult(context, gateDecision);
+    await this.persistAcceptedArtifact(context, artifactPath, output.artifacts.content);
+    await this.recordPersistenceResult(context, gateDecision, artifactPath);
     const parsedWorkplan = this.contractChecker.parseWorkPlan(output.artifacts.content);
 
     return {
       ...output,
       artifacts: {
         ...output.artifacts,
-        implementation_workplan: IMPLEMENTATION_PLAN_ARTIFACT_PATH,
+        implementation_workplan: artifactPath,
         parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
         current_step: JSON.stringify(this.resolveInitialCurrentStep(parsedWorkplan)),
       },
@@ -96,14 +96,15 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     changedPaths: string[];
     changedFiles: ChangedFile[];
   } {
+    const artifactPath = resolveImplementationPlanArtifactPath(context.workspaceRoot);
     return {
       taskId: context.taskId,
       stageId: context.stageId,
       summary: "Implementation workplan ready for review.",
-      changedPaths: [IMPLEMENTATION_PLAN_ARTIFACT_PATH],
+      changedPaths: [artifactPath],
       changedFiles: [
         {
-          path: IMPLEMENTATION_PLAN_ARTIFACT_PATH,
+          path: artifactPath,
           operation: "update",
           content,
         },
@@ -111,7 +112,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     };
   }
 
-  private async persistAcceptedArtifact(context: StageRunContext, content: string): Promise<void> {
+  private async persistAcceptedArtifact(context: StageRunContext, artifactPath: string, content: string): Promise<void> {
     if (!this.artifactStore) {
       throw new Error("ImplementationPlanStageRunner requires an artifactStore.");
     }
@@ -119,16 +120,20 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     await this.artifactStore.writeArtifact({
       taskId: context.taskId,
       stageId: context.stageId,
-      filePath: IMPLEMENTATION_PLAN_ARTIFACT_PATH,
+      filePath: artifactPath,
       content,
     });
   }
 
-  private async recordPersistenceResult(context: StageRunContext, gateDecision: GateDecision): Promise<void> {
+  private async recordPersistenceResult(
+    context: StageRunContext,
+    gateDecision: GateDecision,
+    artifactPath: string,
+  ): Promise<void> {
     await super.recordSharedPersistenceResult(
       context,
-      IMPLEMENTATION_PLAN_ARTIFACT_PATH,
-      `Accepted implementation-plan artifact persisted to ${IMPLEMENTATION_PLAN_ARTIFACT_PATH}.`,
+      artifactPath,
+      `Accepted implementation-plan artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
   }

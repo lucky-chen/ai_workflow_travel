@@ -4,39 +4,16 @@ import { ValidationStageRunner } from "../../src/workflow/stage-runners/validati
 import type { ShellResult } from "../../src/workflow/validation/shell-runner.js";
 
 export async function runValidationModelTests(): Promise<void> {
-  await testParseValidationInputArtifactsRequiresProjectPath();
-  await testParseValidationInputArtifactsReturnsNormalizedShape();
+  await testValidationUsesWorkspaceRoot();
   await testBuildValidationStageOutputShapesValidationResult();
 }
 
-async function testParseValidationInputArtifactsRequiresProjectPath(): Promise<void> {
+async function testValidationUsesWorkspaceRoot(): Promise<void> {
   const runner = new ValidationStageRunner({
     shellRunner: new MockShellRunner({
       passed: true,
-      summary: "unused",
-      command: "unused",
-      exit_code: 0,
-    }),
-  });
-
-  await assert.rejects(
-    runner.run({
-      taskId: "task-validation",
-      stageId: "validation",
-      attempt: 1,
-      workspaceRoot: "/tmp/validation-workspace",
-      inputArtifacts: {},
-    }),
-    /Missing required input artifact "project_path"\./,
-  );
-}
-
-async function testParseValidationInputArtifactsReturnsNormalizedShape(): Promise<void> {
-  const runner = new ValidationStageRunner({
-    shellRunner: new MockShellRunner({
-      passed: true,
-      summary: 'Shell command passed: cd "/tmp/validation-project" && npm test',
-      command: 'cd "/tmp/validation-project" && npm test',
+      summary: 'Shell command passed: cd "/tmp/validation-workspace" && npm test',
+      command: 'cd "/tmp/validation-workspace" && npm test',
       exit_code: 0,
     }),
   });
@@ -46,12 +23,10 @@ async function testParseValidationInputArtifactsReturnsNormalizedShape(): Promis
     stageId: "validation",
     attempt: 1,
     workspaceRoot: "/tmp/validation-workspace",
-    inputArtifacts: {
-      project_path: "  /tmp/validation-project  ",
-    },
+    inputArtifacts: {},
   });
 
-  assert.equal(output.artifacts.projectPath, "/tmp/validation-project");
+  assert.equal(output.artifacts.projectPath, "/tmp/validation-workspace");
 }
 
 async function testBuildValidationStageOutputShapesValidationResult(): Promise<void> {
@@ -70,9 +45,7 @@ async function testBuildValidationStageOutputShapesValidationResult(): Promise<v
     stageId: "validation",
     attempt: 1,
     workspaceRoot: "/tmp/validation-workspace",
-    inputArtifacts: {
-      project_path: "/tmp/validation-project",
-    },
+    inputArtifacts: {},
     params: {
       validationCommand: "npm test",
     },
@@ -84,7 +57,7 @@ async function testBuildValidationStageOutputShapesValidationResult(): Promise<v
     summary: "Validation failed: unit tests returned exit code 1.",
     artifacts: {
       artifactKey: "validation_result",
-      projectPath: "/tmp/validation-project",
+      projectPath: "/tmp/validation-workspace",
       command: "npm test",
       exitCode: 1,
       logs: "1 test failed",

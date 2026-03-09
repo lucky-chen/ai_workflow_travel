@@ -403,20 +403,21 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] support `init` to copy bundled SDLC resources into `workspace/sdlc/resources`
   - [x] cover workspace-rooted launch behavior in CLI tests
 - [ ] Batch 2: workspace path and artifact layout alignment
-  - [ ] make stage input loading resolve required artifacts from the workspace directory layout instead of explicit CLI artifact arguments
+  - [x] make stage input loading resolve required artifacts from the workspace directory layout instead of explicit CLI artifact arguments
   - [x] make template and contract loading prefer `workspace/sdlc/resources` and fall back to bundled `dist/resources`
-  - [ ] redirect document-stage outputs into `workspace/docs/generated`
-  - [ ] pin `implementation_execution` generated code target to `workspace/src`
-  - [ ] converge validation runtime input from `project_path` into `workspace`
-  - [ ] extend runner and validation tests for the new workspace-rooted path rules
+  - [x] move `implementation_workplan` off the hard-coded `plans/implementation/...` path and resolve it from a runner-owned `workspaceRoot` convention
+  - [x] redirect document-stage outputs into `workspace/sdlc/docs`
+  - [x] pin `implementation_execution` generated code target to `workspace/src`
+  - [x] converge validation runtime input from `project_path` into `workspace`
+  - [x] extend runner and validation tests for the new workspace-rooted path rules
 - [ ] Batch 3: design-doc and sequence synchronization
-  - [ ] sync `Interface/CLI.md` with workspace-rooted launch semantics and runtime-inline review behavior
-  - [ ] sync `Workflow/StageRunners.md` with `workspace/docs/generated`, `workspace/src`, and workspace-rooted validation semantics
-  - [ ] sync `SystemInteractionDesign.md` with workspace-driven input loading and output path conventions
-  - [ ] sync architecture-level path semantics only where the current architecture doc still reflects the old layout assumptions
-  - [ ] update sequence diagrams affected by runtime changes
-  - [ ] update plan status to reflect true implementation state
-  - [ ] confirm docs and runnable behavior are consistent
+  - [x] sync `Interface/CLI.md` with workspace-rooted launch semantics and runtime-inline review behavior
+  - [x] sync `Workflow/StageRunners.md` with `workspace/sdlc/docs`, `workspace/src`, and workspace-rooted validation semantics
+  - [x] sync `SystemInteractionDesign.md` with workspace-driven input loading and output path conventions
+  - [x] sync architecture-level path semantics only where the current architecture doc still reflects the old layout assumptions
+  - [x] update sequence diagrams affected by runtime changes
+  - [x] update plan status to reflect true implementation state
+  - [x] confirm docs and runnable behavior are consistent
 - [ ] Batch 4: MCP baseline alignment
   - [ ] add MCP protocol support to `AgentRuntime`
   - [ ] add file read/write as the default MCP-backed tool capability
@@ -439,7 +440,7 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 1: hello-service end-to-end baseline verification
   - [ ] create or prepare one minimal `hello-service` target
   - [ ] verify the CLI can launch from `workspace` without explicit artifact path arguments
-  - [ ] verify document artifacts are produced under `workspace/docs/generated`
+  - [ ] verify document artifacts are produced under `workspace/sdlc/docs`
   - [ ] verify `implementation_execution` targets `workspace/src`
   - [ ] verify validation runs against `workspace`
   - [ ] capture validation evidence for the runnable backbone

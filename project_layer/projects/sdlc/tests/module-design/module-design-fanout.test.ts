@@ -3,6 +3,11 @@ import { rm } from "node:fs/promises";
 
 import type { StageContinuationContext, StageDefinition, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
 import { continueAfterArchitectureDesign } from "../../src/workflow/pipeline/module-design-fanout.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveModuleDesignArtifactPath,
+  resolveRequirementArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 import { createArchitectureDocument, createTempDir } from "../workflow/pipeline-test-helpers.js";
 
 export async function runModuleDesignFanoutTests(): Promise<void> {
@@ -30,7 +35,7 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
           artifacts: {
             artifactKey: "module_design_document",
             moduleName: descriptor.name,
-            module_design_document: `docs/module_design/${descriptor.name}.md`,
+            module_design_document: resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
             content: `# ${descriptor.name} Design`,
           },
         };
@@ -48,8 +53,8 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
         attempt: 1,
         params: undefined,
         inputArtifacts: {
-          requirement_document: "docs/requirements/Requirement.md",
-          architecture_document: "docs/architecture/TechnicalArchitecture.md",
+          requirement_document: resolveRequirementArtifactPath(workspaceRoot),
+          architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
         },
         stageOutput: {
           stageId: "architecture_design",
@@ -58,7 +63,7 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
           summary: "Architecture generated.",
           artifacts: {
             artifactKey: "architecture_document",
-            architecture_document: "docs/architecture/TechnicalArchitecture.md",
+            architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
             content: createArchitectureDocument(),
           },
         },
@@ -93,12 +98,12 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
     ]);
     assert.equal(updatedModuleInputs.length, invocationOrder.length);
     assert.deepEqual(JSON.parse(result.nextInputArtifacts.module_design_documents), [
-      "docs/module_design/Interface Layer.md",
-      "docs/module_design/Workflow.md",
-      "docs/module_design/Execution.md",
-      "docs/module_design/Contract.md",
-      "docs/module_design/Quality Gate.md",
-      "docs/module_design/Data.md",
+      resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
     ]);
     assert.equal("module_design_document" in result.nextInputArtifacts, false);
   } finally {

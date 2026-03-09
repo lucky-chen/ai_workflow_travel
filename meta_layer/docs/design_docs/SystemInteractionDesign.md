@@ -113,7 +113,7 @@ Notes:
 
 - contract check is optional per stage.
 - validation stage is the exception and performs final validation directly inside `ValidationStageRunner.run(context)`.
-- validation stage reads `context.inputArtifacts["project_path"]` and runs final project validation against that path.
+- validation stage reads `context.workspaceRoot` and runs final project validation against that workspace root.
 - contract success does not replace review.
 
 ### 2.5 Review And Decision
@@ -139,6 +139,9 @@ Notes:
 Stage composition mapping and per-stage runner flow are defined in [Workflow/StageRunners.md](./Workflow/StageRunners.md) as the single source of truth.
 
 Stage-to-stage artifact mapping:
+
+- document-stage artifact refs are relative to `workspaceRoot` and resolve under `workspaceRoot/sdlc/docs/...`
+- implementation-stage accepted source-code changes remain under `workspaceRoot/src/...`
 
 - `requirement_interpretation`
   - generator output: `artifacts.artifactKey == "requirement_document"`
@@ -166,27 +169,27 @@ Stage-to-stage artifact mapping:
   - runner resolves one accepted batch from `current_step` and returns either the next `{ stepId, batchId }` or completion state after review
   - accepted files are persisted to their generated paths
 - `validation`
-  - runtime input: `inputArtifacts["project_path"]`
-  - `project_path` is provided as an external runtime input and is not derived from implementation-stage generated files
+  - runtime input: `context.workspaceRoot`
+  - validation executes against the user workspace root and does not require a separate `project_path`
   - validation does not depend on upstream generated file arrays as direct contract input
 
 Gate review-request mapping by stage:
 
 - `requirement_interpretation`
   - review summary source: `output.summary`
-  - review path: `docs/requirements/Requirement.md`
+  - review path: `sdlc/docs/requirements/Requirement.md`
   - review content source: `output.artifacts.content`
 - `architecture_design`
   - review summary source: `output.summary`
-  - review path: `docs/architecture/TechnicalArchitecture.md`
+  - review path: `sdlc/docs/architecture/TechnicalArchitecture.md`
   - review content source: `output.artifacts.content`
 - `module_design`
   - review summary source: `output.summary`
-  - review path: `docs/module_design/{moduleName}.md`
+  - review path: `sdlc/docs/module_design/{moduleName}.md`
   - review content source: `output.artifacts.content`
 - `implementation_plan`
   - review summary source: `output.summary`
-  - review path: `plans/implementation/ImplementationWorkPlan.md`
+  - review path: `sdlc/docs/CodeGenerationExecutionPlan.md`
   - review content source: `output.artifacts.content`
 - `implementation_execution`
   - review summary source: `output.summary`

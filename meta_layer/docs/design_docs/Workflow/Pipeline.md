@@ -605,7 +605,7 @@ start
 while (more module descriptors?) is (yes)
   :create `module_design` StageRunContext;
   :run one `module_design`;
-  :persist accepted `docs/module_design/{moduleName}.md`;
+  :persist accepted `sdlc/docs/module_design/{moduleName}.md`;
   :append accepted output to `module_design_documents`;
 endwhile (no)
 

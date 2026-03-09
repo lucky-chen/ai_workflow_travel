@@ -149,10 +149,10 @@ ChangeReviewRequest {
   taskId: context.taskId
   stageId: "architecture_design"
   summary: output.summary
-  changedPaths: ["docs/architecture/TechnicalArchitecture.md"]
+  changedPaths: ["sdlc/docs/architecture/TechnicalArchitecture.md"]
   changedFiles: [
     {
-      path: "docs/architecture/TechnicalArchitecture.md",
+      path: "sdlc/docs/architecture/TechnicalArchitecture.md",
       operation: "create_or_update",
       content: output.artifacts.content,
     },
@@ -163,7 +163,7 @@ ChangeReviewRequest {
 #### 4.2.5 Persistence Limit
 
 - only accepted architecture-design-stage artifacts may be persisted for downstream stages
-- `ArchitectureStageRunner` persists accepted output to `docs/architecture/TechnicalArchitecture.md`
+- `ArchitectureStageRunner` persists accepted output to `sdlc/docs/architecture/TechnicalArchitecture.md`
 - downstream `ModuleDesignGenerator` receives the persisted content through `inputArtifacts["architecture_document"]`
 
 ### 4.3 Constraints

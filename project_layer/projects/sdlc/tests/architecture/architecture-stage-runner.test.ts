@@ -7,6 +7,7 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
+import { resolveArchitectureArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runArchitectureStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("architecture-stage-runner-");
@@ -47,12 +48,12 @@ async function testArchitectureStageRunnerPersistsAcceptedDocument(
     },
   });
 
-  assert.equal(output.artifacts.architecture_document, "docs/architecture/TechnicalArchitecture.md");
+  assert.equal(output.artifacts.architecture_document, resolveArchitectureArtifactPath(workspaceRoot));
   assert.equal(
     await artifactStore.getArtifact({
       taskId: "task-1",
       stageId: "architecture_design",
-      filePath: "docs/architecture/TechnicalArchitecture.md",
+      filePath: resolveArchitectureArtifactPath(workspaceRoot),
     }),
     content,
   );
@@ -98,7 +99,7 @@ async function testArchitectureStageRunnerRejectStopsPersistence(
     artifactStore.getArtifact({
       taskId: "task-2",
       stageId: "architecture_design",
-      filePath: "docs/architecture/TechnicalArchitecture.md",
+      filePath: resolveArchitectureArtifactPath(workspaceRoot),
     }),
   );
 }

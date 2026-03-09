@@ -9,6 +9,7 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { IImplementationGitCommitter } from "../../src/workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../../src/workflow/stage-runners/implementation-stage-runner.js";
+import { resolveImplementationPlanArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import type { IContractChecker, IStageGenerator, ImplementationStageArtifacts, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
 
@@ -52,7 +53,7 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
     await artifactStore.writeArtifact({
       taskId,
       stageId: "implementation_plan",
-      filePath: "plans/implementation/ImplementationWorkPlan.md",
+      filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
       content: createImplementationWorkplanDocument(),
     });
   }
@@ -136,12 +137,12 @@ async function testImplementationStageRunnerApply(
   const updatedWorkplan = await artifactStore.getArtifact({
     taskId: "task-1",
     stageId: "implementation_plan",
-    filePath: "plans/implementation/ImplementationWorkPlan.md",
+    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
   });
   assert.equal(updatedWorkplan.includes("## 4. Implementation Execution State"), true);
   assert.equal(updatedWorkplan.includes("- [x] batch-1"), true);
   assert.equal(
-    await readFile(path.join(workspaceRoot, "plans", "implementation", "ImplementationWorkPlan.md"), "utf8"),
+    await readFile(path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)), "utf8"),
     updatedWorkplan,
   );
   assert.equal(
@@ -205,7 +206,7 @@ async function testImplementationStageRunnerReject(
   const workplan = await artifactStore.getArtifact({
     taskId: "task-2",
     stageId: "implementation_plan",
-    filePath: "plans/implementation/ImplementationWorkPlan.md",
+    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
   });
   assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
   await assert.rejects(
@@ -267,7 +268,7 @@ async function testImplementationStageRunnerContractFailure(
   const workplan = await artifactStore.getArtifact({
     taskId: "task-3",
     stageId: "implementation_plan",
-    filePath: "plans/implementation/ImplementationWorkPlan.md",
+    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
   });
   assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
   await assert.rejects(
@@ -408,7 +409,7 @@ async function testImplementationStageRunnerWaitReviewCarriesComment(
   const workplan = await artifactStore.getArtifact({
     taskId: "task-2",
     stageId: "implementation_plan",
-    filePath: "plans/implementation/ImplementationWorkPlan.md",
+    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
   });
   assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
   await assert.rejects(
@@ -443,7 +444,7 @@ function createRunContext(
     module_design_documents: JSON.stringify(["module-design.md"]),
     requirement_document: "# requirement",
     architecture_document: "# architecture",
-    implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
+    implementation_workplan: resolveImplementationPlanArtifactPath(workspaceRoot),
     parsed_implementation_workplan: JSON.stringify(createParsedWorkplan()),
     current_step: JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
   };

@@ -7,6 +7,7 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { ModuleStageRunner } from "../../src/workflow/stage-runners/module-stage-runner.js";
+import { resolveModuleDesignArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runModuleStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("module-stage-runner-");
@@ -51,12 +52,12 @@ async function testModuleStageRunnerPersistsAcceptedDocument(
     },
   });
 
-  assert.equal(output.artifacts.module_design_document, "docs/module_design/Workflow.md");
+  assert.equal(output.artifacts.module_design_document, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"));
   assert.equal(
     await artifactStore.getArtifact({
       taskId: "task-1",
       stageId: "module_design",
-      filePath: "docs/module_design/Workflow.md",
+      filePath: resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
     }),
     content,
   );
@@ -106,7 +107,7 @@ async function testModuleStageRunnerRejectStopsPersistence(
     artifactStore.getArtifact({
       taskId: "task-2",
       stageId: "module_design",
-      filePath: "docs/module_design/Workflow.md",
+      filePath: resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
     }),
   );
 }

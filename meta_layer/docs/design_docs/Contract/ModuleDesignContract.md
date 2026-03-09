@@ -150,10 +150,10 @@ ChangeReviewRequest {
   taskId: context.taskId
   stageId: "module_design"
   summary: output.summary
-  changedPaths: [`docs/module_design/${output.artifacts.moduleName}.md`]
+  changedPaths: [`sdlc/docs/module_design/${output.artifacts.moduleName}.md`]
   changedFiles: [
     {
-      path: `docs/module_design/${output.artifacts.moduleName}.md`,
+      path: `sdlc/docs/module_design/${output.artifacts.moduleName}.md`,
       operation: "create_or_update",
       content: output.artifacts.content,
     },
@@ -164,7 +164,7 @@ ChangeReviewRequest {
 #### 4.2.5 Persistence Limit
 
 - only accepted module-design-stage artifacts may be persisted for downstream stages
-- `ModuleStageRunner` persists accepted output to `docs/module_design/{moduleName}.md`
+- `ModuleStageRunner` persists accepted output to `sdlc/docs/module_design/{moduleName}.md`
 - downstream `ImplementationGenerator` receives accepted output through `inputArtifacts["module_design_document"]`
 
 ### 4.3 Constraints

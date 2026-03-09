@@ -16,6 +16,12 @@ import type { IStageRunner, StageDefinition, StageOutput, StageRunContext } from
 import type { ShellResult } from "../../src/workflow/validation/shell-runner.js";
 import { ShellRunner } from "../../src/workflow/validation/shell-runner.js";
 import {
+  resolveArchitectureArtifactPath,
+  resolveImplementationPlanArtifactPath,
+  resolveModuleDesignArtifactPath,
+  resolveRequirementArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
+import {
   MockTextLlmExecutor,
   createArchitectureDocument,
   createRegistry,
@@ -115,7 +121,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
     const implementationExecutionContext = implementationExecutionInvocationContexts[0];
     assert.equal(
       implementationExecutionContext.inputArtifacts.implementation_workplan,
-      "plans/implementation/ImplementationWorkPlan.md",
+      resolveImplementationPlanArtifactPath(workspaceRoot),
     );
     assert.equal(typeof implementationExecutionContext.inputArtifacts.parsed_implementation_workplan, "string");
     assert.equal(
@@ -125,7 +131,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
     const implementationPlanOutput = await artifactStore.getArtifact({
       taskId,
       stageId: "implementation_plan",
-      filePath: "plans/implementation/ImplementationWorkPlan.md",
+      filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
     });
     assert.equal(implementationPlanOutput, createImplementationPlanDocument());
     const moduleDesignDocuments = JSON.parse(
@@ -133,26 +139,26 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
         await artifactStore.getArtifact({
           taskId,
           stageId: "module_design",
-          filePath: "docs/module_design/Data.md",
+          filePath: resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         })
       ).length > 0
         ? JSON.stringify([
-          "docs/module_design/Interface Layer.md",
-          "docs/module_design/Workflow.md",
-          "docs/module_design/Execution.md",
-          "docs/module_design/Contract.md",
-          "docs/module_design/Quality Gate.md",
-          "docs/module_design/Data.md",
+          resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         ])
         : "[]",
     ) as string[];
     assert.deepEqual(moduleDesignDocuments, [
-      "docs/module_design/Interface Layer.md",
-      "docs/module_design/Workflow.md",
-      "docs/module_design/Execution.md",
-      "docs/module_design/Contract.md",
-      "docs/module_design/Quality Gate.md",
-      "docs/module_design/Data.md",
+      resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
     ]);
     assert.deepEqual(implementationExecutionContext, {
       taskId,
@@ -160,17 +166,17 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       attempt: 1,
       workspaceRoot,
       inputArtifacts: {
-        requirement_document: "docs/requirements/Requirement.md",
-        architecture_document: "docs/architecture/TechnicalArchitecture.md",
+        requirement_document: resolveRequirementArtifactPath(workspaceRoot),
+        architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
         module_design_documents: JSON.stringify([
-          "docs/module_design/Interface Layer.md",
-          "docs/module_design/Workflow.md",
-          "docs/module_design/Execution.md",
-          "docs/module_design/Contract.md",
-          "docs/module_design/Quality Gate.md",
-          "docs/module_design/Data.md",
+          resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         ]),
-        implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
+        implementation_workplan: resolveImplementationPlanArtifactPath(workspaceRoot),
         parsed_implementation_workplan: JSON.stringify({
           steps: [
             {
@@ -200,7 +206,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       await artifactStore.getArtifact({
         taskId,
         stageId: "architecture_design",
-        filePath: "docs/architecture/TechnicalArchitecture.md",
+        filePath: resolveArchitectureArtifactPath(workspaceRoot),
       }),
       createArchitectureDocument(),
     );
@@ -435,7 +441,7 @@ async function testValidationFinalStageMarksTaskCompleted(workspaceRoot: string)
     registry: createRegistry(
       {
         stageId: "implementation_execution",
-        launchRequirements: ["project_path"],
+        launchRequirements: [],
         runner: {
           async run(context: StageRunContext): Promise<StageOutput> {
             return {
@@ -443,9 +449,7 @@ async function testValidationFinalStageMarksTaskCompleted(workspaceRoot: string)
               status: "completed",
               success: true,
               summary: "Implementation execution stage completed.",
-              artifacts: {
-                project_path: context.inputArtifacts.project_path,
-              },
+              artifacts: {},
             };
           },
         },
@@ -453,7 +457,7 @@ async function testValidationFinalStageMarksTaskCompleted(workspaceRoot: string)
       },
       {
         stageId: "validation",
-        launchRequirements: ["project_path"],
+        launchRequirements: [],
         runner: new ValidationStageRunner({
           traceRecorder,
           shellRunner: new MockValidationShellRunner({
@@ -471,9 +475,7 @@ async function testValidationFinalStageMarksTaskCompleted(workspaceRoot: string)
   const taskId = await pipeline.launchTask({
     startStageId: "implementation_execution",
     workspaceRoot,
-    inputArtifacts: {
-      project_path: "/tmp/final-project",
-    },
+    inputArtifacts: {},
   });
 
   assert.equal(pipeline.getTaskStatus(taskId), "completed");
@@ -494,7 +496,7 @@ async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promi
     registry: createRegistry(
       {
         stageId: "implementation_execution",
-        launchRequirements: ["project_path"],
+        launchRequirements: [],
         runner: {
           async run(context: StageRunContext): Promise<StageOutput> {
             return {
@@ -502,9 +504,7 @@ async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promi
               status: "completed",
               success: true,
               summary: "Implementation execution stage completed.",
-              artifacts: {
-                project_path: context.inputArtifacts.project_path,
-              },
+              artifacts: {},
             };
           },
         },
@@ -512,7 +512,7 @@ async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promi
       },
       {
         stageId: "validation",
-        launchRequirements: ["project_path"],
+        launchRequirements: [],
         runner: new ValidationStageRunner({
           traceRecorder,
           changeGate: new InMemoryChangeGate({
@@ -536,9 +536,7 @@ async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promi
   const taskId = await pipeline.launchTask({
     startStageId: "implementation_execution",
     workspaceRoot,
-    inputArtifacts: {
-      project_path: "/tmp/final-project",
-    },
+    inputArtifacts: {},
   });
 
   assert.equal(pipeline.getTaskStatus(taskId), "failed");

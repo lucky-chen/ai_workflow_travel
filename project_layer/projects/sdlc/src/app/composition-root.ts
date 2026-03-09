@@ -146,7 +146,7 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
   });
   registry.register({
     stageId: "validation",
-    launchRequirements: ["project_path"],
+    launchRequirements: [],
     runner: new ValidationStageRunner({
       artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,

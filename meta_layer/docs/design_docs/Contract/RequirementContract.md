@@ -153,10 +153,10 @@ ChangeReviewRequest {
   taskId: context.taskId
   stageId: "requirement_interpretation"
   summary: output.summary
-  changedPaths: ["docs/requirements/Requirement.md"]
+  changedPaths: ["sdlc/docs/requirements/Requirement.md"]
   changedFiles: [
     {
-      path: "docs/requirements/Requirement.md",
+      path: "sdlc/docs/requirements/Requirement.md",
       operation: "create_or_update",
       content: output.artifacts.content,
     },
@@ -167,7 +167,7 @@ ChangeReviewRequest {
 #### 4.2.5 Persistence Limit
 
 - only accepted requirement-stage artifacts may be persisted for downstream stages
-- `RequirementStageRunner` persists accepted output to `docs/requirements/Requirement.md`
+- `RequirementStageRunner` persists accepted output to `sdlc/docs/requirements/Requirement.md`
 - downstream `ArchitectureDesignGenerator` receives the persisted content through `inputArtifacts["requirement_document"]`
 
 ### 4.3 Constraints

@@ -14,6 +14,7 @@ import {
   type ModuleDesignArtifacts,
 } from "../../execution/module-design-generator/module-design-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
+import { resolveModuleDesignArtifactPath } from "./stage-artifact-paths.js";
 
 export interface ModuleStageRunnerDependencies extends BaseStageRunnerDependencies {
   llmExecutor: ILlmExecutor;
@@ -47,7 +48,7 @@ export class ModuleStageRunner extends BaseStageRunner {
       throw new Error(`Module design contract failed: ${contractResult.summary}`);
     }
 
-    const artifactPath = this.buildArtifactPath(output.artifacts.moduleName);
+    const artifactPath = this.buildArtifactPath(context.workspaceRoot, output.artifacts.moduleName);
     const gateDecision = await this.reviewChanges(this.buildReviewRequest(context, artifactPath, output.artifacts));
     if (gateDecision.action !== "apply") {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
@@ -65,8 +66,8 @@ export class ModuleStageRunner extends BaseStageRunner {
     };
   }
 
-  private buildArtifactPath(moduleName: string): string {
-    return `docs/module_design/${moduleName}.md`;
+  private buildArtifactPath(workspaceRoot: string, moduleName: string): string {
+    return resolveModuleDesignArtifactPath(workspaceRoot, moduleName);
   }
 
   private buildReviewRequest(

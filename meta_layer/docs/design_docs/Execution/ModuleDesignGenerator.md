@@ -171,7 +171,7 @@ interface ModuleDesignArtifacts {
 
 - downstream `ImplementationGenerator` reads this output through `inputArtifacts["module_design_document"]`
 - final persistence paths are resolved by `ModuleStageRunner` after gate approval:
-  - `docs/module_design/{moduleName}.md`
+  - `sdlc/docs/module_design/{moduleName}.md`
 
 ### 4.3 Constraints
 

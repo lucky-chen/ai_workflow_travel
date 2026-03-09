@@ -103,11 +103,7 @@ export class ValidationStageRunner implements IStageRunner {
   }
 
   private parseProjectPath(context: StageRunContext): string {
-    const projectPath = context.inputArtifacts.project_path?.trim();
-    if (!projectPath) {
-      throw new Error('Missing required input artifact "project_path".');
-    }
-    return projectPath;
+    return context.workspaceRoot;
   }
 
   private buildCommand(context: StageRunContext, projectPath: string): string {

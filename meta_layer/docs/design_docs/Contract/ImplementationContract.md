@@ -264,4 +264,4 @@ ChangeReviewRequest {
 - `ImplementationStageRunner` persists accepted create/update files to their `changedFiles[*].path`
 - step review result controls next-batch or next-step transition through `current_step`
 - `ImplementationStageRunner` returns either the next `{ stepId, batchId }` or an implementation-execution completion signal after an accepted batch
-- `ValidationStageRunner` remains independent and reads `inputArtifacts["project_path"]`
+- `ValidationStageRunner` remains independent and validates against `context.workspaceRoot`

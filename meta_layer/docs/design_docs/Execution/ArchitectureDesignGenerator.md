@@ -146,7 +146,7 @@ interface ArchitectureDesignArtifacts {
 
 - downstream `ModuleDesignGenerator` reads this output through `inputArtifacts["architecture_document"]`
 - final persistence path is resolved by `ArchitectureStageRunner` after gate approval:
-  - `docs/architecture/TechnicalArchitecture.md`
+  - `sdlc/docs/architecture/TechnicalArchitecture.md`
 
 ### 4.3 Constraints
 

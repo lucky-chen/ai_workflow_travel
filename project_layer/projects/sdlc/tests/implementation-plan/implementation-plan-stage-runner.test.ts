@@ -7,6 +7,12 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { ImplementationPlanStageRunner } from "../../src/workflow/stage-runners/implementation-plan-stage-runner.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveImplementationPlanArtifactPath,
+  resolveModuleDesignArtifactPath,
+  resolveRequirementArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationPlanStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("implementation-plan-stage-runner-");
@@ -45,7 +51,8 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
     inputArtifacts: createInputArtifacts(),
   });
 
-  assert.equal(output.artifacts.implementation_workplan, "plans/implementation/ImplementationWorkPlan.md");
+  const implementationPlanPath = resolveImplementationPlanArtifactPath(workspaceRoot);
+  assert.equal(output.artifacts.implementation_workplan, implementationPlanPath);
   assert.equal(typeof output.artifacts.parsed_implementation_workplan, "string");
   const parsedWorkplan = JSON.parse(output.artifacts.parsed_implementation_workplan) as {
     steps: Array<{ stepId: string; batches: Array<{ batchId: string }> }>;
@@ -57,7 +64,7 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
     await artifactStore.getArtifact({
       taskId: "task-1",
       stageId: "implementation_plan",
-      filePath: "plans/implementation/ImplementationWorkPlan.md",
+      filePath: implementationPlanPath,
     }),
     content,
   );
@@ -101,7 +108,7 @@ async function testImplementationPlanStageRunnerRejectStopsPersistence(
     artifactStore.getArtifact({
       taskId: "task-2",
       stageId: "implementation_plan",
-      filePath: "plans/implementation/ImplementationWorkPlan.md",
+      filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
     }),
   );
 }
@@ -129,12 +136,13 @@ async function testImplementationPlanStageRunnerContractFailure(
 }
 
 function createInputArtifacts() {
+  const workspaceRoot = "/tmp/workspace";
   return {
-    requirement_document: "docs/requirements/Requirement.md",
-    architecture_document: "docs/architecture/TechnicalArchitecture.md",
+    requirement_document: resolveRequirementArtifactPath(workspaceRoot),
+    architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
     module_design_documents: JSON.stringify([
-      "docs/module_design/Workflow.md",
-      "docs/module_design/Data.md",
+      resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
+      resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
     ]),
   };
 }

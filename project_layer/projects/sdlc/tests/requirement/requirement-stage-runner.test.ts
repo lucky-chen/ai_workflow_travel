@@ -7,6 +7,7 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { RequirementStageRunner } from "../../src/workflow/stage-runners/requirement-stage-runner.js";
+import { resolveRequirementArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runRequirementStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("requirement-stage-runner-");
@@ -46,12 +47,12 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(
     },
   });
 
-  assert.equal(output.artifacts.requirement_document, "docs/requirements/Requirement.md");
+  assert.equal(output.artifacts.requirement_document, resolveRequirementArtifactPath(workspaceRoot));
   assert.equal(
     await artifactStore.getArtifact({
       taskId: "task-1",
       stageId: "requirement_interpretation",
-      filePath: "docs/requirements/Requirement.md",
+      filePath: resolveRequirementArtifactPath(workspaceRoot),
     }),
     content,
   );
@@ -95,7 +96,7 @@ async function testRequirementStageRunnerRejectStopsPersistence(
     artifactStore.getArtifact({
       taskId: "task-2",
       stageId: "requirement_interpretation",
-      filePath: "docs/requirements/Requirement.md",
+      filePath: resolveRequirementArtifactPath(workspaceRoot),
     }),
   );
 }

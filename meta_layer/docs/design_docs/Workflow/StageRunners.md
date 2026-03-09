@@ -134,7 +134,7 @@ ValidationStageRunner ..|> IStageRunner
 Stage exceptions:
 
 - `validation` is a workflow-owned special runner and does not reuse the shared generator/contract runner binding model.
-- `validation` reads `inputArtifacts["project_path"]` as its only required runtime input.
+- `validation` uses `context.workspaceRoot` as its runtime validation root and does not require a separate `project_path` input artifact.
 - `validation` exposes only trace/store as shared workflow-facing injected collaborators.
 - `validation` does not emit `contract_checked`; contract-enabled runtime semantics stop at `implementation_execution`.
 
@@ -169,34 +169,38 @@ Validation runner exception:
 
 Persistence mapping rule for document stages:
 
+- document-stage artifact refs are relative to `workspaceRoot` and are stored under `workspaceRoot/sdlc/docs/...`
+- `implementation_execution` keeps accepted source-code changes under `workspaceRoot/src/...`
+
 - `requirement_interpretation`
   - read `StageOutput.artifacts.artifactKey == "requirement_document"`
-  - persist content to `docs/requirements/Requirement.md`
+  - persist content to `sdlc/docs/requirements/Requirement.md`
   - pass persisted content downstream as `inputArtifacts["requirement_document"]`
 - `architecture_design`
   - read `StageOutput.artifacts.artifactKey == "architecture_document"`
-  - persist content to `docs/architecture/TechnicalArchitecture.md`
+  - persist content to `sdlc/docs/architecture/TechnicalArchitecture.md`
   - pass persisted content downstream as `inputArtifacts["architecture_document"]`
 - `module_design`
   - read `StageOutput.artifacts.artifactKey == "module_design_document"`
-  - persist content to `docs/module_design/{moduleName}.md`
+  - persist content to `sdlc/docs/module_design/{moduleName}.md`
   - the `architecture_design` stage definition may declare a continuation handler that resolves module count and ordered module descriptors from accepted `architecture_document`
   - that continuation handler launches one `ModuleStageRunner` execution per module descriptor in sequence through the registered runner
   - aggregate accepted outputs downstream as `inputArtifacts["module_design_documents"]`
 - `implementation_plan`
   - read `StageOutput.artifacts.artifactKey == "implementation_workplan"`
   - read aggregated `inputArtifacts["module_design_documents"]` produced after all sequential `module_design` runs complete
-  - persist content to `plans/implementation/ImplementationWorkPlan.md`
+  - persist content to `sdlc/docs/CodeGenerationExecutionPlan.md`
   - pass accepted output downstream as `inputArtifacts["implementation_workplan"]`
 - `implementation_execution`
   - `ImplementationStageRunner` owns implementation-workplan parsing and `current_step` assembly
   - `ImplementationStageRunner` may use `SDK/AgentRuntime` as the V1 execution backbone with single-turn session semantics only
   - read `StageOutput.artifacts.changedFiles`
-  - persist each accepted create/update file to its `changedFiles[*].path`
+  - persist each accepted create/update file to its `changedFiles[*].path` under `workspaceRoot`
+  - generated source-code targets remain under `workspaceRoot/src/...`
   - read `inputArtifacts["current_step"]` as `{ stepId, batchId }`
   - use `inputArtifacts["current_step"]` plus review result to return either the next `{ stepId, batchId }` or an execution-completed signal
 - `validation`
-  - read `inputArtifacts["project_path"]`
+  - validate directly against `context.workspaceRoot`
   - do not persist new artifacts by default
 
 Dependency rule:

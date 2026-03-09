@@ -145,7 +145,7 @@ Runtime parsing rule:
 - `ImplementationPlanContract` parses accepted workplan content into `ImplementationWorkPlan`
 - downstream runtime modules should consume the parsed `ImplementationWorkPlan` structure produced after contract acceptance
 - final persistence path is resolved by `ImplementationPlanStageRunner` after gate approval:
-  - `plans/implementation/ImplementationWorkPlan.md`
+  - `sdlc/docs/CodeGenerationExecutionPlan.md`
 
 ### 4.4 Inheritance Rule
 

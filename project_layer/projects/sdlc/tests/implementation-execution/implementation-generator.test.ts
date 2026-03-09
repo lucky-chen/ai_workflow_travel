@@ -7,6 +7,7 @@ import { ProjectContextLoader } from "../../src/execution/implementation-generat
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import type { ProjectFile } from "../../src/shared/types/common.js";
 import type { ImplementationWorkPlan } from "../../src/shared/contracts/implementation-workplan.js";
+import { resolveImplementationPlanArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationGeneratorTests(): Promise<void> {
   const workspaceRoot = await createTempDir("workspace-");
@@ -59,7 +60,7 @@ async function testImplementationGeneratorProducesPlannedChanges(
     workspaceRoot,
     inputArtifacts: {
       prepared_step_context: JSON.stringify({
-        workplanRef: "plans/implementation/ImplementationWorkPlan.md",
+        workplanRef: resolveImplementationPlanArtifactPath(workspaceRoot),
         workplan: createParsedWorkplan(),
         currentBatch: {
           batchId: "batch-1",
@@ -119,7 +120,7 @@ async function testImplementationGeneratorProducesPlannedChanges(
       moduleDesignDocuments: Array<{ moduleName: string; content: string }>;
     };
   };
-  assert.equal(requestPayload.workplanRef, "plans/implementation/ImplementationWorkPlan.md");
+  assert.equal(requestPayload.workplanRef, resolveImplementationPlanArtifactPath(workspaceRoot));
   assert.equal(requestPayload.workplan.steps[0]?.stepId, "step-1");
   assert.equal(requestPayload.currentBatch.batchId, "batch-1");
   assert.equal(requestPayload.upstreamContext.requirementDocument, "# requirement");
