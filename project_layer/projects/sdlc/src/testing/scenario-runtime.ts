@@ -1,125 +1,37 @@
-import { ArtifactStoreService } from "../data/artifact-store/artifact-store.js";
-import { HistoryStoreService } from "../data/history-store/history-store.js";
+import type { CompositionRootOptions } from "../app/composition-root.js";
 import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
-import { TraceService } from "../quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
-import type {
-  IContractChecker,
-  ImplementationStageArtifacts,
-  IPipeline,
-  StageOutput,
-  StageRunContext,
-} from "../shared/contracts/pipeline.js";
-import { ArchitectureStageRunner } from "../workflow/stage-runners/architecture-stage-runner.js";
-import { ImplementationPlanStageRunner } from "../workflow/stage-runners/implementation-plan-stage-runner.js";
 import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
-import { ImplementationStageRunner } from "../workflow/stage-runners/implementation-stage-runner.js";
-import { ModuleStageRunner } from "../workflow/stage-runners/module-stage-runner.js";
-import { RequirementStageRunner } from "../workflow/stage-runners/requirement-stage-runner.js";
-import { ValidationStageRunner } from "../workflow/stage-runners/validation-stage-runner.js";
 import type { ShellResult } from "../workflow/validation/shell-runner.js";
 import { ShellRunner } from "../workflow/validation/shell-runner.js";
 
-export function createCliBaselineTestRuntime(): { pipeline: IPipeline } {
-  const taskId = process.env.SDLC_TEST_TASK_ID?.trim() || "baseline-task";
+export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
   const serviceName = process.env.SDLC_TEST_SERVICE_NAME?.trim() || "baseline-service";
-  const historyStore = new HistoryStoreService(
-    process.env.SDLC_HISTORY_ROOT,
-    (candidateTaskId) => (candidateTaskId === taskId ? process.env.SDLC_WORKSPACE_ROOT : undefined),
-  );
-  const traceRecorder = new TraceService(historyStore);
-  const artifactStore = new ArtifactStoreService(process.env.SDLC_ARTIFACT_ROOT, traceRecorder);
-  const changeGate = new InMemoryChangeGate();
-
-  const requirementRunner = new RequirementStageRunner({
-    traceRecorder,
-    changeGate,
-    llmExecutor: new PassingRequirementContractLlmExecutor(),
+  const llmExecutor = new ScriptedLlmExecutor({
+    serviceName,
+    architectureDocument: createScenarioArchitectureDocument(serviceName),
+    moduleDesignDocument: createScenarioModuleDesignDocument(serviceName),
+    implementationPlanDocument: createScenarioImplementationPlanDocument(serviceName),
   });
-  const architectureRunner = new ArchitectureStageRunner({
-    traceRecorder,
-    changeGate,
-    llmExecutor: new DeterministicDocumentLlmExecutor(createScenarioArchitectureDocument(serviceName)),
-  });
-  const moduleRunner = new ModuleStageRunner({
-    traceRecorder,
-    changeGate,
-    llmExecutor: new DeterministicDocumentLlmExecutor(createScenarioModuleDesignDocument(serviceName)),
-  });
-  const implementationPlanRunner = new ImplementationPlanStageRunner({
-    traceRecorder,
-    changeGate,
-    llmExecutor: new DeterministicDocumentLlmExecutor(createScenarioImplementationPlanDocument(serviceName)),
-  });
-  const implementationRunner = new ImplementationStageRunner({
-    artifactStore,
-    traceRecorder,
-    changeGate,
-    generator: new CliBaselineImplementationGenerator(serviceName),
-    contractChecker: new PassingCliBaselineImplementationContractChecker(serviceName),
-    gitCommitter: new NoopGitCommitter(),
-  });
-  const validationRunner = new ValidationStageRunner({
-    artifactStore,
-    traceRecorder,
-    changeGate,
-    shellRunner: new MockShellRunner(),
-  });
-
   return {
-    pipeline: {
-      async launchTask(request) {
-        const baseContext = {
-          taskId,
-          attempt: 1,
-          workspaceRoot: request.workspaceRoot,
-          inputArtifacts: request.inputArtifacts,
-        };
-
-        switch (request.startStageId) {
-          case "requirement_interpretation":
-            await requirementRunner.run({ ...baseContext, stageId: "requirement_interpretation" });
-            break;
-          case "architecture_design":
-            await architectureRunner.run({ ...baseContext, stageId: "architecture_design" });
-            break;
-          case "module_design":
-            await moduleRunner.run({ ...baseContext, stageId: "module_design" });
-            break;
-          case "implementation_plan":
-            await implementationPlanRunner.run({ ...baseContext, stageId: "implementation_plan" });
-            break;
-          case "implementation_execution":
-            await implementationRunner.run({ ...baseContext, stageId: "implementation_execution" });
-            break;
-          case "validation":
-            await validationRunner.run({ ...baseContext, stageId: "validation" });
-            break;
-          default:
-            throw new Error(`Unsupported fixed workspace scenario stage: ${request.startStageId}`);
-        }
-
-        return taskId;
-      },
-    },
+    artifactStorageRoot: process.env.SDLC_ARTIFACT_ROOT,
+    historyStorageRoot: process.env.SDLC_HISTORY_ROOT,
+    llmExecutorInstance: llmExecutor,
+    shellRunner: new MockShellRunner(),
+    gitCommitter: new NoopGitCommitter(),
+    changeGate: new InMemoryChangeGate(),
   };
 }
 
-class PassingRequirementContractLlmExecutor implements ILlmExecutor {
-  async execute(): Promise<LlmExecutionResult> {
-    return {
-      content: JSON.stringify({
-        passed: true,
-        summary: "Requirement document passed contract checks.",
-        issues: [],
-      }),
-      responseFormat: "json",
-    };
-  }
+interface ScriptedLlmExecutorDependencies {
+  serviceName: string;
+  architectureDocument: string;
+  moduleDesignDocument: string;
+  implementationPlanDocument: string;
 }
 
-class DeterministicDocumentLlmExecutor implements ILlmExecutor {
-  constructor(private readonly content: string) {}
+class ScriptedLlmExecutor implements ILlmExecutor {
+  constructor(private readonly dependencies: ScriptedLlmExecutorDependencies) {}
 
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     if (request.metadata?.checkType === "contract") {
@@ -133,46 +45,52 @@ class DeterministicDocumentLlmExecutor implements ILlmExecutor {
       };
     }
 
+    switch (request.metadata?.stage) {
+      case "architecture_design":
+        return this.buildTextResult(request, this.dependencies.architectureDocument);
+      case "module_design":
+        return this.buildTextResult(request, this.dependencies.moduleDesignDocument);
+      case "implementation_plan":
+        return this.buildTextResult(request, this.dependencies.implementationPlanDocument);
+      case "implementation":
+        return {
+          content: JSON.stringify({
+            summary: `Generated ${this.dependencies.serviceName} implementation baseline.`,
+            changed_files: [
+              {
+                path: "src/index.ts",
+                operation: "create",
+                content: `export function hello(): string {\n  return "${this.dependencies.serviceName}";\n}\n`,
+              },
+            ],
+          }),
+          responseFormat: "json",
+          metadata: {
+            ...(request.metadata ?? {}),
+          },
+        };
+      default:
+        return {
+          content: JSON.stringify({
+            passed: true,
+            summary: "Requirement document passed contract checks.",
+            issues: [],
+          }),
+          responseFormat: request.responseFormat,
+          metadata: {
+            ...(request.metadata ?? {}),
+          },
+        };
+    }
+  }
+
+  private buildTextResult(request: LlmExecutionRequest, content: string): LlmExecutionResult {
     return {
-      content: this.content,
+      content,
       responseFormat: "text",
       metadata: {
         ...(request.metadata ?? {}),
       },
-    };
-  }
-}
-
-class CliBaselineImplementationGenerator {
-  constructor(private readonly serviceName: string) {}
-
-  async run(_context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
-    return {
-      stageId: "implementation_execution",
-      success: true,
-      summary: `Generated ${this.serviceName} implementation baseline.`,
-      artifacts: {
-        summary: `Generated ${this.serviceName} implementation baseline.`,
-        changedFiles: [
-          {
-            path: "src/index.ts",
-            operation: "create",
-            content: `export function hello(): string {\n  return "${this.serviceName}";\n}\n`,
-          },
-        ],
-      },
-    };
-  }
-}
-
-class PassingCliBaselineImplementationContractChecker implements IContractChecker {
-  constructor(private readonly serviceName: string) {}
-
-  async check(): Promise<{ passed: boolean; summary: string; issues: [] }> {
-    return {
-      passed: true,
-      summary: `${this.serviceName} implementation contract passed.`,
-      issues: [],
     };
   }
 }

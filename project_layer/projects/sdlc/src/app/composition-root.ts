@@ -4,7 +4,11 @@ import { ImplementationContract } from "../contract/implementation-contract/impl
 import { ImplementationGenerator } from "../execution/implementation-generator/implementation-generator.js";
 import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
 import { TraceService } from "../quality-gate/trace/trace-recorder.js";
-import { LlmExecutorService, type LlmExecutorServiceDependencies } from "../sdk/llm-executor/llm-executor.js";
+import {
+  LlmExecutorService,
+  type ILlmExecutor,
+  type LlmExecutorServiceDependencies,
+} from "../sdk/llm-executor/llm-executor.js";
 import type { StageDefinition } from "../shared/contracts/pipeline.js";
 import { PipelineService } from "../workflow/pipeline/pipeline.js";
 import { StageRegistry } from "../workflow/pipeline/stage-registry.js";
@@ -12,23 +16,34 @@ import { createModuleDesignFanoutContinuation } from "../workflow/pipeline/modul
 import { TaskRuntimeStore } from "../workflow/pipeline/task-runtime-store.js";
 import { ArchitectureStageRunner } from "../workflow/stage-runners/architecture-stage-runner.js";
 import { ImplementationPlanStageRunner } from "../workflow/stage-runners/implementation-plan-stage-runner.js";
+import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../workflow/stage-runners/implementation-stage-runner.js";
 import { ModuleStageRunner } from "../workflow/stage-runners/module-stage-runner.js";
 import { RequirementStageRunner } from "../workflow/stage-runners/requirement-stage-runner.js";
 import { ValidationStageRunner } from "../workflow/stage-runners/validation-stage-runner.js";
+import { ShellRunner } from "../workflow/validation/shell-runner.js";
+import {
+  ContractResultBuilder,
+  DefaultExecutionEnvironmentPreparer,
+  ShellCommandTestRunner,
+} from "../contract/implementation-contract/implementation-contract.js";
 
 export interface ApplicationServices {
   artifactStore: ArtifactStoreService;
   historyStore: HistoryStoreService;
   traceRecorder: TraceService;
   changeGate: InMemoryChangeGate;
-  llmExecutor: LlmExecutorService;
+  llmExecutor: ILlmExecutor;
 }
 
 export interface CompositionRootOptions {
   artifactStorageRoot?: string;
   historyStorageRoot?: string;
   llmExecutor?: LlmExecutorServiceDependencies;
+  llmExecutorInstance?: ILlmExecutor;
+  shellRunner?: ShellRunner;
+  gitCommitter?: IImplementationGitCommitter;
+  changeGate?: InMemoryChangeGate;
 }
 
 export interface ApplicationRuntime {
@@ -41,9 +56,9 @@ export function createApplicationServices(options: CompositionRootOptions = {}):
   const historyStore = new HistoryStoreService(options.historyStorageRoot);
   const traceRecorder = new TraceService(historyStore);
   const artifactStore = new ArtifactStoreService(options.artifactStorageRoot, traceRecorder);
-  const changeGate = new InMemoryChangeGate();
+  const changeGate = options.changeGate ?? new InMemoryChangeGate();
 
-  const llmExecutor = new LlmExecutorService({
+  const llmExecutor = options.llmExecutorInstance ?? new LlmExecutorService({
     ...options.llmExecutor,
     traceRecorder,
   });
@@ -60,7 +75,7 @@ export function createApplicationServices(options: CompositionRootOptions = {}):
 export function createApplicationRuntime(options: CompositionRootOptions = {}): ApplicationRuntime {
   const taskRuntimeStore = new TaskRuntimeStore();
   const services = createApplicationServicesWithTaskRuntimeStore(options, taskRuntimeStore);
-  const registry = createDefaultStageRegistry(services);
+  const registry = createDefaultStageRegistry(services, options);
   const pipeline = new PipelineService({
     registry,
     traceRecorder: services.traceRecorder,
@@ -84,9 +99,9 @@ function createApplicationServicesWithTaskRuntimeStore(
   );
   const traceRecorder = new TraceService(historyStore);
   const artifactStore = new ArtifactStoreService(options.artifactStorageRoot, traceRecorder);
-  const changeGate = new InMemoryChangeGate();
+  const changeGate = options.changeGate ?? new InMemoryChangeGate();
 
-  const llmExecutor = new LlmExecutorService({
+  const llmExecutor = options.llmExecutorInstance ?? new LlmExecutorService({
     ...options.llmExecutor,
     traceRecorder,
   });
@@ -100,7 +115,7 @@ function createApplicationServicesWithTaskRuntimeStore(
   };
 }
 
-export function createDefaultStageRegistry(services: ApplicationServices): StageRegistry {
+export function createDefaultStageRegistry(services: ApplicationServices, options: CompositionRootOptions = {}): StageRegistry {
   const registry = new StageRegistry();
 
   const requirementStageDefinition: StageDefinition = {
@@ -162,10 +177,17 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
       generator: new ImplementationGenerator({
         llmExecutor: services.llmExecutor,
       }),
-      contractChecker: ImplementationContract.create(),
+      contractChecker: options.shellRunner
+        ? new ImplementationContract(
+          new DefaultExecutionEnvironmentPreparer(),
+          new ShellCommandTestRunner(options.shellRunner),
+          new ContractResultBuilder(),
+        )
+        : ImplementationContract.create(),
       artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
+      ...(options.gitCommitter ? { gitCommitter: options.gitCommitter } : {}),
     }),
     nextStageId: null,
   });
@@ -176,6 +198,7 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
       artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
+      ...(options.shellRunner ? { shellRunner: options.shellRunner } : {}),
     }),
     nextStageId: null,
   });

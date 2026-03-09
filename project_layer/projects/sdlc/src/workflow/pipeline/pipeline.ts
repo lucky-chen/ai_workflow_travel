@@ -40,7 +40,7 @@ export class PipelineService implements IPipeline {
 
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
     const triggerReason = request.triggerReason ?? "new_run";
-    const taskId = triggerReason === "stage_entry" ? request.taskId ?? this.createTaskId() : this.createTaskId();
+    const taskId = request.taskId ?? this.createTaskId();
     this.registry.validate();
     this.launchValidator.validate(request, this.registry);
 

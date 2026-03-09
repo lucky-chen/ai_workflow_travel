@@ -5,17 +5,28 @@ import {
   DefaultCLICommandParser,
   DefaultCLIRequestMapper,
 } from "../interface/cli/cli.js";
-import { createCliBaselineTestRuntime } from "../testing/scenario-runtime.js";
+import { createCliBaselineRuntimeOptions } from "../testing/scenario-runtime.js";
 
 async function main(): Promise<void> {
   const runtime = process.env.SDLC_TEST_SCENARIO === "fixed_workspace_baseline"
-    ? createCliBaselineTestRuntime()
+    ? createApplicationRuntime(createCliBaselineRuntimeOptions())
     : createApplicationRuntime();
+  const fixedTaskId = process.env.SDLC_TEST_TASK_ID?.trim();
+  const pipeline = fixedTaskId
+    ? {
+        launchTask(request: Parameters<typeof runtime.pipeline.launchTask>[0]) {
+          return runtime.pipeline.launchTask({
+            ...request,
+            taskId: request.taskId ?? fixedTaskId,
+          });
+        },
+      }
+    : runtime.pipeline;
 
   const cli = new CLIService(
     new DefaultCLICommandParser(),
     new DefaultCLIRequestMapper(),
-    runtime.pipeline,
+    pipeline,
     new ConsoleTraceViewer(),
   );
   const exitCode = await cli.run(process.argv.slice(2));
