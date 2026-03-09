@@ -369,11 +369,12 @@ This step delivers the shared runtime backbone used by all stages.
     - [x] `QualityGate/ChangeGate` runtime supports review `comment`, but presenter and CLI-facing review workflow are still narrower than the CLI design doc examples.
     - [x] `Interface/CLI` design doc and runtime implementation are materially misaligned: the design doc describes multi-input stage launches and review commands, while the current CLI still supports only a minimal `generate --module --input --workspace` path.
     - [x] `Execution/ImplementationGenerator` and `Contract/ImplementationContract` were aligned in Step 6/7, so the remaining Step 8 work is mainly in shared workflow, trace, gate, and CLI semantics rather than implementation-stage internals.
-- [ ] Batch 2: pipeline and stage-runner alignment
+- [x] Batch 2: pipeline and stage-runner alignment
   - [x] align pipeline generic orchestration semantics
   - [x] align stage-runner shared behavior model
   - [x] align stage continuation and retry semantics
   - [x] extend tests for orchestration behavior
+  - [x] register `architecture_design -> module_design` fan-out continuation in the production composition root
 - [ ] Batch 3: contract, trace, and gate alignment
   - [ ] align implementation runtime semantics
   - [ ] align contract runtime semantics
