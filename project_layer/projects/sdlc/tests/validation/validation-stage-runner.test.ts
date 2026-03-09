@@ -16,6 +16,7 @@ export async function runValidationStageRunnerTests(): Promise<void> {
   try {
     await testValidationStageRunnerPassesWithoutOptionalCollaborators();
     await testValidationStageRunnerRejectsOnGateDecision();
+    await testValidationStageRunnerRecordsReviewCommentInTrace();
     await testValidationStageRunnerRecordsTraceAndPersistsArtifact(artifactStore);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
@@ -75,6 +76,42 @@ async function testValidationStageRunnerRejectsOnGateDecision(): Promise<void> {
     ),
     /Validation review ended with action "reject"\./,
   );
+}
+
+async function testValidationStageRunnerRecordsReviewCommentInTrace(): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
+  const runner = new ValidationStageRunner({
+    shellRunner: new MockShellRunner({
+      passed: true,
+      summary: "Shell command passed: custom validation",
+      command: "custom validation",
+      exit_code: 0,
+    }),
+    traceRecorder,
+    changeGate: new InMemoryChangeGate({
+      decision: {
+        action: "wait",
+        summary: "Validation requires follow-up changes.",
+        comment: "Please capture failing snapshots before rerun.",
+      },
+    }),
+  });
+
+  await assert.rejects(
+    runner.run(
+      createContext(
+        { project_path: "/tmp/project" },
+        { validationCommand: "custom validation" },
+      ),
+    ),
+    /Validation review ended with action "wait"\./,
+  );
+
+  const gateEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "gate_reviewed");
+  assert.deepEqual(gateEvent?.event.metadata, {
+    action: "wait",
+    comment: "Please capture failing snapshots before rerun.",
+  });
 }
 
 async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(

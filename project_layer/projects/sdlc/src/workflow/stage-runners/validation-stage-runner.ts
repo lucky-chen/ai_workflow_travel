@@ -70,6 +70,7 @@ export class ValidationStageRunner implements IStageRunner {
         summary: decision.summary,
         metadata: {
           action: decision.action,
+          ...(decision.comment ? { comment: decision.comment } : {}),
         },
       });
 
