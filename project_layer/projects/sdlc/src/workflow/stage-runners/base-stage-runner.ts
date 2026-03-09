@@ -33,6 +33,7 @@ export abstract class BaseStageRunner implements IStageRunner {
 
   protected async recordStageStart(context: StageRunContext): Promise<void> {
     await this.traceRecorder?.recordTrace({
+      caller: `${this.constructor.name}.recordStageStart`,
       taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
@@ -50,10 +51,15 @@ export abstract class BaseStageRunner implements IStageRunner {
 
   protected async recordSharedContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
     await this.traceRecorder?.recordTrace({
+      caller: `${this.constructor.name}.recordSharedContractResult`,
       taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.contractChecked,
       summary,
+      category: "contract",
+      payload: {
+        passed,
+      },
       metadata: {
         passed: String(passed),
       },
@@ -67,6 +73,7 @@ export abstract class BaseStageRunner implements IStageRunner {
     gateDecision?: GateDecision,
   ): Promise<void> {
     await this.traceRecorder?.recordTrace({
+      caller: `${this.constructor.name}.recordSharedPersistenceResult`,
       taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.artifactPersisted,
@@ -83,14 +90,22 @@ export abstract class BaseStageRunner implements IStageRunner {
       ? await this.changeGate.review(changeRequest)
       : {
           action: "apply",
-          summary: "No change gate configured. Changes applied by default.",
+        summary: "No change gate configured. Changes applied by default.",
         };
 
     await this.traceRecorder?.recordTrace({
+      caller: `${this.constructor.name}.reviewChanges`,
       taskId: changeRequest.taskId,
       stageId: changeRequest.stageId,
       eventType: TRACE_EVENT_TYPES.gateReviewed,
       summary: decision.summary,
+      category: "review",
+      payload: {
+        action: decision.action,
+        changedPaths: changeRequest.changedPaths,
+        changedFiles: changeRequest.changedFiles,
+        ...(decision.comment ? { comment: decision.comment } : {}),
+      },
       metadata: {
         action: decision.action,
         ...(decision.comment ? { comment: decision.comment } : {}),

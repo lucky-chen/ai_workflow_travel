@@ -277,7 +277,7 @@ async function testHttpErrorResponse(): Promise<void> {
       },
       responseFormat: "json",
     }),
-    /HTTP 401: unauthorized/,
+    /HTTP request failed with status 401: unauthorized/,
   );
 }
 

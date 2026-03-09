@@ -9,6 +9,7 @@ import type { StageDefinition } from "../shared/contracts/pipeline.js";
 import { PipelineService } from "../workflow/pipeline/pipeline.js";
 import { StageRegistry } from "../workflow/pipeline/stage-registry.js";
 import { createModuleDesignFanoutContinuation } from "../workflow/pipeline/module-design-fanout.js";
+import { TaskRuntimeStore } from "../workflow/pipeline/task-runtime-store.js";
 import { ArchitectureStageRunner } from "../workflow/stage-runners/architecture-stage-runner.js";
 import { ImplementationPlanStageRunner } from "../workflow/stage-runners/implementation-plan-stage-runner.js";
 import { ImplementationStageRunner } from "../workflow/stage-runners/implementation-stage-runner.js";
@@ -37,9 +38,9 @@ export interface ApplicationRuntime {
 }
 
 export function createApplicationServices(options: CompositionRootOptions = {}): ApplicationServices {
-  const artifactStore = new ArtifactStoreService(options.artifactStorageRoot);
   const historyStore = new HistoryStoreService(options.historyStorageRoot);
   const traceRecorder = new TraceService(historyStore);
+  const artifactStore = new ArtifactStoreService(options.artifactStorageRoot, traceRecorder);
   const changeGate = new InMemoryChangeGate();
 
   const llmExecutor = new LlmExecutorService({
@@ -57,17 +58,45 @@ export function createApplicationServices(options: CompositionRootOptions = {}):
 }
 
 export function createApplicationRuntime(options: CompositionRootOptions = {}): ApplicationRuntime {
-  const services = createApplicationServices(options);
+  const taskRuntimeStore = new TaskRuntimeStore();
+  const services = createApplicationServicesWithTaskRuntimeStore(options, taskRuntimeStore);
   const registry = createDefaultStageRegistry(services);
   const pipeline = new PipelineService({
     registry,
     traceRecorder: services.traceRecorder,
+    taskRuntimeStore,
   });
 
   return {
     services,
     registry,
     pipeline,
+  };
+}
+
+function createApplicationServicesWithTaskRuntimeStore(
+  options: CompositionRootOptions,
+  taskRuntimeStore: TaskRuntimeStore,
+): ApplicationServices {
+  const historyStore = new HistoryStoreService(
+    options.historyStorageRoot,
+    (taskId) => taskRuntimeStore.getWorkspaceRoot(taskId),
+  );
+  const traceRecorder = new TraceService(historyStore);
+  const artifactStore = new ArtifactStoreService(options.artifactStorageRoot, traceRecorder);
+  const changeGate = new InMemoryChangeGate();
+
+  const llmExecutor = new LlmExecutorService({
+    ...options.llmExecutor,
+    traceRecorder,
+  });
+
+  return {
+    artifactStore,
+    historyStore,
+    traceRecorder,
+    changeGate,
+    llmExecutor,
   };
 }
 

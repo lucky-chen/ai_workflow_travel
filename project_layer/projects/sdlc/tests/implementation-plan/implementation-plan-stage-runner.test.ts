@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
@@ -66,6 +66,10 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
       stageId: "implementation_plan",
       filePath: implementationPlanPath,
     }),
+    content,
+  );
+  assert.equal(
+    await readFile(path.join(workspaceRoot, implementationPlanPath), "utf8"),
     content,
   );
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [

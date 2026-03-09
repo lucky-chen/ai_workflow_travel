@@ -36,6 +36,10 @@ export class TaskRuntimeStore {
     return this.tasks.get(taskId);
   }
 
+  getWorkspaceRoot(taskId: TaskId): string | undefined {
+    return this.tasks.get(taskId)?.workspaceRoot;
+  }
+
   getLastOutput(taskId: TaskId): StageOutput | undefined {
     return this.tasks.get(taskId)?.lastOutput;
   }

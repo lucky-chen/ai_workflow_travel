@@ -5,8 +5,10 @@ import type { FilePath, StageId, TaskId, TraceRef } from "../../shared/types/com
 export interface HistoryRecord {
   recordId?: TraceRef;
   category: string;
-  taskId?: TaskId;
-  stageId?: StageId;
+  scope?: {
+    taskId?: TaskId;
+    stageId?: StageId;
+  };
   summary?: string;
   payload: Record<string, unknown>;
 }
@@ -17,42 +19,139 @@ export interface HistoryQuery {
   stageId?: StageId;
 }
 
+export type HistoryWorkspaceRootResolver = (taskId: TaskId) => string | undefined;
+
 export class HistoryStoreService {
-  constructor(private readonly storageRoot: string = path.resolve(process.cwd(), "history_store")) {}
+  constructor(
+    private readonly storageRoot: string = path.resolve(process.cwd(), "history_store"),
+    private readonly workspaceRootResolver?: HistoryWorkspaceRootResolver,
+  ) {}
 
   async writeRecord(record: HistoryRecord): Promise<TraceRef> {
     const recordId = record.recordId ?? `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const targetPath = path.join(this.storageRoot, "records", `${recordId}.json`);
+    const taskId = this.requireTaskId(record.scope?.taskId);
+    const stageId = this.normalizeOptionalIdentifier(record.scope?.stageId);
+    const persistedRecord: HistoryRecord = {
+      ...record,
+      ...(taskId || stageId ? { scope: this.buildScope(taskId, stageId) } : {}),
+      recordId,
+    };
+    const taskBucketName = this.resolveTaskBucketName(taskId);
+    const targetPath = path.join(this.storageRoot, "records", `${taskBucketName}.json`);
+    const updatedBucket = await this.readBucket(targetPath);
+    updatedBucket.push(persistedRecord);
+    await this.writeBucket(targetPath, updatedBucket);
 
-    await mkdir(path.dirname(targetPath), { recursive: true });
-    await writeFile(
-      targetPath,
-      JSON.stringify(
-        {
-          ...record,
-          recordId,
-        },
-        null,
-        2,
-      ),
-      "utf8",
-    );
+    const workspaceRoot = taskId ? this.workspaceRootResolver?.(taskId) : undefined;
+    if (workspaceRoot) {
+      await this.writeBucket(
+        path.join(workspaceRoot, "sdlc", "trace", `${taskBucketName}.json`),
+        updatedBucket,
+      );
+    }
 
     return recordId;
   }
 
   async getRecord(recordId: TraceRef): Promise<HistoryRecord> {
-    const targetPath = path.join(this.storageRoot, "records", `${recordId}.json`);
-    const raw = await readFile(targetPath, "utf8");
-    return JSON.parse(raw) as HistoryRecord;
+    const records = await this.listRecords();
+    const record = records.find((entry) => entry.recordId === recordId);
+    if (!record) {
+      const error = new Error(`History record "${recordId}" not found.`) as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return record;
   }
 
   async listRecords(query: HistoryQuery = {}): Promise<HistoryRecord[]> {
     const recordsDirectory = path.join(this.storageRoot, "records");
-    let entries: string[];
+    const recordFiles = await this.listRecordFiles(recordsDirectory);
+    const records = await Promise.all(
+      recordFiles.map(async (entry) => {
+        const raw = await readFile(entry, "utf8");
+        return JSON.parse(raw) as HistoryRecord[];
+      }),
+    );
+
+    return records.flat().filter((record) => {
+      if (query.category && record.category !== query.category) {
+        return false;
+      }
+
+      if (query.taskId && record.scope?.taskId !== query.taskId) {
+        return false;
+      }
+
+      if (query.stageId && record.scope?.stageId !== query.stageId) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  private requireTaskId(taskId?: TaskId): TaskId {
+    if (taskId?.trim()) {
+      return taskId;
+    }
+
+    throw new Error('History record requires a non-empty "taskId".');
+  }
+
+  private buildScope(taskId?: TaskId, stageId?: StageId): {
+    taskId?: TaskId;
+    stageId?: StageId;
+  } {
+    return {
+      ...(taskId ? { taskId } : {}),
+      ...(stageId ? { stageId } : {}),
+    };
+  }
+
+  private normalizeOptionalIdentifier<T extends string>(value?: T): T | undefined {
+    return value?.trim() ? value : undefined;
+  }
+
+  private resolveTaskBucketName(taskId?: TaskId): string {
+    return taskId ?? "_global";
+  }
+
+  private async readBucket(targetPath: string): Promise<HistoryRecord[]> {
+    try {
+      const raw = await readFile(targetPath, "utf8");
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed as HistoryRecord[] : [];
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === "ENOENT") {
+        return [];
+      }
+
+      throw error;
+    }
+  }
+
+  private async writeBucket(targetPath: string, records: HistoryRecord[]): Promise<void> {
+    await this.writeFileAt(targetPath, JSON.stringify(records, null, 2));
+  }
+
+  private async writeFileAt(targetPath: string, content: string): Promise<void> {
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, content, "utf8");
+  }
+
+  private async listRecordFiles(recordsDirectory: string): Promise<string[]> {
+    let entries: Array<{ name: string; isFile: boolean }>;
 
     try {
-      entries = await readdir(recordsDirectory);
+      entries = await readdir(recordsDirectory, { withFileTypes: true }).then((items) =>
+        items.map((item) => ({
+          name: item.name,
+          isFile: item.isFile(),
+        })),
+      );
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
       if (nodeError.code === "ENOENT") {
@@ -62,29 +161,8 @@ export class HistoryStoreService {
       throw error;
     }
 
-    const records = await Promise.all(
-      entries
-        .filter((entry) => entry.endsWith(".json"))
-        .map(async (entry) => {
-          const raw = await readFile(path.join(recordsDirectory, entry as FilePath), "utf8");
-          return JSON.parse(raw) as HistoryRecord;
-        }),
-    );
-
-    return records.filter((record) => {
-      if (query.category && record.category !== query.category) {
-        return false;
-      }
-
-      if (query.taskId && record.taskId !== query.taskId) {
-        return false;
-      }
-
-      if (query.stageId && record.stageId !== query.stageId) {
-        return false;
-      }
-
-      return true;
-    });
+    return entries
+      .filter((entry) => entry.isFile && entry.name.endsWith(".json"))
+      .map((entry) => path.join(recordsDirectory, entry.name as FilePath));
   }
 }

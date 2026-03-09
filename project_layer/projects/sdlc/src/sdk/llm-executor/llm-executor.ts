@@ -49,6 +49,12 @@ export class LlmExecutorService implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     await this.traceRecorder?.recordTrace({
       taskId: "llm-executor",
+      caller: "LlmExecutorService.execute",
+      stageId: typeof request.metadata?.stageId === "string"
+        ? request.metadata.stageId
+        : typeof request.metadata?.stage === "string"
+          ? request.metadata.stage
+          : undefined,
       eventType: TRACE_EVENT_TYPES.llmExecutionStarted,
       summary: "LLM execution started.",
       metadata: {
@@ -66,6 +72,12 @@ export class LlmExecutorService implements ILlmExecutor {
 
     await this.traceRecorder?.recordTrace({
       taskId: "llm-executor",
+      caller: "LlmExecutorService.execute",
+      stageId: typeof request.metadata?.stageId === "string"
+        ? request.metadata.stageId
+        : typeof request.metadata?.stage === "string"
+          ? request.metadata.stage
+          : undefined,
       eventType: TRACE_EVENT_TYPES.llmExecutionFinished,
       summary: "LLM execution finished.",
       metadata: {

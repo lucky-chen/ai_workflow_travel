@@ -433,20 +433,23 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 10. Validate Baseline With `hello-service`
 
-- [x] Step 10 is in progress
-- [ ] Architecture modules in scope
-  - [ ] `SDK/AgentRuntime`
-  - [ ] `SDK/LlmExecutor`
-  - [ ] workflow automation on top of completed stages
-  - [ ] `hello-service` verification target
-- [ ] Batch 1: hello-service end-to-end baseline verification
-  - [ ] create or prepare one minimal `hello-service` target
-  - [ ] verify the CLI can launch from `workspace` without explicit artifact path arguments
-  - [ ] verify document artifacts are produced under `workspace/sdlc/docs`
-  - [ ] verify `implementation_execution` targets `workspace/src`
-  - [ ] verify validation runs against `workspace`
-  - [ ] capture validation evidence for the runnable backbone
-  - [ ] record scope limits and follow-up gaps before broader agent capability expansion
+- [x] Step 10 is completed
+- [x] Architecture modules in scope
+  - [x] `SDK/AgentRuntime`
+  - [x] `SDK/LlmExecutor`
+  - [x] workflow automation on top of completed stages
+  - [x] `hello-service` verification target
+- [x] Batch 1: hello-service end-to-end baseline verification
+  - [x] create or prepare one minimal `hello-service` target
+  - [x] verify the CLI can launch from `workspace` without explicit artifact path arguments
+  - [x] verify document artifacts are produced under `workspace/sdlc/docs`
+  - [x] verify `implementation_execution` targets `workspace/src`
+  - [x] verify validation runs against `workspace`
+  - [x] capture validation evidence for the runnable backbone
+  - [x] record scope limits and follow-up gaps before broader agent capability expansion
+  - [x] Verification note
+    - [x] baseline evidence is automated in `tests/hello-service/hello-service-baseline.test.ts`
+    - [x] verification currently uses a temporary hello-service workspace rather than a committed sample app under `user_projects/hello-service`
 
 ### Step 11. Extend Toward Agent Capabilities
 
@@ -495,7 +498,7 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 7 is completed
 - [x] Step 8 is in progress
 - [x] Step 9 is completed
-- [x] Step 10 is in progress
+- [x] Step 10 is completed
 - [ ] Step 11 is not started
 
 ## 5. Verification Rule

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { HistoryStoreService } from "../../src/data/history-store/history-store.js";
@@ -9,6 +9,7 @@ import { TraceService } from "../../src/quality-gate/trace/trace-recorder.js";
 export async function runTraceTests(): Promise<void> {
   await testTraceRecorderAssignsStableRefs();
   await testTraceServicePersistsHistory();
+  await testTraceServiceMirrorsTraceIntoWorkspace();
 }
 
 async function testTraceRecorderAssignsStableRefs(): Promise<void> {
@@ -17,11 +18,13 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
   const ref1 = await recorder.recordTrace({
     taskId: "task-1",
     stageId: "implementation",
+    caller: "trace.test",
     eventType: "stage_started",
     summary: "Implementation started.",
   });
   const ref2 = await recorder.recordTrace({
     taskId: "task-1",
+    caller: "trace.test",
     eventType: "task_finished",
     summary: "Task finished.",
   });
@@ -34,6 +37,7 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
       event: {
         taskId: "task-1",
         stageId: "implementation",
+        caller: "trace.test",
         eventType: "stage_started",
         summary: "Implementation started.",
       },
@@ -42,6 +46,7 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
       ref: "trace-2",
       event: {
         taskId: "task-1",
+        caller: "trace.test",
         eventType: "task_finished",
         summary: "Task finished.",
       },
@@ -59,6 +64,7 @@ async function testTraceServicePersistsHistory(): Promise<void> {
     const ref = await recorder.recordTrace({
       taskId: "task-1",
       stageId: "implementation",
+      caller: "trace.test",
       eventType: "stage_started",
       summary: "Implementation started.",
       metadata: {
@@ -68,8 +74,10 @@ async function testTraceServicePersistsHistory(): Promise<void> {
 
     const record = await historyStore.getRecord(ref);
     assert.equal(record.category, "trace");
-    assert.equal(record.taskId, "task-1");
-    assert.equal(record.stageId, "implementation");
+    assert.deepEqual(record.scope, {
+      taskId: "task-1",
+      stageId: "implementation",
+    });
     assert.equal(record.summary, "Implementation started.");
     assert.deepEqual(record.payload, {
       eventType: "stage_started",
@@ -79,6 +87,51 @@ async function testTraceServicePersistsHistory(): Promise<void> {
     });
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
+  }
+}
+
+async function testTraceServiceMirrorsTraceIntoWorkspace(): Promise<void> {
+  const storageRoot = await createTempDir("trace-history-");
+  const workspaceRoot = await createTempDir("trace-workspace-");
+
+  try {
+    const historyStore = new HistoryStoreService(
+      storageRoot,
+      (taskId) => (taskId === "task-workspace" ? workspaceRoot : undefined),
+    );
+    const recorder = new TraceService(historyStore);
+
+    const ref = await recorder.recordTrace({
+      taskId: "task-workspace",
+      stageId: "architecture_design",
+      caller: "trace.test",
+      eventType: "stage_started",
+      summary: "Architecture started.",
+    });
+
+    const mirroredRecord = JSON.parse(
+      await readFile(
+        path.join(workspaceRoot, "sdlc", "trace", "task-workspace.json"),
+        "utf8",
+      ),
+    ) as Array<{
+      recordId: string;
+      category: string;
+      scope: { taskId: string; stageId: string };
+      summary: string;
+    }>;
+
+    assert.equal(mirroredRecord.length, 1);
+    assert.equal(mirroredRecord[0]?.recordId, ref);
+    assert.equal(mirroredRecord[0]?.category, "trace");
+    assert.deepEqual(mirroredRecord[0]?.scope, {
+      taskId: "task-workspace",
+      stageId: "architecture_design",
+    });
+    assert.equal(mirroredRecord[0]?.summary, "Architecture started.");
+  } finally {
+    await rm(storageRoot, { recursive: true, force: true });
+    await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 

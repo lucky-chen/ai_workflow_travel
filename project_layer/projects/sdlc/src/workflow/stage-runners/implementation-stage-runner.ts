@@ -1,5 +1,4 @@
 // Implementation stage runner: executes implementation generation, contract check, review, and final apply.
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
@@ -51,7 +50,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
 
     const contractResult = await this.runContractCheck(this.dependencies.contractChecker, context, output);
-    await this.recordContractResult(context, contractResult.passed, contractResult.summary);
+    await this.recordSharedContractResult(context, contractResult.passed, contractResult.summary);
     if (!contractResult.passed) {
       throw new Error(`Implementation contract failed: ${contractResult.summary}`);
     }
@@ -224,11 +223,8 @@ export class ImplementationStageRunner extends BaseStageRunner {
       stageId: "implementation_plan",
       filePath: preparedStepContext.workplanRef,
       content: updatedContent,
+      workspaceRoot: context.workspaceRoot,
     });
-
-    const workspacePlanPath = path.join(context.workspaceRoot, preparedStepContext.workplanRef);
-    await mkdir(path.dirname(workspacePlanPath), { recursive: true });
-    await writeFile(workspacePlanPath, updatedContent, "utf8");
   }
 
   private markAcceptedBatch(workplanContent: string, batchId: string): string {
@@ -331,24 +327,13 @@ export class ImplementationStageRunner extends BaseStageRunner {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
-  private async recordContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: TRACE_EVENT_TYPES.contractChecked,
-      summary,
-      metadata: {
-        passed: String(passed),
-      },
-    });
-  }
-
   private async recordFinalStepResult(
     context: StageRunContext,
     batchId: string,
     changedFiles: ChangedFile[],
   ): Promise<void> {
     await this.traceRecorder?.recordTrace({
+      caller: "ImplementationStageRunner.recordFinalStepResult",
       taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stepCompleted,

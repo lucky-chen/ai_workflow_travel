@@ -40,6 +40,7 @@ export class ValidationStageRunner implements IStageRunner {
 
   async run(context: StageRunContext): Promise<ValidationStageOutput> {
     await this.dependencies.traceRecorder?.recordTrace({
+      caller: "ValidationStageRunner.run",
       taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
@@ -52,6 +53,7 @@ export class ValidationStageRunner implements IStageRunner {
     const output = this.buildOutput(projectPath, shellResult);
 
     await this.dependencies.traceRecorder?.recordTrace({
+      caller: "ValidationStageRunner.run",
       taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.validationFinished,
@@ -65,6 +67,7 @@ export class ValidationStageRunner implements IStageRunner {
     if (this.dependencies.changeGate) {
       const decision = await this.dependencies.changeGate.review(this.buildReviewRequest(context, output));
       await this.dependencies.traceRecorder?.recordTrace({
+        caller: "ValidationStageRunner.run",
         taskId: context.taskId,
         stageId: context.stageId,
         eventType: TRACE_EVENT_TYPES.gateReviewed,
@@ -89,6 +92,7 @@ export class ValidationStageRunner implements IStageRunner {
       });
 
       await this.dependencies.traceRecorder?.recordTrace({
+        caller: "ValidationStageRunner.run",
         taskId: context.taskId,
         stageId: context.stageId,
         eventType: TRACE_EVENT_TYPES.artifactPersisted,

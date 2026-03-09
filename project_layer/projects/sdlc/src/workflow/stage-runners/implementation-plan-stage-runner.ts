@@ -122,6 +122,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
       stageId: context.stageId,
       filePath: artifactPath,
       content,
+      workspaceRoot: context.workspaceRoot,
     });
   }
 

@@ -106,6 +106,7 @@ export class ModuleStageRunner extends BaseStageRunner {
       stageId: context.stageId,
       filePath: artifactPath,
       content,
+      workspaceRoot: context.workspaceRoot,
     });
   }
 

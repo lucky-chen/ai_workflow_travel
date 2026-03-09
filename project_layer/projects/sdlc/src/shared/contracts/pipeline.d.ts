@@ -49,6 +49,7 @@ export interface WriteArtifactRequest {
     stageId: StageId;
     filePath: FilePath;
     content: string;
+    workspaceRoot?: string;
 }
 export interface GetArtifactRequest {
     taskId: TaskId;

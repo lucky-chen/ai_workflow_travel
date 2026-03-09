@@ -339,6 +339,8 @@ export class CLIService implements ICLI {
     const request = await this.requestMapper.map(parsed);
     this.traceViewer.renderTrace({
       taskId: "pending",
+      caller: "CLIService.run",
+      stageId: request.startStageId,
       eventType: TRACE_EVENT_TYPES.taskLaunchRequested,
       summary: `Launching command "${parsed.command}" for stage "${request.startStageId}".`,
     });

@@ -5,19 +5,41 @@ import type { FilePath } from "../../shared/types/common.js";
 import type {
   GetArtifactRequest,
   IArtifactStore,
+  ITraceRecorder,
   ListArtifactRequest,
   WriteArtifactRequest,
 } from "../../shared/contracts/pipeline.js";
 
 export class ArtifactStoreService implements IArtifactStore {
   // Storage layout: {storageRoot}/{taskId}/{stageId}/{filePath}
-  constructor(private readonly storageRoot: string = path.resolve(process.cwd(), "artifact_store")) {}
+  constructor(
+    private readonly storageRoot: string = path.resolve(process.cwd(), "artifact_store"),
+    private readonly traceRecorder?: ITraceRecorder,
+  ) {}
 
   // Public API: persistent artifact entry used by workflow and generators.
   async writeArtifact(request: WriteArtifactRequest): Promise<boolean> {
     const artifactPath = this.getArtifactAbsolutePath(request);
-    await mkdir(path.dirname(artifactPath), { recursive: true });
-    await writeFile(artifactPath, request.content, "utf8");
+    await this.writeFileAt(artifactPath, request.content);
+
+    if (request.workspaceRoot) {
+      const workspaceArtifactPath = path.join(request.workspaceRoot, request.filePath);
+      await this.writeFileAt(workspaceArtifactPath, request.content);
+    }
+
+    await this.traceRecorder?.recordTrace({
+      caller: "ArtifactStoreService.writeArtifact",
+      category: "artifact",
+      taskId: request.taskId,
+      stageId: request.stageId,
+      eventType: "artifact_persisted",
+      summary: `Artifact persisted to ${request.filePath}.`,
+      payload: {
+        filePath: request.filePath,
+        mirroredToWorkspace: Boolean(request.workspaceRoot),
+      },
+    });
+
     return true;
   }
 
@@ -44,6 +66,11 @@ export class ArtifactStoreService implements IArtifactStore {
 
   private getStageDirectory(taskId: string, stageId: string): string {
     return path.join(this.storageRoot, taskId, stageId);
+  }
+
+  private async writeFileAt(targetPath: string, content: string): Promise<void> {
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, content, "utf8");
   }
 
   private async walkRelativePaths(directoryPath: string, basePath: string = directoryPath): Promise<FilePath[]> {

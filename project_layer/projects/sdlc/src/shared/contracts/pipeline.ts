@@ -91,6 +91,7 @@ export interface WriteArtifactRequest {
   stageId: StageId;
   filePath: FilePath;
   content: string;
+  workspaceRoot?: string;
 }
 
 export interface GetArtifactRequest {
@@ -114,9 +115,12 @@ export interface IArtifactStore {
 export interface TraceEvent {
   taskId: TaskId;
   stageId?: StageId;
+  caller: string;
   eventType: TraceEventType;
   summary: string;
+  category?: string;
   metadata?: StringMap;
+  payload?: Record<string, unknown>;
 }
 
 export interface ITraceRecorder {

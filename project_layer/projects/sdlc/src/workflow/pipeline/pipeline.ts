@@ -68,6 +68,8 @@ export class PipelineService implements IPipeline {
     });
     await this.traceRecorder?.recordTrace({
       taskId,
+      caller: "PipelineService.launchTask",
+      stageId: request.startStageId,
       eventType: TRACE_EVENT_TYPES.taskStarted,
       summary: `Task "${taskId}" started at stage "${request.startStageId}".`,
     });
@@ -97,6 +99,7 @@ export class PipelineService implements IPipeline {
         });
         await this.traceRecorder?.recordTrace({
           taskId,
+          caller: "PipelineService.launchTask",
           stageId: currentStageId,
           eventType: TRACE_EVENT_TYPES.stageFailed,
           summary: error instanceof Error
@@ -118,6 +121,7 @@ export class PipelineService implements IPipeline {
         });
         await this.traceRecorder?.recordTrace({
           taskId,
+          caller: "PipelineService.launchTask",
           stageId: currentStageId,
           eventType: TRACE_EVENT_TYPES.stageFailed,
           summary: `Stage "${currentStageId}" failed.`,
@@ -153,6 +157,8 @@ export class PipelineService implements IPipeline {
 
     await this.traceRecorder?.recordTrace({
       taskId,
+      caller: "PipelineService.launchTask",
+      stageId: this.getTaskRecord(taskId)?.currentStageId ?? request.startStageId,
       eventType: TRACE_EVENT_TYPES.taskFinished,
       summary: `Task "${taskId}" finished.`,
     });
@@ -247,6 +253,7 @@ export class PipelineService implements IPipeline {
         });
         await this.traceRecorder?.recordTrace({
           taskId: context.taskId,
+          caller: "PipelineService.runStageContinuation",
           stageId,
           eventType: TRACE_EVENT_TYPES.stageFailed,
           summary,
