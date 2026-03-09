@@ -395,13 +395,15 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] `SDK/AgentRuntime`
   - [ ] `SDK/LlmExecutor`
   - [ ] runtime-to-document synchronization
-- [ ] Batch 1: CLI and MCP baseline alignment
+- [ ] Batch 1: CLI baseline alignment
   - [ ] align CLI interaction semantics
   - [ ] update sequence diagrams affected by runtime changes
   - [ ] update plan status to reflect true implementation state
   - [ ] confirm docs and runnable behavior are consistent
-  - [x] current baseline: `AgentRuntime` already supports the MCP protocol and exposes file read/write as a default tool
-  - [ ] promote the current MCP baseline into stable runtime planning, execution, and trace semantics
+- [ ] Batch 2: MCP baseline alignment
+  - [ ] add MCP protocol support to `AgentRuntime`
+  - [ ] add file read/write as the default MCP-backed tool capability
+  - [ ] promote MCP support into stable runtime planning, execution, and trace semantics
   - [ ] `IMcpGateway`
   - [ ] MCP request/result types
   - [ ] tool-capable execution plan steps
