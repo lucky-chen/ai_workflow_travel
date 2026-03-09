@@ -247,13 +247,7 @@ async function testRequirementContractBuildsPromptRequest(workspaceRoot: string)
 }
 
 async function testRequirementContractPrefersWorkspaceResourceSource(workspaceRoot: string): Promise<void> {
-  const resourcePath = path.join(
-    workspaceRoot,
-    "sdlc",
-    "resources",
-    "contract",
-    "RequirementTemplate.contract.json",
-  );
+  const resourcePath = path.join(workspaceRoot, "sdlc", "resources", "contract", "RequirementTemplate.contract.json");
   await mkdir(path.dirname(resourcePath), { recursive: true });
   await writeFile(
     resourcePath,
