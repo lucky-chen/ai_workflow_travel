@@ -4,17 +4,17 @@
 
 Read these documents first before any requirement analysis, architecture work, module design work, or code generation:
 
-- Requirement document:
-  [meta_layer/docs/Requirement.md](./meta_layer/docs/Requirement.md)
-- Architecture document:
-  [meta_layer/docs/TechnicalArchitecture.md](./meta_layer/docs/TechnicalArchitecture.md)
-- Module design documents:
-  `module_desig` in discussions refers to the current design-doc directory
-  [meta_layer/docs/design_docs/](./meta_layer/docs/design_docs/)
-- Code generation execution plan:
-  [project_layer/docs/CodeGenerationExecutionPlan.md](./project_layer/docs/CodeGenerationExecutionPlan.md)
-- Collaboration standard:
-  [project_layer/docs/COLLABORATION_STANDARD.md](./project_layer/docs/COLLABORATION_STANDARD.md)
+- [Requirement document](./meta_layer/docs/Requirement.md):
+  - product requirement baseline, scope, user workflow, and target capability definition
+- [Architecture document](./meta_layer/docs/TechnicalArchitecture.md):
+  - end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model
+- [Module design documents](./meta_layer/docs/design_docs/):
+  - `module_desig` in discussions refers to the current design-doc directory
+  - module-level design set covering workflow, execution, contract, interface, SDK, data, and quality-gate details
+- [Code generation execution plan](./project_layer/docs/CodeGenerationExecutionPlan.md):
+  - implementation delivery plan, batch breakdown, execution status, and completion tracking
+- [Collaboration standard](./project_layer/docs/COLLABORATION_STANDARD.md):
+  - collaboration rules for change plans, batch boundaries, validation, and commit requirements
 
 ## Background
 
@@ -57,28 +57,15 @@ Core goals:
 
 Standard flow:
 
-1. A PM creates or updates a requirement document and starts a task
-2. The platform interprets the requirement and prepares intended changes
-3. The PM reviews the interpreted requirement result and decides whether to continue, revise, or stop
-4. The platform generates or updates design artifacts
-5. An engineer reviews design changes and confirms whether they should be applied
-6. The platform generates or updates implementation artifacts
-7. An engineer reviews code changes and decides whether to accept or reject them
-8. The platform runs validation or test steps and presents a result summary
-9. The PM and engineer accept the result together
-
-Supported resume entry points:
-
-- design generation/update
-- implementation generation/update
-- validation
-
-Failure handling:
-
-- when a stage fails, the workflow stops at the current stage
-- the platform does not automatically roll back to an earlier stage
-- users fix the issue at the current stage
-- after the issue is fixed, the workflow retries from the same stage
+1. A **PM** creates or updates a requirement document and starts a task
+2. The **Platform** interprets the requirement and prepares intended changes
+3. The **PM** reviews the interpreted requirement result and decides whether to continue, revise, or stop
+4. The **Platform** generates or updates design artifacts
+5. An **Engineer** reviews design changes and confirms whether they should be applied
+6. The **Platform** generates or updates implementation artifacts
+7. An **Engineer** reviews code changes and decides whether to accept or reject them
+8. The **Platform** runs validation or test steps and presents a result summary
+9. The **PM** and **Engineer** accept the result together
 
 ## Inputs and Outputs
 
@@ -103,52 +90,29 @@ Main outputs:
 ## Project Structure
 
 - `meta_layer`
-  - `docs/design_docs/`
-    - architecture, workflow, execution, contract, interface, and SDK documents
-  - `resources/template/`
-    - generation templates for each stage
-  - `resources/contract/`
-    - contracts and template constraints for each stage
+  - `docs/`: requirement, architecture, and module design documents
+  - `resources/`: templates and contract resources
 - `project_layer`
-  - `projects/sdlc/`
-    - the current primary implementation project
-  - `docs/`
-    - collaboration standards and execution plans
+  - `projects/sdlc/`: current primary implementation project
+  - `projects/agent_runtime/`: shared agent runtime project
+  - `docs/`: collaboration standards and execution plans
 
-## Current Implementation Scope
+## Roadmap
 
-Implemented stages in `project_layer/projects/sdlc`:
-
-1. `requirement_interpretation`
-2. `architecture_design`
-3. `module_design`
-4. `implementation_plan`
-5. `implementation_execution`
-6. `validation`
-
-Stages still to be extended in later work:
-
-1. AgentRuntime V2 memory support
-2. AgentRuntime-managed multi-turn continuation
-3. richer CLI interaction flow
-
-## Test Organization
-
-`project_layer/projects/sdlc/tests/` is grouped by function and stage:
-
-- `shared/`
-- `workflow/`
-- `requirement/`
-- `architecture/`
-- `module-design/`
-- `implementation-plan/`
-- `implementation-execution/`
-- `validation/`
-
-Only these files remain at the test root:
-
-- `run-tests.ts`
-- `cli.test.ts`
+- `project_layer/projects/sdlc`
+  - [x] Workflow stage flow
+  - [x] CLI-based stage launch and task execution
+  - [x] Requirement, architecture, module design, implementation plan, implementation execution, and validation stages
+  - [ ] richer CLI interaction flow
+- `project_layer/projects/agent_runtime`
+  - [x] AgentRuntime V1 single-turn execution foundation
+  - [x] Agent abstraction, runtime execution loop, and trace integration
+  - [ ] AgentRuntime V2 memory support
+  - [ ] AgentRuntime-managed multi-turn continuation
+- `AI Travel`
+  - [ ] AI Travel end-to-end delivery goal
+  - [ ] AI Travel output quality and controllability improvement
+  - [ ] AI Travel CLI interaction improvement
 
 ## Run Tests
 
@@ -158,21 +122,18 @@ Run the following in `project_layer/projects/sdlc`:
 npm test
 ```
 
-This command first builds:
+## Usage
 
-- `project_layer/projects/sdlc`
-- `project_layer/projects/agent_runtime`
+CLI entry: `project_layer/projects/sdlc/src/interface/cli/cli.ts`
 
-It then runs the aggregated test entry at `tests/run-tests.ts`.
+Example command:
 
-## Key Documents
+```bash
+generate --module <stage_id> --input <input_file> --workspace <workspace_path>
+```
 
-- Start here first:
-  - [meta_layer/docs/Requirement.md](./meta_layer/docs/Requirement.md)
-  - [meta_layer/docs/TechnicalArchitecture.md](./meta_layer/docs/TechnicalArchitecture.md)
-  - [meta_layer/docs/design_docs/](./meta_layer/docs/design_docs/)
-  - [project_layer/docs/CodeGenerationExecutionPlan.md](./project_layer/docs/CodeGenerationExecutionPlan.md)
-  - [project_layer/docs/COLLABORATION_STANDARD.md](./project_layer/docs/COLLABORATION_STANDARD.md)
-- Workflow design:
-  - [meta_layer/docs/design_docs/Workflow/Pipeline.md](./meta_layer/docs/design_docs/Workflow/Pipeline.md)
-  - [meta_layer/docs/design_docs/Workflow/StageRunners.md](./meta_layer/docs/design_docs/Workflow/StageRunners.md)
+Arguments:
+
+- `--module`: target stage id
+- `--input`: stage input file
+- `--workspace`: workspace root path

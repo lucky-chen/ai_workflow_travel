@@ -1,5 +1,21 @@
 # AI Meta-Agent 项目
 
+## 核心协作文档
+
+在进行需求分析、架构设计、模块设计或代码生成之前，请优先阅读以下文档：
+
+- [需求文档](./meta_layer/docs/Requirement.md)：
+  - 定义产品需求基线、范围、用户工作流和目标能力
+- [架构文档](./meta_layer/docs/TechnicalArchitecture.md)：
+  - 定义端到端技术架构、阶段流转、模块职责和运行时协作模型
+- [模块设计文档](./meta_layer/docs/design_docs/)：
+  - 讨论中的 `module_desig` 当前对应设计文档目录
+  - 包含 workflow、execution、contract、interface、SDK、data、quality-gate 等模块级设计
+- [代码生成计划](./project_layer/docs/CodeGenerationExecutionPlan.md)：
+  - 定义实现交付计划、batch 拆分、执行状态和完成跟踪
+- [协作文档](./project_layer/docs/COLLABORATION_STANDARD.md)：
+  - 定义变更计划、batch 边界、验证要求和 commit 规则
+
 ## 背景
 
 多数情况下，一个产品想法很难直接、低成本地落地为可运行程序。
@@ -41,28 +57,15 @@
 
 标准流程如下：
 
-1. PM 创建或更新需求文档，并启动任务
-2. 平台解析需求并准备待变更内容
-3. PM 审查需求解释结果，决定继续、修改或停止
-4. 平台生成或更新设计产物
-5. 工程师审查设计变更，并确认是否应用
-6. 平台生成或更新实现代码
-7. 工程师审查代码变更，并决定接受或拒绝
-8. 平台执行验证或测试，并展示结果摘要
-9. PM 与工程师共同验收结果
-
-支持从中间阶段恢复：
-
-- 设计生成/更新
-- 实现生成/更新
-- 验证
-
-失败处理原则：
-
-- 某阶段失败后，工作流停在当前阶段
-- 不自动回滚到更早阶段
-- 用户需先修复当前阶段问题
-- 修复后从当前阶段重试
+1. **PM** 创建或更新需求文档，并启动任务
+2. **Platform** 解析需求并准备待变更内容
+3. **PM** 审查需求解释结果，决定继续、修改或停止
+4. **Platform** 生成或更新设计产物
+5. **Engineer** 审查设计变更，并确认是否应用
+6. **Platform** 生成或更新实现代码
+7. **Engineer** 审查代码变更，并决定接受或拒绝
+8. **Platform** 执行验证或测试，并展示结果摘要
+9. **PM** 与 **Engineer** 共同验收结果
 
 ## 输入与输出
 
@@ -87,59 +90,29 @@
 ## 项目结构
 
 - `meta_layer`
-  - `docs/design_docs/`
-    - 架构、工作流、Execution、Contract、Interface、SDK 等设计文档
-  - `resources/template/`
-    - 各阶段生成模板
-  - `resources/contract/`
-    - 各阶段 contract / 模板约束
+  - `docs/`：需求、架构、模块设计文档
+  - `resources/`：模板与 contract 资源
 - `project_layer`
-  - `projects/sdlc/`
-    - 当前主要实现工程
-  - `docs/`
-    - 协作规范、执行计划
+  - `projects/sdlc/`：当前主实现工程
+  - `projects/agent_runtime/`：共享 agent runtime 工程
+  - `docs/`：协作规范与执行计划
 
-## 当前实现范围
+## 里程碑
 
-当前版本对应 `Requirement.md` 中的 `V1: MVP` 目标，聚焦通过 CLI 跑通从需求到可运行 Demo 的标准流程。
-
-当前 `project_layer/projects/sdlc` 已实现的主线阶段：
-
-1. `requirement_interpretation`
-2. `architecture_design`
-3. `module_design`
-4. `implementation_plan`
-5. `validation`
-
-当前范围特征：
-
-- 通过 CLI 执行任务与阶段恢复
-- 展示关键阶段信息和待变更内容
-- 支持已验证 Demo 场景：Travel Planning Agent
-
-当前非目标：
-
-- 不提供 UI 化审查体验
-- 不支持多种项目类型
-- 不保证每一步都有完整、可直接审查的中间产物
-
-## 测试组织
-
-`project_layer/projects/sdlc/tests/` 已按功能和 stage 分组：
-
-- `shared/`
-- `workflow/`
-- `requirement/`
-- `architecture/`
-- `module-design/`
-- `implementation-plan/`
-- `implementation-execution/`
-- `validation/`
-
-根目录只保留：
-
-- `run-tests.ts`
-- `cli.test.ts`
+- `project_layer/projects/sdlc`
+  - [x] Workflow 主线阶段流转
+  - [x] 基于 CLI 的阶段启动与任务执行
+  - [x] Requirement、Architecture、Module Design、Implementation Plan、Implementation Execution、Validation 阶段
+  - [ ] 更丰富的 CLI 交互流程
+- `project_layer/projects/agent_runtime`
+  - [x] AgentRuntime V1 单轮执行基础能力
+  - [x] Agent 抽象、runtime 执行循环与 trace 集成
+  - [ ] AgentRuntime V2 memory support
+  - [ ] AgentRuntime-managed multi-turn continuation
+- `AI Travel`
+  - [ ] AI Travel 端到端交付目标
+  - [ ] AI Travel 输出质量与可控性提升
+  - [ ] AI Travel CLI 交互优化
 
 ## 运行测试
 
@@ -149,19 +122,18 @@
 npm test
 ```
 
-该命令会先构建：
+## 使用方式
 
-- `project_layer/projects/sdlc`
-- `project_layer/projects/agent_runtime`
+CLI 入口：`project_layer/projects/sdlc/src/interface/cli/cli.ts`
 
-然后执行 `tests/run-tests.ts` 聚合测试入口。
+示例命令：
 
-## 关键文档
+```bash
+generate --module <stage_id> --input <input_file> --workspace <workspace_path>
+```
 
-- 中文执行计划：
-  - [project_layer/docs/CodeGenerationExecutionPlan.md](./project_layer/docs/CodeGenerationExecutionPlan.md)
-- 协作规范：
-  - [project_layer/docs/COLLABORATION_STANDARD.md](./project_layer/docs/COLLABORATION_STANDARD.md)
-- 工作流设计：
-  - [meta_layer/docs/design_docs/Workflow/Pipeline.md](./meta_layer/docs/design_docs/Workflow/Pipeline.md)
-  - [meta_layer/docs/design_docs/Workflow/StageRunners.md](./meta_layer/docs/design_docs/Workflow/StageRunners.md)
+参数说明：
+
+- `--module`：目标 stage id
+- `--input`：阶段输入文件
+- `--workspace`：工作目录根路径
