@@ -281,11 +281,14 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] pass runner-prepared step context into `ImplementationGenerator`
   - [x] extend tests for explicit workplan-step context before generator execution
   - [x] extend tests for execution-context loading and prompt input completeness
-- [ ] Batch 4: execution-environment contract validation
-  - [ ] make `ImplementationContract` validate implementation-execution generated changes in a prepared execution environment
-  - [ ] apply generated changes into prepared validation workspace before test execution
-  - [ ] isolate validation workspace lifecycle from user workspace
-  - [ ] extend tests for prepared-environment success and failure cases
+- [x] Batch 4: execution-environment contract validation
+  - [x] apply generated changes into the target project workspace before test execution
+  - [x] make `ImplementationContract` validate the applied implementation-execution result by running the configured test script in the target project workspace
+  - [x] present validated changes to user review only after contract test passes
+  - [ ] update the accepted implementation plan state after user review accepts the validated changes
+  - [ ] create one overall git commit after user review accepts the validated changes
+  - [x] keep current file state and stop the task when user review rejects the validated changes
+  - [x] extend tests for direct in-project execution success, validation failure, and review rejection stop semantics
 - [ ] Batch 5: implementation execution runner persistence and trace
   - [ ] persist implementation-stage artifacts after successful runner completion
   - [x] record trace for stage start

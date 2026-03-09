@@ -24,6 +24,8 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
     const preparedContext = await this.prepareExecutionContext(context);
     const output = await this.dependencies.generator.run(preparedContext);
+    await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
+
     const contractResult = await this.runContractCheck(this.dependencies.contractChecker, context, output);
     if (!contractResult.passed) {
       throw new Error(`Implementation contract failed: ${contractResult.summary}`);
@@ -40,7 +42,6 @@ export class ImplementationStageRunner extends BaseStageRunner {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
-    await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
     return output;
   }
 

@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ImplementationContract } from "../../src/contract/implementation-contract/implementation-contract.js";
+import { ChangeApplier } from "../../src/execution/implementation-generator/change-applier.js";
 import type { IContractChecker } from "../../src/shared/contracts/pipeline.js";
 
 export async function runImplementationContractTests(): Promise<void> {
   const workdir = await createTempDir("implementation-contract-");
   const checker = ImplementationContract.create();
+  const changeApplier = new ChangeApplier();
 
   try {
-    await testImplementationContractSuccess(checker, workdir);
+    await testImplementationContractSuccess(checker, changeApplier, workdir);
     await testImplementationContractFailure(checker, workdir);
   } finally {
     await rm(workdir, { recursive: true, force: true });
@@ -19,8 +21,22 @@ export async function runImplementationContractTests(): Promise<void> {
 
 async function testImplementationContractSuccess(
   checker: IContractChecker,
+  changeApplier: ChangeApplier,
   workspaceRoot: string,
 ): Promise<void> {
+  await mkdir(path.join(workspaceRoot, "src"), { recursive: true });
+  await writeFile(path.join(workspaceRoot, "src", "generated.ts"), "export const generated = false;\n", "utf8");
+  await changeApplier.applyChangedFiles(
+    [
+      {
+        path: "src/generated.ts",
+        operation: "update",
+        content: "export const generated = true;\n",
+      },
+    ],
+    workspaceRoot,
+  );
+
   const successResult = await checker.check(
     {
       taskId: "task-1",
@@ -48,6 +64,10 @@ async function testImplementationContractSuccess(
     summary: 'Test command passed: node -e "process.exit(0)"',
     issues: [],
   });
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"),
+    "export const generated = true;\n",
+  );
 }
 
 async function testImplementationContractFailure(

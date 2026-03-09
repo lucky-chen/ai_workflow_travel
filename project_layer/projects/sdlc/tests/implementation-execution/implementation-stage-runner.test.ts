@@ -137,9 +137,9 @@ async function testImplementationStageRunnerReject(
     /Change review ended with action "reject"/,
   );
 
-  await assert.rejects(access(path.join(workspaceRoot, "src", "generated.ts")));
-  assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 1;\n");
-  assert.equal(await readFile(path.join(workspaceRoot, "obsolete.txt"), "utf8"), "to be deleted\n");
+  assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
+  assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
+  await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
 }
 
 async function testImplementationStageRunnerContractFailure(
@@ -176,7 +176,9 @@ async function testImplementationStageRunnerContractFailure(
   );
 
   assert.equal(failingGate.getLastRequest(), undefined);
-  await assert.rejects(access(path.join(workspaceRoot, "src", "generated.ts")));
+  assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
+  assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
+  await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
 }
 
 async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(

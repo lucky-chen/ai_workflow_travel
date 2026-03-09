@@ -1,5 +1,5 @@
 // Implementation contract module: prepares a test environment and converts test results into contract checks.
-import { spawn } from "node:child_process";
+import path from "node:path";
 import type {
   ContractCheckResult,
   IContractChecker,
@@ -8,17 +8,15 @@ import type {
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
+import { ShellRunner } from "../../workflow/validation/shell-runner.js";
 
 export interface ExecutionEnvironment {
   generatedResult: {
     changedFiles: ChangedFile[];
     summary: string;
   };
-  workdir: string;
-  unitTestCommand: {
-    name: string;
-    command: string;
-  };
+  testCommand: string;
+  command: string;
 }
 
 export interface TestRunResult {
@@ -41,58 +39,38 @@ export class DefaultExecutionEnvironmentPreparer implements ExecutionEnvironment
     context: StageRunContext,
     output: StageOutput<ImplementationStageArtifacts>,
   ): Promise<ExecutionEnvironment> {
+    const testCommand = context.params?.testCommand ?? "npm test";
+    const escapedWorkspaceRoot = this.quoteForShell(context.workspaceRoot);
+
     return {
       generatedResult: {
         changedFiles: output.artifacts.changedFiles,
         summary: output.artifacts.summary,
       },
-      workdir: context.workspaceRoot,
-      unitTestCommand: {
-        name: "implementation-contract",
-        command: context.params?.testCommand ?? "npm test",
-      },
+      testCommand,
+      command: `cd ${escapedWorkspaceRoot} && ${testCommand}`,
     };
+  }
+
+  private quoteForShell(workspaceRoot: string): string {
+    const normalized = path.resolve(workspaceRoot);
+    return `'${normalized.replaceAll("'", `'\\''`)}'`;
   }
 }
 
-export class ShellTestRunner implements ITestRunner {
+export class ShellCommandTestRunner implements ITestRunner {
+  constructor(private readonly shellRunner: ShellRunner) {}
+
   async run(environment: ExecutionEnvironment): Promise<TestRunResult> {
-    const { unitTestCommand, workdir } = environment;
-
-    return new Promise<TestRunResult>((resolve, reject) => {
-      const child = spawn(unitTestCommand.command, {
-        cwd: workdir,
-        shell: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      child.stdout.on("data", (chunk: Buffer | string) => {
-        stdout += chunk.toString();
-      });
-
-      child.stderr.on("data", (chunk: Buffer | string) => {
-        stderr += chunk.toString();
-      });
-
-      child.on("error", reject);
-
-      child.on("close", (code) => {
-        const success = code === 0;
-        const logs = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
-
-        resolve({
-          success,
-          scriptName: unitTestCommand.name,
-          summary: success
-            ? `Test command passed: ${unitTestCommand.command}`
-            : `Test command failed: ${unitTestCommand.command}`,
-          logs: logs || undefined,
-        });
-      });
-    });
+    const result = await this.shellRunner.run(environment.command);
+    return {
+      success: result.passed,
+      scriptName: "implementation-contract",
+      summary: result.passed
+        ? `Test command passed: ${environment.testCommand}`
+        : `Test command failed: ${environment.testCommand}`,
+      logs: result.logs,
+    };
   }
 }
 
@@ -119,7 +97,7 @@ export class ImplementationContract implements IContractChecker {
   static create(): IContractChecker {
     return new ImplementationContract(
       new DefaultExecutionEnvironmentPreparer(),
-      new ShellTestRunner(),
+      new ShellCommandTestRunner(new ShellRunner()),
       new ContractResultBuilder(),
     );
   }
