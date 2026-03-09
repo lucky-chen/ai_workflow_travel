@@ -421,15 +421,15 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 4: MCP baseline alignment
   - [x] sync MCP baseline design intent across `SDK/AgentRuntime`, `SDK/LlmExecutor`, and `SystemInteractionDesign`
   - [x] expand `SDK/AgentRuntime` design to cover MCP baseline plus the forward-compatible session/memory/multi-turn evolution model
-  - [ ] add MCP protocol support to `AgentRuntime`
-  - [ ] add file read/write as the default MCP-backed tool capability
-  - [ ] promote MCP support into stable runtime planning, execution, and trace semantics
-  - [ ] `IMcpGateway`
-  - [ ] MCP request/result types
-  - [ ] tool-capable execution plan steps
-  - [ ] executor support for MCP tool calls
-  - [ ] trace events for tool call and tool result
-  - [ ] tests for MCP-enabled execution
+  - [x] add MCP protocol support to `AgentRuntime`
+  - [x] add file read/write as the default MCP-backed tool capability
+  - [x] promote MCP support into stable runtime planning, execution, and trace semantics
+  - [x] `IMcpGateway`
+  - [x] MCP request/result types
+  - [x] tool-capable execution plan steps
+  - [x] executor support for MCP tool calls
+  - [x] trace events for tool call and tool result
+  - [x] tests for MCP-enabled execution
 
 ### Step 10. Validate Baseline With `hello-service`
 

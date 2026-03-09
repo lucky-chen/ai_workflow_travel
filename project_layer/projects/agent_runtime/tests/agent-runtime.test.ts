@@ -1,8 +1,12 @@
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import path from "node:path";
+
 import assert from "node:assert/strict";
 
 import {
   DefaultAgent,
   DefaultExecutor,
+  DefaultMcpGateway,
   DefaultObserver,
   DefaultPlanner,
   type AgentContext,
@@ -15,9 +19,13 @@ import type {
 
 export async function runAgentRuntimeTests(): Promise<void> {
   await testDefaultPlannerBuildsDirectGenerationPlan();
+  await testDefaultPlannerBuildsToolAugmentedPlan();
   await testDefaultObserverAcceptsResult();
   await testDefaultExecutorPassesRequestToBackend();
+  await testDefaultExecutorRunsMcpToolStepsBeforeBackend();
   await testDefaultAgentRunsSinglePassAndRecordsTrace();
+  await testDefaultAgentRecordsToolTrace();
+  await testDefaultMcpGatewaySupportsFileReadAndWrite();
   await testAgentTraceRecorderContract();
 }
 
@@ -29,6 +37,29 @@ async function testDefaultPlannerBuildsDirectGenerationPlan(): Promise<void> {
 
   assert.equal(plan.mode, "direct_generation");
   assert.equal(plan.summary, "Use direct generation for the current request.");
+}
+
+async function testDefaultPlannerBuildsToolAugmentedPlan(): Promise<void> {
+  const planner = new DefaultPlanner();
+  const context = createAgentContext({
+    mcpToolCalls: [
+      {
+        toolName: "file_read",
+        arguments: { path: "/tmp/input.txt" },
+      },
+    ],
+  });
+
+  const plan = await planner.plan(context);
+
+  assert.equal(plan.mode, "tool_augmented_generation");
+  assert.equal(plan.summary, "Use MCP-backed tool execution before generation.");
+  assert.deepEqual(plan.toolSteps, [
+    {
+      toolName: "file_read",
+      arguments: { path: "/tmp/input.txt" },
+    },
+  ]);
 }
 
 async function testDefaultObserverAcceptsResult(): Promise<void> {
@@ -99,6 +130,41 @@ async function testDefaultExecutorPassesRequestToBackend(): Promise<void> {
   assert.deepEqual(backend.requests[0], context.request);
 }
 
+async function testDefaultExecutorRunsMcpToolStepsBeforeBackend(): Promise<void> {
+  const backend = new TestModelExecutionBackend({
+    content: "{\"summary\":\"backend-with-tools\"}",
+    responseFormat: "json",
+  });
+  const gateway = new TestMcpGateway();
+  const executor = new DefaultExecutor(backend, gateway);
+  const context = createAgentContext({
+    mcpToolCalls: [
+      {
+        toolName: "file_read",
+        arguments: { path: "/tmp/input.txt" },
+      },
+    ],
+  });
+
+  const result = await executor.execute(context, {
+    mode: "tool_augmented_generation",
+    summary: "Use MCP-backed tool execution before generation.",
+    toolSteps: [
+      {
+        toolName: "file_read",
+        arguments: { path: "/tmp/input.txt" },
+      },
+    ],
+  });
+
+  assert.equal(gateway.calls.length, 1);
+  assert.equal(gateway.calls[0]?.toolName, "file_read");
+  assert.equal(result.toolResults?.length, 1);
+  assert.equal(backend.requests.length, 1);
+  assert.equal(backend.requests[0]?.prompt.userPrompt.includes("MCP tool results:"), true);
+  assert.equal(backend.requests[0]?.prompt.userPrompt.includes("tool:file_read"), true);
+}
+
 async function testDefaultAgentRunsSinglePassAndRecordsTrace(): Promise<void> {
   const planner = new DefaultPlanner();
   const observer = new DefaultObserver();
@@ -129,7 +195,74 @@ async function testDefaultAgentRunsSinglePassAndRecordsTrace(): Promise<void> {
   );
 }
 
-function createAgentContext(): AgentContext {
+async function testDefaultAgentRecordsToolTrace(): Promise<void> {
+  const planner = new DefaultPlanner();
+  const observer = new DefaultObserver();
+  const backend = new TestModelExecutionBackend({
+    content: "{\"summary\":\"agent-tool\"}",
+    responseFormat: "json",
+  });
+  const executor = new DefaultExecutor(backend, new TestMcpGateway());
+  const traceRecorder = new TestAgentTraceRecorder();
+  const agent = new DefaultAgent(planner, executor, observer, traceRecorder);
+
+  const result = await agent.run(createAgentContext({
+    mcpToolCalls: [
+      {
+        toolName: "file_read",
+        arguments: { path: "/tmp/input.txt" },
+      },
+    ],
+  }));
+
+  assert.equal(result.plan.mode, "tool_augmented_generation");
+  assert.equal(result.toolResults?.length, 1);
+  assert.deepEqual(
+    traceRecorder.getEvents().map((entry) => entry.event.eventType),
+    [
+      "agent_plan_created",
+      "agent_execution_started",
+      "agent_tool_called",
+      "agent_tool_result_recorded",
+      "agent_execution_finished",
+      "agent_observation_finished",
+    ],
+  );
+}
+
+async function testDefaultMcpGatewaySupportsFileReadAndWrite(): Promise<void> {
+  const tempRoot = path.join(process.cwd(), "dist", "tmp");
+  await mkdir(tempRoot, { recursive: true });
+  const workspaceRoot = await mkdtemp(path.join(tempRoot, "agent-runtime-mcp-"));
+  const gateway = new DefaultMcpGateway();
+  const filePath = path.join(workspaceRoot, "nested", "note.txt");
+
+  try {
+    const writeResult = await gateway.call({
+      toolName: "file_write",
+      arguments: {
+        path: filePath,
+        content: "hello mcp",
+      },
+    });
+    assert.equal(writeResult.success, true);
+    assert.equal(writeResult.metadata?.path, filePath);
+
+    const readResult = await gateway.call({
+      toolName: "file_read",
+      arguments: {
+        path: filePath,
+      },
+    });
+    assert.equal(readResult.success, true);
+    assert.equal(readResult.content, "hello mcp");
+    assert.equal(await readFile(filePath, "utf8"), "hello mcp");
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+}
+
+function createAgentContext(inputPayload: Record<string, unknown> = {}): AgentContext {
   return {
     request: {
       prompt: {
@@ -143,6 +276,7 @@ function createAgentContext(): AgentContext {
     },
     inputPayload: {
       target: "implementation",
+      ...inputPayload,
     },
   };
 }
@@ -173,5 +307,18 @@ class TestModelExecutionBackend implements IModelExecutionBackend {
   async execute(request: AgentContext["request"]) {
     this.requests.push(request);
     return this.result;
+  }
+}
+
+class TestMcpGateway {
+  readonly calls: Array<{ toolName: string; arguments: Record<string, unknown> }> = [];
+
+  async call(request: { toolName: string; arguments: Record<string, unknown> }) {
+    this.calls.push(request);
+    return {
+      toolName: request.toolName,
+      success: true,
+      content: `tool:${request.toolName}`,
+    };
   }
 }
