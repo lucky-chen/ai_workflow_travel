@@ -107,10 +107,19 @@ async function testImplementationStageRunnerApply(
   assert.deepEqual(applyGate.getLastRequest()?.changedPaths, ["src/generated.ts", "src/existing.ts", "obsolete.txt"]);
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
+    "contract_checked",
     "gate_reviewed",
+    "step_completed",
   ]);
   assert.deepEqual(traceRecorder.getEvents()[1]?.event.metadata, {
+    passed: "true",
+  });
+  assert.deepEqual(traceRecorder.getEvents()[2]?.event.metadata, {
     action: "apply",
+  });
+  assert.deepEqual(traceRecorder.getEvents()[3]?.event.metadata, {
+    batchId: "batch-1",
+    changedFileCount: "3",
   });
   assert.deepEqual(gitCommitter.calls, [
     {
@@ -128,6 +137,29 @@ async function testImplementationStageRunnerApply(
   assert.equal(
     await readFile(path.join(workspaceRoot, "plans", "implementation", "ImplementationWorkPlan.md"), "utf8"),
     updatedWorkplan,
+  );
+  assert.equal(
+    await artifactStore.getArtifact({
+      taskId: "task-1",
+      stageId: "implementation",
+      filePath: "src/generated.ts",
+    }),
+    "export const generated = true;\n",
+  );
+  assert.equal(
+    await artifactStore.getArtifact({
+      taskId: "task-1",
+      stageId: "implementation",
+      filePath: "src/existing.ts",
+    }),
+    "export const value = 2;\n",
+  );
+  await assert.rejects(
+    artifactStore.getArtifact({
+      taskId: "task-1",
+      stageId: "implementation",
+      filePath: "obsolete.txt",
+    }),
   );
 }
 
@@ -167,6 +199,13 @@ async function testImplementationStageRunnerReject(
     filePath: "plans/implementation/ImplementationWorkPlan.md",
   });
   assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
+  await assert.rejects(
+    artifactStore.getArtifact({
+      taskId: "task-2",
+      stageId: "implementation",
+      filePath: "src/generated.ts",
+    }),
+  );
 }
 
 async function testImplementationStageRunnerContractFailure(
@@ -213,6 +252,13 @@ async function testImplementationStageRunnerContractFailure(
     filePath: "plans/implementation/ImplementationWorkPlan.md",
   });
   assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
+  await assert.rejects(
+    artifactStore.getArtifact({
+      taskId: "task-3",
+      stageId: "implementation",
+      filePath: "src/generated.ts",
+    }),
+  );
 }
 
 async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(

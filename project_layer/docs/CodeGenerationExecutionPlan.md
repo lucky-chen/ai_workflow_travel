@@ -290,12 +290,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] keep current file state and stop the task when user review rejects the validated changes
   - [x] extend tests for direct in-project execution success, validation failure, and review rejection stop semantics
 - [ ] Batch 5: implementation execution runner persistence and trace
-  - [ ] persist implementation-stage artifacts after successful runner completion
+  - [x] persist implementation-stage artifacts after successful runner completion
   - [x] record trace for stage start
-  - [ ] record trace for contract result
+  - [x] record trace for contract result
   - [x] record trace for gate result
-  - [ ] record trace for final step result
-  - [ ] extend tests for artifact persistence and trace flow
+  - [x] record trace for final step result
+  - [x] extend tests for artifact persistence and trace flow
 - [ ] Batch 6: execution review and runtime semantics alignment
   - [ ] support review `comment`
   - [ ] support workflow-level multi-step execution across one `implementation_workplan`
@@ -424,8 +424,8 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 3 is in progress
 - [x] Step 4 is in progress
 - [x] Step 5 is in progress
-- [ ] Step 6 is not started
-- [ ] Step 7 is not started
+- [x] Step 6 is in progress
+- [x] Step 7 is completed
 - [ ] Step 8 is not started
 
 ## 5. Verification Rule

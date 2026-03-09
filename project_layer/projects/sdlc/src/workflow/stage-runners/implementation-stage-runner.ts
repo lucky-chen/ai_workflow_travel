@@ -4,6 +4,7 @@ import path from "node:path";
 
 import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ImplementationStageArtifacts } from "../../shared/contracts/pipeline.js";
+import type { ChangedFile } from "../../shared/types/common.js";
 import { ChangeApplier } from "../../execution/implementation-generator/change-applier.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 import {
@@ -38,6 +39,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
 
     const contractResult = await this.runContractCheck(this.dependencies.contractChecker, context, output);
+    await this.recordContractResult(context, contractResult.passed, contractResult.summary);
     if (!contractResult.passed) {
       throw new Error(`Implementation contract failed: ${contractResult.summary}`);
     }
@@ -53,7 +55,9 @@ export class ImplementationStageRunner extends BaseStageRunner {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
+    await this.persistAcceptedArtifacts(context, output.artifacts.changedFiles);
     await this.updateAcceptedImplementationWorkplan(context, preparedStepContext);
+    await this.recordFinalStepResult(context, preparedStepContext.currentBatch.batchId, output.artifacts.changedFiles);
     await this.gitCommitter.commit({
       workspaceRoot: context.workspaceRoot,
       stepId: preparedStepContext.currentBatch.batchId,
@@ -128,6 +132,22 @@ export class ImplementationStageRunner extends BaseStageRunner {
     }
 
     return JSON.parse(rawPreparedStepContext) as PreparedStepContext;
+  }
+
+  private async persistAcceptedArtifacts(context: StageRunContext, changedFiles: ChangedFile[]): Promise<void> {
+    if (!this.artifactStore) {
+      throw new Error("ImplementationStageRunner requires an artifactStore for artifact persistence.");
+    }
+
+    const persistedFiles = changedFiles.filter((file) => file.operation !== "delete" && typeof file.content === "string");
+    await Promise.all(
+      persistedFiles.map((file) => this.artifactStore!.writeArtifact({
+        taskId: context.taskId,
+        stageId: context.stageId,
+        filePath: file.path,
+        content: file.content!,
+      })),
+    );
   }
 
   private async updateAcceptedImplementationWorkplan(
@@ -234,6 +254,35 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
   private escapeForRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  private async recordContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
+    await this.traceRecorder?.recordTrace({
+      taskId: context.taskId,
+      stageId: context.stageId,
+      eventType: "contract_checked",
+      summary,
+      metadata: {
+        passed: String(passed),
+      },
+    });
+  }
+
+  private async recordFinalStepResult(
+    context: StageRunContext,
+    batchId: string,
+    changedFiles: ChangedFile[],
+  ): Promise<void> {
+    await this.traceRecorder?.recordTrace({
+      taskId: context.taskId,
+      stageId: context.stageId,
+      eventType: "step_completed",
+      summary: `Implementation batch "${batchId}" completed and accepted.`,
+      metadata: {
+        batchId,
+        changedFileCount: String(changedFiles.length),
+      },
+    });
   }
 
   private async loadModuleDesignDocuments(
