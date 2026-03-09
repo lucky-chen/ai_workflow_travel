@@ -285,8 +285,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] apply generated changes into the target project workspace before test execution
   - [x] make `ImplementationContract` validate the applied implementation-execution result by running the configured test script in the target project workspace
   - [x] present validated changes to user review only after contract test passes
-  - [ ] update the accepted implementation plan state after user review accepts the validated changes
-  - [ ] create one overall git commit after user review accepts the validated changes
+  - [x] update the accepted implementation plan state after user review accepts the validated changes
+  - [x] create one overall git commit after user review accepts the validated changes
   - [x] keep current file state and stop the task when user review rejects the validated changes
   - [x] extend tests for direct in-project execution success, validation failure, and review rejection stop semantics
 - [ ] Batch 5: implementation execution runner persistence and trace

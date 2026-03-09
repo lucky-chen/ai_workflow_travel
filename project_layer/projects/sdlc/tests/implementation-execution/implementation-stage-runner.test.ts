@@ -7,6 +7,7 @@ import { ImplementationGenerator } from "../../src/execution/implementation-gene
 import { ImplementationContract } from "../../src/contract/implementation-contract/implementation-contract.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import type { IImplementationGitCommitter } from "../../src/workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../../src/workflow/stage-runners/implementation-stage-runner.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import type { IContractChecker, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
@@ -87,12 +88,14 @@ async function testImplementationStageRunnerApply(
 ): Promise<void> {
   const applyGate = new InMemoryChangeGate();
   const traceRecorder = new InMemoryTraceRecorder();
+  const gitCommitter = new MockImplementationGitCommitter();
   const runner = new ImplementationStageRunner({
     generator,
     contractChecker,
     artifactStore,
     changeGate: applyGate,
     traceRecorder,
+    gitCommitter,
   });
 
   const output = await runner.run(createRunContext("task-1", workspaceRoot));
@@ -109,6 +112,23 @@ async function testImplementationStageRunnerApply(
   assert.deepEqual(traceRecorder.getEvents()[1]?.event.metadata, {
     action: "apply",
   });
+  assert.deepEqual(gitCommitter.calls, [
+    {
+      workspaceRoot,
+      stepId: "step-1",
+    },
+  ]);
+  const updatedWorkplan = await artifactStore.getArtifact({
+    taskId: "task-1",
+    stageId: "implementation_plan",
+    filePath: "plans/implementation/ImplementationWorkPlan.md",
+  });
+  assert.equal(updatedWorkplan.includes("## 4. Implementation Execution State"), true);
+  assert.equal(updatedWorkplan.includes("- [x] step-1"), true);
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "plans", "implementation", "ImplementationWorkPlan.md"), "utf8"),
+    updatedWorkplan,
+  );
 }
 
 async function testImplementationStageRunnerReject(
@@ -128,6 +148,7 @@ async function testImplementationStageRunnerReject(
     contractChecker,
     artifactStore,
     changeGate: rejectGate,
+    gitCommitter: new MockImplementationGitCommitter(),
   });
 
   await resetWorkspace(workspaceRoot);
@@ -140,6 +161,12 @@ async function testImplementationStageRunnerReject(
   assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
   assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
   await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
+  const workplan = await artifactStore.getArtifact({
+    taskId: "task-2",
+    stageId: "implementation_plan",
+    filePath: "plans/implementation/ImplementationWorkPlan.md",
+  });
+  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
 }
 
 async function testImplementationStageRunnerContractFailure(
@@ -166,6 +193,7 @@ async function testImplementationStageRunnerContractFailure(
     contractChecker: failingContractChecker,
     artifactStore,
     changeGate: failingGate,
+    gitCommitter: new MockImplementationGitCommitter(),
   });
 
   await resetWorkspace(workspaceRoot);
@@ -179,6 +207,12 @@ async function testImplementationStageRunnerContractFailure(
   assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
   assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
   await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
+  const workplan = await artifactStore.getArtifact({
+    taskId: "task-3",
+    stageId: "implementation_plan",
+    filePath: "plans/implementation/ImplementationWorkPlan.md",
+  });
+  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
 }
 
 async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
@@ -191,6 +225,7 @@ async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
     generator,
     contractChecker,
     artifactStore,
+    gitCommitter: new MockImplementationGitCommitter(),
   });
 
   await assert.rejects(
@@ -287,5 +322,13 @@ class MockLlmExecutor implements ILlmExecutor {
       content: JSON.stringify(this.result),
       responseFormat: "json",
     };
+  }
+}
+
+class MockImplementationGitCommitter implements IImplementationGitCommitter {
+  readonly calls: Array<{ workspaceRoot: string; stepId: string }> = [];
+
+  async commit(context: { workspaceRoot: string; stepId: string }): Promise<void> {
+    this.calls.push(context);
   }
 }

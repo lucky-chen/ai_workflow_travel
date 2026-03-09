@@ -1,21 +1,45 @@
 // Implementation stage runner: executes implementation generation, contract check, review, and final apply.
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ImplementationStageArtifacts } from "../../shared/contracts/pipeline.js";
 import { ChangeApplier } from "../../execution/implementation-generator/change-applier.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
+import {
+  GitProcessCommitter,
+  type IImplementationGitCommitter,
+} from "./implementation-git-committer.js";
+
+interface PreparedImplementationStepContext {
+  workplan: {
+    ref: string;
+    content: string;
+  };
+  currentStep: {
+    stepId: string;
+    raw: string;
+  };
+  upstreamContext: {
+    requirementDocument: string;
+    architectureDocument: string;
+    moduleDesignDocuments: Array<{ moduleName: string; content: string }>;
+  };
+}
 
 export class ImplementationStageRunner extends BaseStageRunner {
   private readonly changeApplier = new ChangeApplier();
+  private readonly gitCommitter: IImplementationGitCommitter;
 
   constructor(
     private readonly dependencies: BaseStageRunnerDependencies & {
       generator: IStageGenerator<StageOutput<ImplementationStageArtifacts>>;
       contractChecker: IContractChecker;
+      gitCommitter?: IImplementationGitCommitter;
     },
   ) {
     super(dependencies);
+    this.gitCommitter = dependencies.gitCommitter ?? new GitProcessCommitter();
   }
 
   async run(context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
@@ -23,6 +47,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.recordStageStart(context);
 
     const preparedContext = await this.prepareExecutionContext(context);
+    const preparedStepContext = this.parsePreparedStepContext(preparedContext.inputArtifacts.prepared_step_context);
     const output = await this.dependencies.generator.run(preparedContext);
     await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
 
@@ -41,6 +66,12 @@ export class ImplementationStageRunner extends BaseStageRunner {
     if (gateDecision.action !== "apply") {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
+
+    await this.updateAcceptedImplementationWorkplan(context, preparedStepContext);
+    await this.gitCommitter.commit({
+      workspaceRoot: context.workspaceRoot,
+      stepId: preparedStepContext.currentStep.stepId,
+    });
 
     return output;
   }
@@ -105,6 +136,60 @@ export class ImplementationStageRunner extends BaseStageRunner {
         }),
       },
     };
+  }
+
+  private parsePreparedStepContext(rawPreparedStepContext: string | undefined): PreparedImplementationStepContext {
+    if (!rawPreparedStepContext) {
+      throw new Error('Missing required input artifact "prepared_step_context".');
+    }
+
+    return JSON.parse(rawPreparedStepContext) as PreparedImplementationStepContext;
+  }
+
+  private async updateAcceptedImplementationWorkplan(
+    context: StageRunContext,
+    preparedStepContext: PreparedImplementationStepContext,
+  ): Promise<void> {
+    if (!this.artifactStore) {
+      throw new Error("ImplementationStageRunner requires an artifactStore to update implementation workplan state.");
+    }
+
+    const updatedContent = this.markAcceptedStep(preparedStepContext.workplan.content, preparedStepContext.currentStep.stepId);
+    await this.artifactStore.writeArtifact({
+      taskId: context.taskId,
+      stageId: "implementation_plan",
+      filePath: preparedStepContext.workplan.ref,
+      content: updatedContent,
+    });
+
+    const workspacePlanPath = path.join(context.workspaceRoot, preparedStepContext.workplan.ref);
+    await mkdir(path.dirname(workspacePlanPath), { recursive: true });
+    await writeFile(workspacePlanPath, updatedContent, "utf8");
+  }
+
+  private markAcceptedStep(workplanContent: string, stepId: string): string {
+    const heading = "## 4. Implementation Execution State";
+    const acceptedLine = `- [x] ${stepId}`;
+    const pendingLinePattern = new RegExp(`^- \\[ \\] ${this.escapeForRegExp(stepId)}$`, "m");
+    const acceptedLinePattern = new RegExp(`^- \\[x\\] ${this.escapeForRegExp(stepId)}$`, "m");
+
+    if (acceptedLinePattern.test(workplanContent)) {
+      return workplanContent;
+    }
+
+    if (pendingLinePattern.test(workplanContent)) {
+      return workplanContent.replace(pendingLinePattern, acceptedLine);
+    }
+
+    if (!workplanContent.includes(heading)) {
+      return `${workplanContent.trimEnd()}\n\n${heading}\n${acceptedLine}\n`;
+    }
+
+    return workplanContent.replace(heading, `${heading}\n${acceptedLine}`);
+  }
+
+  private escapeForRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   private parseCurrentStep(rawCurrentStep: string): { stepId: string; raw: string } {
