@@ -375,12 +375,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] align stage continuation and retry semantics
   - [x] extend tests for orchestration behavior
   - [x] register `architecture_design -> module_design` fan-out continuation in the production composition root
-- [ ] Batch 3: contract, trace, and gate alignment
-  - [ ] align implementation runtime semantics
-  - [ ] align contract runtime semantics
-  - [ ] align trace persistence semantics
-  - [ ] align gate presenter and review semantics
-  - [ ] extend tests for contract, trace, and review flows
+- [x] Batch 3: contract, trace, and gate alignment
+  - [x] align implementation runtime semantics
+  - [x] align contract runtime semantics
+  - [x] align trace persistence semantics
+  - [x] align gate presenter and review semantics
+  - [x] extend tests for contract, trace, and review flows
   - [x] align validation-stage `gate_reviewed` trace metadata with shared review comment semantics
   - [x] centralize document-stage `contract_checked` and `artifact_persisted` trace helpers in `BaseStageRunner`
   - [x] align review presenter/session semantics with `changedPaths` and stable `reviewId` display
