@@ -28,7 +28,7 @@ export class RequirementStageRunner extends BaseStageRunner {
 
     const output = await this.generator.run(context);
     const contractResult = await this.contractChecker.check(context, output);
-    await this.recordContractResult(context, contractResult.passed, contractResult.summary);
+    await this.recordSharedContractResult(context, contractResult.passed, contractResult.summary);
     if (!contractResult.passed) {
       throw new Error(`Requirement contract failed: ${contractResult.summary}`);
     }
@@ -85,28 +85,12 @@ export class RequirementStageRunner extends BaseStageRunner {
     });
   }
 
-  private async recordContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "contract_checked",
-      summary,
-      metadata: {
-        passed: String(passed),
-      },
-    });
-  }
-
   private async recordPersistenceResult(context: StageRunContext, gateDecision: GateDecision): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "artifact_persisted",
-      summary: `Accepted requirement artifact persisted to ${REQUIREMENT_ARTIFACT_PATH}.`,
-      metadata: {
-        action: gateDecision.action,
-        filePath: REQUIREMENT_ARTIFACT_PATH,
-      },
-    });
+    await super.recordSharedPersistenceResult(
+      context,
+      REQUIREMENT_ARTIFACT_PATH,
+      `Accepted requirement artifact persisted to ${REQUIREMENT_ARTIFACT_PATH}.`,
+      gateDecision,
+    );
   }
 }

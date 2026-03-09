@@ -47,6 +47,36 @@ export abstract class BaseStageRunner implements IStageRunner {
     return contractChecker.check(context, output);
   }
 
+  protected async recordSharedContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
+    await this.traceRecorder?.recordTrace({
+      taskId: context.taskId,
+      stageId: context.stageId,
+      eventType: "contract_checked",
+      summary,
+      metadata: {
+        passed: String(passed),
+      },
+    });
+  }
+
+  protected async recordSharedPersistenceResult(
+    context: StageRunContext,
+    artifactPath: string,
+    summary: string,
+    gateDecision?: GateDecision,
+  ): Promise<void> {
+    await this.traceRecorder?.recordTrace({
+      taskId: context.taskId,
+      stageId: context.stageId,
+      eventType: "artifact_persisted",
+      summary,
+      metadata: {
+        filePath: artifactPath,
+        ...(gateDecision ? { action: gateDecision.action } : {}),
+      },
+    });
+  }
+
   protected async reviewChanges(changeRequest: ChangeReviewRequest): Promise<GateDecision> {
     const decision: GateDecision = this.changeGate
       ? await this.changeGate.review(changeRequest)

@@ -48,7 +48,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
 
     const output = await this.generator.run(context) as StageOutput<ImplementationPlanArtifacts>;
     const contractResult = await this.contractChecker.check(context, output);
-    await this.recordContractResult(context, contractResult.passed, contractResult.summary);
+    await this.recordSharedContractResult(context, contractResult.passed, contractResult.summary);
     if (!contractResult.passed) {
       throw new Error(`Implementation plan contract failed: ${contractResult.summary}`);
     }
@@ -124,28 +124,12 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     });
   }
 
-  private async recordContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "contract_checked",
-      summary,
-      metadata: {
-        passed: String(passed),
-      },
-    });
-  }
-
   private async recordPersistenceResult(context: StageRunContext, gateDecision: GateDecision): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "artifact_persisted",
-      summary: `Accepted implementation-plan artifact persisted to ${IMPLEMENTATION_PLAN_ARTIFACT_PATH}.`,
-      metadata: {
-        action: gateDecision.action,
-        filePath: IMPLEMENTATION_PLAN_ARTIFACT_PATH,
-      },
-    });
+    await super.recordSharedPersistenceResult(
+      context,
+      IMPLEMENTATION_PLAN_ARTIFACT_PATH,
+      `Accepted implementation-plan artifact persisted to ${IMPLEMENTATION_PLAN_ARTIFACT_PATH}.`,
+      gateDecision,
+    );
   }
 }

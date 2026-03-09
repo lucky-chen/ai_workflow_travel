@@ -42,7 +42,7 @@ export class ModuleStageRunner extends BaseStageRunner {
 
     const output = await this.generator.run(context) as StageOutput<ModuleDesignArtifacts>;
     const contractResult = await this.contractChecker.check(context, output);
-    await this.recordContractResult(context, contractResult.passed, contractResult.summary);
+    await this.recordSharedContractResult(context, contractResult.passed, contractResult.summary);
     if (!contractResult.passed) {
       throw new Error(`Module design contract failed: ${contractResult.summary}`);
     }
@@ -108,32 +108,16 @@ export class ModuleStageRunner extends BaseStageRunner {
     });
   }
 
-  private async recordContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "contract_checked",
-      summary,
-      metadata: {
-        passed: String(passed),
-      },
-    });
-  }
-
   private async recordPersistenceResult(
     context: StageRunContext,
     gateDecision: GateDecision,
     artifactPath: string,
   ): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "artifact_persisted",
-      summary: `Accepted module-design artifact persisted to ${artifactPath}.`,
-      metadata: {
-        action: gateDecision.action,
-        filePath: artifactPath,
-      },
-    });
+    await super.recordSharedPersistenceResult(
+      context,
+      artifactPath,
+      `Accepted module-design artifact persisted to ${artifactPath}.`,
+      gateDecision,
+    );
   }
 }

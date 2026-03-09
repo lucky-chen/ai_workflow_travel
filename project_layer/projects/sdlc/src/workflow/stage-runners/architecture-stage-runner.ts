@@ -44,7 +44,7 @@ export class ArchitectureStageRunner extends BaseStageRunner {
 
     const output = await this.generator.run(context) as StageOutput<ArchitectureDesignArtifacts>;
     const contractResult = await this.contractChecker.check(context, output);
-    await this.recordContractResult(context, contractResult.passed, contractResult.summary);
+    await this.recordSharedContractResult(context, contractResult.passed, contractResult.summary);
     if (!contractResult.passed) {
       throw new Error(`Architecture contract failed: ${contractResult.summary}`);
     }
@@ -101,28 +101,12 @@ export class ArchitectureStageRunner extends BaseStageRunner {
     });
   }
 
-  private async recordContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "contract_checked",
-      summary,
-      metadata: {
-        passed: String(passed),
-      },
-    });
-  }
-
   private async recordPersistenceResult(context: StageRunContext, gateDecision: GateDecision): Promise<void> {
-    await this.traceRecorder?.recordTrace({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      eventType: "artifact_persisted",
-      summary: `Accepted architecture artifact persisted to ${ARCHITECTURE_ARTIFACT_PATH}.`,
-      metadata: {
-        action: gateDecision.action,
-        filePath: ARCHITECTURE_ARTIFACT_PATH,
-      },
-    });
+    await super.recordSharedPersistenceResult(
+      context,
+      ARCHITECTURE_ARTIFACT_PATH,
+      `Accepted architecture artifact persisted to ${ARCHITECTURE_ARTIFACT_PATH}.`,
+      gateDecision,
+    );
   }
 }
