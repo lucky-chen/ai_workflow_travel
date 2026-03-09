@@ -115,9 +115,9 @@ export class ContractResultBuilder {
 }
 
 // Public API: contract checker entry used by stage runners to validate generated implementation output.
-export class ImplementationContractService implements IContractChecker {
+export class ImplementationContract implements IContractChecker {
   static create(): IContractChecker {
-    return new ImplementationContractService(
+    return new ImplementationContract(
       new DefaultExecutionEnvironmentPreparer(),
       new ShellTestRunner(),
       new ContractResultBuilder(),

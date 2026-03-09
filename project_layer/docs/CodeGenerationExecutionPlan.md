@@ -262,20 +262,22 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] change parsing
   - [x] planned change output
   - [x] runnable tests for the vertical slice
-- [ ] Batch 2: implementation execution contract and runner backbone
+- [x] Batch 2: implementation execution contract and runner backbone
   - [x] `ImplementationContract`
   - [x] `ImplementationStageRunner`
   - [x] implementation execution vertical slice through `generate -> contract -> review -> apply`
   - [x] implementation execution environment preparation
   - [x] shell or unit-test runner execution
   - [x] test-run result to `ContractCheckResult` mapping
-  - [ ] align contract naming and public API with the implementation-contract design doc
-  - [ ] extend tests for explicit workplan-step context in contract input
+  - [x] align contract naming and public API with the implementation-contract design doc
+  - [x] keep `ImplementationContract.check(...)` scoped to generated-result validation only
 - [ ] Batch 3: implementation execution-context loading
+  - [x] validate `implementation_workplan` and `current_step` before generator execution in `ImplementationStageRunner.run(...)`
   - [ ] introduce workplan-aware execution-context loading for `ImplementationGenerator`
   - [ ] load `implementation_workplan` and `current_step` as required runtime input
   - [ ] load upstream `requirement_document` and `architecture_document` into implementation generation input
   - [ ] load all relevant `module_design_documents` for the current execution step
+  - [x] extend tests for explicit workplan-step context before generator execution
   - [ ] extend tests for execution-context loading and prompt input completeness
 - [ ] Batch 4: execution-environment contract validation
   - [ ] make `ImplementationContract` validate implementation-execution generated changes in a prepared execution environment

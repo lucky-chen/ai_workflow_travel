@@ -17,6 +17,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
   }
 
   async run(context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
+    this.validateExecutionContext(context);
     await this.recordStageStart(context);
 
     const output = await this.dependencies.generator.run(context);
@@ -38,5 +39,17 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
     await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
     return output;
+  }
+
+  private validateExecutionContext(context: StageRunContext): void {
+    const implementationWorkplan = context.inputArtifacts.implementation_workplan?.trim();
+    if (!implementationWorkplan) {
+      throw new Error('Missing required input artifact "implementation_workplan".');
+    }
+
+    const currentStep = context.inputArtifacts.current_step?.trim();
+    if (!currentStep) {
+      throw new Error('Missing required input artifact "current_step".');
+    }
   }
 }

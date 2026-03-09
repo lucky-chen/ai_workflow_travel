@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ImplementationContractService } from "../../src/contract/implementation-contract/implementation-contract.js";
+import { ImplementationContract } from "../../src/contract/implementation-contract/implementation-contract.js";
 import type { IContractChecker } from "../../src/shared/contracts/pipeline.js";
 
 export async function runImplementationContractTests(): Promise<void> {
   const workdir = await createTempDir("implementation-contract-");
-  const checker = ImplementationContractService.create();
+  const checker = ImplementationContract.create();
 
   try {
     await testImplementationContractSuccess(checker, workdir);

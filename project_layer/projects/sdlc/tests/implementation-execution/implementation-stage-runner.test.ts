@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
 import { ImplementationGenerator } from "../../src/execution/implementation-generator/implementation-generator.js";
-import { ImplementationContractService } from "../../src/contract/implementation-contract/implementation-contract.js";
+import { ImplementationContract } from "../../src/contract/implementation-contract/implementation-contract.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import { ImplementationStageRunner } from "../../src/workflow/stage-runners/implementation-stage-runner.js";
@@ -41,11 +41,12 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
 
   try {
     const generator = createGenerator(artifactStore);
-    const contractChecker = ImplementationContractService.create();
+    const contractChecker = ImplementationContract.create();
 
     await testImplementationStageRunnerApply(generator, contractChecker, workspaceRoot);
     await testImplementationStageRunnerReject(generator, contractChecker, workspaceRoot);
     await testImplementationStageRunnerContractFailure(generator, workspaceRoot);
+    await testImplementationStageRunnerRequiresWorkplanAndCurrentStep(generator, contractChecker, workspaceRoot);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -146,6 +147,35 @@ async function testImplementationStageRunnerContractFailure(
   await assert.rejects(access(path.join(workspaceRoot, "src", "generated.ts")));
 }
 
+async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
+  generator: ImplementationGenerator,
+  contractChecker: IContractChecker,
+  workspaceRoot: string,
+): Promise<void> {
+  const runner = new ImplementationStageRunner({
+    generator,
+    contractChecker,
+  });
+
+  await assert.rejects(
+    runner.run(
+      createRunContext("task-4", workspaceRoot, {
+        implementation_workplan: undefined,
+      }),
+    ),
+    /Missing required input artifact "implementation_workplan"\./,
+  );
+
+  await assert.rejects(
+    runner.run(
+      createRunContext("task-5", workspaceRoot, {
+        current_step: undefined,
+      }),
+    ),
+    /Missing required input artifact "current_step"\./,
+  );
+}
+
 function createGenerator(artifactStore: ArtifactStoreService): ImplementationGenerator {
   return new ImplementationGenerator({
     artifactStore,
@@ -160,13 +190,39 @@ function createGenerator(artifactStore: ArtifactStoreService): ImplementationGen
   });
 }
 
-function createRunContext(taskId: string, workspaceRoot: string): StageRunContext {
+function createRunContext(
+  taskId: string,
+  workspaceRoot: string,
+  overrides?: Partial<Record<"implementation_workplan" | "current_step", string | undefined>>,
+): StageRunContext {
+  const inputArtifacts: Record<string, string> = {
+    moduleDesign: "module-design.md",
+    implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
+    current_step: "step-1",
+  };
+
+  if (overrides && "implementation_workplan" in overrides) {
+    if (typeof overrides.implementation_workplan === "string") {
+      inputArtifacts.implementation_workplan = overrides.implementation_workplan;
+    } else {
+      delete inputArtifacts.implementation_workplan;
+    }
+  }
+
+  if (overrides && "current_step" in overrides) {
+    if (typeof overrides.current_step === "string") {
+      inputArtifacts.current_step = overrides.current_step;
+    } else {
+      delete inputArtifacts.current_step;
+    }
+  }
+
   return {
     taskId,
     stageId: "implementation",
     attempt: 1,
     workspaceRoot,
-    inputArtifacts: { moduleDesign: "module-design.md" },
+    inputArtifacts,
     params: {
       moduleDesignStageId: "module-design",
       testCommand: 'node -e "process.exit(0)"',
