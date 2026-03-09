@@ -1,5 +1,21 @@
 # AI Meta-Agent Project
 
+## Core Collaboration Documents
+
+Read these documents first before any requirement analysis, architecture work, module design work, or code generation:
+
+- Requirement document:
+  [meta_layer/docs/Requirement.md](./meta_layer/docs/Requirement.md)
+- Architecture document:
+  [meta_layer/docs/TechnicalArchitecture.md](./meta_layer/docs/TechnicalArchitecture.md)
+- Module design documents:
+  `module_desig` in discussions refers to the current design-doc directory
+  [meta_layer/docs/design_docs/](./meta_layer/docs/design_docs/)
+- Code generation execution plan:
+  [project_layer/docs/CodeGenerationExecutionPlan.md](./project_layer/docs/CodeGenerationExecutionPlan.md)
+- Collaboration standard:
+  [project_layer/docs/COLLABORATION_STANDARD.md](./project_layer/docs/COLLABORATION_STANDARD.md)
+
 ## Background
 
 In most cases, it is difficult to turn a product idea into a runnable program directly and at low cost.
@@ -158,9 +174,11 @@ It then runs the aggregated test entry at `tests/run-tests.ts`.
 
 ## Key Documents
 
-- Chinese execution plan:
+- Start here first:
+  - [meta_layer/docs/Requirement.md](./meta_layer/docs/Requirement.md)
+  - [meta_layer/docs/TechnicalArchitecture.md](./meta_layer/docs/TechnicalArchitecture.md)
+  - [meta_layer/docs/design_docs/](./meta_layer/docs/design_docs/)
   - [project_layer/docs/CodeGenerationExecutionPlan.md](./project_layer/docs/CodeGenerationExecutionPlan.md)
-- Collaboration standard:
   - [project_layer/docs/COLLABORATION_STANDARD.md](./project_layer/docs/COLLABORATION_STANDARD.md)
 - Workflow design:
   - [meta_layer/docs/design_docs/Workflow/Pipeline.md](./meta_layer/docs/design_docs/Workflow/Pipeline.md)
