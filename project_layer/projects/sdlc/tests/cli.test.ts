@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -8,6 +8,7 @@ import {
   ConsoleTraceViewer,
   DefaultCLICommandParser,
   DefaultCLIRequestMapper,
+  ResourceWorkspaceInitializer,
 } from "../src/interface/cli/cli.js";
 import type { IPipeline, LaunchTaskRequest } from "../src/shared/contracts/pipeline.js";
 
@@ -20,6 +21,7 @@ export async function runCliTests(): Promise<void> {
     await testRequestMapper(workspaceRoot);
     await testCliRunSuccess(workspaceRoot);
     await testCliRunMissingWorkspace();
+    await testCliInitCopiesResources(workspaceRoot);
     await testRequestMapperRequiresStage();
     await testModuleDesignRequiresTargetModule(workspaceRoot);
     await testImplementationExecutionIsNotSupported(workspaceRoot);
@@ -136,6 +138,44 @@ async function testCliRunMissingWorkspace(): Promise<void> {
     async () => cli.run(["generate", "--stage", "architecture_design"]),
     /Missing required option: --workspace/,
   );
+}
+
+async function testCliInitCopiesResources(workspaceRoot: string): Promise<void> {
+  const parser = new DefaultCLICommandParser();
+  const mapper = new DefaultCLIRequestMapper();
+  const initializer = new ResourceWorkspaceInitializer();
+  const rendered: string[] = [];
+  const traceViewer: ConsoleTraceViewer = {
+    renderStatus(message: string): void {
+      rendered.push(`status:${message}`);
+    },
+    renderTrace(event): void {
+      rendered.push(`trace:${event.eventType}:${event.summary}`);
+    },
+    renderResult(summary: string): void {
+      rendered.push(`result:${summary}`);
+    },
+  };
+  const pipeline: IPipeline = {
+    async launchTask(): Promise<string> {
+      throw new Error("launchTask should not be called for init.");
+    },
+  };
+
+  const cli = new CLIService(parser, mapper, pipeline, traceViewer, initializer);
+  const exitCode = await cli.run(["init", "--workspace", workspaceRoot]);
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(rendered, [
+    `status:Workspace initialized: ${workspaceRoot}`,
+    `result:Copied SDLC resources to ${path.join(workspaceRoot, "sdlc", "resources")}`,
+  ]);
+
+  const copiedStandard = await readFile(
+    path.join(workspaceRoot, "sdlc", "resources", "COLLABORATION_STANDARD.md"),
+    "utf8",
+  );
+  assert.equal(copiedStandard.includes("# Collaboration Standard"), true);
 }
 
 async function testRequestMapperRequiresStage(): Promise<void> {

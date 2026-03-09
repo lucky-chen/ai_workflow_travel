@@ -400,6 +400,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] converge CLI launch input to `workspace` as the single project root input
   - [x] keep review as runtime-inline CLI interaction and do not introduce a standalone `review` command
   - [x] remove explicit CLI artifact-path arguments from the baseline launch flow
+  - [x] support `init` to copy bundled SDLC resources into `workspace/sdlc/resources`
   - [x] cover workspace-rooted launch behavior in CLI tests
 - [ ] Batch 2: workspace path and artifact layout alignment
   - [ ] make stage input loading resolve required artifacts from the workspace directory layout instead of explicit CLI artifact arguments

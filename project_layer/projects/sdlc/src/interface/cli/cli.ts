@@ -1,8 +1,9 @@
 // CLI module: parses user commands, maps them to workflow requests, and renders basic output.
-import { readFile, readdir } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { fileURLToPath } from "node:url";
 import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
@@ -40,6 +41,10 @@ export interface ReviewSession {
 // Public API: command-line entry interface exposed to the executable layer.
 export interface ICLI {
   run(argv: string[]): Promise<number>;
+}
+
+export interface WorkspaceInitializer {
+  initialize(workspaceRoot: string): Promise<string>;
 }
 
 export class DefaultCLICommandParser implements CLICommandParser {
@@ -231,6 +236,19 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
   }
 }
 
+export class ResourceWorkspaceInitializer implements WorkspaceInitializer {
+  async initialize(workspaceRoot: string): Promise<string> {
+    const targetRoot = path.join(workspaceRoot, "sdlc");
+    const targetResourcesDirectory = path.join(targetRoot, "resources");
+    const sourceResourcesDirectory = await resolveBundledResourcesDirectory();
+
+    await mkdir(targetRoot, { recursive: true });
+    await cp(sourceResourcesDirectory, targetResourcesDirectory, { recursive: true });
+
+    return targetResourcesDirectory;
+  }
+}
+
 export class ConsoleTraceViewer implements TraceViewer {
   renderStatus(message: string): void {
     process.stdout.write(`${message}\n`);
@@ -311,10 +329,15 @@ export class CLIService implements ICLI {
     private readonly requestMapper: CLIRequestMapper,
     private readonly pipelineClient: IPipeline,
     private readonly traceViewer: TraceViewer,
+    private readonly workspaceInitializer: WorkspaceInitializer = new ResourceWorkspaceInitializer(),
   ) {}
 
   async run(argv: string[]): Promise<number> {
     const parsed = this.commandParser.parse(argv);
+    if (parsed.command === "init") {
+      return this.runInit(parsed);
+    }
+
     const request = await this.requestMapper.map(parsed);
     this.traceViewer.renderTrace({
       taskId: "pending",
@@ -326,4 +349,46 @@ export class CLIService implements ICLI {
     this.traceViewer.renderResult(`Completed command: ${parsed.command}`);
     return 0;
   }
+
+  private async runInit(parsed: ParsedCommand): Promise<number> {
+    const workspace = readSingleRequiredOption(parsed.options, "workspace");
+    const resourcesDirectory = await this.workspaceInitializer.initialize(workspace);
+    this.traceViewer.renderStatus(`Workspace initialized: ${workspace}`);
+    this.traceViewer.renderResult(`Copied SDLC resources to ${resourcesDirectory}`);
+    return 0;
+  }
+}
+
+function readSingleRequiredOption(options: ParsedCommand["options"], key: string): string {
+  const value = options[key];
+  if (typeof value === "undefined") {
+    throw new Error(`Missing required option: --${key}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new Error(`Option "--${key}" must be provided at most once.`);
+  }
+
+  return value;
+}
+
+async function resolveBundledResourcesDirectory(): Promise<string> {
+  const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+  const candidateDirectories = [
+    path.resolve(currentDirectory, "..", "..", "..", "resources"),
+    path.resolve(currentDirectory, "..", "..", "..", "..", "..", "..", "..", "meta_layer", "resources"),
+  ];
+
+  for (const candidateDirectory of candidateDirectories) {
+    try {
+      const entries = await readdir(candidateDirectory);
+      if (entries.length > 0) {
+        return candidateDirectory;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("Unable to locate bundled SDLC resources.");
 }
