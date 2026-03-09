@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -15,10 +15,14 @@ export async function runCliTests(): Promise<void> {
   const workspaceRoot = await createTempDir("cli-workspace-");
 
   try {
+    await seedWorkspace(workspaceRoot);
     await testCommandParser(workspaceRoot);
     await testRequestMapper(workspaceRoot);
     await testCliRunSuccess(workspaceRoot);
     await testCliRunMissingWorkspace();
+    await testRequestMapperRequiresStage();
+    await testModuleDesignRequiresTargetModule(workspaceRoot);
+    await testImplementationExecutionIsNotSupported(workspaceRoot);
     await testReviewInteractionApply();
     await testReviewInteractionReject();
     await testReviewInteractionComment();
@@ -29,32 +33,38 @@ export async function runCliTests(): Promise<void> {
 
 async function testCommandParser(workspaceRoot: string): Promise<void> {
   const parser = new DefaultCLICommandParser();
-  assert.deepEqual(parser.parse(["generate", "--module", "implementation", "--input", "module.md", "--workspace", workspaceRoot]), {
-    command: "generate",
-    options: {
-      module: "implementation",
-      input: "module.md",
-      workspace: workspaceRoot,
+  assert.deepEqual(
+    parser.parse(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot]),
+    {
+      command: "generate",
+      options: {
+        stage: "architecture_design",
+        workspace: workspaceRoot,
+      },
     },
-  });
+  );
 }
 
 async function testRequestMapper(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
-    mapper.map({
+    await mapper.map({
       command: "generate",
       options: {
-        module: "implementation",
-        input: "module.md",
+        stage: "implementation_plan",
         workspace: workspaceRoot,
       },
     }),
     {
-      startStageId: "implementation",
+      startStageId: "implementation_plan",
       workspaceRoot,
       inputArtifacts: {
-        moduleDesign: "module.md",
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+        module_design_documents: JSON.stringify([
+          "# Module Alpha\n",
+          "# Module Beta\n",
+        ]),
       },
     },
   );
@@ -87,24 +97,22 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
   const cli = new CLIService(parser, mapper, pipeline, traceViewer);
   const exitCode = await cli.run([
     "generate",
-    "--module",
-    "implementation",
-    "--input",
-    "module.md",
+    "--stage",
+    "architecture_design",
     "--workspace",
     workspaceRoot,
   ]);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(capturedRequest, {
-    startStageId: "implementation",
+    startStageId: "architecture_design",
     workspaceRoot,
     inputArtifacts: {
-      moduleDesign: "module.md",
+      requirement_document: "# Requirement\n",
     },
   });
   assert.deepEqual(rendered, [
-    'trace:task_launch_requested:Launching command "generate" for stage "implementation".',
+    'trace:task_launch_requested:Launching command "generate" for stage "architecture_design".',
     "status:Task launched: task-cli-1",
     "result:Completed command: generate",
   ]);
@@ -125,8 +133,52 @@ async function testCliRunMissingWorkspace(): Promise<void> {
   };
   const cli = new CLIService(parser, mapper, pipeline, traceViewer);
   await assert.rejects(
-    async () => cli.run(["generate", "--module", "implementation", "--input", "module.md"]),
+    async () => cli.run(["generate", "--stage", "architecture_design"]),
     /Missing required option: --workspace/,
+  );
+}
+
+async function testRequestMapperRequiresStage(): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  await assert.rejects(
+    async () =>
+      mapper.map({
+        command: "generate",
+        options: {
+          workspace: "/tmp/project",
+        },
+      }),
+    /Missing required option: --stage/,
+  );
+}
+
+async function testModuleDesignRequiresTargetModule(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  await assert.rejects(
+    async () =>
+      mapper.map({
+        command: "generate",
+        options: {
+          stage: "module_design",
+          workspace: workspaceRoot,
+        },
+      }),
+    /Missing required option: --target-module for stage "module_design"./,
+  );
+}
+
+async function testImplementationExecutionIsNotSupported(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  await assert.rejects(
+    async () =>
+      mapper.map({
+        command: "generate",
+        options: {
+          stage: "implementation_execution",
+          workspace: workspaceRoot,
+        },
+      }),
+    /CLI launch baseline does not yet support stage "implementation_execution"./,
   );
 }
 
@@ -203,4 +255,17 @@ async function createTempDir(prefix: string): Promise<string> {
   const tempRoot = path.resolve(process.cwd(), "dist", "tmp");
   await mkdir(tempRoot, { recursive: true });
   return mkdtemp(path.join(tempRoot, prefix));
+}
+
+async function seedWorkspace(workspaceRoot: string): Promise<void> {
+  await writeWorkspaceFile(workspaceRoot, "docs/requirements/Requirement.md", "# Requirement\n");
+  await writeWorkspaceFile(workspaceRoot, "docs/architecture/TechnicalArchitecture.md", "# Architecture\n");
+  await writeWorkspaceFile(workspaceRoot, "docs/module_design/alpha.md", "# Module Alpha\n");
+  await writeWorkspaceFile(workspaceRoot, "docs/module_design/beta.md", "# Module Beta\n");
+}
+
+async function writeWorkspaceFile(workspaceRoot: string, relativePath: string, content: string): Promise<void> {
+  const absolutePath = path.join(workspaceRoot, relativePath);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, content, "utf8");
 }
