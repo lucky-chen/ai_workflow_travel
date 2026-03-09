@@ -11,11 +11,11 @@ import {
   DefaultPlanner,
   type AgentContext,
   type IModelExecutionBackend,
-} from "../src/agent-runtime.js";
+} from "../src/runtime/agent-runtime.js";
 import type {
   AgentTraceEvent,
   IAgentTraceRecorder,
-} from "../src/agent-trace-recorder.js";
+} from "../src/runtime/agent-trace-recorder.js";
 
 export async function runAgentRuntimeTests(): Promise<void> {
   await testDefaultPlannerBuildsDirectGenerationPlan();

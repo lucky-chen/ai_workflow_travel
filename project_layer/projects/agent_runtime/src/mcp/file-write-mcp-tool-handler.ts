@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { McpToolRequest, McpToolResult } from "./agent-runtime-types.js";
+import type { McpToolRequest, McpToolResult } from "../runtime/agent-runtime-types.js";
 import type { IMcpToolHandler } from "./mcp-tool-registry.js";
 
 export class FileWriteMcpToolHandler implements IMcpToolHandler {

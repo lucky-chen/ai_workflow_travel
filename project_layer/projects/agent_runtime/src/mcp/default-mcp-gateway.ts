@@ -1,4 +1,4 @@
-import type { IMcpGateway, McpToolRequest, McpToolResult } from "./agent-runtime-types.js";
+import type { IMcpGateway, McpToolRequest, McpToolResult } from "../runtime/agent-runtime-types.js";
 import { FileReadMcpToolHandler } from "./file-read-mcp-tool-handler.js";
 import { FileWriteMcpToolHandler } from "./file-write-mcp-tool-handler.js";
 import { McpToolRegistry } from "./mcp-tool-registry.js";

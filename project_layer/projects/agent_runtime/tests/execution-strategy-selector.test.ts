@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { ExecutionStrategySelector } from "../src/execution-strategy-selector.js";
-import type { FetchLike } from "../src/http-json-client.js";
+import { ExecutionStrategySelector } from "../src/model/execution-strategy-selector.js";
+import type { FetchLike } from "../src/model/http-json-client.js";
 
 export async function runExecutionStrategySelectorTests(): Promise<void> {
   await testExecutionStrategySelectorDefaultsToMock();

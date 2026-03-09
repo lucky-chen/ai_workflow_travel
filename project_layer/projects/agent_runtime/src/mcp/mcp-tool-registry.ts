@@ -1,4 +1,4 @@
-import type { McpToolRequest, McpToolResult } from "./agent-runtime-types.js";
+import type { McpToolRequest, McpToolResult } from "../runtime/agent-runtime-types.js";
 
 export interface IMcpToolHandler {
   readonly toolName: string;

@@ -1,4 +1,8 @@
-import type { IModelExecutionBackend, LlmExecutionRequest, LlmExecutionResult } from "./agent-runtime.js";
+import type {
+  IModelExecutionBackend,
+  LlmExecutionRequest,
+  LlmExecutionResult,
+} from "../runtime/agent-runtime.js";
 import { HttpJsonClient } from "./http-json-client.js";
 import type { RealProviderConfig } from "./real-provider-config.js";
 
