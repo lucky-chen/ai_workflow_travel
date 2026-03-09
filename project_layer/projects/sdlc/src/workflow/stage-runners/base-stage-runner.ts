@@ -62,6 +62,7 @@ export abstract class BaseStageRunner implements IStageRunner {
       summary: decision.summary,
       metadata: {
         action: decision.action,
+        ...(decision.comment ? { comment: decision.comment } : {}),
       },
     });
 

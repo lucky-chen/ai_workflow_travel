@@ -10,7 +10,7 @@ import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-record
 import type { IImplementationGitCommitter } from "../../src/workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../../src/workflow/stage-runners/implementation-stage-runner.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
-import type { IContractChecker, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
+import type { IContractChecker, IStageGenerator, ImplementationStageArtifacts, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
 
 export async function runImplementationStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("implementation-stage-runner-");
@@ -74,6 +74,9 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
       artifactStore,
       workspaceRoot,
     );
+    await testImplementationStageRunnerReturnsNextCurrentStep(artifactStore, workspaceRoot);
+    await testImplementationStageRunnerMarksExecutionCompletedAtLastBatch(artifactStore, workspaceRoot);
+    await testImplementationStageRunnerWaitReviewCarriesComment(artifactStore, workspaceRoot);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -127,6 +130,8 @@ async function testImplementationStageRunnerApply(
       stepId: "batch-1",
     },
   ]);
+  assert.equal(output.artifacts.current_step, undefined);
+  assert.equal(output.artifacts.implementation_execution_completed, "true");
   const updatedWorkplan = await artifactStore.getArtifact({
     taskId: "task-1",
     stageId: "implementation_plan",
@@ -291,6 +296,100 @@ async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
     ),
     /Missing required input artifact "current_step"\./,
   );
+
+  await assert.rejects(
+    runner.run(
+      createRunContext("task-5", workspaceRoot, {
+        current_step: "step-1",
+      }),
+    ),
+    /Input artifact "current_step" must be valid JSON with \{ stepId, batchId \}\./,
+  );
+}
+
+async function testImplementationStageRunnerReturnsNextCurrentStep(
+  artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
+): Promise<void> {
+  const runner = new ImplementationStageRunner({
+    generator: createStubGenerator(),
+    contractChecker: createPassingContractChecker(),
+    artifactStore,
+    gitCommitter: new MockImplementationGitCommitter(),
+  });
+
+  await resetWorkspace(workspaceRoot);
+
+  const output = await runner.run(
+    createRunContext("task-1", workspaceRoot, {
+      parsed_implementation_workplan: JSON.stringify(createMultiStepWorkplan()),
+      current_step: JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
+    }),
+  );
+
+  assert.equal(output.artifacts.current_step, JSON.stringify({ stepId: "step-1", batchId: "batch-2" }));
+  assert.equal(output.artifacts.implementation_execution_completed, "false");
+}
+
+async function testImplementationStageRunnerMarksExecutionCompletedAtLastBatch(
+  artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
+): Promise<void> {
+  const runner = new ImplementationStageRunner({
+    generator: createStubGenerator(),
+    contractChecker: createPassingContractChecker(),
+    artifactStore,
+    gitCommitter: new MockImplementationGitCommitter(),
+  });
+
+  await resetWorkspace(workspaceRoot);
+
+  const output = await runner.run(
+    createRunContext("task-1", workspaceRoot, {
+      parsed_implementation_workplan: JSON.stringify(createMultiStepWorkplan()),
+      current_step: JSON.stringify({ stepId: "step-2", batchId: "batch-2" }),
+    }),
+  );
+
+  assert.equal(output.artifacts.current_step, undefined);
+  assert.equal(output.artifacts.implementation_execution_completed, "true");
+}
+
+async function testImplementationStageRunnerWaitReviewCarriesComment(
+  artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
+): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
+  const runner = new ImplementationStageRunner({
+    generator: createStubGenerator(),
+    contractChecker: createPassingContractChecker(),
+    artifactStore,
+    traceRecorder,
+    changeGate: new InMemoryChangeGate({
+      decision: {
+        action: "wait",
+        summary: "User requested revisions.",
+        comment: "Please split the adapter and parser.",
+      },
+    }),
+    gitCommitter: new MockImplementationGitCommitter(),
+  });
+
+  await resetWorkspace(workspaceRoot);
+
+  await assert.rejects(
+    runner.run(
+      createRunContext("task-2", workspaceRoot, {
+        current_step: JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
+      }),
+    ),
+    /Change review ended with action "wait"\./,
+  );
+
+  assert.deepEqual(traceRecorder.getEvents()[2]?.event.metadata, {
+    action: "wait",
+    comment: "Please split the adapter and parser.",
+  });
 }
 
 function createGenerator(artifactStore: ArtifactStoreService): ImplementationGenerator {
@@ -310,7 +409,7 @@ function createGenerator(artifactStore: ArtifactStoreService): ImplementationGen
 function createRunContext(
   taskId: string,
   workspaceRoot: string,
-  overrides?: Partial<Record<"implementation_workplan" | "current_step", string | undefined>>,
+  overrides?: Partial<Record<"implementation_workplan" | "current_step" | "parsed_implementation_workplan", string | undefined>>,
 ): StageRunContext {
   const inputArtifacts: Record<string, string> = {
     module_design_documents: JSON.stringify(["module-design.md"]),
@@ -318,7 +417,7 @@ function createRunContext(
     architecture_document: "# architecture",
     implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
     parsed_implementation_workplan: JSON.stringify(createParsedWorkplan()),
-    current_step: "step-1",
+    current_step: JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
   };
 
   if (overrides && "implementation_workplan" in overrides) {
@@ -334,6 +433,14 @@ function createRunContext(
       inputArtifacts.current_step = overrides.current_step;
     } else {
       delete inputArtifacts.current_step;
+    }
+  }
+
+  if (overrides && "parsed_implementation_workplan" in overrides) {
+    if (typeof overrides.parsed_implementation_workplan === "string") {
+      inputArtifacts.parsed_implementation_workplan = overrides.parsed_implementation_workplan;
+    } else {
+      delete inputArtifacts.parsed_implementation_workplan;
     }
   }
 
@@ -380,6 +487,45 @@ class MockImplementationGitCommitter implements IImplementationGitCommitter {
   }
 }
 
+function createPassingContractChecker(): IContractChecker {
+  return {
+    async check(): Promise<{ passed: true; summary: string; issues: [] }> {
+      return {
+        passed: true,
+        summary: "Implementation contract passed.",
+        issues: [],
+      };
+    },
+  };
+}
+
+function createStubGenerator(): IStageGenerator<StageOutput<ImplementationStageArtifacts>> {
+  return {
+    async run(context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
+      const preparedStepContext = JSON.parse(context.inputArtifacts.prepared_step_context ?? "{}") as {
+        currentBatch?: { batchId?: string };
+      };
+      const batchId = preparedStepContext.currentBatch?.batchId ?? "unknown-batch";
+
+      return {
+        stageId: context.stageId,
+        success: true,
+        summary: `Generated changes for ${batchId}.`,
+        artifacts: {
+          changedFiles: [
+            {
+              path: `src/${batchId}.ts`,
+              operation: "create",
+              content: `export const batch = "${batchId}";\n`,
+            },
+          ],
+          summary: `Generated changes for ${batchId}.`,
+        },
+      };
+    },
+  };
+}
+
 function createParsedWorkplan() {
   return {
     steps: [
@@ -394,6 +540,53 @@ function createParsedWorkplan() {
             title: "interfaces and skeleton",
             status: "completed",
             tasks: ["shared contracts"],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function createMultiStepWorkplan() {
+  return {
+    steps: [
+      {
+        stepId: "step-1",
+        title: "Shared Workflow Backbone",
+        status: "in_progress",
+        architectureModulesInScope: ["Workflow/Pipeline"],
+        batches: [
+          {
+            batchId: "batch-1",
+            title: "interfaces and skeleton",
+            status: "completed",
+            tasks: ["shared contracts"],
+          },
+          {
+            batchId: "batch-2",
+            title: "pipeline orchestration",
+            status: "not_started",
+            tasks: ["pipeline loop"],
+          },
+        ],
+      },
+      {
+        stepId: "step-2",
+        title: "Implementation Execution",
+        status: "not_started",
+        architectureModulesInScope: ["Execution/ImplementationGenerator"],
+        batches: [
+          {
+            batchId: "batch-1",
+            title: "runner continuation",
+            status: "not_started",
+            tasks: ["next current step"],
+          },
+          {
+            batchId: "batch-2",
+            title: "review comment",
+            status: "not_started",
+            tasks: ["comment trace"],
           },
         ],
       },

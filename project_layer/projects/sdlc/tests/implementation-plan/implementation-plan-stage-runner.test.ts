@@ -52,6 +52,7 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
   };
   assert.equal(parsedWorkplan.steps[0]?.stepId, "step-1");
   assert.equal(parsedWorkplan.steps[0]?.batches[0]?.batchId, "batch-1");
+  assert.equal(output.artifacts.current_step, JSON.stringify({ stepId: "step-1", batchId: "batch-1" }));
   assert.equal(
     await artifactStore.getArtifact({
       taskId: "task-1",

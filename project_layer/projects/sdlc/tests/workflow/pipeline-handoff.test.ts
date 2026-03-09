@@ -114,6 +114,10 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       "plans/implementation/ImplementationWorkPlan.md",
     );
     assert.equal(typeof implementationExecutionContext.inputArtifacts.parsed_implementation_workplan, "string");
+    assert.equal(
+      implementationExecutionContext.inputArtifacts.current_step,
+      JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
+    );
     const implementationPlanOutput = await artifactStore.getArtifact({
       taskId,
       stageId: "implementation_plan",
@@ -180,6 +184,10 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
               ],
             },
           ],
+        }),
+        current_step: JSON.stringify({
+          stepId: "step-1",
+          batchId: "batch-1",
         }),
       },
       params: undefined,

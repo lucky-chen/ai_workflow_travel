@@ -297,16 +297,16 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] record trace for final step result
   - [x] extend tests for artifact persistence and trace flow
 - [ ] Batch 6: execution review and runtime semantics alignment
-  - [ ] support review `comment`
-  - [ ] support workflow-level multi-step execution across one `implementation_workplan`
-  - [ ] iterate ordered workplan batches inside each step in `ImplementationStageRunner`
-  - [ ] persist and resume `current_batch` between stage-entry runs
-  - [ ] align plan-step and plan-batch review outcomes with runner-managed next-batch and next-step transition semantics
-  - [ ] stop `implementation_execution` when all workplan batches are completed
-  - [ ] align batch execution input with runner-managed workplan context loading
+  - [x] support review `comment`
+  - [x] support workflow-level multi-step execution across one `implementation_workplan`
+  - [x] iterate ordered workplan batches inside each step in `ImplementationStageRunner`
+  - [x] persist and resume `current_batch` between stage-entry runs
+  - [x] align plan-step and plan-batch review outcomes with runner-managed next-batch and next-step transition semantics
+  - [x] stop `implementation_execution` when all workplan batches are completed
+  - [x] align batch execution input with runner-managed workplan context loading
   - [ ] remove residual single-module execution assumptions
   - [ ] fully align implementation-plan and implementation-execution semantics with design docs
-  - [ ] extend tests for comment-aware review outcomes
+  - [x] extend tests for comment-aware review outcomes
 - [ ] Batch 7: implementation-execution design and runtime alignment cleanup
   - [ ] align `Execution/ImplementationGenerator` design doc with the current implementation transition state
   - [ ] align `Contract/ImplementationContract` design doc with the current implementation transition state

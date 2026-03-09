@@ -12,7 +12,16 @@ import {
   type IImplementationGitCommitter,
 } from "./implementation-git-committer.js";
 import type { PreparedStepContext } from "../../execution/implementation-generator/types.js";
-import type { ImplementationWorkPlan, ImplementationWorkPlanBatch } from "../../shared/contracts/implementation-workplan.js";
+import type {
+  ImplementationWorkPlan,
+  ImplementationWorkPlanBatch,
+  ImplementationWorkPlanStep,
+} from "../../shared/contracts/implementation-workplan.js";
+
+interface CurrentExecutionPointer {
+  stepId: string;
+  batchId: string;
+}
 
 export class ImplementationStageRunner extends BaseStageRunner {
   private readonly changeApplier = new ChangeApplier();
@@ -29,7 +38,9 @@ export class ImplementationStageRunner extends BaseStageRunner {
     this.gitCommitter = dependencies.gitCommitter ?? new GitProcessCommitter();
   }
 
-  async run(context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
+  async run(
+    context: StageRunContext,
+  ): Promise<StageOutput<ImplementationStageArtifacts & { current_step?: string; implementation_execution_completed: string }>> {
     this.validateExecutionContext(context);
     await this.recordStageStart(context);
 
@@ -58,12 +69,24 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.persistAcceptedArtifacts(context, output.artifacts.changedFiles);
     await this.updateAcceptedImplementationWorkplan(context, preparedStepContext);
     await this.recordFinalStepResult(context, preparedStepContext.currentBatch.batchId, output.artifacts.changedFiles);
+    const nextCurrentStep = this.resolveNextCurrentStep(
+      preparedStepContext.workplan,
+      preparedStepContext.currentBatch.batchId,
+      preparedContext.inputArtifacts.current_step,
+    );
     await this.gitCommitter.commit({
       workspaceRoot: context.workspaceRoot,
       stepId: preparedStepContext.currentBatch.batchId,
     });
 
-    return output;
+    return {
+      ...output,
+      artifacts: {
+        ...output.artifacts,
+        ...(nextCurrentStep ? { current_step: JSON.stringify(nextCurrentStep) } : {}),
+        implementation_execution_completed: String(nextCurrentStep === null),
+      },
+    };
   }
 
   private validateExecutionContext(context: StageRunContext): void {
@@ -105,7 +128,8 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
     const implementationWorkplanRef = context.inputArtifacts.implementation_workplan.trim();
     const parsedWorkplan = this.parseStructuredWorkplan(context.inputArtifacts.parsed_implementation_workplan);
-    const currentBatch = this.resolveCurrentBatch(parsedWorkplan, context.inputArtifacts.current_step.trim());
+    const currentExecutionPointer = this.parseCurrentExecutionPointer(context.inputArtifacts.current_step);
+    const currentBatch = this.resolveCurrentBatch(parsedWorkplan, currentExecutionPointer);
     const moduleDesignDocuments = await this.loadModuleDesignDocuments(context);
 
     return {
@@ -132,6 +156,35 @@ export class ImplementationStageRunner extends BaseStageRunner {
     }
 
     return JSON.parse(rawPreparedStepContext) as PreparedStepContext;
+  }
+
+  private parseCurrentExecutionPointer(rawCurrentStep: string | undefined): CurrentExecutionPointer {
+    if (!rawCurrentStep?.trim()) {
+      throw new Error('Missing required input artifact "current_step".');
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawCurrentStep);
+    } catch {
+      throw new Error('Input artifact "current_step" must be valid JSON with { stepId, batchId }.');
+    }
+
+    if (
+      !parsed
+      || typeof parsed !== "object"
+      || typeof (parsed as { stepId?: unknown }).stepId !== "string"
+      || (parsed as { stepId: string }).stepId.trim().length === 0
+      || typeof (parsed as { batchId?: unknown }).batchId !== "string"
+      || (parsed as { batchId: string }).batchId.trim().length === 0
+    ) {
+      throw new Error('Input artifact "current_step" must be valid JSON with { stepId, batchId }.');
+    }
+
+    return {
+      stepId: (parsed as { stepId: string }).stepId,
+      batchId: (parsed as { batchId: string }).batchId,
+    };
   }
 
   private async persistAcceptedArtifacts(context: StageRunContext, changedFiles: ChangedFile[]): Promise<void> {
@@ -221,35 +274,55 @@ export class ImplementationStageRunner extends BaseStageRunner {
     return parsed as ImplementationWorkPlan;
   }
 
-  private resolveCurrentBatch(workplan: ImplementationWorkPlan, rawCurrentStep: string): ImplementationWorkPlanBatch {
-    let stepId = rawCurrentStep;
-    let batchId: string | undefined;
-
-    try {
-      const parsed = JSON.parse(rawCurrentStep) as { stepId?: unknown; batchId?: unknown };
-      if (typeof parsed.stepId === "string" && parsed.stepId.length > 0) {
-        stepId = parsed.stepId;
-      }
-      if (typeof parsed.batchId === "string" && parsed.batchId.length > 0) {
-        batchId = parsed.batchId;
-      }
-    } catch {
-      // Fallback to plain step id string.
-    }
-
-    const step = workplan.steps.find((entry) => entry.stepId === stepId);
+  private resolveCurrentBatch(workplan: ImplementationWorkPlan, currentStep: CurrentExecutionPointer): ImplementationWorkPlanBatch {
+    const step = workplan.steps.find((entry) => entry.stepId === currentStep.stepId);
     if (!step) {
-      throw new Error(`Current execution step "${stepId}" was not found in parsed implementation workplan.`);
+      throw new Error(`Current execution step "${currentStep.stepId}" was not found in parsed implementation workplan.`);
     }
 
-    const batch = batchId
-      ? step.batches.find((entry) => entry.batchId === batchId)
-      : step.batches[0];
+    const batch = step.batches.find((entry) => entry.batchId === currentStep.batchId);
     if (!batch) {
-      throw new Error(`Current execution batch "${batchId ?? "<first>"}" was not found in parsed implementation workplan.`);
+      throw new Error(`Current execution batch "${currentStep.batchId}" was not found in parsed implementation workplan.`);
     }
 
     return batch;
+  }
+
+  private resolveNextCurrentStep(
+    workplan: ImplementationWorkPlan,
+    currentBatchId: string,
+    rawCurrentStep: string | undefined,
+  ): CurrentExecutionPointer | null {
+    const currentPointer = this.parseCurrentExecutionPointer(rawCurrentStep);
+    const stepIndex = workplan.steps.findIndex((step) => step.stepId === currentPointer.stepId);
+    if (stepIndex < 0) {
+      throw new Error(`Current execution step "${currentPointer.stepId}" was not found in parsed implementation workplan.`);
+    }
+
+    const step = workplan.steps[stepIndex] as ImplementationWorkPlanStep;
+    const batchIndex = step.batches.findIndex((batch) => batch.batchId === currentBatchId);
+    if (batchIndex < 0) {
+      throw new Error(`Current execution batch "${currentBatchId}" was not found in parsed implementation workplan.`);
+    }
+
+    const nextBatch = step.batches[batchIndex + 1];
+    if (nextBatch) {
+      return {
+        stepId: step.stepId,
+        batchId: nextBatch.batchId,
+      };
+    }
+
+    const nextStep = workplan.steps[stepIndex + 1];
+    const firstNextBatch = nextStep?.batches[0];
+    if (nextStep && firstNextBatch) {
+      return {
+        stepId: nextStep.stepId,
+        batchId: firstNextBatch.batchId,
+      };
+    }
+
+    return null;
   }
 
   private escapeForRegExp(value: string): string {

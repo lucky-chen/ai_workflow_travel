@@ -39,7 +39,11 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
 
   async run(
     context: StageRunContext,
-  ): Promise<StageOutput<ImplementationPlanArtifacts & { implementation_workplan: string; parsed_implementation_workplan: string }>> {
+  ): Promise<StageOutput<ImplementationPlanArtifacts & {
+      implementation_workplan: string;
+      parsed_implementation_workplan: string;
+      current_step: string;
+    }>> {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ImplementationPlanArtifacts>;
@@ -64,7 +68,24 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
         ...output.artifacts,
         implementation_workplan: IMPLEMENTATION_PLAN_ARTIFACT_PATH,
         parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
+        current_step: JSON.stringify(this.resolveInitialCurrentStep(parsedWorkplan)),
       },
+    };
+  }
+
+  private resolveInitialCurrentStep(parsedWorkplan: { steps: Array<{ stepId: string; batches: Array<{ batchId: string }> }> }): {
+    stepId: string;
+    batchId: string;
+  } {
+    const firstStep = parsedWorkplan.steps[0];
+    const firstBatch = firstStep?.batches[0];
+    if (!firstStep || !firstBatch) {
+      throw new Error("Parsed implementation workplan must contain at least one step and one batch.");
+    }
+
+    return {
+      stepId: firstStep.stepId,
+      batchId: firstBatch.batchId,
     };
   }
 
