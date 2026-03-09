@@ -387,15 +387,46 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] define a shared `TraceEventType` taxonomy and move production trace emitters to shared constants
   - [x] pin the contract boundary: `implementation_execution` emits failed `contract_checked`, while `validation` remains a no-contract exception
   - [x] pin implementation failure paths so reject and wait reviews never emit completion semantics
-- [ ] Batch 4: CLI and document synchronization
+### Step 9. Align CLI And MCP Runtime Baseline
+
+- [ ] Step 9 is not started
+- [ ] Documents and modules in scope
+  - [ ] `Interface/CLI`
+  - [ ] `SDK/AgentRuntime`
+  - [ ] `SDK/LlmExecutor`
+  - [ ] runtime-to-document synchronization
+- [ ] Batch 1: CLI and MCP baseline alignment
   - [ ] align CLI interaction semantics
   - [ ] update sequence diagrams affected by runtime changes
   - [ ] update plan status to reflect true implementation state
   - [ ] confirm docs and runnable behavior are consistent
+  - [x] current baseline: `AgentRuntime` already supports the MCP protocol and exposes file read/write as a default tool
+  - [ ] promote the current MCP baseline into stable runtime planning, execution, and trace semantics
+  - [ ] `IMcpGateway`
+  - [ ] MCP request/result types
+  - [ ] tool-capable execution plan steps
+  - [ ] executor support for MCP tool calls
+  - [ ] trace events for tool call and tool result
+  - [ ] tests for MCP-enabled execution
 
-### Step 9. Extend Toward Agent Capabilities
+### Step 10. Validate Baseline With `hello-service`
 
-- [ ] Step 8 is not started
+- [ ] Step 10 is not started
+- [ ] Architecture modules in scope
+  - [ ] `SDK/AgentRuntime`
+  - [ ] `SDK/LlmExecutor`
+  - [ ] workflow automation on top of completed stages
+  - [ ] `hello-service` verification target
+- [ ] Batch 1: hello-service end-to-end baseline verification
+  - [ ] create or prepare one minimal `hello-service` target
+  - [ ] verify the MCP-enabled runtime can read and write project files through the default file tool
+  - [ ] verify the baseline execution path against a minimal service change
+  - [ ] capture validation evidence for the runnable backbone
+  - [ ] record scope limits and follow-up gaps before broader agent capability expansion
+
+### Step 11. Extend Toward Agent Capabilities
+
+- [ ] Step 11 is not started
 - [ ] Architecture modules in scope
   - [ ] `SDK/AgentRuntime`
   - [ ] `SDK/LlmExecutor`
@@ -412,20 +443,13 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] memory-aware planner inputs
   - [ ] memory-aware executor inputs
   - [ ] tests for memory persistence and memory-driven execution
-- [ ] Batch 3: AgentRuntime V2 MCP support
-  - [ ] `IMcpGateway`
-  - [ ] MCP request/result types
-  - [ ] tool-capable execution plan steps
-  - [ ] executor support for MCP tool calls
-  - [ ] trace events for tool call and tool result
-  - [ ] tests for MCP-enabled execution
-- [ ] Batch 4: AgentRuntime V2 multi-turn semantics
+- [ ] Batch 3: AgentRuntime V2 multi-turn semantics
   - [ ] step-based execution plan model
   - [ ] richer `ObservationResult` decisions (`accept` / `continue` / `abort`)
   - [ ] bounded multi-iteration agent loop
   - [ ] stop-condition and continuation policies
   - [ ] tests for multi-turn continuation and stop conditions
-- [ ] Batch 5: SDLC integration on top of AgentRuntime V2
+- [ ] Batch 4: SDLC integration on top of AgentRuntime V2
   - [ ] `LlmExecutor` adaptation to session-aware runtime
   - [ ] MCP-enabled llm execution facade path
   - [ ] migrate `ImplementationStageRunner` continuation model into AgentRuntime-managed multi-turn sessions without breaking the V1 stage API
@@ -443,6 +467,9 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 6 is in progress
 - [x] Step 7 is completed
 - [x] Step 8 is in progress
+- [ ] Step 9 is not started
+- [ ] Step 10 is not started
+- [ ] Step 11 is not started
 
 ## 5. Verification Rule
 
