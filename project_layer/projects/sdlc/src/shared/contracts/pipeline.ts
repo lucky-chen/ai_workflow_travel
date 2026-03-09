@@ -126,11 +126,36 @@ export interface IStageRunner {
   run(context: StageRunContext): Promise<StageOutput>;
 }
 
+export interface StageContinuationContext {
+  taskId: TaskId;
+  stageId: StageId;
+  nextStageId?: StageId | null;
+  attempt: number;
+  workspaceRoot: string;
+  inputArtifacts: ArtifactMap;
+  stageOutput: StageOutput;
+  params?: StringMap;
+  mergeInputArtifacts(current: ArtifactMap, output: StageOutput): ArtifactMap;
+  resolveStageStatus(output: StageOutput): "completed" | "failed";
+  updateTaskAfterStageRun(context: StageRunContext, output: StageOutput): void;
+  onStageFailure(stageId: StageId, inputArtifacts: ArtifactMap, summary: string): Promise<void>;
+}
+
+export interface StageContinuationResult {
+  nextInputArtifacts: ArtifactMap;
+  nextStageId?: StageId;
+}
+
+export interface IStageContinuationHandler {
+  continue(context: StageContinuationContext): Promise<StageContinuationResult>;
+}
+
 export interface StageDefinition {
   stageId: StageId;
   launchRequirements: string[];
   runner: IStageRunner;
   nextStageId?: StageId | null;
+  continuation?: IStageContinuationHandler;
 }
 
 export interface StageRunnerSharedDependencies {

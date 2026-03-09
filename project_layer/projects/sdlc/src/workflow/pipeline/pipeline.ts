@@ -3,6 +3,8 @@ import type {
   ITraceRecorder,
   IPipeline,
   LaunchTaskRequest,
+  StageContinuationResult,
+  StageDefinition,
   StageOutput,
   StageRunContext,
   TaskRecord,
@@ -10,7 +12,6 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js";
 import { LaunchValidator } from "./launch-validator.js";
-import { continueAfterArchitectureDesign } from "./module-design-fanout.js";
 import { StageRegistry } from "./stage-registry.js";
 import { TaskRuntimeStore } from "./task-runtime-store.js";
 
@@ -123,49 +124,19 @@ export class PipelineService implements IPipeline {
         break;
       }
 
-      // Special continuation flow:
-      // 1. after architecture_design, parse ordered modules from the accepted architecture result
-      // 2. run one module_design per module in sequence
-      // 3. aggregate accepted outputs into module_design_documents before continuing to implementation_plan
-      // Test entry: tests/pipeline-handoff.test.ts -> runPipelineHandoffTests()
-      const architectureContinuation = await continueAfterArchitectureDesign({
-        currentStageId,
-        nextStageId: stage.nextStageId,
+      const continuation = await this.runStageContinuation(stage, {
         taskId,
-        workspaceRoot: request.workspaceRoot,
+        stageId: currentStageId,
+        nextStageId: stage.nextStageId,
         attempt: context.attempt,
-        params: request.params,
-        currentInputArtifacts,
+        workspaceRoot: request.workspaceRoot,
+        inputArtifacts: currentInputArtifacts,
         stageOutput: output,
-        moduleStageDefinition: currentStageId === "architecture_design" && stage.nextStageId === "module_design"
-          ? this.registry.get("module_design")
-          : undefined,
-      }, {
-        mergeInputArtifacts: (current, stageOutput) => this.mergeInputArtifacts(current, stageOutput),
-        resolveStageStatus: (stageOutput) => this.resolveStageStatus(stageOutput),
-        updateTaskAfterModuleRun: (moduleContext, moduleOutput) => {
-          this.taskRuntimeStore.updateTask(taskId, {
-            currentStageId: "module_design",
-            inputArtifacts: moduleContext.inputArtifacts,
-            lastOutput: moduleOutput,
-          });
-        },
-        onModuleStageFailure: async (failedTaskId) => {
-          this.taskRuntimeStore.updateTask(failedTaskId, {
-            status: "failed",
-          });
-          await this.traceRecorder?.recordTrace({
-            taskId: failedTaskId,
-            stageId: "module_design",
-            eventType: "stage_failed",
-            summary: 'Stage "module_design" failed.',
-          });
-        },
+        params: request.params,
       });
-
-      if (architectureContinuation.matched) {
-        currentInputArtifacts = architectureContinuation.nextInputArtifacts;
-        currentStageId = architectureContinuation.nextStageId;
+      if (continuation) {
+        currentInputArtifacts = continuation.nextInputArtifacts;
+        currentStageId = continuation.nextStageId;
         continue;
       }
 
@@ -230,5 +201,56 @@ export class PipelineService implements IPipeline {
       ...current,
       ...Object.fromEntries(nextEntries),
     };
+  }
+
+  private async runStageContinuation(
+    stage: StageDefinition,
+    context: {
+      taskId: TaskId;
+      stageId: StageId;
+      nextStageId?: StageId | null;
+      attempt: number;
+      workspaceRoot: string;
+      inputArtifacts: ArtifactMap;
+      stageOutput: StageOutput;
+      params?: LaunchTaskRequest["params"];
+    },
+  ): Promise<StageContinuationResult | null> {
+    if (!stage.continuation) {
+      return null;
+    }
+
+    return stage.continuation.continue({
+      taskId: context.taskId,
+      stageId: context.stageId,
+      nextStageId: context.nextStageId,
+      attempt: context.attempt,
+      workspaceRoot: context.workspaceRoot,
+      inputArtifacts: context.inputArtifacts,
+      stageOutput: context.stageOutput,
+      params: context.params,
+      mergeInputArtifacts: (current, output) => this.mergeInputArtifacts(current, output),
+      resolveStageStatus: (output) => this.resolveStageStatus(output),
+      updateTaskAfterStageRun: (stageContext, output) => {
+        this.taskRuntimeStore.updateTask(context.taskId, {
+          currentStageId: stageContext.stageId,
+          inputArtifacts: stageContext.inputArtifacts,
+          lastOutput: output,
+        });
+      },
+      onStageFailure: async (stageId, inputArtifacts, summary) => {
+        this.taskRuntimeStore.updateTask(context.taskId, {
+          currentStageId: stageId,
+          inputArtifacts,
+          status: "failed",
+        });
+        await this.traceRecorder?.recordTrace({
+          taskId: context.taskId,
+          stageId,
+          eventType: "stage_failed",
+          summary,
+        });
+      },
+    });
   }
 }

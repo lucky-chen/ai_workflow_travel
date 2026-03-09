@@ -71,6 +71,7 @@ class StageDefinition {
   +stage_id: StageId
   +launch_requirements: string[]
   +runner: IStageRunner
+  +continuation: IStageContinuationHandler
   +next_stage_id: StageId | null
 }
 
@@ -294,8 +295,15 @@ loop for each stage
   IStageRunner --> PipelineService: stage_output
 
   alt stage_output.status == completed
-    PipelineService -> PipelineService: merge artifacts by ArtifactRef key
-    PipelineService -> PipelineService: current_stage = definition.next_stage_id
+    alt continuation handler exists on StageDefinition
+      PipelineService -> IStageContinuationHandler: continue(context)
+      IStageContinuationHandler --> PipelineService: continuation_result
+      PipelineService -> PipelineService: current_input = continuation_result.next_input_artifacts
+      PipelineService -> PipelineService: current_stage = continuation_result.next_stage_id
+    else no continuation handler
+      PipelineService -> PipelineService: merge artifacts by ArtifactRef key
+      PipelineService -> PipelineService: current_stage = definition.next_stage_id
+    end
   else stage_output.status == failed
     PipelineService -> ITraceRecorder: recordTrace(stage_failed)
     break
@@ -380,8 +388,7 @@ interface StageDefinition {
   stage_id: StageId
   launch_requirements: string[]
   runner: IStageRunner
-  requires_contract_check?: boolean
-  requires_gate_review?: boolean
+  continuation?: IStageContinuationHandler
   next_stage_id: StageId | null
 }
 
@@ -432,6 +439,10 @@ interface ValidationResult {
 
 interface IStageRunner {
   run(context: StageRunContext): Promise<StageOutput>
+}
+
+interface IStageContinuationHandler {
+  continue(context: StageContinuationContext): Promise<StageContinuationResult>
 }
 
 interface ContractCheckResult {
@@ -579,7 +590,8 @@ stop
 ### 4.4 Constraints
 
 - `Pipeline` may depend on concrete stage capability only through registered `IStageRunner`.
-- `Pipeline` must not hard-code business-stage identifiers.
+- `Pipeline` must not hard-code business-stage identifiers in its main orchestration loop.
+- stage-specific continuation may exist, but it should be declared through `StageDefinition.continuation` instead of pipeline-owned stage-id branching.
 - `IStageRunner` may call `Data/ArtifactStore` through the pipeline-owned `IArtifactStore` interface to persist stage outputs inside stage execution.
 - `Pipeline` must treat stage result as `completed` or `failed`.
 - stage behavior must follow interface binding: execute bound interfaces and skip unbound interfaces.

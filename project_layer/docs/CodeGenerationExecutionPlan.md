@@ -370,10 +370,10 @@ This step delivers the shared runtime backbone used by all stages.
     - [x] `Interface/CLI` design doc and runtime implementation are materially misaligned: the design doc describes multi-input stage launches and review commands, while the current CLI still supports only a minimal `generate --module --input --workspace` path.
     - [x] `Execution/ImplementationGenerator` and `Contract/ImplementationContract` were aligned in Step 6/7, so the remaining Step 8 work is mainly in shared workflow, trace, gate, and CLI semantics rather than implementation-stage internals.
 - [ ] Batch 2: pipeline and stage-runner alignment
-  - [ ] align pipeline generic orchestration semantics
-  - [ ] align stage-runner shared behavior model
-  - [ ] align stage continuation and retry semantics
-  - [ ] extend tests for orchestration behavior
+  - [x] align pipeline generic orchestration semantics
+  - [x] align stage-runner shared behavior model
+  - [x] align stage continuation and retry semantics
+  - [x] extend tests for orchestration behavior
 - [ ] Batch 3: contract, trace, and gate alignment
   - [ ] align implementation runtime semantics
   - [ ] align contract runtime semantics

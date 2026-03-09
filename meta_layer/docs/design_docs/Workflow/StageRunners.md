@@ -168,8 +168,8 @@ Persistence mapping rule for document stages:
 - `module_design`
   - read `StageOutput.artifacts.artifactKey == "module_design_document"`
   - persist content to `docs/module_design/{moduleName}.md`
-  - `Pipeline` resolves module count and ordered module descriptors from accepted `architecture_document`
-  - `Pipeline` launches one `ModuleStageRunner` execution per module descriptor in sequence
+  - the `architecture_design` stage definition may declare a continuation handler that resolves module count and ordered module descriptors from accepted `architecture_document`
+  - that continuation handler launches one `ModuleStageRunner` execution per module descriptor in sequence through the registered runner
   - aggregate accepted outputs downstream as `inputArtifacts["module_design_documents"]`
 - `implementation_plan`
   - read `StageOutput.artifacts.artifactKey == "implementation_workplan"`

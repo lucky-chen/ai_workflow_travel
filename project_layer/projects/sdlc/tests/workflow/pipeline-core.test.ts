@@ -12,6 +12,7 @@ export async function runPipelineCoreTests(workspaceRoot: string): Promise<void>
   await testMissingRequiredArtifact(workspaceRoot);
   await testDuplicateStageRegistration();
   await testStageContinuationAndMerge(workspaceRoot);
+  await testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot);
   await testFailureStopsContinuation(workspaceRoot);
   await testInvalidNextStageValidation(workspaceRoot);
 }
@@ -258,6 +259,98 @@ async function testFailureStopsContinuation(workspaceRoot: string): Promise<void
     "task_finished",
   ]);
   assert.equal(failPipeline.getTaskStatus(failedTaskId), "failed");
+}
+
+async function testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot: string): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  const stageA: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage A completed.",
+        artifacts: {
+          stageAArtifact: "a.md",
+        },
+      };
+    },
+  };
+  const stageB: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage B completed.",
+        artifacts: {},
+      };
+    },
+  };
+  const stageC: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage C completed.",
+        artifacts: {},
+      };
+    },
+  };
+
+  const pipeline = new PipelineService({
+    registry: createRegistry(
+      {
+        stageId: "stage-a",
+        launchRequirements: ["sourceDoc"],
+        runner: stageA,
+        nextStageId: "stage-b",
+        continuation: {
+          async continue(context) {
+            return {
+              nextInputArtifacts: {
+                ...context.mergeInputArtifacts(context.inputArtifacts, context.stageOutput),
+                continuationArtifact: "continued.md",
+              },
+              nextStageId: "stage-c",
+            };
+          },
+        },
+      },
+      {
+        stageId: "stage-b",
+        launchRequirements: ["stageAArtifact"],
+        runner: stageB,
+        nextStageId: null,
+      },
+      {
+        stageId: "stage-c",
+        launchRequirements: ["continuationArtifact"],
+        runner: stageC,
+        nextStageId: null,
+      },
+    ),
+  });
+
+  await pipeline.launchTask({
+    startStageId: "stage-a",
+    workspaceRoot,
+    inputArtifacts: {
+      sourceDoc: "source.md",
+    },
+  });
+
+  assert.equal(invocationContexts.length, 2);
+  assert.equal(invocationContexts[1]?.stageId, "stage-c");
+  assert.deepEqual(invocationContexts[1]?.inputArtifacts, {
+    sourceDoc: "source.md",
+    stageAArtifact: "a.md",
+    continuationArtifact: "continued.md",
+  });
 }
 
 async function testInvalidNextStageValidation(workspaceRoot: string): Promise<void> {

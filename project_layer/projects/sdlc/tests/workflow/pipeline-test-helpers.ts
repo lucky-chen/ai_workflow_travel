@@ -2,14 +2,15 @@ import { mkdir, mkdtemp } from "node:fs/promises";
 import path from "node:path";
 
 import { StageRegistry } from "../../src/workflow/pipeline/stage-registry.js";
-import type { IStageRunner } from "../../src/shared/contracts/pipeline.js";
+import type { IStageContinuationHandler, IStageRunner } from "../../src/shared/contracts/pipeline.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 
 export function createRegistry(...definitions: Array<{
   stageId: string;
   launchRequirements: string[];
   runner: IStageRunner;
-  nextStageId: string | null;
+  nextStageId?: string | null;
+  continuation?: IStageContinuationHandler;
 }>): StageRegistry {
   const registry = new StageRegistry();
   for (const definition of definitions) {

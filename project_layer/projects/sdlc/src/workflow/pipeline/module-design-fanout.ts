@@ -1,5 +1,13 @@
-import type { LaunchTaskRequest, StageDefinition, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
-import type { ArtifactMap, StageId, TaskId } from "../../shared/types/common.js";
+import type {
+  IStageContinuationHandler,
+  LaunchTaskRequest,
+  StageContinuationContext,
+  StageContinuationResult,
+  StageDefinition,
+  StageOutput,
+  StageRunContext,
+} from "../../shared/contracts/pipeline.js";
+import type { ArtifactMap, TaskId } from "../../shared/types/common.js";
 
 interface ModuleDescriptor {
   name: string;
@@ -16,47 +24,38 @@ export interface ModuleDesignFanoutInput {
   moduleStageDefinition: StageDefinition;
 }
 
-export interface ModuleDesignFanoutDependencies {
-  mergeInputArtifacts: (current: ArtifactMap, output: StageOutput) => ArtifactMap;
-  resolveStageStatus: (output: StageOutput) => "completed" | "failed";
-  updateTaskAfterModuleRun: (context: StageRunContext, output: StageOutput) => void;
-  onModuleStageFailure: (taskId: TaskId) => Promise<void>;
-}
+export function createModuleDesignFanoutContinuation(
+  moduleStageDefinition: StageDefinition,
+): IStageContinuationHandler {
+  return {
+    async continue(context: StageContinuationContext): Promise<StageContinuationResult> {
+      const mergedArtifacts = context.mergeInputArtifacts(context.inputArtifacts, context.stageOutput);
+      const nextInputArtifacts = await runSequentialModuleDesignFanout(
+        {
+          taskId: context.taskId,
+          workspaceRoot: context.workspaceRoot,
+          attempt: context.attempt,
+          params: context.params,
+          currentInputArtifacts: mergedArtifacts,
+          architectureOutput: context.stageOutput,
+          moduleStageDefinition,
+        },
+        context,
+      );
 
-export interface ModuleDesignContinuationInput {
-  currentStageId: StageId;
-  nextStageId: StageId | null | undefined;
-  taskId: TaskId;
-  workspaceRoot: string;
-  attempt: number;
-  params: LaunchTaskRequest["params"];
-  currentInputArtifacts: ArtifactMap;
-  stageOutput: StageOutput;
-  moduleStageDefinition?: StageDefinition;
-}
-
-export interface ModuleDesignContinuationResult {
-  matched: boolean;
-  nextInputArtifacts: ArtifactMap;
-  nextStageId?: StageId;
+      return {
+        nextInputArtifacts,
+        nextStageId: moduleStageDefinition.nextStageId ?? undefined,
+      };
+    },
+  };
 }
 
 export async function continueAfterArchitectureDesign(
-  input: ModuleDesignContinuationInput,
-  dependencies: ModuleDesignFanoutDependencies,
-): Promise<ModuleDesignContinuationResult> {
-  if (input.currentStageId !== "architecture_design" || input.nextStageId !== "module_design") {
-    return {
-      matched: false,
-      nextInputArtifacts: input.currentInputArtifacts,
-    };
-  }
-
-  if (!input.moduleStageDefinition) {
-    throw new Error('No stage definition registered for stageId "module_design".');
-  }
-
-  const mergedArtifacts = dependencies.mergeInputArtifacts(input.currentInputArtifacts, input.stageOutput);
+  input: StageContinuationContext,
+  moduleStageDefinition: StageDefinition,
+): Promise<StageContinuationResult> {
+  const mergedArtifacts = input.mergeInputArtifacts(input.inputArtifacts, input.stageOutput);
   const nextInputArtifacts = await runSequentialModuleDesignFanout(
     {
       taskId: input.taskId,
@@ -65,21 +64,23 @@ export async function continueAfterArchitectureDesign(
       params: input.params,
       currentInputArtifacts: mergedArtifacts,
       architectureOutput: input.stageOutput,
-      moduleStageDefinition: input.moduleStageDefinition,
+      moduleStageDefinition,
     },
-    dependencies,
+    input,
   );
 
   return {
-    matched: true,
     nextInputArtifacts,
-    nextStageId: input.moduleStageDefinition.nextStageId ?? undefined,
+    nextStageId: moduleStageDefinition.nextStageId ?? undefined,
   };
 }
 
 export async function runSequentialModuleDesignFanout(
   input: ModuleDesignFanoutInput,
-  dependencies: ModuleDesignFanoutDependencies,
+  context: Pick<
+    StageContinuationContext,
+    "mergeInputArtifacts" | "resolveStageStatus" | "updateTaskAfterStageRun" | "onStageFailure"
+  >,
 ): Promise<ArtifactMap> {
   const architectureContent = readArchitectureContent(input.architectureOutput);
   const moduleDescriptors = parseArchitectureModules(architectureContent);
@@ -100,16 +101,16 @@ export async function runSequentialModuleDesignFanout(
     };
 
     const moduleOutput = await input.moduleStageDefinition.runner.run(moduleContext);
-    dependencies.updateTaskAfterModuleRun(moduleContext, moduleOutput);
+    context.updateTaskAfterStageRun(moduleContext, moduleOutput);
 
-    if (dependencies.resolveStageStatus(moduleOutput) === "failed") {
-      await dependencies.onModuleStageFailure(input.taskId);
+    if (context.resolveStageStatus(moduleOutput) === "failed") {
+      await context.onStageFailure("module_design", moduleContext.inputArtifacts, 'Stage "module_design" failed.');
       throw new Error('Stage "module_design" failed during sequential fan-out.');
     }
 
     const modulePath = readModuleDesignPath(moduleOutput);
     acceptedModuleDesignPaths.push(modulePath);
-    accumulatedArtifacts = dependencies.mergeInputArtifacts(accumulatedArtifacts, moduleOutput);
+    accumulatedArtifacts = context.mergeInputArtifacts(accumulatedArtifacts, moduleOutput);
   }
 
   const {

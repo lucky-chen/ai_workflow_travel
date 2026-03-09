@@ -11,7 +11,8 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { PipelineService } from "../../src/workflow/pipeline/pipeline.js";
-import type { IStageRunner, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
+import { createModuleDesignFanoutContinuation } from "../../src/workflow/pipeline/module-design-fanout.js";
+import type { IStageRunner, StageDefinition, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
 import type { ShellResult } from "../../src/workflow/validation/shell-runner.js";
 import { ShellRunner } from "../../src/workflow/validation/shell-runner.js";
 import {
@@ -47,6 +48,17 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
   };
 
   try {
+    const moduleStageDefinition: StageDefinition = {
+      stageId: "module_design",
+      launchRequirements: ["architecture_document", "module_descriptors"],
+      runner: new ModuleStageRunner({
+        llmExecutor: new ModulePipelineLlmExecutor(),
+        artifactStore,
+        traceRecorder,
+      }),
+      nextStageId: "implementation_plan",
+    };
+
     const pipeline = new PipelineService({
       traceRecorder,
       registry: createRegistry(
@@ -69,17 +81,9 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
             traceRecorder,
           }),
           nextStageId: "module_design",
+          continuation: createModuleDesignFanoutContinuation(moduleStageDefinition),
         },
-        {
-          stageId: "module_design",
-          launchRequirements: ["architecture_document", "module_descriptors"],
-          runner: new ModuleStageRunner({
-            llmExecutor: new ModulePipelineLlmExecutor(),
-            artifactStore,
-            traceRecorder,
-          }),
-          nextStageId: "implementation_plan",
-        },
+        moduleStageDefinition,
         {
           stageId: "implementation_plan",
           launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],

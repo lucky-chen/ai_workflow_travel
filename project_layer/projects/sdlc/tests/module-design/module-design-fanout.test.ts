@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
 
-import type { StageDefinition, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
+import type { StageContinuationContext, StageDefinition, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
 import { continueAfterArchitectureDesign } from "../../src/workflow/pipeline/module-design-fanout.js";
 import { createArchitectureDocument, createTempDir } from "../workflow/pipeline-test-helpers.js";
 
@@ -41,13 +41,13 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
   try {
     const result = await continueAfterArchitectureDesign(
       {
-        currentStageId: "architecture_design",
+        stageId: "architecture_design",
         nextStageId: "module_design",
         taskId: "task-1",
         workspaceRoot,
         attempt: 1,
         params: undefined,
-        currentInputArtifacts: {
+        inputArtifacts: {
           requirement_document: "docs/requirements/Requirement.md",
           architecture_document: "docs/architecture/TechnicalArchitecture.md",
         },
@@ -62,9 +62,6 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
             content: createArchitectureDocument(),
           },
         },
-        moduleStageDefinition,
-      },
-      {
         mergeInputArtifacts: (current, output) => ({
           ...current,
           ...Object.fromEntries(
@@ -75,16 +72,16 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
           ),
         }),
         resolveStageStatus: (output) => (output.success ? "completed" : "failed"),
-        updateTaskAfterModuleRun: (context) => {
+        updateTaskAfterStageRun: (context) => {
           updatedModuleInputs.push(context.inputArtifacts.module_descriptors);
         },
-        onModuleStageFailure: async () => {
+        onStageFailure: async () => {
           throw new Error("unexpected failure");
         },
-      },
+      } satisfies StageContinuationContext,
+      moduleStageDefinition,
     );
 
-    assert.equal(result.matched, true);
     assert.equal(result.nextStageId, "implementation_plan");
     assert.deepEqual(invocationOrder, [
       "Interface Layer",
