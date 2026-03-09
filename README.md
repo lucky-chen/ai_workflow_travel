@@ -126,14 +126,36 @@ npm test
 
 CLI entry: `project_layer/projects/sdlc/src/interface/cli/cli.ts`
 
-Example command:
+Quick start:
 
 ```bash
-generate --module <stage_id> --input <input_file> --workspace <workspace_path>
+init --workspace /path/to/workspace
+generate --stage architecture_design --workspace /path/to/workspace
+generate --stage module_design --workspace /path/to/workspace --target-module Workflow
 ```
 
-Arguments:
+Command syntax:
 
-- `--module`: target stage id
-- `--input`: stage input file
-- `--workspace`: workspace root path
+- `init --workspace <workspace_path>`
+  Bootstrap bundled SDLC resources into the target workspace.
+- `generate --stage <stage_id> --workspace <workspace_path> [--target-module <module_name>]`
+  Launch a supported workflow stage from the workspace.
+
+Workspace layout:
+
+- resources: `<workspace>/sdlc/resources`
+- upstream stage docs: `<workspace>/sdlc/docs/...`
+- resource fallback: bundled `dist/resources`
+
+Supported stage ids:
+
+- `requirement_interpretation`
+- `architecture_design`
+- `module_design`
+- `implementation_plan`
+- `validation`
+
+Current limits:
+
+- `implementation_execution` is not launched directly from the current CLI baseline.
+- `module_design` requires `--target-module <module_name>`.

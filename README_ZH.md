@@ -126,14 +126,36 @@ npm test
 
 CLI 入口：`project_layer/projects/sdlc/src/interface/cli/cli.ts`
 
-示例命令：
+快速开始：
 
 ```bash
-generate --module <stage_id> --input <input_file> --workspace <workspace_path>
+init --workspace /path/to/workspace
+generate --stage architecture_design --workspace /path/to/workspace
+generate --stage module_design --workspace /path/to/workspace --target-module Workflow
 ```
 
-参数说明：
+命令格式：
 
-- `--module`：目标 stage id
-- `--input`：阶段输入文件
-- `--workspace`：工作目录根路径
+- `init --workspace <workspace_path>`
+  把 SDLC 内置资源初始化到目标工作区。
+- `generate --stage <stage_id> --workspace <workspace_path> [--target-module <module_name>]`
+  从工作区启动一个受支持的工作流阶段。
+
+工作区目录约定：
+
+- 资源目录：`<workspace>/sdlc/resources`
+- 上游阶段文档：`<workspace>/sdlc/docs/...`
+- 资源回退目录：内置 `dist/resources`
+
+支持的 stage id：
+
+- `requirement_interpretation`
+- `architecture_design`
+- `module_design`
+- `implementation_plan`
+- `validation`
+
+当前限制：
+
+- 当前 CLI baseline 不直接启动 `implementation_execution`
+- `module_design` 必须额外传入 `--target-module <module_name>`
