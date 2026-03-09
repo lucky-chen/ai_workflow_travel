@@ -315,7 +315,7 @@ function createImplementationPlanDocument(): string {
     "## 1.1 Collaboration Rule",
     "All implementation work under this plan must follow the shared collaboration standard:",
     "",
-    "- `project_layer/docs/COLLABORATION_STANDARD.md`",
+    "- `meta_layer/resources/COLLABORATION_STANDARD.md`",
     "",
     "## 2. Workflow Delivery Order",
     "1. shared workflow backbone",

@@ -13,7 +13,7 @@
   - 包含 workflow、execution、contract、interface、SDK、data、quality-gate 等模块级设计
 - [代码生成计划](./project_layer/docs/CodeGenerationExecutionPlan.md)：
   - 定义实现交付计划、batch 拆分、执行状态和完成跟踪
-- [协作文档](./project_layer/docs/COLLABORATION_STANDARD.md)：
+- [协作文档](./meta_layer/resources/COLLABORATION_STANDARD.md)：
   - 定义变更计划、batch 边界、验证要求和 commit 规则
 
 ## 背景

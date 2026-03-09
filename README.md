@@ -13,7 +13,7 @@ Read these documents first before any requirement analysis, architecture work, m
   - module-level design set covering workflow, execution, contract, interface, SDK, data, and quality-gate details
 - [Code generation execution plan](./project_layer/docs/CodeGenerationExecutionPlan.md):
   - implementation delivery plan, batch breakdown, execution status, and completion tracking
-- [Collaboration standard](./project_layer/docs/COLLABORATION_STANDARD.md):
+- [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md):
   - collaboration rules for change plans, batch boundaries, validation, and commit requirements
 
 ## Background

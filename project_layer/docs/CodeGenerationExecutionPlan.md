@@ -21,7 +21,7 @@ This plan is organized to match:
 
 All implementation work under this plan must follow the shared collaboration standard:
 
-- `project_layer/docs/COLLABORATION_STANDARD.md`
+- `meta_layer/resources/COLLABORATION_STANDARD.md`
 
 This plan keeps only delivery status and implementation scope. Collaboration behavior is defined in the shared standard document.
 
