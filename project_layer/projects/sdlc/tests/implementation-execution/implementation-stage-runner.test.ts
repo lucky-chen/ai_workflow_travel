@@ -175,6 +175,7 @@ async function testImplementationStageRunnerReject(
   artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
   const rejectGate = new InMemoryChangeGate({
     decision: {
       action: "reject",
@@ -186,6 +187,7 @@ async function testImplementationStageRunnerReject(
     contractChecker,
     artifactStore,
     changeGate: rejectGate,
+    traceRecorder,
     gitCommitter: new MockImplementationGitCommitter(),
   });
 
@@ -196,6 +198,7 @@ async function testImplementationStageRunnerReject(
     /Change review ended with action "reject"/,
   );
 
+  assert.equal(traceRecorder.getEvents().some((entry) => entry.event.eventType === "step_completed"), false);
   assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
   assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
   await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
@@ -400,6 +403,21 @@ async function testImplementationStageRunnerWaitReviewCarriesComment(
     action: "wait",
     comment: "Please split the adapter and parser.",
   });
+  assert.equal(traceRecorder.getEvents().some((entry) => entry.event.eventType === "step_completed"), false);
+
+  const workplan = await artifactStore.getArtifact({
+    taskId: "task-2",
+    stageId: "implementation_plan",
+    filePath: "plans/implementation/ImplementationWorkPlan.md",
+  });
+  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
+  await assert.rejects(
+    artifactStore.getArtifact({
+      taskId: "task-2",
+      stageId: "implementation",
+      filePath: "src/generated.ts",
+    }),
+  );
 }
 
 function createGenerator(artifactStore: ArtifactStoreService): ImplementationGenerator {

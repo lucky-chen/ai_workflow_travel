@@ -386,6 +386,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] align review presenter/session semantics with `changedPaths` and stable `reviewId` display
   - [x] define a shared `TraceEventType` taxonomy and move production trace emitters to shared constants
   - [x] pin the contract boundary: `implementation_execution` emits failed `contract_checked`, while `validation` remains a no-contract exception
+  - [x] pin implementation failure paths so reject and wait reviews never emit completion semantics
 - [ ] Batch 4: CLI and document synchronization
   - [ ] align CLI interaction semantics
   - [ ] update sequence diagrams affected by runtime changes
