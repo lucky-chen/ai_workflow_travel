@@ -251,12 +251,12 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 6. Deliver `implementation_execution` Stage
 
-- [x] Step 6 is in progress
+- [ ] Step 6 is in progress
 - [x] Architecture modules in scope
   - [x] `Execution/ImplementationGenerator`
   - [x] `Contract/ImplementationContract`
   - [x] `Workflow/ImplementationStageRunner`
-- [ ] Batch 1: implementation execution vertical slice
+- [x] Batch 1: implementation execution vertical slice
   - [x] `ImplementationGenerator` prototype
   - [x] implementation prompt builder prototype
   - [x] change parsing
@@ -265,10 +265,12 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 2: implementation execution contract and runner backbone
   - [x] `ImplementationContract`
   - [x] `ImplementationStageRunner`
-  - [ ] implementation contract-check prompt construction
-  - [ ] real `ILlmExecutor`-based implementation contract execution
-  - [ ] real `LlmExecutionResult` to `ContractCheckResult` mapping
   - [x] implementation execution vertical slice through `generate -> contract -> review -> apply`
+  - [x] implementation execution environment preparation
+  - [x] shell or unit-test runner execution
+  - [x] test-run result to `ContractCheckResult` mapping
+  - [ ] align contract naming and public API with the implementation-contract design doc
+  - [ ] extend tests for explicit workplan-step context in contract input
 - [ ] Batch 3: implementation execution-context loading
   - [ ] introduce workplan-aware execution-context loading for `ImplementationGenerator`
   - [ ] load `implementation_workplan` and `current_step` as required runtime input
@@ -282,34 +284,40 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] extend tests for prepared-environment success and failure cases
 - [ ] Batch 5: implementation execution runner persistence and trace
   - [ ] persist implementation-stage artifacts after successful runner completion
-  - [ ] record trace for stage start
+  - [x] record trace for stage start
   - [ ] record trace for contract result
-  - [ ] record trace for gate result
+  - [x] record trace for gate result
   - [ ] record trace for final step result
   - [ ] extend tests for artifact persistence and trace flow
 - [ ] Batch 6: execution review and runtime semantics alignment
   - [ ] support review `comment`
+  - [ ] support workflow-level multi-step execution across one `implementation_workplan`
+  - [ ] parse ordered steps from accepted `implementation_workplan`
+  - [ ] persist and resume `current_step` between stage-entry runs
   - [ ] align plan-step review outcomes with next-step transition semantics
+  - [ ] stop `implementation_execution` when all workplan steps are completed
   - [ ] align step execution input with workplan-driven context loading
   - [ ] remove residual single-module execution assumptions
   - [ ] fully align implementation-plan and implementation-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes
 - [ ] Batch 7: implementation-execution design and runtime alignment cleanup
   - [ ] align `Execution/ImplementationGenerator` design doc with the current implementation transition state
+  - [ ] align `Contract/ImplementationContract` design doc with the current implementation transition state
   - [ ] remove outdated single-module assumptions from docs and runtime naming
+  - [ ] keep agent-runtime-level session and memory requirements out of Step 6 and defer them to Step 9
   - [ ] update this execution plan after each completed implementation batch
 
 ### Step 7. Deliver `validation` Stage
 
-- [ ] Step 7 is in progress
-- [ ] Architecture modules in scope
+- [x] Step 7 is completed
+- [x] Architecture modules in scope
   - [x] `Workflow/ValidationStageRunner`
 - [x] Batch 1: validation input and result model
   - [x] final validation input shape
   - [x] validation-stage output shape
   - [x] validation summary and issue model
   - [x] minimal tests for validation input and output shaping
-- [ ] Batch 2: validation execution backbone
+- [x] Batch 2: validation execution backbone
   - [x] final workspace validation checks
   - [x] final artifact completeness checks
   - [x] project-path loading and shell-test execution flow
@@ -322,7 +330,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] validation artifact persistence
   - [x] validation trace flow
   - [x] focused tests for runner and stage flow
-- [ ] Batch 4: validation-stage runtime alignment
+- [x] Batch 4: validation-stage runtime alignment
   - [x] load implementation-stage artifacts as validation input
   - [x] align validation completion semantics with pipeline task completion
   - [x] align validation review semantics with CLI presentation
