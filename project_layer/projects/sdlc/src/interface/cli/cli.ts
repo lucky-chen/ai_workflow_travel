@@ -3,9 +3,9 @@ import { cp, mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { fileURLToPath } from "node:url";
 import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import { resolveBundledResourcesDirectory } from "../../shared/resources/resource-resolver.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 
 export interface ParsedCommand {
@@ -370,25 +370,4 @@ function readSingleRequiredOption(options: ParsedCommand["options"], key: string
   }
 
   return value;
-}
-
-async function resolveBundledResourcesDirectory(): Promise<string> {
-  const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
-  const candidateDirectories = [
-    path.resolve(currentDirectory, "..", "..", "..", "resources"),
-    path.resolve(currentDirectory, "..", "..", "..", "..", "..", "..", "..", "meta_layer", "resources"),
-  ];
-
-  for (const candidateDirectory of candidateDirectories) {
-    try {
-      const entries = await readdir(candidateDirectory);
-      if (entries.length > 0) {
-        return candidateDirectory;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  throw new Error("Unable to locate bundled SDLC resources.");
 }

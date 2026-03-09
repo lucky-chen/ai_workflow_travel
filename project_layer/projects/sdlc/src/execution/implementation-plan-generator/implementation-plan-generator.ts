@@ -1,22 +1,8 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { StageOutput } from "../../shared/contracts/pipeline.js";
 import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "../document-stage-generator.js";
-
-const IMPLEMENTATION_PLAN_TEMPLATE_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "template",
-  "CodeGenerationExecutionPlanTemplate.md",
-);
 
 export interface ImplementationPlanArtifacts {
   artifactKey: "implementation_workplan";
@@ -77,8 +63,8 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator {
     return JSON.stringify(payload);
   }
 
-  protected async loadTemplate(): Promise<string> {
-    return readFile(IMPLEMENTATION_PLAN_TEMPLATE_PATH, "utf8");
+  protected getTemplateResourcePath(): string {
+    return "template/CodeGenerationExecutionPlanTemplate.md";
   }
 
   protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {

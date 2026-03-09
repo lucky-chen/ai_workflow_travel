@@ -178,7 +178,7 @@ async function testModuleDesignContractLoadsTemplateContractSource(): Promise<vo
     spec.document_contracts.map((entry) => entry.check_item),
     rawSpec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(spec.specific_contract?.source, "meta_layer/resources/contract/ModuleDesignTemplate.contract.json");
+  assert.equal(spec.specific_contract?.source, "dist/resources/contract/ModuleDesignTemplate.contract.json");
   assert.equal(spec.specific_contract?.stage, "module_design");
 }
 
@@ -256,7 +256,7 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
     payload.contractSpec.document_contracts.map((entry) => entry.check_item),
     spec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(payload.contractSpec.specific_contract?.source, "meta_layer/resources/contract/ModuleDesignTemplate.contract.json");
+  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/contract/ModuleDesignTemplate.contract.json");
   assert.equal(payload.contractSpec.specific_contract?.stage, "module_design");
   assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
 }

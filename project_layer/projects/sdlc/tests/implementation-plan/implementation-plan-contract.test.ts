@@ -132,7 +132,7 @@ async function testImplementationPlanContractLoadsTemplateContractSource(): Prom
     spec.document_contracts.map((entry) => entry.check_item),
     rawSpec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(spec.specific_contract?.source, "meta_layer/resources/contract/CodeGenerationExecutionPlanTemplate.contract.json");
+  assert.equal(spec.specific_contract?.source, "dist/resources/contract/CodeGenerationExecutionPlanTemplate.contract.json");
   assert.equal(spec.specific_contract?.stage, "implementation_plan");
 }
 

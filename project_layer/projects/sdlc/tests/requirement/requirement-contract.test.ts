@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { RequirementContract } from "../../src/contract/requirement-contract/requirement-contract.js";
@@ -15,6 +15,7 @@ export async function runRequirementContractTests(): Promise<void> {
     await testRequirementContractRejectsInvalidLlmResult(workspaceRoot);
     await testRequirementContractLoadsTemplateContractSource();
     await testRequirementContractBuildsPromptRequest(workspaceRoot);
+    await testRequirementContractPrefersWorkspaceResourceSource(workspaceRoot);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }
@@ -166,7 +167,7 @@ async function testRequirementContractLoadsTemplateContractSource(): Promise<voi
     spec.document_contracts.map((entry) => entry.check_item),
     rawSpec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(spec.specific_contract?.source, "meta_layer/resources/contract/RequirementTemplate.contract.json");
+  assert.equal(spec.specific_contract?.source, "dist/resources/contract/RequirementTemplate.contract.json");
   assert.equal(spec.specific_contract?.stage, "requirement_interpretation");
 }
 
@@ -240,9 +241,39 @@ async function testRequirementContractBuildsPromptRequest(workspaceRoot: string)
     payload.contractSpec.document_contracts.map((entry) => entry.check_item),
     spec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(payload.contractSpec.specific_contract?.source, "meta_layer/resources/contract/RequirementTemplate.contract.json");
+  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/contract/RequirementTemplate.contract.json");
   assert.equal(payload.contractSpec.specific_contract?.stage, "requirement_interpretation");
   assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
+}
+
+async function testRequirementContractPrefersWorkspaceResourceSource(workspaceRoot: string): Promise<void> {
+  const resourcePath = path.join(
+    workspaceRoot,
+    "sdlc",
+    "resources",
+    "contract",
+    "RequirementTemplate.contract.json",
+  );
+  await mkdir(path.dirname(resourcePath), { recursive: true });
+  await writeFile(
+    resourcePath,
+    JSON.stringify({
+      document_contracts: [{ check_item: "workspace_rule", description: "workspace", severity: "low" }],
+      section_contracts: [],
+    }),
+    "utf8",
+  );
+
+  const contract = new RequirementContract();
+  const spec = await (contract as unknown as {
+    loadSpecificContract(context: { workspaceRoot: string }): Promise<{
+      document_contracts: Array<{ check_item: string }>;
+      specific_contract?: { source?: string; stage?: string };
+    }>;
+  }).loadSpecificContract({ workspaceRoot });
+
+  assert.equal(spec.document_contracts[0]?.check_item, "workspace_rule");
+  assert.equal(spec.specific_contract?.source, "workspace/sdlc/resources/contract/RequirementTemplate.contract.json");
 }
 
 async function createTempDir(prefix: string): Promise<string> {

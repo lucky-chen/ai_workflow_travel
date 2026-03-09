@@ -182,7 +182,7 @@ async function testArchitectureContractLoadsTemplateContractSource(): Promise<vo
   );
   assert.equal(
     spec.specific_contract?.source,
-    "meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json",
+    "dist/resources/contract/TechnicalArchitectureTemplate.contract.json",
   );
   assert.equal(spec.specific_contract?.stage, "architecture_design");
 }
@@ -260,7 +260,7 @@ async function testArchitectureContractBuildsPromptRequest(workspaceRoot: string
   );
   assert.equal(
     payload.contractSpec.specific_contract?.source,
-    "meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json",
+    "dist/resources/contract/TechnicalArchitectureTemplate.contract.json",
   );
   assert.equal(payload.contractSpec.specific_contract?.stage, "architecture_design");
   assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);

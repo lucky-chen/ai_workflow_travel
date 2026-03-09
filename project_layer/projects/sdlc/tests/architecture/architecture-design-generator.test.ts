@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ArchitectureDesignGenerator } from "../../src/execution/architecture-design-generator/architecture-design-generator.js";
@@ -10,6 +10,7 @@ export async function runArchitectureDesignGeneratorTests(): Promise<void> {
 
   try {
     await testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoot);
+    await testArchitectureDesignGeneratorPrefersWorkspaceTemplate(workspaceRoot);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }
@@ -51,6 +52,29 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
   assert.equal(payload.target, "architecture_design");
   assert.equal(payload.inputDocument.includes("Requirement content."), true);
   assert.equal(payload.template.includes("# Technical Architecture"), true);
+}
+
+async function testArchitectureDesignGeneratorPrefersWorkspaceTemplate(workspaceRoot: string): Promise<void> {
+  const llmExecutor = new MockLlmExecutor("# Technical Architecture\n\nGenerated architecture content.\n");
+  const generator = new ArchitectureDesignGenerator({ llmExecutor });
+  const templatePath = path.join(workspaceRoot, "sdlc", "resources", "template", "TechnicalArchitectureTemplate.md");
+  await mkdir(path.dirname(templatePath), { recursive: true });
+  await writeFile(templatePath, "# Workspace Technical Architecture Template\n", "utf8");
+
+  await generator.run({
+    taskId: "task-2",
+    stageId: "architecture_design",
+    attempt: 1,
+    workspaceRoot,
+    inputArtifacts: {
+      requirement_document: "# 1. Background\n\nRequirement content.\n",
+    },
+  });
+
+  const payload = JSON.parse(llmExecutor.lastRequest?.prompt.userPrompt ?? "{}") as {
+    template: string;
+  };
+  assert.equal(payload.template, "# Workspace Technical Architecture Template\n");
 }
 
 async function createTempDir(prefix: string): Promise<string> {

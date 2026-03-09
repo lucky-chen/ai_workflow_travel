@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import type { ContractCheckResult, IContractChecker, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
+import { describeResourcePath, resolveResourcePath } from "../shared/resources/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 
 export interface ContractSpec {
@@ -35,29 +36,28 @@ export abstract class DocumentStageContract implements IContractChecker {
   constructor(private readonly llmExecutor?: ILlmExecutor) {}
 
   async check(context: StageRunContext, output: StageOutput): Promise<ContractCheckResult> {
-    const contractSpec = await this.loadSpecificContract();
+    const contractSpec = await this.loadSpecificContract(context);
     const request = await this.buildCheckRequest(context, output, contractSpec);
     const result = await this.executeCheck(request);
     return this.buildContractResult(result);
   }
 
-  protected abstract getContractFilePath(): string;
+  protected abstract getContractResourcePath(): string;
   protected abstract getStageId(): string;
 
   protected async refineLoadedContract(baseSpec: ContractSpec): Promise<ContractSpec> {
     return baseSpec;
   }
 
-  protected async loadSpecificContract(): Promise<ContractSpec> {
-    const content = await readFile(this.getContractFilePath(), "utf8");
+  protected async loadSpecificContract(context?: StageRunContext): Promise<ContractSpec> {
+    const contractFilePath = await resolveResourcePath(this.getContractResourcePath(), context?.workspaceRoot);
+    const content = await readFile(contractFilePath, "utf8");
     const parsed = JSON.parse(content) as ContractSpec;
     const baseSpec: ContractSpec = {
       document_contracts: parsed.document_contracts,
       section_contracts: parsed.section_contracts,
       specific_contract: {
-        source: this.getContractFilePath().split("meta_layer/")[1]
-          ? `meta_layer/${this.getContractFilePath().split("meta_layer/")[1].replaceAll("\\", "/")}`
-          : this.getContractFilePath(),
+        source: await describeResourcePath(contractFilePath, context?.workspaceRoot),
         stage: this.getStageId(),
       },
     };

@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import type {
   ContractCheckResult,
   ContractIssue,
@@ -14,20 +12,9 @@ import {
   type ContractExecutionResult,
 } from "../document-stage-contract.js";
 
-const REQUIREMENT_TEMPLATE_CONTRACT_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "contract",
-  "RequirementTemplate.contract.json",
-);
-
 export class RequirementContract extends DocumentStageContract {
-  protected getContractFilePath(): string {
-    return REQUIREMENT_TEMPLATE_CONTRACT_PATH;
+  protected getContractResourcePath(): string {
+    return "contract/RequirementTemplate.contract.json";
   }
 
   protected getStageId(): string {

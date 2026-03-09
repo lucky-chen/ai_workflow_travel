@@ -404,6 +404,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] cover workspace-rooted launch behavior in CLI tests
 - [ ] Batch 2: workspace path and artifact layout alignment
   - [ ] make stage input loading resolve required artifacts from the workspace directory layout instead of explicit CLI artifact arguments
+  - [x] make template and contract loading prefer `workspace/sdlc/resources` and fall back to bundled `dist/resources`
   - [ ] redirect document-stage outputs into `workspace/docs/generated`
   - [ ] pin `implementation_execution` generated code target to `workspace/src`
   - [ ] converge validation runtime input from `project_path` into `workspace`

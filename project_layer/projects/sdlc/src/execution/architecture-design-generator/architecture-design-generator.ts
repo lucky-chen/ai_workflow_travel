@@ -1,22 +1,8 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { StageOutput } from "../../shared/contracts/pipeline.js";
 import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "../document-stage-generator.js";
-
-const TECHNICAL_ARCHITECTURE_TEMPLATE_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "template",
-  "TechnicalArchitectureTemplate.md",
-);
 
 export interface ArchitectureDesignArtifacts {
   artifactKey: "architecture_document";
@@ -42,8 +28,8 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
     return inputDocument;
   }
 
-  protected async loadTemplate(): Promise<string> {
-    return readFile(TECHNICAL_ARCHITECTURE_TEMPLATE_PATH, "utf8");
+  protected getTemplateResourcePath(): string {
+    return "template/TechnicalArchitectureTemplate.md";
   }
 
   protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {

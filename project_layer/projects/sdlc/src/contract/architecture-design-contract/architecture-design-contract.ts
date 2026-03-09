@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import type {
   ContractCheckResult,
   ContractIssue,
@@ -10,25 +8,14 @@ import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js
 import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
 
-const TECHNICAL_ARCHITECTURE_CONTRACT_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "contract",
-  "TechnicalArchitectureTemplate.contract.json",
-);
-
 interface ArchitectureArtifacts {
   artifactKey: "architecture_document";
   content: string;
 }
 
 export class ArchitectureDesignContract extends DocumentStageContract {
-  protected getContractFilePath(): string {
-    return TECHNICAL_ARCHITECTURE_CONTRACT_PATH;
+  protected getContractResourcePath(): string {
+    return "contract/TechnicalArchitectureTemplate.contract.json";
   }
 
   protected getStageId(): string {

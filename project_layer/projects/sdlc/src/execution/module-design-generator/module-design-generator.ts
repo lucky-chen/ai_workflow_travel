@@ -1,22 +1,8 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { StageOutput } from "../../shared/contracts/pipeline.js";
 import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "../document-stage-generator.js";
-
-const MODULE_DESIGN_TEMPLATE_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "template",
-  "ModuleDesignTemplate.md",
-);
 
 export interface ModuleDescriptor {
   name: string;
@@ -74,8 +60,8 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
     return JSON.stringify(payload);
   }
 
-  protected async loadTemplate(): Promise<string> {
-    return readFile(MODULE_DESIGN_TEMPLATE_PATH, "utf8");
+  protected getTemplateResourcePath(): string {
+    return "template/ModuleDesignTemplate.md";
   }
 
   protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {

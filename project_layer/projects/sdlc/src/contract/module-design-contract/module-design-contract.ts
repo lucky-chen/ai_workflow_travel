@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import type {
   ContractCheckResult,
   ContractIssue,
@@ -10,17 +8,6 @@ import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js
 import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
 
-const MODULE_DESIGN_CONTRACT_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "contract",
-  "ModuleDesignTemplate.contract.json",
-);
-
 interface ModuleDesignArtifacts {
   artifactKey: "module_design_document";
   moduleName: string;
@@ -28,8 +15,8 @@ interface ModuleDesignArtifacts {
 }
 
 export class ModuleDesignContract extends DocumentStageContract {
-  protected getContractFilePath(): string {
-    return MODULE_DESIGN_CONTRACT_PATH;
+  protected getContractResourcePath(): string {
+    return "contract/ModuleDesignTemplate.contract.json";
   }
 
   protected getStageId(): string {

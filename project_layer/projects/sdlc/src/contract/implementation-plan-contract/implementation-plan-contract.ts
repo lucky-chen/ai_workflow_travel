@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import type {
   ContractCheckResult,
   ContractIssue,
@@ -10,17 +8,6 @@ import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js
 import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
 import type { ImplementationWorkPlan, ImplementationWorkPlanBatch, ImplementationWorkPlanStatus, ImplementationWorkPlanStep } from "../../shared/contracts/implementation-workplan.js";
-
-const IMPLEMENTATION_PLAN_CONTRACT_PATH = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "..",
-  "meta_layer",
-  "resources",
-  "contract",
-  "CodeGenerationExecutionPlanTemplate.contract.json",
-);
 
 interface ImplementationPlanArtifacts {
   artifactKey: "implementation_workplan";
@@ -90,8 +77,8 @@ export class ImplementationPlanContract extends DocumentStageContract {
     return { steps };
   }
 
-  protected getContractFilePath(): string {
-    return IMPLEMENTATION_PLAN_CONTRACT_PATH;
+  protected getContractResourcePath(): string {
+    return "contract/CodeGenerationExecutionPlanTemplate.contract.json";
   }
 
   protected getStageId(): string {
