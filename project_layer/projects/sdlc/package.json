@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm --prefix ../agent_runtime run build && tsc -p tsconfig.json",
+    "build": "npm --prefix ../agent_runtime run build && tsc -p tsconfig.json && sh ./scripts/copy-resources.sh",
     "typecheck": "npm --prefix ../agent_runtime run build && tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node dist/tests/run-tests.js",
     "test:llm:integration": "npm run build && node dist/tests/llm-executor.integration.js"
