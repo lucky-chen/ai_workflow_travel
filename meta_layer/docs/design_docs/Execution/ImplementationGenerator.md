@@ -196,7 +196,7 @@ interface ProjectFile {
 Implementation generation input source:
 
 - `StageRunContext.inputArtifacts["implementation_workplan"]`
-- `StageRunContext.inputArtifacts["current_batch"]`
+- `StageRunContext.inputArtifacts["current_step"]`
 - `StageRunContext.inputArtifacts["requirement_document"]`
 - `StageRunContext.inputArtifacts["architecture_document"]`
 - `StageRunContext.inputArtifacts["module_design_documents"]`
@@ -215,7 +215,8 @@ Runtime input rule:
 
 - `ImplementationPlanContract` parses accepted workplan markdown into `ImplementationWorkPlan`
 - `ImplementationGenerator` receives the parsed `ImplementationWorkPlan` structure
-- `ImplementationGenerator` receives one `ImplementationWorkPlanBatch` as the current execution unit
+- `ImplementationStageRunner` reads `inputArtifacts["current_step"]` as `{ stepId, batchId }`
+- `ImplementationGenerator` receives one `ImplementationWorkPlanBatch` as the current execution unit after `ImplementationStageRunner` resolves the current batch from `current_step`
 - `ImplementationGenerator` should not parse markdown workplan text by itself
 - `ImplementationStageRunner` selects the current execution batch from the parsed workplan structure
 

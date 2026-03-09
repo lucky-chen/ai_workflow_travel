@@ -4,7 +4,7 @@ import { ShellRunner } from "../validation/shell-runner.js";
 
 export interface ImplementationGitCommitContext {
   workspaceRoot: string;
-  stepId: string;
+  batchId: string;
 }
 
 export interface IImplementationGitCommitter {
@@ -18,8 +18,8 @@ export class GitProcessCommitter implements IImplementationGitCommitter {
     const workspaceRoot = this.quotePathForShell(context.workspaceRoot);
     await this.runGitCommand(`cd ${workspaceRoot} && git add -A`);
     await this.runGitCommand(
-      `cd ${workspaceRoot} && git commit -m ${this.quoteStringForShell(`[AI] gpt-5.4: accept implementation step ${context.stepId}`)}`
-      + ` -m ${this.quoteStringForShell("Target:\nimplementation execution.\n\nChange items:\n1. Apply accepted generated changes.\n2. Update accepted implementation workplan state.\n3. Commit accepted implementation changes.")}`,
+      `cd ${workspaceRoot} && git commit -m ${this.quoteStringForShell(`[AI] gpt-5.4: accept implementation batch ${context.batchId}`)}`
+      + ` -m ${this.quoteStringForShell("Target: implementation execution.\nChange items:\n1. Apply accepted generated changes for the current workplan batch.\n2. Update accepted implementation workplan batch state.\n3. Commit accepted implementation changes.")}`,
     );
   }
 

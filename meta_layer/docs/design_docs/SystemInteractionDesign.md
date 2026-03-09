@@ -157,12 +157,13 @@ Stage-to-stage artifact mapping:
   - runtime input source: aggregated accepted outputs from all sequential `module_design` runs
   - downstream handoff: `inputArtifacts["implementation_workplan"]`
 - `implementation_execution`
-  - generator output: `artifacts.generatedFiles`
+  - generator output: `artifacts.changedFiles`
   - runtime input: `inputArtifacts["implementation_workplan"]`
-  - runtime input: `inputArtifacts["current_step"]`
+  - runtime input: `inputArtifacts["current_step"]` as `{ stepId, batchId }`
   - runtime input: `inputArtifacts["requirement_document"]`
   - runtime input: `inputArtifacts["architecture_document"]`
   - runtime input: `inputArtifacts["module_design_documents"]`
+  - runner resolves one accepted batch from `current_step` and returns either the next `{ stepId, batchId }` or completion state after review
   - accepted files are persisted to their generated paths
 - `validation`
   - runtime input: `inputArtifacts["project_path"]`
@@ -189,8 +190,8 @@ Gate review-request mapping by stage:
   - review content source: `output.artifacts.content`
 - `implementation_execution`
   - review summary source: `output.summary`
-  - review paths: `output.artifacts.generatedFiles[*].path`
-  - review content source: `output.artifacts.generatedFiles[*].content`
+  - review paths: `output.artifacts.changedFiles[*].path`
+  - review content source: `output.artifacts.changedFiles[*].content`
 - `validation`
   - review summary source: contract check summary
   - review content source: shell test result

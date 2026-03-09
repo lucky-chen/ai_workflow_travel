@@ -291,7 +291,7 @@ meta-layer task start \
 meta-layer task start \
   --stage implementation_execution \
   --input implementation_workplan=plans/implementation/ImplementationWorkPlan.md \
-  --input current_step=step_1 \
+  --input current_step='{"stepId":"step-1","batchId":"batch-1"}' \
   --project-path ./project_layer
 
 # review a pending change

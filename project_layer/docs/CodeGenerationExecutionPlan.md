@@ -304,8 +304,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] align plan-step and plan-batch review outcomes with runner-managed next-batch and next-step transition semantics
   - [x] stop `implementation_execution` when all workplan batches are completed
   - [x] align batch execution input with runner-managed workplan context loading
-  - [ ] remove residual single-module execution assumptions
-  - [ ] fully align implementation-plan and implementation-execution semantics with design docs
+  - [x] remove residual single-module execution assumptions
+  - [x] fully align implementation-plan and implementation-execution semantics with design docs
   - [x] extend tests for comment-aware review outcomes
 - [ ] Batch 7: implementation-execution design and runtime alignment cleanup
   - [ ] align `Execution/ImplementationGenerator` design doc with the current implementation transition state

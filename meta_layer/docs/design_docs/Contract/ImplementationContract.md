@@ -233,10 +233,10 @@ Result conversion rules:
 
 Check target rule:
 
-- check target field path is `output.artifacts.generatedFiles`
+- check target field path is `output.artifacts.changedFiles`
 - step context source is `context.inputArtifacts["current_step"]`
 - workplan context source is `context.inputArtifacts["implementation_workplan"]`
-- runtime environment is prepared from `output.artifacts.generatedFiles`
+- runtime environment is prepared from `output.artifacts.changedFiles`
 
 ### 4.3 Review Input / Output Limit
 
@@ -250,10 +250,10 @@ ChangeReviewRequest {
   taskId: context.taskId
   stageId: "implementation_execution"
   summary: output.summary
-  changedPaths: output.artifacts.generatedFiles.map((file) => file.path)
-  changedFiles: output.artifacts.generatedFiles.map((file) => ({
+  changedPaths: output.artifacts.changedFiles.map((file) => file.path)
+  changedFiles: output.artifacts.changedFiles.map((file) => ({
     path: file.path,
-    operation: "create_or_update",
+    operation: file.operation,
     content: file.content,
   }))
 }
