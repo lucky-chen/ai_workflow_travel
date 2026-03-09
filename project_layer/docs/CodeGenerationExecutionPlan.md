@@ -383,6 +383,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] extend tests for contract, trace, and review flows
   - [x] align validation-stage `gate_reviewed` trace metadata with shared review comment semantics
   - [x] centralize document-stage `contract_checked` and `artifact_persisted` trace helpers in `BaseStageRunner`
+  - [x] align review presenter/session semantics with `changedPaths` and stable `reviewId` display
 - [ ] Batch 4: CLI and document synchronization
   - [ ] align CLI interaction semantics
   - [ ] update sequence diagrams affected by runtime changes

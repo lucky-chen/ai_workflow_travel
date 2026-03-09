@@ -143,6 +143,7 @@ async function testReviewInteractionApply(): Promise<void> {
   const decision = await reviewInteraction.waitForReview({
     reviewId: "review-1",
     summary: "Review generated changes.",
+    changedPaths: ["src/a.ts"],
     changedFiles: [
       { path: "src/a.ts", operation: "update", content: "export const a = 1;\n" },
     ],
@@ -151,7 +152,8 @@ async function testReviewInteractionApply(): Promise<void> {
     action: "apply",
     summary: "User approved the change set.",
   });
-  assert.equal(reviewOutput.some((line) => line.includes("Review generated changes.")), true);
+  assert.equal(reviewOutput.some((line) => line.includes("Review review-1: Review generated changes.")), true);
+  assert.equal(reviewOutput.some((line) => line.includes("Changed paths: src/a.ts")), true);
 }
 
 async function testReviewInteractionReject(): Promise<void> {
@@ -164,6 +166,7 @@ async function testReviewInteractionReject(): Promise<void> {
   const rejectDecision = await rejectInteraction.waitForReview({
     reviewId: "review-2",
     summary: "Reject generated changes.",
+    changedPaths: [],
     changedFiles: [],
   });
   assert.deepEqual(rejectDecision, {
@@ -186,6 +189,7 @@ async function testReviewInteractionComment(): Promise<void> {
   const commentDecision = await commentInteraction.waitForReview({
     reviewId: "review-3",
     summary: "Comment on generated changes.",
+    changedPaths: [],
     changedFiles: [],
   });
   assert.deepEqual(commentDecision, {

@@ -30,6 +30,7 @@ export interface TraceViewer {
 export interface ReviewSession {
   reviewId: string;
   summary: string;
+  changedPaths: string[];
   changedFiles: ChangedFile[];
 }
 
@@ -125,7 +126,10 @@ export class ConsoleReviewInteraction implements IReviewInteraction {
   constructor(private readonly promptAdapter: ReviewPromptAdapter = new ReadlinePromptAdapter()) {}
 
   async waitForReview(reviewSession: ReviewSession): Promise<GateDecision> {
-    this.promptAdapter.write(`Review: ${reviewSession.summary}\n`);
+    this.promptAdapter.write(`Review ${reviewSession.reviewId}: ${reviewSession.summary}\n`);
+    if (reviewSession.changedPaths.length > 0) {
+      this.promptAdapter.write(`Changed paths: ${reviewSession.changedPaths.join(", ")}\n`);
+    }
     for (const changedFile of reviewSession.changedFiles) {
       this.promptAdapter.write(
         `- ${changedFile.operation} ${changedFile.path}${changedFile.content ? "\n" + changedFile.content : ""}\n`,

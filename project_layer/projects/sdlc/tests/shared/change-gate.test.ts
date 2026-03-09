@@ -45,6 +45,7 @@ async function testChangeReviewPresenter(): Promise<void> {
   assert.deepEqual(reviewSession, {
     reviewId: "review-1",
     summary: "Generated three file changes.",
+    changedPaths: ["src/a.ts", "src/b.ts"],
     changedFiles: [
       { path: "src/a.ts", operation: "update", content: "export const a = 1;\n" },
       { path: "src/b.ts", operation: "create", content: "export const b = 2;\n" },
@@ -53,7 +54,12 @@ async function testChangeReviewPresenter(): Promise<void> {
 }
 
 async function testInteractiveGateUsesPresenter(): Promise<void> {
-  const receivedSessions: Array<{ reviewId: string; summary: string; changedFiles: Array<{ path: string }> }> = [];
+  const receivedSessions: Array<{
+    reviewId: string;
+    summary: string;
+    changedPaths: string[];
+    changedFiles: Array<{ path: string }>;
+  }> = [];
   const presenter = new ChangeReviewPresenter();
   const gate = new InteractiveChangeGate(
     {
@@ -61,6 +67,7 @@ async function testInteractiveGateUsesPresenter(): Promise<void> {
         receivedSessions.push({
           reviewId: reviewSession.reviewId,
           summary: reviewSession.summary,
+          changedPaths: reviewSession.changedPaths,
           changedFiles: reviewSession.changedFiles.map((file) => ({ path: file.path })),
         });
         return {
@@ -82,6 +89,7 @@ async function testInteractiveGateUsesPresenter(): Promise<void> {
     {
       reviewId: "review-1",
       summary: "Generated three file changes.",
+      changedPaths: ["src/a.ts", "src/b.ts"],
       changedFiles: [{ path: "src/a.ts" }, { path: "src/b.ts" }],
     },
   ]);

@@ -32,6 +32,7 @@ export class ChangeReviewPresenter {
     return {
       reviewId,
       summary: changeRequest.summary,
+      changedPaths: changeRequest.changedPaths,
       changedFiles: changeRequest.changedFiles,
     };
   }
