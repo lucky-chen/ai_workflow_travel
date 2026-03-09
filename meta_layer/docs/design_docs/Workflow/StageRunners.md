@@ -177,6 +177,8 @@ Persistence mapping rule for document stages:
   - persist content to `plans/implementation/ImplementationWorkPlan.md`
   - pass accepted output downstream as `inputArtifacts["implementation_workplan"]`
 - `implementation_execution`
+  - `ImplementationStageRunner` owns implementation-workplan parsing and `current_step` assembly
+  - `ImplementationStageRunner` may use `SDK/AgentRuntime` as the V1 execution backbone with single-turn session semantics only
   - read `StageOutput.artifacts.generatedFiles`
   - persist each generated file to its `generatedFiles[*].path`
   - use `inputArtifacts["current_step"]` plus review result for next-step transition
@@ -189,4 +191,8 @@ Dependency rule:
 - concrete stage runners depend only on pipeline-owned collaboration interfaces such as `ITraceRecorder`, `IChangeGate`, and `IArtifactStore`
 - concrete stage runners may directly create stage-local generator and contract bindings inside the runner when the implementation stays within workflow-owned composition boundaries
 - stage runners should not rely on a separate application composition root for stage-local execution and contract binding
+- `ImplementationStageRunner` should keep its public runner-facing input and state-transition surface versionable so later AgentRuntime-based session continuation can be added without redefining the workflow stage API
+- `ImplementationStageRunner` V1 may depend on `SDK/AgentRuntime`, but only through single-turn session semantics
+- workflow-level multi-step continuation remains runner-managed in V1 even when `SDK/AgentRuntime` is used underneath
+- later versions may migrate multi-turn continuation from `ImplementationStageRunner` into `SDK/AgentRuntime`
 - `ValidationStageRunner` is the exception: it directly implements `IStageRunner` and keeps only shared trace/store injection in its public design surface

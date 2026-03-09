@@ -22,9 +22,6 @@ This module design collaborates with:
 
 Its core functions are:
 
-- load the accepted implementation workplan
-- load the current workplan step to execute
-- load upstream context documents needed by the current step
 - load the target project or engineering context that should be generated or updated
 - call the LLM execution capability to generate candidate implementation artifacts, including code and resources
 - return generated implementation file content in a structured `StageOutput`
@@ -122,8 +119,6 @@ Responsibilities:
 
 - expose `run` to the stage runner or equivalent caller
 - own implementation generation orchestration
-- load the accepted implementation workplan and current step from `StageRunContext.inputArtifacts`
-- load upstream requirement, architecture, and module-design context required by the current step
 - load the target project context that should be updated
 - build implementation-generation prompt input
 - call shared `ILlmExecutor`
@@ -143,17 +138,9 @@ participant ILlmExecutor as "SDK/ILlmExecutor"
 participant StageOutputBuilder
 
 Caller -> ImplementationGenerator: run(stage_run_context)
-ImplementationGenerator -> ImplementationGenerator: loadModuleDesign(stage_run_context.inputArtifacts)
-ImplementationGenerator --> ImplementationGenerator: module_design_doc
-ImplementationGenerator -> ImplementationGenerator: loadWorkPlan(stage_run_context.inputArtifacts)
-ImplementationGenerator --> ImplementationGenerator: workplan
-ImplementationGenerator -> ImplementationGenerator: loadCurrentStep(stage_run_context.inputArtifacts)
-ImplementationGenerator --> ImplementationGenerator: current_step
-ImplementationGenerator -> ImplementationGenerator: loadUpstreamContext(stage_run_context.inputArtifacts)
-ImplementationGenerator --> ImplementationGenerator: upstream_context
 ImplementationGenerator -> ProjectContextLoader: loadProjectContext(stage_run_context)
 ProjectContextLoader --> ImplementationGenerator: project_context
-ImplementationGenerator -> ImplementationPromptBuilder: build(workplan, current_step, upstream_context, project_context)
+ImplementationGenerator -> ImplementationPromptBuilder: build(stage_run_context.inputArtifacts, project_context)
 ImplementationPromptBuilder --> ImplementationGenerator: llm_execution_request
 ImplementationGenerator -> ILlmExecutor: execute(llm_execution_request)
 ILlmExecutor --> ImplementationGenerator: llm_execution_result
@@ -220,7 +207,7 @@ interface ProjectFile {
 
 `StageRunContext` is defined by the upstream workflow contract and is reused here directly.
 
-Upstream module-design input source:
+Implementation generation input source:
 
 - `StageRunContext.inputArtifacts["implementation_workplan"]`
 - `StageRunContext.inputArtifacts["current_step"]`
@@ -228,7 +215,7 @@ Upstream module-design input source:
 - `StageRunContext.inputArtifacts["architecture_document"]`
 - `StageRunContext.inputArtifacts["module_design_documents"]`
 
-Expected upstream shape:
+Expected input shape:
 
 ```ts
 type ModuleDesignDocumentsInput = ModuleDesignDoc[]
@@ -332,7 +319,6 @@ The exact output payload may expand later, but V1 should at least return generat
 
 - `ImplementationGenerator` must not decide whether the generated output passes contract checks.
 - `ImplementationGenerator` must not decide whether the generated output is approved.
-- `ImplementationGenerator` should read the structured module design document from upstream artifact input.
 - `ImplementationGenerator` should load enough project context to support targeted code and resource updates.
 - `ImplementationGenerator` must not apply generated file content to the target project directly.
 - `ImplementationGenerator` should return structured generated files and generation summary as `StageOutput`.

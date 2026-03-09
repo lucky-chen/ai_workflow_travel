@@ -273,10 +273,11 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] keep `ImplementationContract.check(...)` scoped to generated-result validation only
 - [ ] Batch 3: implementation execution-context loading
   - [x] validate `implementation_workplan` and `current_step` before generator execution in `ImplementationStageRunner.run(...)`
-  - [ ] introduce workplan-aware execution-context loading for `ImplementationGenerator`
-  - [ ] load `implementation_workplan` and `current_step` as required runtime input
+  - [ ] parse accepted `implementation_workplan` inside `ImplementationStageRunner`
+  - [ ] assemble `current_step` execution context inside `ImplementationStageRunner`
   - [ ] load upstream `requirement_document` and `architecture_document` into implementation generation input
   - [ ] load all relevant `module_design_documents` for the current execution step
+  - [ ] pass runner-prepared step context into `ImplementationGenerator`
   - [x] extend tests for explicit workplan-step context before generator execution
   - [ ] extend tests for execution-context loading and prompt input completeness
 - [ ] Batch 4: execution-environment contract validation
@@ -294,19 +295,20 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 6: execution review and runtime semantics alignment
   - [ ] support review `comment`
   - [ ] support workflow-level multi-step execution across one `implementation_workplan`
-  - [ ] parse ordered steps from accepted `implementation_workplan`
+  - [ ] iterate ordered workplan steps inside `ImplementationStageRunner`
   - [ ] persist and resume `current_step` between stage-entry runs
-  - [ ] align plan-step review outcomes with next-step transition semantics
+  - [ ] align plan-step review outcomes with runner-managed next-step transition semantics
   - [ ] stop `implementation_execution` when all workplan steps are completed
-  - [ ] align step execution input with workplan-driven context loading
+  - [ ] align step execution input with runner-managed workplan context loading
   - [ ] remove residual single-module execution assumptions
   - [ ] fully align implementation-plan and implementation-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes
 - [ ] Batch 7: implementation-execution design and runtime alignment cleanup
   - [ ] align `Execution/ImplementationGenerator` design doc with the current implementation transition state
   - [ ] align `Contract/ImplementationContract` design doc with the current implementation transition state
+  - [ ] keep `ImplementationStageRunner` public input and transition surface versionable while using `SDK/AgentRuntime` as a V1 single-turn backbone
   - [ ] remove outdated single-module assumptions from docs and runtime naming
-  - [ ] keep agent-runtime-level session and memory requirements out of Step 6 and defer them to Step 9
+  - [ ] keep workflow-level multi-step continuation inside `ImplementationStageRunner` for V1 even when `SDK/AgentRuntime` is used underneath
   - [ ] update this execution plan after each completed implementation batch
 
 ### Step 7. Deliver `validation` Stage
@@ -406,6 +408,7 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 5: SDLC integration on top of AgentRuntime V2
   - [ ] `LlmExecutor` adaptation to session-aware runtime
   - [ ] MCP-enabled llm execution facade path
+  - [ ] migrate `ImplementationStageRunner` continuation model into AgentRuntime-managed multi-turn sessions without breaking the V1 stage API
   - [ ] workflow-stage integration points for agent-assisted execution
   - [ ] richer workflow automation after core stages are complete
   - [ ] integration tests across `SDK/LlmExecutor` and `SDK/AgentRuntime`
