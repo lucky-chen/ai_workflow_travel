@@ -7,6 +7,7 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import { ShellRunner, type ShellResult } from "../validation/shell-runner.js";
 
@@ -41,7 +42,7 @@ export class ValidationStageRunner implements IStageRunner {
     await this.dependencies.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "stage_started",
+      eventType: TRACE_EVENT_TYPES.stageStarted,
       summary: `Stage "${context.stageId}" started.`,
     });
 
@@ -53,7 +54,7 @@ export class ValidationStageRunner implements IStageRunner {
     await this.dependencies.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "validation_finished",
+      eventType: TRACE_EVENT_TYPES.validationFinished,
       summary: output.summary,
       metadata: {
         passed: String(output.success),
@@ -66,7 +67,7 @@ export class ValidationStageRunner implements IStageRunner {
       await this.dependencies.traceRecorder?.recordTrace({
         taskId: context.taskId,
         stageId: context.stageId,
-        eventType: "gate_reviewed",
+        eventType: TRACE_EVENT_TYPES.gateReviewed,
         summary: decision.summary,
         metadata: {
           action: decision.action,
@@ -90,7 +91,7 @@ export class ValidationStageRunner implements IStageRunner {
       await this.dependencies.traceRecorder?.recordTrace({
         taskId: context.taskId,
         stageId: context.stageId,
-        eventType: "artifact_persisted",
+        eventType: TRACE_EVENT_TYPES.artifactPersisted,
         summary: `Validation result persisted to ${VALIDATION_ARTIFACT_PATH}.`,
         metadata: {
           filePath: VALIDATION_ARTIFACT_PATH,

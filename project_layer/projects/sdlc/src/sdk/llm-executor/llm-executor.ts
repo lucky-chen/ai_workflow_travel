@@ -1,5 +1,6 @@
 // LLM executor module: public entry for shared LLM execution.
 import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { StringMap } from "../../shared/types/common.js";
 import {
   type IAgent,
@@ -48,7 +49,7 @@ export class LlmExecutorService implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     await this.traceRecorder?.recordTrace({
       taskId: "llm-executor",
-      eventType: "llm_execution_started",
+      eventType: TRACE_EVENT_TYPES.llmExecutionStarted,
       summary: "LLM execution started.",
       metadata: {
         responseFormat: request.responseFormat,
@@ -65,7 +66,7 @@ export class LlmExecutorService implements ILlmExecutor {
 
     await this.traceRecorder?.recordTrace({
       taskId: "llm-executor",
-      eventType: "llm_execution_finished",
+      eventType: TRACE_EVENT_TYPES.llmExecutionFinished,
       summary: "LLM execution finished.",
       metadata: {
         responseFormat: result.result.responseFormat,

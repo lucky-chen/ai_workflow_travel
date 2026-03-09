@@ -184,6 +184,30 @@ Responsibilities:
 - record task-level events
 - record stage-level events
 
+Shared trace taxonomy rule:
+
+- `TraceEvent.eventType` must use the shared `TraceEventType` taxonomy defined in the pipeline contract
+- current shared event set includes:
+  - `task_launch_requested`
+  - `task_started`
+  - `task_finished`
+  - `stage_started`
+  - `stage_failed`
+  - `contract_checked`
+  - `gate_reviewed`
+  - `artifact_persisted`
+  - `generation_started`
+  - `generation_finished`
+  - `agent_plan_created`
+  - `agent_execution_started`
+  - `agent_execution_finished`
+  - `agent_observation_finished`
+  - `llm_execution_started`
+  - `llm_execution_finished`
+  - `validation_finished`
+  - `step_completed`
+- workflow code should not introduce ad hoc trace event strings outside this shared taxonomy without first extending the contract
+
 Ownership rule:
 
 - `ITraceRecorder`, `IChangeGate`, and `IArtifactStore` are pipeline-owned collaboration interfaces.

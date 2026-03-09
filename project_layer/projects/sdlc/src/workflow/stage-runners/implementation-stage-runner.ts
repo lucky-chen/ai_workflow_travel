@@ -4,6 +4,7 @@ import path from "node:path";
 
 import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ImplementationStageArtifacts } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import { ChangeApplier } from "../../execution/implementation-generator/change-applier.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
@@ -334,7 +335,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "contract_checked",
+      eventType: TRACE_EVENT_TYPES.contractChecked,
       summary,
       metadata: {
         passed: String(passed),
@@ -350,7 +351,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "step_completed",
+      eventType: TRACE_EVENT_TYPES.stepCompleted,
       summary: `Implementation batch "${batchId}" completed and accepted.`,
       metadata: {
         batchId,

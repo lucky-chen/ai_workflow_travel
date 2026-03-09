@@ -11,6 +11,7 @@ import type {
   StageRunContext,
   StageRunnerSharedDependencies,
 } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 
 export interface BaseStageRunnerDependencies extends StageRunnerSharedDependencies {
   changeGate?: IChangeGate;
@@ -34,7 +35,7 @@ export abstract class BaseStageRunner implements IStageRunner {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "stage_started",
+      eventType: TRACE_EVENT_TYPES.stageStarted,
       summary: `Stage "${context.stageId}" started.`,
     });
   }
@@ -51,7 +52,7 @@ export abstract class BaseStageRunner implements IStageRunner {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "contract_checked",
+      eventType: TRACE_EVENT_TYPES.contractChecked,
       summary,
       metadata: {
         passed: String(passed),
@@ -68,7 +69,7 @@ export abstract class BaseStageRunner implements IStageRunner {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "artifact_persisted",
+      eventType: TRACE_EVENT_TYPES.artifactPersisted,
       summary,
       metadata: {
         filePath: artifactPath,
@@ -88,7 +89,7 @@ export abstract class BaseStageRunner implements IStageRunner {
     await this.traceRecorder?.recordTrace({
       taskId: changeRequest.taskId,
       stageId: changeRequest.stageId,
-      eventType: "gate_reviewed",
+      eventType: TRACE_EVENT_TYPES.gateReviewed,
       summary: decision.summary,
       metadata: {
         action: decision.action,

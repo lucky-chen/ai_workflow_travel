@@ -11,6 +11,29 @@ import type {
   TraceRef,
 } from "../types/common.js";
 
+export const TRACE_EVENT_TYPES = {
+  agentExecutionFinished: "agent_execution_finished",
+  agentExecutionStarted: "agent_execution_started",
+  agentObservationFinished: "agent_observation_finished",
+  agentPlanCreated: "agent_plan_created",
+  artifactPersisted: "artifact_persisted",
+  contractChecked: "contract_checked",
+  gateReviewed: "gate_reviewed",
+  generationFinished: "generation_finished",
+  generationStarted: "generation_started",
+  llmExecutionFinished: "llm_execution_finished",
+  llmExecutionStarted: "llm_execution_started",
+  stageFailed: "stage_failed",
+  stageStarted: "stage_started",
+  stepCompleted: "step_completed",
+  taskFinished: "task_finished",
+  taskLaunchRequested: "task_launch_requested",
+  taskStarted: "task_started",
+  validationFinished: "validation_finished",
+} as const;
+
+export type TraceEventType = (typeof TRACE_EVENT_TYPES)[keyof typeof TRACE_EVENT_TYPES];
+
 export interface StageRunContext {
   taskId: TaskId;
   stageId: StageId;
@@ -91,7 +114,7 @@ export interface IArtifactStore {
 export interface TraceEvent {
   taskId: TaskId;
   stageId?: StageId;
-  eventType: string;
+  eventType: TraceEventType;
   summary: string;
   metadata?: StringMap;
 }

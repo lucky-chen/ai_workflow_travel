@@ -2,6 +2,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 
 export interface ParsedCommand {
@@ -189,7 +190,7 @@ export class CLIService implements ICLI {
     const request = this.requestMapper.map(parsed);
     this.traceViewer.renderTrace({
       taskId: "pending",
-      eventType: "task_launch_requested",
+      eventType: TRACE_EVENT_TYPES.taskLaunchRequested,
       summary: `Launching command "${parsed.command}" for stage "${request.startStageId}".`,
     });
     const taskId = await this.pipelineClient.launchTask(request);

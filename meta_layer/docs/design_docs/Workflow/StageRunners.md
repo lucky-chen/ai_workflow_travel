@@ -149,6 +149,17 @@ For each stage runner:
 6. call `IArtifactStore.writeArtifact` on pass
 7. return `StageOutput`
 
+Trace taxonomy rule:
+
+- stage runners and workflow-owned generators must emit only shared `TraceEventType` values defined in `Workflow/Pipeline`
+- document stages reuse shared runner helpers for:
+  - `stage_started`
+  - `contract_checked`
+  - `gate_reviewed`
+  - `artifact_persisted`
+- `implementation_execution` additionally emits `step_completed`
+- `validation` additionally emits `validation_finished`
+
 Validation runner exception:
 
 - `ValidationStageRunner` does not follow the shared `generate -> contract -> review -> persist` sequence

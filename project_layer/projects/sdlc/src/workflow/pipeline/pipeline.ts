@@ -10,6 +10,7 @@ import type {
   TaskRecord,
   TaskStatus,
 } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js";
 import { LaunchValidator } from "./launch-validator.js";
 import { StageRegistry } from "./stage-registry.js";
@@ -67,7 +68,7 @@ export class PipelineService implements IPipeline {
     });
     await this.traceRecorder?.recordTrace({
       taskId,
-      eventType: "task_started",
+      eventType: TRACE_EVENT_TYPES.taskStarted,
       summary: `Task "${taskId}" started at stage "${request.startStageId}".`,
     });
 
@@ -97,7 +98,7 @@ export class PipelineService implements IPipeline {
         await this.traceRecorder?.recordTrace({
           taskId,
           stageId: currentStageId,
-          eventType: "stage_failed",
+          eventType: TRACE_EVENT_TYPES.stageFailed,
           summary: error instanceof Error
             ? error.message
             : `Stage "${currentStageId}" failed.`,
@@ -118,7 +119,7 @@ export class PipelineService implements IPipeline {
         await this.traceRecorder?.recordTrace({
           taskId,
           stageId: currentStageId,
-          eventType: "stage_failed",
+          eventType: TRACE_EVENT_TYPES.stageFailed,
           summary: `Stage "${currentStageId}" failed.`,
         });
         break;
@@ -152,7 +153,7 @@ export class PipelineService implements IPipeline {
 
     await this.traceRecorder?.recordTrace({
       taskId,
-      eventType: "task_finished",
+      eventType: TRACE_EVENT_TYPES.taskFinished,
       summary: `Task "${taskId}" finished.`,
     });
 
@@ -247,7 +248,7 @@ export class PipelineService implements IPipeline {
         await this.traceRecorder?.recordTrace({
           taskId: context.taskId,
           stageId,
-          eventType: "stage_failed",
+          eventType: TRACE_EVENT_TYPES.stageFailed,
           summary,
         });
       },

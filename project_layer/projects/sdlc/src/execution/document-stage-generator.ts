@@ -1,5 +1,6 @@
 import type { IStageGenerator, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
 import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../shared/contracts/pipeline.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import type { ArtifactMap } from "../shared/types/common.js";
 
@@ -13,7 +14,7 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "generation_started",
+      eventType: TRACE_EVENT_TYPES.generationStarted,
       summary: `Generation started for stage "${context.stageId}".`,
     });
 
@@ -26,7 +27,7 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
     await this.traceRecorder?.recordTrace({
       taskId: context.taskId,
       stageId: context.stageId,
-      eventType: "generation_finished",
+      eventType: TRACE_EVENT_TYPES.generationFinished,
       summary: output.summary,
     });
 
