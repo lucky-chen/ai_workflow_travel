@@ -1,6 +1,5 @@
 import type {
   GateDecision,
-  IArtifactStore,
   IChangeGate,
   ITraceRecorder,
   StageOutput,
@@ -18,7 +17,6 @@ import { resolveImplementationPlanArtifactPath } from "./stage-artifact-paths.js
 
 export interface ImplementationPlanStageRunnerDependencies extends BaseStageRunnerDependencies {
   llmExecutor: ILlmExecutor;
-  artifactStore: IArtifactStore;
   traceRecorder?: ITraceRecorder;
   changeGate?: IChangeGate;
 }
@@ -58,7 +56,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
-    await this.persistAcceptedArtifact(context, artifactPath, output.artifacts.content);
+    await this.writeWorkspaceFile(context, artifactPath, output.artifacts.content);
     await this.recordPersistenceResult(context, gateDecision, artifactPath);
     const parsedWorkplan = this.contractChecker.parseWorkPlan(output.artifacts.content);
 
@@ -110,20 +108,6 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
         },
       ],
     };
-  }
-
-  private async persistAcceptedArtifact(context: StageRunContext, artifactPath: string, content: string): Promise<void> {
-    if (!this.artifactStore) {
-      throw new Error("ImplementationPlanStageRunner requires an artifactStore.");
-    }
-
-    await this.artifactStore.writeArtifact({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      filePath: artifactPath,
-      content,
-      workspaceRoot: context.workspaceRoot,
-    });
   }
 
   private async recordPersistenceResult(

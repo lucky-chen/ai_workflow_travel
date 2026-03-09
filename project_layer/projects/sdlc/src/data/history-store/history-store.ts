@@ -5,6 +5,7 @@ import type { FilePath, StageId, TaskId, TraceRef } from "../../shared/types/com
 export interface HistoryRecord {
   recordId?: TraceRef;
   category: string;
+  caller?: string;
   scope?: {
     taskId?: TaskId;
     stageId?: StageId;

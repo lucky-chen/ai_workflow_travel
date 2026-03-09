@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
@@ -15,30 +14,23 @@ import {
 } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationPlanStageRunnerTests(): Promise<void> {
-  const storageRoot = await createTempDir("implementation-plan-stage-runner-");
   const workspaceRoot = await createTempDir("implementation-plan-workspace-");
-  const artifactStore = new ArtifactStoreService(storageRoot);
 
   try {
-    await testImplementationPlanStageRunnerPersistsAcceptedDocument(artifactStore, workspaceRoot);
-    await testImplementationPlanStageRunnerRejectStopsPersistence(artifactStore, workspaceRoot);
-    await testImplementationPlanStageRunnerContractFailure(artifactStore, workspaceRoot);
+    await testImplementationPlanStageRunnerPersistsAcceptedDocument(workspaceRoot);
+    await testImplementationPlanStageRunnerRejectStopsPersistence(workspaceRoot);
+    await testImplementationPlanStageRunnerContractFailure(workspaceRoot);
   } finally {
-    await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 
-async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
-  artifactStore: ArtifactStoreService,
-  workspaceRoot: string,
-): Promise<void> {
+async function testImplementationPlanStageRunnerPersistsAcceptedDocument(workspaceRoot: string): Promise<void> {
   const traceRecorder = new InMemoryTraceRecorder();
   const changeGate = new InMemoryChangeGate();
   const content = createImplementationPlanDocument();
   const runner = new ImplementationPlanStageRunner({
     llmExecutor: new ImplementationPlanStageRunnerLlmExecutor(content),
-    artifactStore,
     traceRecorder,
     changeGate,
   });
@@ -61,14 +53,6 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
   assert.equal(parsedWorkplan.steps[0]?.batches[0]?.batchId, "batch-1");
   assert.equal(output.artifacts.current_step, JSON.stringify({ stepId: "step-1", batchId: "batch-1" }));
   assert.equal(
-    await artifactStore.getArtifact({
-      taskId: "task-1",
-      stageId: "implementation_plan",
-      filePath: implementationPlanPath,
-    }),
-    content,
-  );
-  assert.equal(
     await readFile(path.join(workspaceRoot, implementationPlanPath), "utf8"),
     content,
   );
@@ -82,13 +66,10 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(
   ]);
 }
 
-async function testImplementationPlanStageRunnerRejectStopsPersistence(
-  artifactStore: ArtifactStoreService,
-  workspaceRoot: string,
-): Promise<void> {
+async function testImplementationPlanStageRunnerRejectStopsPersistence(workspaceRoot: string): Promise<void> {
+  await rm(path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)), { force: true });
   const runner = new ImplementationPlanStageRunner({
     llmExecutor: new ImplementationPlanStageRunnerLlmExecutor(createImplementationPlanDocument()),
-    artifactStore,
     changeGate: new InMemoryChangeGate({
       decision: {
         action: "reject",
@@ -108,22 +89,15 @@ async function testImplementationPlanStageRunnerRejectStopsPersistence(
     /Change review ended with action "reject"\./,
   );
 
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-2",
-      stageId: "implementation_plan",
-      filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-    }),
-  );
+  await assert.rejects(access(path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot))));
 }
 
 async function testImplementationPlanStageRunnerContractFailure(
-  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
+  await rm(path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)), { force: true });
   const runner = new ImplementationPlanStageRunner({
     llmExecutor: new ImplementationPlanStageRunnerLlmExecutor("# Code Generation Execution Plan\nBroken"),
-    artifactStore,
     changeGate: new InMemoryChangeGate(),
   });
 

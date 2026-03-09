@@ -32,25 +32,21 @@ export function createCliBaselineTestRuntime(): { pipeline: IPipeline } {
   const changeGate = new InMemoryChangeGate();
 
   const requirementRunner = new RequirementStageRunner({
-    artifactStore,
     traceRecorder,
     changeGate,
     llmExecutor: new PassingRequirementContractLlmExecutor(),
   });
   const architectureRunner = new ArchitectureStageRunner({
-    artifactStore,
     traceRecorder,
     changeGate,
     llmExecutor: new DeterministicDocumentLlmExecutor(createScenarioArchitectureDocument(serviceName)),
   });
   const moduleRunner = new ModuleStageRunner({
-    artifactStore,
     traceRecorder,
     changeGate,
     llmExecutor: new DeterministicDocumentLlmExecutor(createScenarioModuleDesignDocument(serviceName)),
   });
   const implementationPlanRunner = new ImplementationPlanStageRunner({
-    artifactStore,
     traceRecorder,
     changeGate,
     llmExecutor: new DeterministicDocumentLlmExecutor(createScenarioImplementationPlanDocument(serviceName)),

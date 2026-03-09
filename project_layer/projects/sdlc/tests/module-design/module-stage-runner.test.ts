@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
@@ -10,30 +9,23 @@ import { ModuleStageRunner } from "../../src/workflow/stage-runners/module-stage
 import { resolveModuleDesignArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runModuleStageRunnerTests(): Promise<void> {
-  const storageRoot = await createTempDir("module-stage-runner-");
   const workspaceRoot = await createTempDir("module-workspace-");
-  const artifactStore = new ArtifactStoreService(storageRoot);
 
   try {
-    await testModuleStageRunnerPersistsAcceptedDocument(artifactStore, workspaceRoot);
-    await testModuleStageRunnerRejectStopsPersistence(artifactStore, workspaceRoot);
-    await testModuleStageRunnerContractFailure(artifactStore, workspaceRoot);
+    await testModuleStageRunnerPersistsAcceptedDocument(workspaceRoot);
+    await testModuleStageRunnerRejectStopsPersistence(workspaceRoot);
+    await testModuleStageRunnerContractFailure(workspaceRoot);
   } finally {
-    await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 
-async function testModuleStageRunnerPersistsAcceptedDocument(
-  artifactStore: ArtifactStoreService,
-  workspaceRoot: string,
-): Promise<void> {
+async function testModuleStageRunnerPersistsAcceptedDocument(workspaceRoot: string): Promise<void> {
   const traceRecorder = new InMemoryTraceRecorder();
   const changeGate = new InMemoryChangeGate();
   const content = createModuleDesignDocument();
   const runner = new ModuleStageRunner({
     llmExecutor: new ModuleStageRunnerLlmExecutor(content),
-    artifactStore,
     traceRecorder,
     changeGate,
   });
@@ -54,14 +46,6 @@ async function testModuleStageRunnerPersistsAcceptedDocument(
 
   assert.equal(output.artifacts.module_design_document, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"));
   assert.equal(
-    await artifactStore.getArtifact({
-      taskId: "task-1",
-      stageId: "module_design",
-      filePath: resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
-    }),
-    content,
-  );
-  assert.equal(
     await readFile(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow")), "utf8"),
     content,
   );
@@ -75,13 +59,10 @@ async function testModuleStageRunnerPersistsAcceptedDocument(
   ]);
 }
 
-async function testModuleStageRunnerRejectStopsPersistence(
-  artifactStore: ArtifactStoreService,
-  workspaceRoot: string,
-): Promise<void> {
+async function testModuleStageRunnerRejectStopsPersistence(workspaceRoot: string): Promise<void> {
+  await rm(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow")), { force: true });
   const runner = new ModuleStageRunner({
     llmExecutor: new ModuleStageRunnerLlmExecutor(createModuleDesignDocument()),
-    artifactStore,
     changeGate: new InMemoryChangeGate({
       decision: {
         action: "reject",
@@ -107,22 +88,15 @@ async function testModuleStageRunnerRejectStopsPersistence(
     /Change review ended with action "reject"\./,
   );
 
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-2",
-      stageId: "module_design",
-      filePath: resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
-    }),
-  );
+  await assert.rejects(access(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"))));
 }
 
 async function testModuleStageRunnerContractFailure(
-  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
+  await rm(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow")), { force: true });
   const runner = new ModuleStageRunner({
     llmExecutor: new ModuleStageRunnerLlmExecutor("# Workflow Design\n\nBroken output"),
-    artifactStore,
     changeGate: new InMemoryChangeGate(),
   });
 

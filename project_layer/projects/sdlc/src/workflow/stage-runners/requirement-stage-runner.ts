@@ -1,4 +1,4 @@
-import type { GateDecision, IArtifactStore, IChangeGate, ITraceRecorder, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
+import type { GateDecision, IChangeGate, ITraceRecorder, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import { RequirementContract } from "../../contract/requirement-contract/requirement-contract.js";
@@ -7,7 +7,6 @@ import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-
 import { resolveRequirementArtifactPath } from "./stage-artifact-paths.js";
 
 export interface RequirementStageRunnerDependencies extends BaseStageRunnerDependencies {
-  artifactStore: IArtifactStore;
   llmExecutor: ILlmExecutor;
   traceRecorder?: ITraceRecorder;
   changeGate?: IChangeGate;
@@ -38,7 +37,7 @@ export class RequirementStageRunner extends BaseStageRunner {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
     }
 
-    await this.persistAcceptedArtifact(context, artifactPath, output.artifacts.content);
+    await this.writeWorkspaceFile(context, artifactPath, output.artifacts.content);
     await this.recordPersistenceResult(context, gateDecision, artifactPath);
 
     return {
@@ -71,20 +70,6 @@ export class RequirementStageRunner extends BaseStageRunner {
         },
       ],
     };
-  }
-
-  private async persistAcceptedArtifact(context: StageRunContext, artifactPath: string, content: string): Promise<void> {
-    if (!this.artifactStore) {
-      throw new Error("RequirementStageRunner requires an artifactStore.");
-    }
-
-    await this.artifactStore.writeArtifact({
-      taskId: context.taskId,
-      stageId: context.stageId,
-      filePath: artifactPath,
-      content,
-      workspaceRoot: context.workspaceRoot,
-    });
   }
 
   private async recordPersistenceResult(

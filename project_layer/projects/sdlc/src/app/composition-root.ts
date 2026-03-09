@@ -107,7 +107,6 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
     stageId: "requirement_interpretation",
     launchRequirements: ["requirement_document"],
     runner: new RequirementStageRunner({
-      artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
       llmExecutor: services.llmExecutor,
@@ -119,7 +118,6 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
     stageId: "module_design",
     launchRequirements: ["architecture_document", "module_descriptors"],
     runner: new ModuleStageRunner({
-      artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
       llmExecutor: services.llmExecutor,
@@ -132,7 +130,6 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
     stageId: "architecture_design",
     launchRequirements: ["requirement_document"],
     runner: new ArchitectureStageRunner({
-      artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
       llmExecutor: services.llmExecutor,
@@ -145,7 +142,6 @@ export function createDefaultStageRegistry(services: ApplicationServices): Stage
     stageId: "implementation_plan",
     launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],
     runner: new ImplementationPlanStageRunner({
-      artifactStore: services.artifactStore,
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
       llmExecutor: services.llmExecutor,

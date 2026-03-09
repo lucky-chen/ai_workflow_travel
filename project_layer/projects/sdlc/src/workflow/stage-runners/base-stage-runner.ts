@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type {
   ChangeReviewRequest,
   ContractCheckResult,
@@ -113,5 +115,15 @@ export abstract class BaseStageRunner implements IStageRunner {
     });
 
     return decision;
+  }
+
+  protected async writeWorkspaceFile(
+    context: StageRunContext,
+    relativePath: string,
+    content: string,
+  ): Promise<void> {
+    const targetPath = path.join(context.workspaceRoot, relativePath);
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, content, "utf8");
   }
 }

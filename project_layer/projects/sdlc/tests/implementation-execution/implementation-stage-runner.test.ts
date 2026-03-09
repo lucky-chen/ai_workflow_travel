@@ -18,51 +18,8 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
   const workspaceRoot = await createTempDir("workspace-runner-");
   const artifactStore = new ArtifactStoreService(storageRoot);
 
-  await artifactStore.writeArtifact({
-    taskId: "task-1",
-    stageId: "module_design",
-    filePath: "module-design.md",
-    content: "# module design",
-  });
-  await artifactStore.writeArtifact({
-    taskId: "task-2",
-    stageId: "module_design",
-    filePath: "module-design.md",
-    content: "# module design",
-  });
-  await artifactStore.writeArtifact({
-    taskId: "task-3",
-    stageId: "module_design",
-    filePath: "module-design.md",
-    content: "# module design",
-  });
-  await artifactStore.writeArtifact({
-    taskId: "task-4",
-    stageId: "module_design",
-    filePath: "module-design.md",
-    content: "# module design",
-  });
-  await artifactStore.writeArtifact({
-    taskId: "task-5",
-    stageId: "module_design",
-    filePath: "module-design.md",
-    content: "# module design",
-  });
-
-  for (const taskId of ["task-1", "task-2", "task-3", "task-4", "task-5"]) {
-    await artifactStore.writeArtifact({
-      taskId,
-      stageId: "implementation_plan",
-      filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-      content: createImplementationWorkplanDocument(),
-    });
-  }
-
-  await mkdir(path.join(workspaceRoot, "src"), { recursive: true });
-  await writeFile(path.join(workspaceRoot, "src", "existing.ts"), "export const value = 1;\n", "utf8");
-  await writeFile(path.join(workspaceRoot, "obsolete.txt"), "to be deleted\n", "utf8");
-
   try {
+    await seedWorkspace(workspaceRoot);
     const generator = createGenerator(artifactStore);
     const contractChecker = ImplementationContract.create();
 
@@ -134,40 +91,12 @@ async function testImplementationStageRunnerApply(
   ]);
   assert.equal(output.artifacts.current_step, undefined);
   assert.equal(output.artifacts.implementation_execution_completed, "true");
-  const updatedWorkplan = await artifactStore.getArtifact({
-    taskId: "task-1",
-    stageId: "implementation_plan",
-    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-  });
+  const updatedWorkplan = await readFile(
+    path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
+    "utf8",
+  );
   assert.equal(updatedWorkplan.includes("## 4. Implementation Execution State"), true);
   assert.equal(updatedWorkplan.includes("- [x] batch-1"), true);
-  assert.equal(
-    await readFile(path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)), "utf8"),
-    updatedWorkplan,
-  );
-  assert.equal(
-    await artifactStore.getArtifact({
-      taskId: "task-1",
-      stageId: "implementation",
-      filePath: "src/generated.ts",
-    }),
-    "export const generated = true;\n",
-  );
-  assert.equal(
-    await artifactStore.getArtifact({
-      taskId: "task-1",
-      stageId: "implementation",
-      filePath: "src/existing.ts",
-    }),
-    "export const value = 2;\n",
-  );
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-1",
-      stageId: "implementation",
-      filePath: "obsolete.txt",
-    }),
-  );
 }
 
 async function testImplementationStageRunnerReject(
@@ -203,19 +132,11 @@ async function testImplementationStageRunnerReject(
   assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
   assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
   await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
-  const workplan = await artifactStore.getArtifact({
-    taskId: "task-2",
-    stageId: "implementation_plan",
-    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-  });
-  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-2",
-      stageId: "implementation",
-      filePath: "src/generated.ts",
-    }),
+  const workplan = await readFile(
+    path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
+    "utf8",
   );
+  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
 }
 
 async function testImplementationStageRunnerContractFailure(
@@ -265,19 +186,11 @@ async function testImplementationStageRunnerContractFailure(
   assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
   assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
   await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));
-  const workplan = await artifactStore.getArtifact({
-    taskId: "task-3",
-    stageId: "implementation_plan",
-    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-  });
-  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-3",
-      stageId: "implementation",
-      filePath: "src/generated.ts",
-    }),
+  const workplan = await readFile(
+    path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
+    "utf8",
   );
+  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
 }
 
 async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
@@ -406,19 +319,11 @@ async function testImplementationStageRunnerWaitReviewCarriesComment(
   });
   assert.equal(traceRecorder.getEvents().some((entry) => entry.event.eventType === "step_completed"), false);
 
-  const workplan = await artifactStore.getArtifact({
-    taskId: "task-2",
-    stageId: "implementation_plan",
-    filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-  });
-  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-2",
-      stageId: "implementation",
-      filePath: "src/generated.ts",
-    }),
+  const workplan = await readFile(
+    path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
+    "utf8",
   );
+  assert.equal(workplan.includes("## 4. Implementation Execution State"), false);
 }
 
 function createGenerator(artifactStore: ArtifactStoreService): ImplementationGenerator {
@@ -441,7 +346,7 @@ function createRunContext(
   overrides?: Partial<Record<"implementation_workplan" | "current_step" | "parsed_implementation_workplan", string | undefined>>,
 ): StageRunContext {
   const inputArtifacts: Record<string, string> = {
-    module_design_documents: JSON.stringify(["module-design.md"]),
+    module_design_documents: JSON.stringify(["sdlc/docs/module_design/Workflow.md"]),
     requirement_document: "# requirement",
     architecture_document: "# architecture",
     implementation_workplan: resolveImplementationPlanArtifactPath(workspaceRoot),
@@ -489,6 +394,25 @@ async function resetWorkspace(workspaceRoot: string): Promise<void> {
   await writeFile(path.join(workspaceRoot, "src", "existing.ts"), "export const value = 1;\n", "utf8");
   await writeFile(path.join(workspaceRoot, "obsolete.txt"), "to be deleted\n", "utf8");
   await rm(path.join(workspaceRoot, "src", "generated.ts"), { force: true });
+  await writeFile(path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md"), "# module design", "utf8");
+  await writeFile(
+    path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
+    createImplementationWorkplanDocument(),
+    "utf8",
+  );
+}
+
+async function seedWorkspace(workspaceRoot: string): Promise<void> {
+  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "module_design"), { recursive: true });
+  await mkdir(path.join(workspaceRoot, "src"), { recursive: true });
+  await writeFile(path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md"), "# module design", "utf8");
+  await writeFile(
+    path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
+    createImplementationWorkplanDocument(),
+    "utf8",
+  );
+  await writeFile(path.join(workspaceRoot, "src", "existing.ts"), "export const value = 1;\n", "utf8");
+  await writeFile(path.join(workspaceRoot, "obsolete.txt"), "to be deleted\n", "utf8");
 }
 
 async function createTempDir(prefix: string): Promise<string> {

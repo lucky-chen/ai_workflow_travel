@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rm } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 
 import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
@@ -59,7 +59,6 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       launchRequirements: ["architecture_document", "module_descriptors"],
       runner: new ModuleStageRunner({
         llmExecutor: new ModulePipelineLlmExecutor(),
-        artifactStore,
         traceRecorder,
       }),
       nextStageId: "implementation_plan",
@@ -72,7 +71,6 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
           stageId: "requirement_interpretation",
           launchRequirements: ["requirement_document"],
           runner: new RequirementStageRunner({
-            artifactStore,
             traceRecorder,
             llmExecutor: new ApproveRequirementContractLlmExecutor(),
           }),
@@ -83,7 +81,6 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
           launchRequirements: ["requirement_document"],
           runner: new ArchitectureStageRunner({
             llmExecutor: new ArchitecturePipelineLlmExecutor(createArchitectureDocument()),
-            artifactStore,
             traceRecorder,
           }),
           nextStageId: "module_design",
@@ -95,7 +92,6 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
           launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],
           runner: new ImplementationPlanStageRunner({
             llmExecutor: new ImplementationPlanPipelineLlmExecutor(),
-            artifactStore,
             traceRecorder,
           }),
           nextStageId: "implementation_execution",
@@ -128,19 +124,17 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       implementationExecutionContext.inputArtifacts.current_step,
       JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
     );
-    const implementationPlanOutput = await artifactStore.getArtifact({
-      taskId,
-      stageId: "implementation_plan",
-      filePath: resolveImplementationPlanArtifactPath(workspaceRoot),
-    });
+    const implementationPlanOutput = await readFile(
+      `${workspaceRoot}/${resolveImplementationPlanArtifactPath(workspaceRoot)}`,
+      "utf8",
+    );
     assert.equal(implementationPlanOutput, createImplementationPlanDocument());
     const moduleDesignDocuments = JSON.parse(
       (
-        await artifactStore.getArtifact({
-          taskId,
-          stageId: "module_design",
-          filePath: resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
-        })
+        await readFile(
+          `${workspaceRoot}/${resolveModuleDesignArtifactPath(workspaceRoot, "Data")}`,
+          "utf8",
+        )
       ).length > 0
         ? JSON.stringify([
           resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
@@ -203,11 +197,10 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       params: undefined,
     });
     assert.equal(
-      await artifactStore.getArtifact({
-        taskId,
-        stageId: "architecture_design",
-        filePath: resolveArchitectureArtifactPath(workspaceRoot),
-      }),
+      await readFile(
+        `${workspaceRoot}/${resolveArchitectureArtifactPath(workspaceRoot)}`,
+        "utf8",
+      ),
       createArchitectureDocument(),
     );
     assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [

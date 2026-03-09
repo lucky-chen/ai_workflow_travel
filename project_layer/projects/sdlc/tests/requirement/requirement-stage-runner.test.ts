@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
@@ -10,27 +9,20 @@ import { RequirementStageRunner } from "../../src/workflow/stage-runners/require
 import { resolveRequirementArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runRequirementStageRunnerTests(): Promise<void> {
-  const storageRoot = await createTempDir("requirement-stage-runner-");
   const workspaceRoot = await createTempDir("requirement-workspace-");
-  const artifactStore = new ArtifactStoreService(storageRoot);
 
   try {
-    await testRequirementStageRunnerPersistsAcceptedDocument(artifactStore, workspaceRoot);
-    await testRequirementStageRunnerRejectStopsPersistence(artifactStore, workspaceRoot);
+    await testRequirementStageRunnerPersistsAcceptedDocument(workspaceRoot);
+    await testRequirementStageRunnerRejectStopsPersistence(workspaceRoot);
   } finally {
-    await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 
-async function testRequirementStageRunnerPersistsAcceptedDocument(
-  artifactStore: ArtifactStoreService,
-  workspaceRoot: string,
-): Promise<void> {
+async function testRequirementStageRunnerPersistsAcceptedDocument(workspaceRoot: string): Promise<void> {
   const traceRecorder = new InMemoryTraceRecorder();
   const changeGate = new InMemoryChangeGate();
   const runner = new RequirementStageRunner({
-    artifactStore,
     traceRecorder,
     changeGate,
     llmExecutor: new ApproveRequirementContractLlmExecutor(),
@@ -49,14 +41,6 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(
 
   assert.equal(output.artifacts.requirement_document, resolveRequirementArtifactPath(workspaceRoot));
   assert.equal(
-    await artifactStore.getArtifact({
-      taskId: "task-1",
-      stageId: "requirement_interpretation",
-      filePath: resolveRequirementArtifactPath(workspaceRoot),
-    }),
-    content,
-  );
-  assert.equal(
     await readFile(path.join(workspaceRoot, resolveRequirementArtifactPath(workspaceRoot)), "utf8"),
     content,
   );
@@ -68,12 +52,9 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(
   ]);
 }
 
-async function testRequirementStageRunnerRejectStopsPersistence(
-  artifactStore: ArtifactStoreService,
-  workspaceRoot: string,
-): Promise<void> {
+async function testRequirementStageRunnerRejectStopsPersistence(workspaceRoot: string): Promise<void> {
+  await rm(path.join(workspaceRoot, resolveRequirementArtifactPath(workspaceRoot)), { force: true });
   const runner = new RequirementStageRunner({
-    artifactStore,
     changeGate: new InMemoryChangeGate({
       decision: {
         action: "reject",
@@ -96,13 +77,7 @@ async function testRequirementStageRunnerRejectStopsPersistence(
     /Change review ended with action "reject"\./,
   );
 
-  await assert.rejects(
-    artifactStore.getArtifact({
-      taskId: "task-2",
-      stageId: "requirement_interpretation",
-      filePath: resolveRequirementArtifactPath(workspaceRoot),
-    }),
-  );
+  await assert.rejects(access(path.join(workspaceRoot, resolveRequirementArtifactPath(workspaceRoot))));
 }
 
 async function createTempDir(prefix: string): Promise<string> {

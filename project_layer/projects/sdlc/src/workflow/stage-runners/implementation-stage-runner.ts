@@ -1,4 +1,5 @@
 // Implementation stage runner: executes implementation generation, contract check, review, and final apply.
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
@@ -123,10 +124,6 @@ export class ImplementationStageRunner extends BaseStageRunner {
   }
 
   private async prepareExecutionContext(context: StageRunContext): Promise<StageRunContext> {
-    if (!this.artifactStore) {
-      throw new Error("ImplementationStageRunner requires an artifactStore for execution-context loading.");
-    }
-
     const implementationWorkplanRef = context.inputArtifacts.implementation_workplan.trim();
     const parsedWorkplan = this.parseStructuredWorkplan(context.inputArtifacts.parsed_implementation_workplan);
     const currentExecutionPointer = this.parseCurrentExecutionPointer(context.inputArtifacts.current_step);
@@ -189,42 +186,18 @@ export class ImplementationStageRunner extends BaseStageRunner {
   }
 
   private async persistAcceptedArtifacts(context: StageRunContext, changedFiles: ChangedFile[]): Promise<void> {
-    if (!this.artifactStore) {
-      throw new Error("ImplementationStageRunner requires an artifactStore for artifact persistence.");
-    }
-
-    const persistedFiles = changedFiles.filter((file) => file.operation !== "delete" && typeof file.content === "string");
-    await Promise.all(
-      persistedFiles.map((file) => this.artifactStore!.writeArtifact({
-        taskId: context.taskId,
-        stageId: context.stageId,
-        filePath: file.path,
-        content: file.content!,
-      })),
-    );
+    void context;
+    void changedFiles;
   }
 
   private async updateAcceptedImplementationWorkplan(
     context: StageRunContext,
     preparedStepContext: PreparedStepContext,
   ): Promise<void> {
-    if (!this.artifactStore) {
-      throw new Error("ImplementationStageRunner requires an artifactStore to update implementation workplan state.");
-    }
-
-    const workplanContent = await this.artifactStore.getArtifact({
-      taskId: context.taskId,
-      stageId: "implementation_plan",
-      filePath: preparedStepContext.workplanRef,
-    });
+    const workplanPath = path.join(context.workspaceRoot, preparedStepContext.workplanRef);
+    const workplanContent = await readFile(workplanPath, "utf8");
     const updatedContent = this.markAcceptedBatch(workplanContent, preparedStepContext.currentBatch.batchId);
-    await this.artifactStore.writeArtifact({
-      taskId: context.taskId,
-      stageId: "implementation_plan",
-      filePath: preparedStepContext.workplanRef,
-      content: updatedContent,
-      workspaceRoot: context.workspaceRoot,
-    });
+    await writeFile(workplanPath, updatedContent, "utf8");
   }
 
   private markAcceptedBatch(workplanContent: string, batchId: string): string {
@@ -369,11 +342,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     return Promise.all(
       moduleDesignRefs.map(async (filePath) => ({
         moduleName: path.basename(filePath, path.extname(filePath)),
-        content: await this.artifactStore!.getArtifact({
-          taskId: context.taskId,
-          stageId: "module_design",
-          filePath,
-        }),
+        content: await readFile(path.join(context.workspaceRoot, filePath), "utf8"),
       })),
     );
   }

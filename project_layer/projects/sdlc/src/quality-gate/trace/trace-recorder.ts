@@ -42,6 +42,7 @@ export class TraceService implements ITraceRecorder {
 
     return this.historyStore.writeRecord({
       category: event.category ?? "trace",
+      caller: event.caller,
       scope: {
         taskId: event.taskId,
         ...(event.stageId ? { stageId: event.stageId } : {}),
