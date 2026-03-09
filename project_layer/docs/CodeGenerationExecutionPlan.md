@@ -346,20 +346,29 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 8. Align Runtime Semantics With Design Docs
 
-- [ ] Step 8 is not started
-- [ ] Documents and modules in scope
-  - [ ] `Execution/ImplementationGenerator`
-  - [ ] `Contract/ImplementationContract`
-  - [ ] `Workflow/Pipeline`
-  - [ ] `Workflow/StageRunners`
-  - [ ] `QualityGate/ChangeGate`
-  - [ ] `QualityGate/Trace`
-  - [ ] `Interface/CLI`
-- [ ] Batch 1: runtime gap inventory
-  - [ ] compare implemented behavior with architecture documents
-  - [ ] compare implemented behavior with module design documents
-  - [ ] identify semantic mismatches in stage transitions and contracts
-  - [ ] record required code and document updates
+- [x] Step 8 is in progress
+- [x] Documents and modules in scope
+  - [x] `Execution/ImplementationGenerator`
+  - [x] `Contract/ImplementationContract`
+  - [x] `Workflow/Pipeline`
+  - [x] `Workflow/StageRunners`
+  - [x] `QualityGate/ChangeGate`
+  - [x] `QualityGate/Trace`
+  - [x] `Interface/CLI`
+- [x] Batch 1: runtime gap inventory
+  - [x] compare implemented behavior with architecture documents
+  - [x] compare implemented behavior with module design documents
+  - [x] identify semantic mismatches in stage transitions and contracts
+  - [x] record required code and document updates
+  - [x] Gap inventory summary
+    - [x] `Workflow/Pipeline` design doc is behind the current shared contract surface and runtime API naming (`triggerReason`, `inputArtifacts`, `params`, `TaskRuntimeStore`, and current `StageOutput` shape).
+    - [x] `PipelineService` is no longer fully generic because it contains built-in `module_design` continuation logic; Batch 2 needs to decide whether to generalize that continuation model or document it more explicitly in shared runner semantics.
+    - [x] `Workflow/Pipeline` design doc still says pipeline must not hard-code business-stage identifiers, which conflicts with the current `architecture_design -> module_design` special case in runtime code.
+    - [x] shared stage-runner behavior is mostly aligned for document stages, but `validation` remains a deliberate exception and `implementation_execution` now exposes runner-managed continuation state (`current_step`, completion signal) that is not yet reflected in `Pipeline.md`.
+    - [x] trace taxonomy is only partially standardized; current runtime emits `task_started`, `stage_started`, `contract_checked`, `gate_reviewed`, `artifact_persisted`, `validation_finished`, `stage_failed`, `task_finished`, and implementation-specific completion events without one consolidated contract source.
+    - [x] `QualityGate/ChangeGate` runtime supports review `comment`, but presenter and CLI-facing review workflow are still narrower than the CLI design doc examples.
+    - [x] `Interface/CLI` design doc and runtime implementation are materially misaligned: the design doc describes multi-input stage launches and review commands, while the current CLI still supports only a minimal `generate --module --input --workspace` path.
+    - [x] `Execution/ImplementationGenerator` and `Contract/ImplementationContract` were aligned in Step 6/7, so the remaining Step 8 work is mainly in shared workflow, trace, gate, and CLI semantics rather than implementation-stage internals.
 - [ ] Batch 2: pipeline and stage-runner alignment
   - [ ] align pipeline generic orchestration semantics
   - [ ] align stage-runner shared behavior model
@@ -426,7 +435,7 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 5 is in progress
 - [x] Step 6 is in progress
 - [x] Step 7 is completed
-- [ ] Step 8 is not started
+- [x] Step 8 is in progress
 
 ## 5. Verification Rule
 
