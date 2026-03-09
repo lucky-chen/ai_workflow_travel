@@ -219,6 +219,7 @@ async function testImplementationStageRunnerContractFailure(
   artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
   const failingGate = new InMemoryChangeGate();
   const failingContractChecker: IContractChecker = {
     async check(_context: StageRunContext, _output: StageOutput): Promise<{
@@ -238,6 +239,7 @@ async function testImplementationStageRunnerContractFailure(
     contractChecker: failingContractChecker,
     artifactStore,
     changeGate: failingGate,
+    traceRecorder,
     gitCommitter: new MockImplementationGitCommitter(),
   });
 
@@ -249,6 +251,13 @@ async function testImplementationStageRunnerContractFailure(
   );
 
   assert.equal(failingGate.getLastRequest(), undefined);
+  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+    "stage_started",
+    "contract_checked",
+  ]);
+  assert.deepEqual(traceRecorder.getEvents()[1]?.event.metadata, {
+    passed: "false",
+  });
   assert.equal(await readFile(path.join(workspaceRoot, "src", "generated.ts"), "utf8"), "export const generated = true;\n");
   assert.equal(await readFile(path.join(workspaceRoot, "src", "existing.ts"), "utf8"), "export const value = 2;\n");
   await assert.rejects(access(path.join(workspaceRoot, "obsolete.txt")));

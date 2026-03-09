@@ -477,12 +477,14 @@ async function testValidationFinalStageMarksTaskCompleted(workspaceRoot: string)
   });
 
   assert.equal(pipeline.getTaskStatus(taskId), "completed");
-  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+  const eventTypes = traceRecorder.getEvents().map((entry) => entry.event.eventType);
+  assert.deepEqual(eventTypes, [
     "task_started",
     "stage_started",
     "validation_finished",
     "task_finished",
   ]);
+  assert.equal(eventTypes.includes("contract_checked"), false);
 }
 
 async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promise<void> {
@@ -540,7 +542,8 @@ async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promi
   });
 
   assert.equal(pipeline.getTaskStatus(taskId), "failed");
-  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+  const eventTypes = traceRecorder.getEvents().map((entry) => entry.event.eventType);
+  assert.deepEqual(eventTypes, [
     "task_started",
     "stage_started",
     "validation_finished",
@@ -548,6 +551,7 @@ async function testValidationRejectMarksTaskFailed(workspaceRoot: string): Promi
     "stage_failed",
     "task_finished",
   ]);
+  assert.equal(eventTypes.includes("contract_checked"), false);
 }
 
 class MockValidationShellRunner extends ShellRunner {

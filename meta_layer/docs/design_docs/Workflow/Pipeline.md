@@ -161,6 +161,11 @@ Responsibilities:
 - persist stage output through bound `IArtifactStore` when storage binding is defined; otherwise skip
 - return `StageOutput`
 
+Contract boundary rule:
+
+- document stages and `implementation_execution` are contract-enabled stages and must emit `contract_checked`
+- `validation` is the workflow-owned exception and does not bind or emit a contract-check step
+
 ### 2.6 `LaunchValidator`
 
 Role:

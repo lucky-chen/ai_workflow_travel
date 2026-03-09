@@ -385,6 +385,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] centralize document-stage `contract_checked` and `artifact_persisted` trace helpers in `BaseStageRunner`
   - [x] align review presenter/session semantics with `changedPaths` and stable `reviewId` display
   - [x] define a shared `TraceEventType` taxonomy and move production trace emitters to shared constants
+  - [x] pin the contract boundary: `implementation_execution` emits failed `contract_checked`, while `validation` remains a no-contract exception
 - [ ] Batch 4: CLI and document synchronization
   - [ ] align CLI interaction semantics
   - [ ] update sequence diagrams affected by runtime changes

@@ -136,6 +136,7 @@ Stage exceptions:
 - `validation` is a workflow-owned special runner and does not reuse the shared generator/contract runner binding model.
 - `validation` reads `inputArtifacts["project_path"]` as its only required runtime input.
 - `validation` exposes only trace/store as shared workflow-facing injected collaborators.
+- `validation` does not emit `contract_checked`; contract-enabled runtime semantics stop at `implementation_execution`.
 
 ## 4. Runtime Responsibilities
 
