@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "sdlc": "bin/sdlc.js"
+  },
   "scripts": {
     "build": "npm --prefix ../agent_runtime run build && tsc -p tsconfig.json && sh ./scripts/copy-resources.sh",
     "typecheck": "npm --prefix ../agent_runtime run build && tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node dist/tests/run-tests.js",
-    "test:functional": "npm run build && node dist/tests/run-functional-tests.js",
+    "test:functional": "npm run build && node ../../../user_projects/hello-service/tests/hello-service-baseline.test.mjs",
     "test:llm:integration": "npm run build && node dist/tests/llm-executor.integration.js"
   },
   "dependencies": {

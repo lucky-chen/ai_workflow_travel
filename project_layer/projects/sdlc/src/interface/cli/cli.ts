@@ -5,6 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import { ImplementationPlanContract } from "../../contract/implementation-plan-contract/implementation-plan-contract.js";
 import { resolveBundledResourcesDirectory } from "../../shared/resources/resource-resolver.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 
@@ -184,10 +185,40 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           inputArtifacts: {},
         };
       case "implementation_execution":
-        throw new Error('CLI launch baseline does not yet support stage "implementation_execution".');
+        return this.buildImplementationExecutionLaunchRequest(workspaceRoot);
       default:
         throw new Error(`CLI launch baseline does not support stage "${stageId}".`);
     }
+  }
+
+  private async buildImplementationExecutionLaunchRequest(workspaceRoot: string): Promise<LaunchTaskRequest> {
+    const implementationWorkplan = await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/CodeGenerationExecutionPlan.md");
+    const implementationPlanContract = new ImplementationPlanContract();
+    const parsedWorkplan = implementationPlanContract.parseWorkPlan(implementationWorkplan);
+    const firstStep = parsedWorkplan.steps[0];
+    const firstBatch = firstStep?.batches[0];
+
+    if (!firstStep || !firstBatch) {
+      throw new Error("Implementation workplan must contain at least one step and one batch.");
+    }
+
+    return {
+      startStageId: "implementation_execution",
+      workspaceRoot,
+      inputArtifacts: {
+        implementation_workplan: "sdlc/docs/CodeGenerationExecutionPlan.md",
+        parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
+        current_step: JSON.stringify({
+          stepId: firstStep.stepId,
+          batchId: firstBatch.batchId,
+        }),
+        requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/requirements/Requirement.md"),
+        architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/architecture/TechnicalArchitecture.md"),
+        module_design_documents: JSON.stringify(
+          await this.readWorkspaceDirectoryPaths(workspaceRoot, "sdlc/docs/module_design"),
+        ),
+      },
+    };
   }
 
   private async readWorkspaceFile(workspaceRoot: string, relativePath: string): Promise<string> {
@@ -207,7 +238,21 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
 
   private async readWorkspaceDirectoryFiles(workspaceRoot: string, relativeDirectory: string): Promise<string[]> {
     const directoryPath = path.join(workspaceRoot, relativeDirectory);
+    const filePaths = await this.readWorkspaceDirectoryMarkdownEntries(directoryPath, relativeDirectory);
 
+    return Promise.all(
+      filePaths.map((entry) => readFile(path.join(directoryPath, entry), "utf8")),
+    );
+  }
+
+  private async readWorkspaceDirectoryPaths(workspaceRoot: string, relativeDirectory: string): Promise<string[]> {
+    const directoryPath = path.join(workspaceRoot, relativeDirectory);
+    const filePaths = await this.readWorkspaceDirectoryMarkdownEntries(directoryPath, relativeDirectory);
+
+    return filePaths.map((entry) => path.posix.join(relativeDirectory, entry));
+  }
+
+  private async readWorkspaceDirectoryMarkdownEntries(directoryPath: string, relativeDirectory: string): Promise<string[]> {
     let entries;
     try {
       entries = await readdir(directoryPath, { withFileTypes: true });
@@ -228,9 +273,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
       throw new Error(`Missing required markdown files in workspace directory: ${relativeDirectory}`);
     }
 
-    return Promise.all(
-      fileEntries.map((entry) => readFile(path.join(directoryPath, entry.name), "utf8")),
-    );
+    return fileEntries.map((entry) => entry.name);
   }
 }
 

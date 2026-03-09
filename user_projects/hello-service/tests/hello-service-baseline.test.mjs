@@ -1,0 +1,202 @@
+import assert from "node:assert/strict";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
+
+const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const projectRoot = path.resolve(workspaceRoot, "..", "..");
+const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
+const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
+const artifactRoot = path.join(workspaceRoot, ".artifact-store");
+const historyRoot = path.join(workspaceRoot, ".trace-history-store");
+const taskId = "hello-service-task";
+
+await resetWorkspace();
+await runBaseline();
+process.stdout.write("All functional tests passed.\n");
+
+async function runBaseline() {
+  await runCli(["init", "--workspace", workspaceRoot]);
+
+  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
+  await writeFile(
+    path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"),
+    createHelloServiceRequirementDocument(),
+    "utf8",
+  );
+
+  await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot]);
+  await runCli(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot]);
+  await runCli(["generate", "--stage", "module_design", "--workspace", workspaceRoot, "--target-module", "Workflow"]);
+  await runCli(["generate", "--stage", "implementation_plan", "--workspace", workspaceRoot]);
+  await runCli(["generate", "--stage", "implementation_execution", "--workspace", workspaceRoot]);
+  await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot]);
+
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"), "utf8"),
+    createHelloServiceRequirementDocument(),
+  );
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "sdlc", "docs", "architecture", "TechnicalArchitecture.md"), "utf8"),
+    createHelloServiceArchitectureDocument(),
+  );
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md"), "utf8"),
+    createHelloServiceModuleDesignDocument(),
+  );
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "sdlc", "docs", "CodeGenerationExecutionPlan.md"), "utf8"),
+    createHelloServiceImplementationPlanDocument(),
+  );
+  assert.equal(
+    await readFile(path.join(workspaceRoot, "src", "index.ts"), "utf8"),
+    'export function hello(): string {\n  return "hello-service";\n}\n',
+  );
+  await access(path.join(workspaceRoot, "sdlc", "trace", `${taskId}.json`));
+
+  const traceRecords = JSON.parse(
+    await readFile(path.join(workspaceRoot, "sdlc", "trace", `${taskId}.json`), "utf8"),
+  );
+  assert.deepEqual(
+    new Set(traceRecords.map((entry) => entry.category)),
+    new Set(["trace", "contract", "review", "artifact"]),
+  );
+}
+
+async function runCli(args) {
+  const child = spawn(process.execPath, [cliEntry, ...args], {
+    cwd: sdlcProjectRoot,
+    env: {
+      ...process.env,
+      SDLC_TEST_SCENARIO: "fixed_workspace_baseline",
+      SDLC_TEST_TASK_ID: taskId,
+      SDLC_TEST_SERVICE_NAME: "hello-service",
+      SDLC_WORKSPACE_ROOT: workspaceRoot,
+      SDLC_ARTIFACT_ROOT: artifactRoot,
+      SDLC_HISTORY_ROOT: historyRoot,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (chunk) => {
+    stdout += String(chunk);
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += String(chunk);
+  });
+
+  const exitCode = await new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
+
+  assert.equal(exitCode, 0, `CLI failed.\nstdout:\n${stdout}\nstderr:\n${stderr}`);
+}
+
+async function resetWorkspace() {
+  await rm(artifactRoot, { recursive: true, force: true });
+  await rm(historyRoot, { recursive: true, force: true });
+  await rm(path.join(workspaceRoot, "sdlc"), { recursive: true, force: true });
+  await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
+}
+
+function createHelloServiceRequirementDocument() {
+  return [
+    "# 1. Background",
+    "hello-service is a minimal service used to verify the SDLC baseline flow.",
+    "",
+    "# 2. User Scenarios",
+    "Users need one simple endpoint-level service example.",
+    "",
+    "# 3. Product Goals",
+    "- generate one minimal service implementation",
+    "",
+    "# 4. Core Problems and Product Abilities",
+    "- provide one stable hello-service baseline for verification",
+    "",
+    "# 5. User Workflow",
+    "- initialize workspace",
+    "- generate design artifacts",
+    "- generate code",
+    "- validate workspace",
+    "",
+    "# 6. Inputs and Outputs",
+    "- input: hello-service requirement",
+    "- output: docs and src baseline",
+    "",
+    "# 7 Scope and Non-Goals",
+    "- no production deployment in this verification step",
+    "",
+    "# 8. Success Criteria",
+    "- documents and code are generated into the expected workspace layout",
+    "",
+    "# 9. Risks",
+    "- baseline verification may expose path mismatches",
+    "",
+    "# 10. Constraints",
+    "- keep the service intentionally minimal",
+  ].join("\n");
+}
+
+function createHelloServiceArchitectureDocument() {
+  return [
+    "# 1. System Overview",
+    "hello-service uses a minimal function export as the service boundary.",
+    "",
+    "# 2. Runtime Flow",
+    "The service exposes one hello function returning a stable string for hello-service.",
+    "",
+    "# 3. Module Design",
+    "- Workflow",
+    "",
+    "# 4. Data and State",
+    "No persistent state is required.",
+    "",
+    "# 5. Validation Strategy",
+    "Validate that the generated file exists and exports the expected function.",
+  ].join("\n");
+}
+
+function createHelloServiceModuleDesignDocument() {
+  return [
+    "# 1. Module Overview",
+    "Workflow coordinates the hello-service generation baseline.",
+    "",
+    "# 2. Responsibilities",
+    "- define the hello function contract",
+    "- keep implementation minimal",
+    "",
+    "# 3. Interfaces",
+    "- export function hello(): string",
+    "",
+    "# 4. Dependencies",
+    "- no external dependencies",
+    "",
+    "# 5. Risks and Constraints",
+    "- keep the output intentionally minimal for verification",
+  ].join("\n");
+}
+
+function createHelloServiceImplementationPlanDocument() {
+  return [
+    "# Code Generation Execution Plan",
+    "",
+    "## 1. Goal",
+    "- deliver the hello-service implementation baseline",
+    "",
+    "## 2. Scope",
+    "- Workflow",
+    "",
+    "### Step 1. Deliver Baseline Service",
+    "- [ ] `Step 1 is not started`",
+    "  - [ ] `Workflow`",
+    "- [ ] Batch 1: Create source file",
+    "  - [ ] add src/index.ts with hello export",
+    "",
+    "## 4. Implementation Execution State",
+    "- [x] batch-1",
+  ].join("\n");
+}

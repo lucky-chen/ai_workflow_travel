@@ -24,7 +24,7 @@ export async function runCliTests(): Promise<void> {
     await testCliInitCopiesResources(workspaceRoot);
     await testRequestMapperRequiresStage();
     await testModuleDesignRequiresTargetModule(workspaceRoot);
-    await testImplementationExecutionIsNotSupported(workspaceRoot);
+    await testImplementationExecutionRequiresWorkplan(workspaceRoot);
     await testReviewInteractionApply();
     await testReviewInteractionReject();
     await testReviewInteractionComment();
@@ -207,7 +207,7 @@ async function testModuleDesignRequiresTargetModule(workspaceRoot: string): Prom
   );
 }
 
-async function testImplementationExecutionIsNotSupported(workspaceRoot: string): Promise<void> {
+async function testImplementationExecutionRequiresWorkplan(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   await assert.rejects(
     async () =>
@@ -218,7 +218,7 @@ async function testImplementationExecutionIsNotSupported(workspaceRoot: string):
           workspace: workspaceRoot,
         },
       }),
-    /CLI launch baseline does not yet support stage "implementation_execution"./,
+    /Missing required workspace file: sdlc\/docs\/CodeGenerationExecutionPlan\.md/,
   );
 }
 
