@@ -271,15 +271,16 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] test-run result to `ContractCheckResult` mapping
   - [x] align contract naming and public API with the implementation-contract design doc
   - [x] keep `ImplementationContract.check(...)` scoped to generated-result validation only
-- [ ] Batch 3: implementation execution-context loading
+- [x] Batch 3: implementation execution-context loading
   - [x] validate `implementation_workplan` and `current_step` before generator execution in `ImplementationStageRunner.run(...)`
-  - [ ] parse accepted `implementation_workplan` inside `ImplementationStageRunner`
-  - [ ] assemble `current_step` execution context inside `ImplementationStageRunner`
-  - [ ] load upstream `requirement_document` and `architecture_document` into implementation generation input
-  - [ ] load all relevant `module_design_documents` for the current execution step
-  - [ ] pass runner-prepared step context into `ImplementationGenerator`
+  - [x] parse accepted `implementation_workplan` inside `ImplementationStageRunner`
+  - [x] assemble `current_step` execution context inside `ImplementationStageRunner`
+  - [x] pass the entire accepted `implementation_workplan` into `ImplementationGenerator`
+  - [x] load upstream `requirement_document` and `architecture_document` into implementation generation input
+  - [x] load all relevant `module_design_documents` for the current execution step
+  - [x] pass runner-prepared step context into `ImplementationGenerator`
   - [x] extend tests for explicit workplan-step context before generator execution
-  - [ ] extend tests for execution-context loading and prompt input completeness
+  - [x] extend tests for execution-context loading and prompt input completeness
 - [ ] Batch 4: execution-environment contract validation
   - [ ] make `ImplementationContract` validate implementation-execution generated changes in a prepared execution environment
   - [ ] apply generated changes into prepared validation workspace before test execution

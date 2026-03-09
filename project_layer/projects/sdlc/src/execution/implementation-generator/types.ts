@@ -2,6 +2,7 @@
 import type { ChangedFile, ProjectFile } from "../../shared/types/common.js";
 
 export interface ModuleDesignDoc {
+  moduleName: string;
   content: string;
 }
 
@@ -10,8 +11,30 @@ export interface ProjectContext {
   relevantFiles: ProjectFile[];
 }
 
+export interface ImplementationWorkPlanInput {
+  ref: string;
+  content: string;
+}
+
+export interface CurrentStepInput {
+  stepId: string;
+  raw: string;
+}
+
+export interface UpstreamImplementationContext {
+  requirementDocument: string;
+  architectureDocument: string;
+  moduleDesignDocuments: ModuleDesignDoc[];
+}
+
+export interface PreparedStepContext {
+  workplan: ImplementationWorkPlanInput;
+  currentStep: CurrentStepInput;
+  upstreamContext: UpstreamImplementationContext;
+}
+
 export interface PromptBuildInput {
-  moduleDesignDoc: ModuleDesignDoc;
+  preparedStepContext: PreparedStepContext;
   projectContext: ProjectContext;
 }
 

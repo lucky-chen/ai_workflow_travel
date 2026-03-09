@@ -12,7 +12,9 @@ export class ImplementationPromptBuilder {
         userPrompt: JSON.stringify(
           {
             target: "implementation",
-            moduleDesignDoc: input.moduleDesignDoc,
+            workplan: input.preparedStepContext.workplan,
+            currentStep: input.preparedStepContext.currentStep,
+            upstreamContext: input.preparedStepContext.upstreamContext,
             projectContext: {
               rootPath: input.projectContext.rootPath,
               relevantFiles: input.projectContext.relevantFiles,

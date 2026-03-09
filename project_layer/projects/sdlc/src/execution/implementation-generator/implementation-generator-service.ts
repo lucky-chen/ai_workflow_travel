@@ -8,8 +8,8 @@ import type {
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
 import { ChangeApplier } from "./change-applier.js";
+import { ExecutionContextLoader } from "./execution-context-loader.js";
 import { ImplementationPromptBuilder } from "./implementation-prompt-builder.js";
-import { ModuleDesignLoader } from "./module-design-loader.js";
 import { ProjectContextLoader } from "./project-context-loader.js";
 import { StageOutputBuilder } from "./stage-output-builder.js";
 
@@ -19,7 +19,7 @@ export class ImplementationGeneratorService implements IStageGenerator {
     llmExecutor: ILlmExecutor,
   ): IStageGenerator<StageOutput<ImplementationStageArtifacts>> {
     return new ImplementationGeneratorService(
-      new ModuleDesignLoader(artifactStore),
+      new ExecutionContextLoader(),
       new ProjectContextLoader(),
       new ImplementationPromptBuilder(),
       llmExecutor,
@@ -29,7 +29,7 @@ export class ImplementationGeneratorService implements IStageGenerator {
   }
 
   constructor(
-    private readonly moduleDesignLoader: ModuleDesignLoader,
+    private readonly executionContextLoader: ExecutionContextLoader,
     private readonly projectContextLoader: ProjectContextLoader,
     private readonly promptBuilder: ImplementationPromptBuilder,
     private readonly llmExecutor: ILlmExecutor,
@@ -38,9 +38,9 @@ export class ImplementationGeneratorService implements IStageGenerator {
   ) {}
 
   async run(context: StageRunContext): Promise<StageOutput<ImplementationStageArtifacts>> {
-    const moduleDesignDoc = await this.moduleDesignLoader.loadModuleDesign(context);
+    const preparedStepContext = this.executionContextLoader.load(context.inputArtifacts);
     const projectContext = await this.projectContextLoader.loadProjectContext(context);
-    const request = this.promptBuilder.build({ moduleDesignDoc, projectContext });
+    const request = this.promptBuilder.build({ preparedStepContext, projectContext });
     const llmResult = await this.llmExecutor.execute(request);
     const generatedChanges = this.changeApplier.parseGeneratedChanges(llmResult);
     return this.outputBuilder.build(context.stageId, generatedChanges);

@@ -28,6 +28,7 @@ export async function runImplementationGeneratorTests(): Promise<void> {
 
   try {
     await testImplementationGeneratorProducesPlannedChanges(artifactStore, workspaceRoot);
+    await testImplementationGeneratorRequiresPreparedStepContext(artifactStore, workspaceRoot);
     await testProjectContextLoaderIgnoresDistFiles(workspaceRoot);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
@@ -39,27 +40,28 @@ async function testImplementationGeneratorProducesPlannedChanges(
   artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
+  const llmExecutor = new MockLlmExecutor({
+    summary: "Applied implementation updates.",
+    changed_files: [
+      {
+        path: "src/generated.ts",
+        operation: "create",
+        content: "export const generated = true;\n",
+      },
+      {
+        path: "src/existing.ts",
+        operation: "update",
+        content: "export const value = 2;\n",
+      },
+      {
+        path: "obsolete.txt",
+        operation: "delete",
+      },
+    ],
+  });
   const generator = new ImplementationGenerator({
     artifactStore,
-    llmExecutor: new MockLlmExecutor({
-      summary: "Applied implementation updates.",
-      changed_files: [
-        {
-          path: "src/generated.ts",
-          operation: "create",
-          content: "export const generated = true;\n",
-        },
-        {
-          path: "src/existing.ts",
-          operation: "update",
-          content: "export const value = 2;\n",
-        },
-        {
-          path: "obsolete.txt",
-          operation: "delete",
-        },
-      ],
-    }),
+    llmExecutor,
   });
 
   const output = await generator.run({
@@ -68,10 +70,26 @@ async function testImplementationGeneratorProducesPlannedChanges(
     attempt: 1,
     workspaceRoot,
     inputArtifacts: {
-      moduleDesign: "module-design.md",
-    },
-    params: {
-      moduleDesignStageId: "module-design",
+      prepared_step_context: JSON.stringify({
+        workplan: {
+          ref: "plans/implementation/ImplementationWorkPlan.md",
+          content: "# plan",
+        },
+        currentStep: {
+          stepId: "step-1",
+          raw: "step-1",
+        },
+        upstreamContext: {
+          requirementDocument: "# requirement",
+          architectureDocument: "# architecture",
+          moduleDesignDocuments: [
+            {
+              moduleName: "module-design",
+              content: "# module design",
+            },
+          ],
+        },
+      }),
     },
   });
 
@@ -102,6 +120,50 @@ async function testImplementationGeneratorProducesPlannedChanges(
     "export const value = 1;\n",
   );
   assert.equal(await readFile(path.join(workspaceRoot, "obsolete.txt"), "utf8"), "to be deleted\n");
+
+  const requestPayload = JSON.parse(llmExecutor.getLastRequest()!.prompt.userPrompt) as {
+    workplan: { ref: string; content: string };
+    currentStep: { stepId: string };
+    upstreamContext: {
+      requirementDocument: string;
+      architectureDocument: string;
+      moduleDesignDocuments: Array<{ moduleName: string; content: string }>;
+    };
+  };
+  assert.equal(requestPayload.workplan.ref, "plans/implementation/ImplementationWorkPlan.md");
+  assert.equal(requestPayload.currentStep.stepId, "step-1");
+  assert.equal(requestPayload.upstreamContext.requirementDocument, "# requirement");
+  assert.equal(requestPayload.upstreamContext.architectureDocument, "# architecture");
+  assert.deepEqual(requestPayload.upstreamContext.moduleDesignDocuments, [
+    {
+      moduleName: "module-design",
+      content: "# module design",
+    },
+  ]);
+}
+
+async function testImplementationGeneratorRequiresPreparedStepContext(
+  artifactStore: ArtifactStoreService,
+  workspaceRoot: string,
+): Promise<void> {
+  const generator = new ImplementationGenerator({
+    artifactStore,
+    llmExecutor: new MockLlmExecutor({
+      summary: "unused",
+      changed_files: [],
+    }),
+  });
+
+  await assert.rejects(
+    generator.run({
+      taskId: "task-2",
+      stageId: "implementation",
+      attempt: 1,
+      workspaceRoot,
+      inputArtifacts: {},
+    }),
+    /Missing required input artifact "prepared_step_context"\./,
+  );
 }
 
 async function testProjectContextLoaderIgnoresDistFiles(workspaceRoot: string): Promise<void> {
@@ -125,12 +187,19 @@ async function createTempDir(prefix: string): Promise<string> {
 }
 
 class MockLlmExecutor implements ILlmExecutor {
+  private lastRequest?: LlmExecutionRequest;
+
   constructor(private readonly result: Record<string, unknown>) {}
 
-  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    this.lastRequest = request;
     return {
       content: JSON.stringify(this.result),
       responseFormat: "json",
     };
+  }
+
+  getLastRequest(): LlmExecutionRequest | undefined {
+    return this.lastRequest;
   }
 }

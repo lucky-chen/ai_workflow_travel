@@ -18,22 +18,43 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
 
   await artifactStore.writeArtifact({
     taskId: "task-1",
-    stageId: "module-design",
+    stageId: "module_design",
     filePath: "module-design.md",
     content: "# module design",
   });
   await artifactStore.writeArtifact({
     taskId: "task-2",
-    stageId: "module-design",
+    stageId: "module_design",
     filePath: "module-design.md",
     content: "# module design",
   });
   await artifactStore.writeArtifact({
     taskId: "task-3",
-    stageId: "module-design",
+    stageId: "module_design",
     filePath: "module-design.md",
     content: "# module design",
   });
+  await artifactStore.writeArtifact({
+    taskId: "task-4",
+    stageId: "module_design",
+    filePath: "module-design.md",
+    content: "# module design",
+  });
+  await artifactStore.writeArtifact({
+    taskId: "task-5",
+    stageId: "module_design",
+    filePath: "module-design.md",
+    content: "# module design",
+  });
+
+  for (const taskId of ["task-1", "task-2", "task-3", "task-4", "task-5"]) {
+    await artifactStore.writeArtifact({
+      taskId,
+      stageId: "implementation_plan",
+      filePath: "plans/implementation/ImplementationWorkPlan.md",
+      content: "# Implementation Workplan\n\n## Step 1\n- id: step-1\n",
+    });
+  }
 
   await mkdir(path.join(workspaceRoot, "src"), { recursive: true });
   await writeFile(path.join(workspaceRoot, "src", "existing.ts"), "export const value = 1;\n", "utf8");
@@ -43,10 +64,15 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
     const generator = createGenerator(artifactStore);
     const contractChecker = ImplementationContract.create();
 
-    await testImplementationStageRunnerApply(generator, contractChecker, workspaceRoot);
-    await testImplementationStageRunnerReject(generator, contractChecker, workspaceRoot);
-    await testImplementationStageRunnerContractFailure(generator, workspaceRoot);
-    await testImplementationStageRunnerRequiresWorkplanAndCurrentStep(generator, contractChecker, workspaceRoot);
+    await testImplementationStageRunnerApply(generator, contractChecker, artifactStore, workspaceRoot);
+    await testImplementationStageRunnerReject(generator, contractChecker, artifactStore, workspaceRoot);
+    await testImplementationStageRunnerContractFailure(generator, artifactStore, workspaceRoot);
+    await testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
+      generator,
+      contractChecker,
+      artifactStore,
+      workspaceRoot,
+    );
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -56,6 +82,7 @@ export async function runImplementationStageRunnerTests(): Promise<void> {
 async function testImplementationStageRunnerApply(
   generator: ImplementationGenerator,
   contractChecker: IContractChecker,
+  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
   const applyGate = new InMemoryChangeGate();
@@ -63,6 +90,7 @@ async function testImplementationStageRunnerApply(
   const runner = new ImplementationStageRunner({
     generator,
     contractChecker,
+    artifactStore,
     changeGate: applyGate,
     traceRecorder,
   });
@@ -86,6 +114,7 @@ async function testImplementationStageRunnerApply(
 async function testImplementationStageRunnerReject(
   generator: ImplementationGenerator,
   contractChecker: IContractChecker,
+  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
   const rejectGate = new InMemoryChangeGate({
@@ -97,6 +126,7 @@ async function testImplementationStageRunnerReject(
   const rejectRunner = new ImplementationStageRunner({
     generator,
     contractChecker,
+    artifactStore,
     changeGate: rejectGate,
   });
 
@@ -114,6 +144,7 @@ async function testImplementationStageRunnerReject(
 
 async function testImplementationStageRunnerContractFailure(
   generator: ImplementationGenerator,
+  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
   const failingGate = new InMemoryChangeGate();
@@ -133,6 +164,7 @@ async function testImplementationStageRunnerContractFailure(
   const failingRunner = new ImplementationStageRunner({
     generator,
     contractChecker: failingContractChecker,
+    artifactStore,
     changeGate: failingGate,
   });
 
@@ -150,11 +182,13 @@ async function testImplementationStageRunnerContractFailure(
 async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
   generator: ImplementationGenerator,
   contractChecker: IContractChecker,
+  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
   const runner = new ImplementationStageRunner({
     generator,
     contractChecker,
+    artifactStore,
   });
 
   await assert.rejects(
@@ -196,7 +230,9 @@ function createRunContext(
   overrides?: Partial<Record<"implementation_workplan" | "current_step", string | undefined>>,
 ): StageRunContext {
   const inputArtifacts: Record<string, string> = {
-    moduleDesign: "module-design.md",
+    module_design_documents: JSON.stringify(["module-design.md"]),
+    requirement_document: "# requirement",
+    architecture_document: "# architecture",
     implementation_workplan: "plans/implementation/ImplementationWorkPlan.md",
     current_step: "step-1",
   };
@@ -224,7 +260,6 @@ function createRunContext(
     workspaceRoot,
     inputArtifacts,
     params: {
-      moduleDesignStageId: "module-design",
       testCommand: 'node -e "process.exit(0)"',
     },
   };
