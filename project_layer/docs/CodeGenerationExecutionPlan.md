@@ -308,12 +308,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] fully align implementation-plan and implementation-execution semantics with design docs
   - [x] extend tests for comment-aware review outcomes
 - [ ] Batch 7: implementation-execution design and runtime alignment cleanup
-  - [ ] align `Execution/ImplementationGenerator` design doc with the current implementation transition state
-  - [ ] align `Contract/ImplementationContract` design doc with the current implementation transition state
-  - [ ] keep `ImplementationStageRunner` public input and transition surface versionable while using `SDK/AgentRuntime` as a V1 single-turn backbone
-  - [ ] remove outdated single-module assumptions from docs and runtime naming
-  - [ ] keep workflow-level multi-step continuation inside `ImplementationStageRunner` for V1 even when `SDK/AgentRuntime` is used underneath
-  - [ ] update this execution plan after each completed implementation batch
+  - [x] align `Execution/ImplementationGenerator` design doc with the current implementation transition state
+  - [x] align `Contract/ImplementationContract` design doc with the current implementation transition state
+  - [x] keep `ImplementationStageRunner` public input and transition surface versionable while using `SDK/AgentRuntime` as a V1 single-turn backbone
+  - [x] remove outdated single-module assumptions from docs and runtime naming
+  - [x] keep workflow-level multi-step continuation inside `ImplementationStageRunner` for V1 even when `SDK/AgentRuntime` is used underneath
+  - [x] update this execution plan after each completed implementation batch
 
 ### Step 7. Deliver `validation` Stage
 

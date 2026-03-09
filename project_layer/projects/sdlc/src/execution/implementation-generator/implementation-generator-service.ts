@@ -1,5 +1,4 @@
 // Implementation generator service: orchestrates loading, prompting, execution, and output shaping.
-import type { IArtifactStore } from "../../shared/contracts/pipeline.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import type {
   IStageGenerator,
@@ -15,7 +14,6 @@ import { StageOutputBuilder } from "./stage-output-builder.js";
 
 export class ImplementationGeneratorService implements IStageGenerator {
   static create(
-    artifactStore: IArtifactStore,
     llmExecutor: ILlmExecutor,
   ): IStageGenerator<StageOutput<ImplementationStageArtifacts>> {
     return new ImplementationGeneratorService(

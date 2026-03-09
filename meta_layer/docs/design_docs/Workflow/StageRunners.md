@@ -179,9 +179,10 @@ Persistence mapping rule for document stages:
 - `implementation_execution`
   - `ImplementationStageRunner` owns implementation-workplan parsing and `current_step` assembly
   - `ImplementationStageRunner` may use `SDK/AgentRuntime` as the V1 execution backbone with single-turn session semantics only
-  - read `StageOutput.artifacts.generatedFiles`
-  - persist each generated file to its `generatedFiles[*].path`
-  - use `inputArtifacts["current_step"]` plus review result for next-step transition
+  - read `StageOutput.artifacts.changedFiles`
+  - persist each accepted create/update file to its `changedFiles[*].path`
+  - read `inputArtifacts["current_step"]` as `{ stepId, batchId }`
+  - use `inputArtifacts["current_step"]` plus review result to return either the next `{ stepId, batchId }` or an execution-completed signal
 - `validation`
   - read `inputArtifacts["project_path"]`
   - do not persist new artifacts by default
@@ -194,5 +195,6 @@ Dependency rule:
 - `ImplementationStageRunner` should keep its public runner-facing input and state-transition surface versionable so later AgentRuntime-based session continuation can be added without redefining the workflow stage API
 - `ImplementationStageRunner` V1 may depend on `SDK/AgentRuntime`, but only through single-turn session semantics
 - workflow-level multi-step continuation remains runner-managed in V1 even when `SDK/AgentRuntime` is used underneath
+- `ImplementationStageRunner` V1 keeps `current_step` and completion-state signaling in the workflow surface even when the internal execution backbone changes
 - later versions may migrate multi-turn continuation from `ImplementationStageRunner` into `SDK/AgentRuntime`
 - `ValidationStageRunner` is the exception: it directly implements `IStageRunner` and keeps only shared trace/store injection in its public design surface

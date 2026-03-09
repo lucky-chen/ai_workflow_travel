@@ -81,7 +81,7 @@ Role:
 
 Responsibilities:
 
-- transform the module design document and target engineering context into implementation-generation input
+- transform the accepted current workplan batch, upstream design context, and target engineering context into implementation-generation input
 - make the generation target explicit as code and resource updates
 - produce a stable `LlmExecutionRequest` for this stage
 
@@ -224,9 +224,7 @@ Runtime input rule:
 
 ```ts
 interface PromptBuildInput {
-  workplan: ImplementationWorkPlan
-  current_batch: ImplementationWorkPlanBatch
-  upstream_context: UpstreamImplementationContext
+  prepared_step_context: PreparedStepContext
   project_context: ProjectContext
 }
 
@@ -247,7 +245,7 @@ interface LlmExecutionRequest {
 Prompt construction rules:
 
 - `system_prompt` defines implementation role, current-batch boundary, and output structure.
-- `user_prompt` contains the accepted workplan, current batch, required upstream context documents, and relevant project context.
+- `user_prompt` contains the accepted workplan reference, current batch resolved from `current_step`, required upstream context documents, and relevant project context.
 - the prompt builder should require the llm to return explicit generated file content instead of free-form implementation advice.
 - the prompt builder should make generated code files and resource files distinguishable in the returned result.
 
@@ -262,6 +260,12 @@ interface ILlmExecutor {
   execute(request: LlmExecutionRequest): Promise<LlmExecutionResult>
 }
 ```
+
+Returned result rule:
+
+- the llm returns `changed_files`
+- `StageOutputBuilder` converts `changed_files` into `StageOutput.artifacts.changedFiles`
+- `ImplementationGenerator` does not expose a separate `generatedFiles` runtime field in V1
 
 LLM invocation rules:
 

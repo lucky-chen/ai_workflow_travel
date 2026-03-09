@@ -394,8 +394,8 @@ async function testImplementationStageRunnerWaitReviewCarriesComment(
 }
 
 function createGenerator(artifactStore: ArtifactStoreService): ImplementationGenerator {
+  void artifactStore;
   return new ImplementationGenerator({
-    artifactStore,
     llmExecutor: new MockLlmExecutor({
       summary: "Planned implementation updates.",
       changed_files: [

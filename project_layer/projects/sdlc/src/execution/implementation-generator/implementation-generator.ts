@@ -1,5 +1,4 @@
 // Implementation generator module: public entry for implementation generation.
-import type { IArtifactStore } from "../../shared/contracts/pipeline.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import type {
   IStageGenerator,
@@ -10,7 +9,6 @@ import type {
 import { ImplementationGeneratorService } from "./implementation-generator-service.js";
 
 export interface ImplementationGeneratorDependencies {
-  artifactStore: IArtifactStore;
   llmExecutor: ILlmExecutor;
 }
 
@@ -20,7 +18,6 @@ export class ImplementationGenerator implements IStageGenerator<StageOutput<Impl
 
   constructor(dependencies: ImplementationGeneratorDependencies) {
     this.generator = ImplementationGeneratorService.create(
-      dependencies.artifactStore,
       dependencies.llmExecutor,
     );
   }

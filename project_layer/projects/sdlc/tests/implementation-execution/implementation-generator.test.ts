@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
 import { ImplementationGenerator } from "../../src/execution/implementation-generator/implementation-generator.js";
 import { ProjectContextLoader } from "../../src/execution/implementation-generator/project-context-loader.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
@@ -10,16 +9,7 @@ import type { ProjectFile } from "../../src/shared/types/common.js";
 import type { ImplementationWorkPlan } from "../../src/shared/contracts/implementation-workplan.js";
 
 export async function runImplementationGeneratorTests(): Promise<void> {
-  const storageRoot = await createTempDir("implementation-generator-");
   const workspaceRoot = await createTempDir("workspace-");
-  const artifactStore = new ArtifactStoreService(storageRoot);
-
-  await artifactStore.writeArtifact({
-    taskId: "task-1",
-    stageId: "module-design",
-    filePath: "module-design.md",
-    content: "# module design",
-  });
 
   await mkdir(path.join(workspaceRoot, "src"), { recursive: true });
   await writeFile(path.join(workspaceRoot, "src", "existing.ts"), "export const value = 1;\n", "utf8");
@@ -28,17 +18,15 @@ export async function runImplementationGeneratorTests(): Promise<void> {
   await writeFile(path.join(workspaceRoot, "dist", "ignored.txt"), "ignored\n", "utf8");
 
   try {
-    await testImplementationGeneratorProducesPlannedChanges(artifactStore, workspaceRoot);
-    await testImplementationGeneratorRequiresPreparedStepContext(artifactStore, workspaceRoot);
+    await testImplementationGeneratorProducesPlannedChanges(workspaceRoot);
+    await testImplementationGeneratorRequiresPreparedStepContext(workspaceRoot);
     await testProjectContextLoaderIgnoresDistFiles(workspaceRoot);
   } finally {
-    await rm(storageRoot, { recursive: true, force: true });
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 
 async function testImplementationGeneratorProducesPlannedChanges(
-  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
   const llmExecutor = new MockLlmExecutor({
@@ -61,7 +49,6 @@ async function testImplementationGeneratorProducesPlannedChanges(
     ],
   });
   const generator = new ImplementationGenerator({
-    artifactStore,
     llmExecutor,
   });
 
@@ -167,11 +154,9 @@ function createParsedWorkplan(): ImplementationWorkPlan {
 }
 
 async function testImplementationGeneratorRequiresPreparedStepContext(
-  artifactStore: ArtifactStoreService,
   workspaceRoot: string,
 ): Promise<void> {
   const generator = new ImplementationGenerator({
-    artifactStore,
     llmExecutor: new MockLlmExecutor({
       summary: "unused",
       changed_files: [],
