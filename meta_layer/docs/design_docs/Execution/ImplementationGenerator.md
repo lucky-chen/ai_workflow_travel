@@ -174,20 +174,6 @@ interface ModuleDesignDoc {
   content: string
 }
 
-interface ImplementationWorkPlanStep {
-  stepId: string
-  title: string
-  goal: string
-}
-
-interface ImplementationWorkPlanInput {
-  content: string
-}
-
-interface CurrentStepInput {
-  stepId: string
-}
-
 interface UpstreamImplementationContext {
   requirement_document: string
   architecture_document: string
@@ -210,7 +196,7 @@ interface ProjectFile {
 Implementation generation input source:
 
 - `StageRunContext.inputArtifacts["implementation_workplan"]`
-- `StageRunContext.inputArtifacts["current_step"]`
+- `StageRunContext.inputArtifacts["current_batch"]`
 - `StageRunContext.inputArtifacts["requirement_document"]`
 - `StageRunContext.inputArtifacts["architecture_document"]`
 - `StageRunContext.inputArtifacts["module_design_documents"]`
@@ -218,15 +204,27 @@ Implementation generation input source:
 Expected input shape:
 
 ```ts
+// Defined by Execution/ImplementationPlanGenerator design.
+interface ImplementationWorkPlan
+interface ImplementationWorkPlanBatch
+
 type ModuleDesignDocumentsInput = ModuleDesignDoc[]
 ```
+
+Runtime input rule:
+
+- `ImplementationPlanContract` parses accepted workplan markdown into `ImplementationWorkPlan`
+- `ImplementationGenerator` receives the parsed `ImplementationWorkPlan` structure
+- `ImplementationGenerator` receives one `ImplementationWorkPlanBatch` as the current execution unit
+- `ImplementationGenerator` should not parse markdown workplan text by itself
+- `ImplementationStageRunner` selects the current execution batch from the parsed workplan structure
 
 #### 4.1.3 Prompt Construction
 
 ```ts
 interface PromptBuildInput {
-  workplan: ImplementationWorkPlanInput
-  current_step: CurrentStepInput
+  workplan: ImplementationWorkPlan
+  current_batch: ImplementationWorkPlanBatch
   upstream_context: UpstreamImplementationContext
   project_context: ProjectContext
 }
@@ -247,8 +245,8 @@ interface LlmExecutionRequest {
 
 Prompt construction rules:
 
-- `system_prompt` defines implementation role, current-step boundary, and output structure.
-- `user_prompt` contains the accepted workplan, current step, required upstream context documents, and relevant project context.
+- `system_prompt` defines implementation role, current-batch boundary, and output structure.
+- `user_prompt` contains the accepted workplan, current batch, required upstream context documents, and relevant project context.
 - the prompt builder should require the llm to return explicit generated file content instead of free-form implementation advice.
 - the prompt builder should make generated code files and resource files distinguishable in the returned result.
 

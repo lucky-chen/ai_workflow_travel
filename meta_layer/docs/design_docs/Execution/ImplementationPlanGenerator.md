@@ -82,10 +82,23 @@ ImplementationPlanGenerator --> ImplementationPlanStageRunner: stage_output
 ### 4.1 Stable Output Shape
 
 ```ts
+interface ImplementationWorkPlan {
+  steps: ImplementationWorkPlanStep[]
+}
+
 interface ImplementationWorkPlanStep {
   stepId: string
   title: string
-  goal: string
+  status: "not_started" | "in_progress" | "completed"
+  architecture_modules_in_scope: string[]
+  batches: ImplementationWorkPlanBatch[]
+}
+
+interface ImplementationWorkPlanBatch {
+  batchId: string
+  title: string
+  status: "not_started" | "in_progress" | "completed"
+  tasks: string[]
 }
 
 interface ImplementationWorkPlanArtifacts {
@@ -101,9 +114,36 @@ interface ImplementationWorkPlanArtifacts {
 - upstream input source is `StageRunContext.inputArtifacts["module_design_documents"]`
 - template source is `meta_layer/resources/template/CodeGenerationExecutionPlanTemplate.md`
 
+### 4.2.1 Markdown Structure Rule
+
+`ImplementationPlanGenerator` produces markdown, but that markdown must be parseable into the runtime workplan structure.
+
+Required mapping:
+
+```ts
+"### Step {n}. Deliver {step_name}" -> ImplementationWorkPlanStep
+"- [ ] Step {n} is not started" -> ImplementationWorkPlanStep.status
+"- [ ] Batch {n}: {batch_name}" -> ImplementationWorkPlanBatch
+"  - [ ] {task}" -> ImplementationWorkPlanBatch.tasks[*]
+```
+
+Runtime execution rule:
+
+- one later `implementation_execution` run targets one accepted batch
+- batch order is preserved within each step
+- step order is preserved across the whole workplan
+
+Runtime parsing rule:
+
+- `ImplementationPlanGenerator` does not parse its own markdown output into runtime structure
+- markdown content remains the generator output and persisted artifact form
+- downstream structured parsing is owned by `ImplementationPlanContract`
+
 ### 4.3 Output Rule
 
 - downstream `ImplementationGenerator` reads the accepted workplan through `inputArtifacts["implementation_workplan"]`
+- `ImplementationPlanContract` parses accepted workplan content into `ImplementationWorkPlan`
+- downstream runtime modules should consume the parsed `ImplementationWorkPlan` structure produced after contract acceptance
 - final persistence path is resolved by `ImplementationPlanStageRunner` after gate approval:
   - `plans/implementation/ImplementationWorkPlan.md`
 

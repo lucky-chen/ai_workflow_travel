@@ -14,6 +14,11 @@
       "check_item": "execution_step_structure_consistency",
       "description": "Each execution step should keep a stable structure with status, architecture modules in scope, and batch-oriented delivery items, without requiring a fixed number of steps.",
       "severity": "high"
+    },
+    {
+      "check_item": "workplan_runtime_parseability",
+      "description": "The execution plan should make the markdown-to-structure mapping explicit enough that workflow runtime can resolve ordered steps and ordered batches from the document.",
+      "severity": "high"
     }
   ],
   "section_contracts": [
@@ -55,7 +60,8 @@
       "checkitems": [
         "contain step-oriented delivery sections that align with workflow delivery order",
         "allow a variable number of top-level step subsections",
-        "keep each step in a status plus scope plus batch structure"
+        "keep each step in a status plus scope plus batch structure",
+        "define how markdown step and batch sections map to runtime workplan structure"
       ],
       "severity": "high"
     },
@@ -66,7 +72,8 @@
         "contain one step status line",
         "contain architecture modules in scope",
         "contain one or more batch-oriented delivery items",
-        "allow step names, modules, and batch counts to vary by project"
+        "allow step names, modules, and batch counts to vary by project",
+        "make each batch individually addressable as one implementation-execution unit"
       ],
       "severity": "high",
       "expected_format": "- [ ] `Step {n} is not started`\n- [ ] `Architecture modules in scope`\n  - [ ] `{module_1}`\n- [ ] `Batch 1: {batch_1_name}`"

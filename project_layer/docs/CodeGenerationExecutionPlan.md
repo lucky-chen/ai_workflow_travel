@@ -272,15 +272,15 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] align contract naming and public API with the implementation-contract design doc
   - [x] keep `ImplementationContract.check(...)` scoped to generated-result validation only
 - [x] Batch 3: implementation execution-context loading
-  - [x] validate `implementation_workplan` and `current_step` before generator execution in `ImplementationStageRunner.run(...)`
-  - [x] parse accepted `implementation_workplan` inside `ImplementationStageRunner`
-  - [x] assemble `current_step` execution context inside `ImplementationStageRunner`
-  - [x] pass the entire accepted `implementation_workplan` into `ImplementationGenerator`
+  - [x] validate `implementation_workplan` and the current execution batch input before generator execution in `ImplementationStageRunner.run(...)`
+  - [ ] make `ImplementationPlanContract` parse accepted `implementation_workplan` markdown into a structured workplan
+  - [x] assemble the current execution batch context inside `ImplementationStageRunner`
+  - [ ] pass the contract-produced structured workplan into `ImplementationGenerator`
   - [x] load upstream `requirement_document` and `architecture_document` into implementation generation input
-  - [x] load all relevant `module_design_documents` for the current execution step
-  - [x] pass runner-prepared step context into `ImplementationGenerator`
-  - [x] extend tests for explicit workplan-step context before generator execution
-  - [x] extend tests for execution-context loading and prompt input completeness
+  - [x] load all relevant `module_design_documents` for the current execution batch
+  - [x] pass runner-prepared batch context into `ImplementationGenerator`
+  - [ ] extend tests for explicit workplan-batch context before generator execution
+  - [ ] extend tests for parsed workplan handoff and prompt input completeness
 - [x] Batch 4: execution-environment contract validation
   - [x] apply generated changes into the target project workspace before test execution
   - [x] make `ImplementationContract` validate the applied implementation-execution result by running the configured test script in the target project workspace
@@ -299,11 +299,11 @@ This step delivers the shared runtime backbone used by all stages.
 - [ ] Batch 6: execution review and runtime semantics alignment
   - [ ] support review `comment`
   - [ ] support workflow-level multi-step execution across one `implementation_workplan`
-  - [ ] iterate ordered workplan steps inside `ImplementationStageRunner`
-  - [ ] persist and resume `current_step` between stage-entry runs
-  - [ ] align plan-step review outcomes with runner-managed next-step transition semantics
-  - [ ] stop `implementation_execution` when all workplan steps are completed
-  - [ ] align step execution input with runner-managed workplan context loading
+  - [ ] iterate ordered workplan batches inside each step in `ImplementationStageRunner`
+  - [ ] persist and resume `current_batch` between stage-entry runs
+  - [ ] align plan-step and plan-batch review outcomes with runner-managed next-batch and next-step transition semantics
+  - [ ] stop `implementation_execution` when all workplan batches are completed
+  - [ ] align batch execution input with runner-managed workplan context loading
   - [ ] remove residual single-module execution assumptions
   - [ ] fully align implementation-plan and implementation-execution semantics with design docs
   - [ ] extend tests for comment-aware review outcomes

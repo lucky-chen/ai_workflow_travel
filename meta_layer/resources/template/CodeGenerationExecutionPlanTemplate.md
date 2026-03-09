@@ -32,6 +32,37 @@ The implementation should be delivered in this order:
 
 ## 3. Execution Steps
 
+Runtime parsing shape:
+
+```ts
+interface ImplementationWorkPlan {
+  steps: ImplementationWorkPlanStep[]
+}
+
+interface ImplementationWorkPlanStep {
+  stepId: string
+  title: string
+  status: "not_started" | "in_progress" | "completed"
+  architecture_modules_in_scope: string[]
+  batches: ImplementationWorkPlanBatch[]
+}
+
+interface ImplementationWorkPlanBatch {
+  batchId: string
+  title: string
+  status: "not_started" | "in_progress" | "completed"
+  tasks: string[]
+}
+```
+
+Markdown-to-structure mapping rule:
+
+- `### Step {n}. Deliver {step_name}` defines one `ImplementationWorkPlanStep`
+- `- [ ] Step {n} is not started` defines `ImplementationWorkPlanStep.status`
+- `- [ ] Batch {n}: {batch_name}` defines one `ImplementationWorkPlanBatch`
+- task bullet lines under one batch define `ImplementationWorkPlanBatch.tasks`
+- one `implementation_execution` run targets one accepted batch, not one whole step
+
 ### Step {n}. Deliver {step_name}
 
 - [ ] `Step {n} is not started`

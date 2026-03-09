@@ -25,7 +25,9 @@ This module design collaborates with:
 Its core functions are:
 
 - check implementation-plan-stage generated workplan output
+- parse generated markdown workplan content into structured runtime workplan data
 - check whether the workplan stays aligned with requirement, architecture, and module-design inputs
+- provide parsed structured workplan output for downstream runtime consumption after acceptance
 - return structured `ContractCheckResult`
 
 `ImplementationPlanContract` does not decide workflow progression, gate approval, or artifact persistence.
@@ -55,6 +57,7 @@ participant ImplementationPlanContract
 participant ILlmExecutor
 
 ImplementationPlanStageRunner -> ImplementationPlanContract: check(context, output)
+ImplementationPlanContract -> ImplementationPlanContract: parseWorkplan(output.artifacts.content)
 ImplementationPlanContract -> ImplementationPlanContract: buildCheckRequest(output)
 ImplementationPlanContract -> ILlmExecutor: execute(llm_request)
 ILlmExecutor --> ImplementationPlanContract: llm_result
@@ -68,10 +71,40 @@ ImplementationPlanContract --> ImplementationPlanStageRunner: contract_check_res
 ### 4.1 Check Target Rule
 
 - check target field path is `output.artifacts.content`
+- parse target field path is `output.artifacts.content`
 - alignment context sources are:
   - `context.inputArtifacts["requirement_document"]`
   - `context.inputArtifacts["architecture_document"]`
   - `context.inputArtifacts["module_design_documents"]`
+
+Structured runtime output:
+
+```ts
+interface ImplementationWorkPlan {
+  steps: ImplementationWorkPlanStep[]
+}
+
+interface ImplementationWorkPlanStep {
+  stepId: string
+  title: string
+  status: "not_started" | "in_progress" | "completed"
+  architecture_modules_in_scope: string[]
+  batches: ImplementationWorkPlanBatch[]
+}
+
+interface ImplementationWorkPlanBatch {
+  batchId: string
+  title: string
+  status: "not_started" | "in_progress" | "completed"
+  tasks: string[]
+}
+```
+
+Contract parsing rule:
+
+- `ImplementationPlanContract` parses accepted markdown workplan content into `ImplementationWorkPlan`
+- contract validation should be performed against the parsed structure plus upstream alignment context
+- downstream runtime should consume the parsed structure instead of re-parsing raw markdown
 
 ### 4.2 Review Input Rule
 
@@ -94,4 +127,5 @@ ChangeReviewRequest {
 ### 4.3 Persistence Limit
 
 - `ImplementationPlanStageRunner` persists accepted output to `plans/implementation/ImplementationWorkPlan.md`
-- downstream `ImplementationGenerator` receives accepted output through `inputArtifacts["implementation_workplan"]`
+- downstream `ImplementationGenerator` receives the accepted workplan through `inputArtifacts["implementation_workplan"]`
+- downstream runtime also receives the parsed `ImplementationWorkPlan` structure prepared by `ImplementationPlanContract`
