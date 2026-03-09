@@ -117,27 +117,20 @@ Main outputs:
 
 ## Current Implementation Scope
 
-The current version corresponds to `V1: MVP` in `Requirement.md` and focuses on completing the standard flow from requirement input to runnable demo output through CLI execution.
-
-The main implemented stages in `project_layer/projects/sdlc` are:
+Implemented stages in `project_layer/projects/sdlc`:
 
 1. `requirement_interpretation`
 2. `architecture_design`
 3. `module_design`
 4. `implementation_plan`
-5. `validation`
+5. `implementation_execution`
+6. `validation`
 
-Current scope characteristics:
+Stages still to be extended in later work:
 
-- execute tasks and resume workflows through CLI
-- show key stage information and pending changes
-- support the validated demo scenario: Travel Planning Agent
-
-Current non-goals:
-
-- no UI-based review experience
-- no support for multiple project types
-- no guarantee that every step exposes fully reviewable intermediate artifacts
+1. AgentRuntime V2 memory support
+2. AgentRuntime-managed multi-turn continuation
+3. richer CLI interaction flow
 
 ## Test Organization
 
