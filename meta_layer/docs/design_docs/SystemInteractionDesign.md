@@ -100,6 +100,9 @@ Notes:
 - `SDK/AgentRuntime` owns the reusable internal agent execution loop used by `SDK/LlmExecutor`.
 - upstream modules provide prompt input and receive model result output.
 - agent design and model selection are hidden behind the `SDK/LlmExecutor` boundary.
+- the `Step 9` MCP baseline allows `SDK/LlmExecutor` to route tool-capable execution through `SDK/AgentRuntime` and `IMcpGateway` without changing workflow-facing stage APIs.
+- default MCP-backed tool capability is limited to file read/write in the baseline design.
+- session-aware runtime, memory, and multi-turn continuation remain later SDK evolution work.
 
 ### 2.4 Check Stage Result
 
@@ -219,3 +222,4 @@ Gate review-request mapping by stage:
 - Detailed request and response fields should be defined in each module design document where implementation needs them.
 - If later the architecture needs workflow-visible storage interactions, those APIs can be added back here at a lightweight level.
 - This document should reference interface sources instead of redefining module-local interface details.
+- MCP-capable runtime wiring should be introduced behind `SDK/AgentRuntime` and `SDK/LlmExecutor` first, before session-aware and memory-aware runtime behavior is expanded.

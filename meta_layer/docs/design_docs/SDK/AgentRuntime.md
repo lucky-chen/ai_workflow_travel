@@ -103,6 +103,12 @@ Its core functions are:
 
 `AgentRuntime` does not own caller-specific business logic, provider SDK details, workflow stage progression, or artifact persistence.
 
+Current delivery baseline note:
+
+- `Step 9 / Batch 4` only establishes the MCP-capable runtime baseline.
+- that baseline means `AgentRuntime` can represent MCP-backed tool-capable execution and expose default file read/write tool semantics through `IMcpGateway`.
+- session-aware runtime, memory, and full multi-turn continuation remain later runtime-evolution work and are not part of the `Step 9` completion bar.
+
 ## 2. Core Classes
 
 <!--
@@ -234,7 +240,8 @@ Responsibilities:
 
 - build an execution plan from agent input
 - choose the minimal execution mode for the current request
-- decide whether the current run requires direct generation, tool-augmented execution, or session continuation
+- decide whether the current run requires direct generation or MCP tool-augmented execution in the baseline runtime
+- keep session continuation as an extension point rather than a required baseline behavior
 - keep planning logic replaceable from execution logic
 
 ### 2.2 `IExecutor`
@@ -249,6 +256,7 @@ Responsibilities:
 - normalize execution output into a stable runtime result
 - preserve the JSON output contract expected by downstream callers
 - call MCP-compatible tools when a plan step requires external tool usage
+- provide the default MCP-backed file read/write tool capability through `IMcpGateway`
 - isolate execution details from planning and observation
 
 ### 2.2 `IObserver`
@@ -263,6 +271,32 @@ Responsibilities:
 - decide whether the current result is accepted
 - return a stable observation output for the agent loop
 
+### 2.2 `IMcpGateway`
+
+Role:
+
+- MCP-backed tool invocation boundary
+
+Responsibilities:
+
+- expose stable MCP request/result types to the runtime executor
+- hide MCP transport and provider-specific protocol details from runtime planning and execution
+- surface tool capability metadata such as default file read/write support
+- keep optional tool catalogs replaceable without changing the core agent API
+
+### 2.2 `IAgentSessionStore`
+
+Role:
+
+- session and memory persistence boundary
+
+Responsibilities:
+
+- load existing session state when a caller provides a reusable `session_id`
+- save updated session state after an accepted agent run
+- persist stable `AgentMessage` and `AgentMemory` structures without leaking storage details into runtime logic
+- keep the runtime compatible with both in-memory and persistent session backends
+
 ### 2.2 `DefaultAgent`
 
 Role:
@@ -274,8 +308,9 @@ Responsibilities:
 - call planner, executor, and observer in order
 - emit runtime trace at stable agent checkpoints through `IAgentTraceRecorder`
 - keep external SDK integration stable without coupling the runtime to caller code structure
-- manage session-aware runtime context and memory progression through stable runtime abstractions
 - provide the default reusable agent path for simple direct generation
+- provide the default reusable agent path for MCP tool-capable execution without requiring session persistence
+- upgrade to session-aware, memory-aware, and multi-turn behavior through explicit runtime structures instead of caller-owned hidden state
 
 ## 3. Core Runtime Flow
 
@@ -345,6 +380,36 @@ IAgent --> Caller: agent_result
 @enduml
 ```
 
+### 3.2 Session-Aware And Multi-Turn Evolution Flow
+
+```plantuml
+@startuml
+participant Caller
+participant IAgent
+participant IAgentSessionStore
+participant IPlanner
+participant IExecutor
+participant IObserver
+
+Caller -> IAgent: run(agent_context with session_id)
+IAgent -> IAgentSessionStore: load(session_id)
+IAgentSessionStore --> IAgent: agent_session
+
+loop while observation.decision == continue and turn_limit not reached
+  IAgent -> IPlanner: plan(agent_context + session + memory)
+  IPlanner --> IAgent: execution_plan
+  IAgent -> IExecutor: execute(agent_context, execution_plan)
+  IExecutor --> IAgent: execution_result
+  IAgent -> IObserver: observe(agent_context, execution_plan, execution_result)
+  IObserver --> IAgent: observation_result
+  IAgent -> IAgent: update session messages and memory
+end
+
+IAgent -> IAgentSessionStore: save(updated_session)
+IAgent --> Caller: agent_result
+@enduml
+```
+
 ## 4. Detailed Design
 
 ### 4.1 Core APIs And Fields
@@ -395,6 +460,9 @@ interface AgentContext {
   request: LlmExecutionRequest
   session_id?: string
   input_payload: Record<string, unknown>
+  session_policy?: "stateless" | "reuse_or_create" | "required"
+  max_turns?: number
+  capabilities?: AgentCapabilitySet
 }
 ```
 
@@ -417,29 +485,73 @@ interface AgentContext {
 
 ```ts
 interface ExecutionPlan {
-  mode: "direct_generation"
+  mode: "direct_generation" | "tool_augmented_generation"
   summary: string
+  steps?: ExecutionPlanStep[]
+  tool_steps?: Array<{
+    tool_name: string
+    arguments: Record<string, unknown>
+  }>
+}
+
+interface ExecutionPlanStep {
+  step_id: string
+  kind: "model_generation" | "tool_call" | "observation_checkpoint"
+  summary: string
+  tool_request?: McpToolRequest
 }
 
 interface AgentSession {
   session_id: string
   messages: AgentMessage[]
   memory?: AgentMemory
+  turn_count: number
+  last_updated_at?: string
 }
 
 interface AgentMessage {
   role: "system" | "user" | "assistant" | "tool"
   content: string
+  tool_name?: string
+  timestamp?: string
+}
+
+interface AgentMemory {
+  summary: string
+  facts: string[]
+  working_set?: Record<string, unknown>
+}
+
+interface AgentCapabilitySet {
+  mcp_enabled?: boolean
+  session_enabled?: boolean
+  memory_enabled?: boolean
+  available_tools?: string[]
+}
+
+interface McpToolRequest {
+  tool_name: string
+  arguments: Record<string, unknown>
+}
+
+interface McpToolResult {
+  tool_name: string
+  success: boolean
+  content: string
+  structured_content?: Record<string, unknown>
 }
 
 interface ExecutionResult {
   result: LlmExecutionResult
   tool_results?: McpToolResult[]
+  intermediate_messages?: AgentMessage[]
 }
 
 interface ObservationResult {
   decision: "accept" | "continue" | "abort"
   summary: string
+  reason?: string
+  next_action_hint?: string
 }
 
 interface AgentTraceEvent {
@@ -473,6 +585,7 @@ interface AgentResult {
   plan: ExecutionPlan
   observation: ObservationResult
   session_id?: string
+  session?: AgentSession
 }
 ```
 
@@ -496,13 +609,19 @@ interface AgentResult {
 
 - the minimal V1 agent runtime must support exactly one `plan -> execute -> observe` pass
 - the default planner must produce a stable `direct_generation` plan so the runtime stays reusable for simple callers
+- the `Step 9` MCP baseline may additionally produce `tool_augmented_generation` plans without requiring session continuation
+- `ExecutionPlan.steps` is the forward-compatible structure for later multi-turn and mixed model/tool execution
 - llm-facing input must be expressed through stable JSON fields instead of caller-specific free-form prompt assembly
 - llm-facing output must remain JSON-parseable when downstream callers require structured consumption
 - agent runtime must record at least plan creation, execution start, execution finish, and observation finish as trace events
 - session-aware execution must keep session state in explicit runtime structures instead of leaking caller-owned state into the SDK
+- session-aware execution should use `session_policy` to distinguish stateless runs from reuse-or-create and mandatory session flows
 - MCP tool usage must flow through `IMcpGateway` rather than embedding MCP protocol details into planner or facade layers
 - memory must be represented as stable agent-owned session data, not as implicit prompt-only concatenation
+- memory update must happen after observation and before session persistence so accepted state is what gets stored
 - the default observer must only decide acceptance and must not mutate the execution result payload
+- default MCP-backed tools must include file read and file write as the minimum supported capability set
+- multi-turn execution must be bounded by explicit turn limits and explicit `ObservationResult.decision` values
 
 ### 4.2 Constraints
 
@@ -524,6 +643,7 @@ interface AgentResult {
 
 - `AgentRuntime` must remain reusable for multiple upstream callers and must not be specialized to `ImplementationGenerator` or any single stage module.
 - V1 must not require multi-step planning, MCP tool invocation, or observer-driven retry loops in order to be considered complete.
+- the `Step 9` MCP baseline must not require session persistence, memory persistence, or multi-turn continuation in order to be usable.
 - Provider-specific model SDK logic must remain outside `AgentRuntime`; it should be injected through execution collaborators.
 - `AgentRuntime` must not depend on caller-specific business modules or inspect caller code structure.
 - caller adaptation and prompt shaping that depend on business code context must remain outside the SDK boundary.
@@ -532,3 +652,5 @@ interface AgentResult {
 - `AgentRuntime` trace abstraction is SDK-owned and must not depend on `Workflow/Pipeline` contracts.
 - session persistence and memory persistence must be abstracted behind `IAgentSessionStore` so the runtime can evolve from in-memory sessions to persistent sessions without changing SDK-facing APIs.
 - MCP integration must remain optional and capability-driven; callers that do not enable `IMcpGateway` should still be able to use direct-generation agent execution.
+- default file read/write MCP tools should be modeled as runtime capabilities, not as workflow-owned stage logic.
+- session-aware, memory-aware, and multi-turn runtime behavior should extend the same `IAgent.run` surface instead of introducing a second caller-facing runtime entrypoint.

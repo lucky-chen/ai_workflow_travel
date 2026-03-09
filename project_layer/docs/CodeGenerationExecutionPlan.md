@@ -419,6 +419,8 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] update plan status to reflect true implementation state
   - [x] confirm docs and runnable behavior are consistent
 - [ ] Batch 4: MCP baseline alignment
+  - [x] sync MCP baseline design intent across `SDK/AgentRuntime`, `SDK/LlmExecutor`, and `SystemInteractionDesign`
+  - [x] expand `SDK/AgentRuntime` design to cover MCP baseline plus the forward-compatible session/memory/multi-turn evolution model
   - [ ] add MCP protocol support to `AgentRuntime`
   - [ ] add file read/write as the default MCP-backed tool capability
   - [ ] promote MCP support into stable runtime planning, execution, and trace semantics
@@ -454,18 +456,21 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] `SDK/LlmExecutor`
   - [ ] workflow automation on top of completed stages
 - [ ] Batch 1: AgentRuntime V2 session-aware runtime
+  - [x] session-aware design baseline documented in `SDK/AgentRuntime.md`
   - [ ] `AgentSession` and `AgentMessage` runtime types
   - [ ] `IAgentSessionStore`
   - [ ] session load/save flow in `IAgent`
   - [ ] session-aware trace metadata
   - [ ] tests for session creation, load, update, and save
 - [ ] Batch 2: AgentRuntime V2 memory support
+  - [x] memory design baseline documented in `SDK/AgentRuntime.md`
   - [ ] `AgentMemory` runtime model
   - [ ] memory update rules across agent runs
   - [ ] memory-aware planner inputs
   - [ ] memory-aware executor inputs
   - [ ] tests for memory persistence and memory-driven execution
 - [ ] Batch 3: AgentRuntime V2 multi-turn semantics
+  - [x] multi-turn design baseline documented in `SDK/AgentRuntime.md`
   - [ ] step-based execution plan model
   - [ ] richer `ObservationResult` decisions (`accept` / `continue` / `abort`)
   - [ ] bounded multi-iteration agent loop

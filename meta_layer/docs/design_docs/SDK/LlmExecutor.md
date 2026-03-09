@@ -37,6 +37,12 @@ Its core functions are:
 
 `LlmExecutor` does not decide business-stage workflow progression or artifact persistence.
 
+Current delivery baseline note:
+
+- `Step 9 / Batch 4` only requires `LlmExecutor` to interoperate with the MCP-capable `AgentRuntime` baseline.
+- that baseline does not require session-aware execution, memory, or multi-turn runtime control.
+- `LlmExecutor` should therefore treat MCP as an optional execution capability layered on top of the existing single-turn prompt-in / result-out facade.
+
 ## 2. Core Classes
 
 ### 2.1 Class Diagram
@@ -112,6 +118,7 @@ Responsibilities:
 - emit internal runtime trace events
 - delegate runtime execution to the selected agent
 - return normalized model result
+- enable MCP-backed tool-capable execution without changing the caller-facing `ILlmExecutor` contract
 
 ### 2.3 `ExecutionStrategySelector`
 
@@ -124,6 +131,7 @@ Responsibilities:
 - choose which agent implementation to use for a request
 - choose which model should be used for a request
 - return one consistent execution strategy for the request
+- decide whether MCP capability is needed for the current request while keeping session/memory concerns out of the `Step 9` baseline
 
 ### 2.4 `IAgent`
 
@@ -159,6 +167,7 @@ Responsibilities:
 - execute the planned steps
 - call the model gateway
 - call MCP tools when the plan requires external tool usage
+- expose default file read/write tool usage through `IMcpGateway` when MCP capability is enabled
 
 ### 2.7 `IObserver`
 
@@ -337,6 +346,7 @@ Agent design notes:
 - if a request is simple, `IPlanner` may produce a one-step direct generation plan.
 - if a request needs tools, `IExecutor` may call `IMcpGateway` before or between model calls.
 - the outer `IAgent` abstraction remains stable whether the internal execution is single-step or multi-step.
+- the `Step 9` baseline keeps `ILlmExecutor.execute` single-turn from the caller perspective even when MCP tools are used internally.
 
 #### 4.1.4 Model Selection And Invocation Types
 
@@ -387,6 +397,7 @@ Model selection notes:
 - `ExecutionStrategySelector` should own model choice based on request policy.
 - different modules may request different model policies while sharing the same `ILlmExecutor`.
 - MCP capability is optional and should only be used when the selected agent strategy requires tools.
+- the minimum MCP baseline should include default file read/write tools, while richer tool catalogs remain later extensions.
 
 #### 4.1.5 Return Types
 
@@ -403,3 +414,4 @@ interface LlmExecutionResult {
 - upstream modules should not couple to concrete model SDKs.
 - agent design and model selection should remain replaceable without changing caller interfaces.
 - `LlmExecutor` should expose internal runtime trace through `ILlmTraceRecorder`.
+- `LlmExecutor` should not force callers to reason about MCP protocol details, session ids, or memory state in the `Step 9` baseline.
