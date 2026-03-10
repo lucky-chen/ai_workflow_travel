@@ -2,7 +2,6 @@ import type { CompositionRootOptions } from "../app/composition-root.js";
 import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
 import type { LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
-import type { ShellResult } from "../workflow/validation/shell-runner.js";
 import { ShellRunner } from "../workflow/validation/shell-runner.js";
 
 export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
@@ -20,7 +19,7 @@ export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
         contractIssueCategories: readScenarioContractIssueCategories(),
       }),
     },
-    shellRunner: new MockShellRunner(),
+    shellRunner: new ShellRunner(),
     gitCommitter: new NoopGitCommitter(),
     changeGate: new InMemoryChangeGate(),
   };
@@ -125,18 +124,6 @@ function buildFailedContractResult(
 
 class NoopGitCommitter implements IImplementationGitCommitter {
   async commit(): Promise<void> {}
-}
-
-class MockShellRunner extends ShellRunner {
-  override async run(command: string): Promise<ShellResult> {
-    return {
-      passed: true,
-      summary: `Shell command passed: ${command}`,
-      command,
-      exit_code: 0,
-      logs: "ok",
-    };
-  }
 }
 
 function createScenarioArchitectureDocument(serviceName: string): string {

@@ -101,4 +101,5 @@ export async function runHelloServiceSuccessTest() {
   );
   assert.equal(validationArtifact.passed, true);
   assert.equal(validationArtifact.command, `cd "${workspaceRoot}" && npm test`);
+  assert.equal(String(validationArtifact.logs ?? "").includes("hello-service mock shell check passed."), true);
 }

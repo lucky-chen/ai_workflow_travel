@@ -57,5 +57,18 @@ export async function runHelloServiceFunctionalTest() {
     ),
     true,
   );
+  const validationArtifact = JSON.parse(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        ".artifact-store",
+        functionalTaskId,
+        "validation",
+        "reports/validation/ValidationResult.json",
+      ),
+      "utf8",
+    ),
+  );
+  assert.equal(validationArtifact.passed, true);
+  assert.equal(String(validationArtifact.logs ?? "").includes("hello-service mock shell check passed."), true);
 }
-

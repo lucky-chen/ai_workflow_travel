@@ -478,6 +478,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] verify contract success/failure leaves reviewable persisted history evidence
 - [ ] Batch 8: hello-service simple-project functional verification
   - [x] separate baseline workflow verification from hello-service functional verification
+  - [x] require shell-based implementation contract and validation instead of mock shell pass-through
   - [x] verify the generated hello-service implementation covers the current simple-project behavior
   - [x] verify the generated workspace documents stay mutually aligned around the simple hello-service scope
   - [x] verify validation output confirms the simple hello-service target remains runnable
