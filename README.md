@@ -112,11 +112,11 @@ Main outputs:
 - `hello-service`
   - [x] baseline capability black-box test
   - [ ] llm call chain black-box test
-  - [x] validate complete SDLC capability with hello-service
+  - [ ] validate complete SDLC capability with hello-service
 - `AI Travel`
-  - [ ] AI Travel end-to-end delivery goal
-  - [ ] AI Travel output quality and controllability improvement
-  - [ ] AI Travel CLI interaction improvement
+  - [ ] document authoring, generation, and review
+  - [ ] code generation
+  - [ ] functionality verification
 
 ## Run Tests
 

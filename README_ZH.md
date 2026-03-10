@@ -112,11 +112,11 @@
 - `hello-service`
   - [x] 基线能力黑盒测试
   - [ ] LLM 调用链路黑盒测试
-  - [x] 用 hello-service 验证完备的 SDLC 能力
+  - [ ] 用 hello-service 验证完备的 SDLC 能力
 - `AI Travel`
-  - [ ] AI Travel 端到端交付目标
-  - [ ] AI Travel 输出质量与可控性提升
-  - [ ] AI Travel CLI 交互优化
+  - [ ] 文档编写、生成与 review
+  - [ ] 代码生成
+  - [ ] 功能验证
 
 ## 运行测试
 
