@@ -28,3 +28,4 @@ project_layer/node_modules/
 project_layer/dist/
 project_layer/local_env.json
 **/local_env.json
+**/artifact_store/
