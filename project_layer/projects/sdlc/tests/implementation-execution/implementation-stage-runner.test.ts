@@ -9,7 +9,10 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { IImplementationGitCommitter } from "../../src/workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../../src/workflow/stage-runners/implementation-stage-runner.js";
-import { resolveImplementationPlanArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
+import {
+  resolveImplementationPlanArtifactPath,
+  resolveStageContractFailureArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import type { IContractChecker, IStageGenerator, ImplementationStageArtifacts, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
 
@@ -190,6 +193,14 @@ async function testImplementationStageRunnerContractFailure(
     failingRunner.run(createRunContext("task-3", workspaceRoot)),
     /Implementation contract failed: Contract failed before apply\./,
   );
+  const failureArtifact = JSON.parse(
+    await readFile(
+      path.join(workspaceRoot, resolveStageContractFailureArtifactPath(workspaceRoot, "implementation")),
+      "utf8",
+    ),
+  ) as { failedAt: string; summary: string };
+  assert.equal(failureArtifact.failedAt, "contract_check");
+  assert.equal(failureArtifact.summary, "Contract failed before apply.");
 
   assert.equal(failingGate.getLastRequest(), undefined);
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [

@@ -28,6 +28,7 @@ export class RequirementStageRunner extends BaseStageRunner {
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
+      await this.persistContractFailureReview(context, output, contractResult);
       throw new Error(`Requirement contract failed: ${contractResult.summary}`);
     }
 

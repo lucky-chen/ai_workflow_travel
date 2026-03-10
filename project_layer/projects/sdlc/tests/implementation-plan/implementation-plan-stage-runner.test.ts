@@ -11,6 +11,7 @@ import {
   resolveImplementationPlanArtifactPath,
   resolveModuleDesignArtifactPath,
   resolveRequirementArtifactPath,
+  resolveStageContractFailureArtifactPath,
 } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationPlanStageRunnerTests(): Promise<void> {
@@ -111,6 +112,14 @@ async function testImplementationPlanStageRunnerContractFailure(
     }),
     /Implementation plan contract failed:/,
   );
+  const failureArtifact = JSON.parse(
+    await readFile(
+      path.join(workspaceRoot, resolveStageContractFailureArtifactPath(workspaceRoot, "implementation_plan")),
+      "utf8",
+    ),
+  ) as { failedAt: string; summary: string };
+  assert.equal(failureArtifact.failedAt, "contract_check");
+  assert.equal(failureArtifact.summary, "Implementation workplan failed contract checks.");
 }
 
 function createInputArtifacts() {

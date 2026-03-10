@@ -6,7 +6,10 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
-import { resolveArchitectureArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveStageContractFailureArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runArchitectureStageRunnerTests(): Promise<void> {
   const workspaceRoot = await createTempDir("architecture-workspace-");
@@ -121,6 +124,14 @@ async function testArchitectureStageRunnerContractFailure(
     }),
     /Architecture contract failed:/,
   );
+  const failureArtifact = JSON.parse(
+    await readFile(
+      path.join(workspaceRoot, resolveStageContractFailureArtifactPath(workspaceRoot, "architecture_design")),
+      "utf8",
+    ),
+  ) as { failedAt: string; summary: string };
+  assert.equal(failureArtifact.failedAt, "contract_check");
+  assert.equal(failureArtifact.summary, "Architecture design document failed contract checks.");
 }
 
 async function createTempDir(prefix: string): Promise<string> {

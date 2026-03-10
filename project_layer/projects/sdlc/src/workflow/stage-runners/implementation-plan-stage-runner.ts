@@ -47,6 +47,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
+      await this.persistContractFailureReview(context, output, contractResult);
       throw new Error(`Implementation plan contract failed: ${contractResult.summary}`);
     }
 

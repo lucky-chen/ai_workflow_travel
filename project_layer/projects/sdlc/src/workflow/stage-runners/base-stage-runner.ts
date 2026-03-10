@@ -19,6 +19,7 @@ import {
   resolveImplementationPlanArtifactPath,
   resolveModuleDesignDirectoryPath,
   resolveRequirementArtifactPath,
+  resolveStageContractFailureArtifactPath,
 } from "./stage-artifact-paths.js";
 
 export interface BaseStageRunnerDependencies extends StageRunnerSharedDependencies {
@@ -140,6 +141,28 @@ export abstract class BaseStageRunner implements IStageRunner {
     const targetPath = path.join(context.workspaceRoot, relativePath);
     await mkdir(path.dirname(targetPath), { recursive: true });
     await writeFile(targetPath, content, "utf8");
+  }
+
+  protected async persistContractFailureReview(
+    context: StageRunContext,
+    output: StageOutput,
+    result: ContractCheckResult,
+  ): Promise<string> {
+    const artifactPath = resolveStageContractFailureArtifactPath(context.workspaceRoot, context.stageId);
+    await this.writeWorkspaceFile(
+      context,
+      artifactPath,
+      `${JSON.stringify({
+        stageId: context.stageId,
+        taskId: context.taskId,
+        attempt: context.attempt,
+        failedAt: "contract_check",
+        summary: result.summary,
+        issues: result.issues,
+        output,
+      }, null, 2)}\n`,
+    );
+    return artifactPath;
   }
 
   private resolveStageInputPaths(context: StageRunContext): string[] {

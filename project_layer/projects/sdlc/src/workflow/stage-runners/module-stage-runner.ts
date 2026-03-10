@@ -44,6 +44,7 @@ export class ModuleStageRunner extends BaseStageRunner {
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
+      await this.persistContractFailureReview(context, output, contractResult);
       throw new Error(`Module design contract failed: ${contractResult.summary}`);
     }
 

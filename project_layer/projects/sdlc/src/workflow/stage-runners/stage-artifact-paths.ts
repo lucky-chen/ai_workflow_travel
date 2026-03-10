@@ -27,3 +27,7 @@ export function resolveModuleDesignDirectoryPath(workspaceRoot: string): string 
 export function resolveModuleDesignArtifactPath(workspaceRoot: string, moduleName: string): string {
   return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "module_design", `${moduleName}.md`);
 }
+
+export function resolveStageContractFailureArtifactPath(workspaceRoot: string, stageId: string): string {
+  return resolveRelativeWorkspacePath(workspaceRoot, "dist", "sdlc", "stage", stageId, "contract-failure.json");
+}
