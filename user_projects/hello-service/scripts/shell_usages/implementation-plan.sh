@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 REPO_ROOT="$(cd "$WORKSPACE_ROOT/../.." && pwd)"
 LOG_DIR="$WORKSPACE_ROOT/dist/shell"
 STDOUT_LOG="$LOG_DIR/implementation-plan.stdout.log"
