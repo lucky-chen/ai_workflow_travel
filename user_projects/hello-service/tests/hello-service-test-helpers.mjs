@@ -73,6 +73,18 @@ export async function loadTraceRecords(taskId, runId) {
   return JSON.parse(await readFile(await getTraceFilePath(taskId, runId), "utf8"));
 }
 
+export function findTraceRecordsByCategory(records, category) {
+  return records.filter((entry) => entry.category === category);
+}
+
+export function findTraceRecordsByEventType(records, eventType) {
+  return records.filter((entry) => entry.payload?.eventType === eventType);
+}
+
+export function findTraceRecordsByStage(records, stageId) {
+  return records.filter((entry) => entry.scope?.stageId === stageId);
+}
+
 export function createHelloServiceRequirementDocument() {
   return [
     "# 1. Background",

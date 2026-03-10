@@ -3,6 +3,8 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   createHelloServiceRequirementDocument,
+  findTraceRecordsByCategory,
+  findTraceRecordsByEventType,
   loadTraceRecords,
   resetWorkspace,
   runCli,
@@ -43,11 +45,22 @@ export async function runHelloServiceContractFailureTest() {
   );
 
   const traceRecords = await loadTraceRecords(failureTaskId, architectureFailureRunId);
+  const contractRecords = findTraceRecordsByCategory(traceRecords, "contract");
+  assert.equal(contractRecords.length, 1);
+  assert.equal(contractRecords[0]?.scope?.stageId, "architecture_design");
+  assert.equal(contractRecords[0]?.payload?.passed, false);
+  assert.equal(contractRecords[0]?.summary.includes("failed contract checks"), true);
+
   assert.equal(
-    traceRecords.some(
-      (entry) => entry.payload?.eventType === "stage_failed"
-        && entry.scope?.stageId === "architecture_design",
+    findTraceRecordsByEventType(traceRecords, "stage_failed").some(
+      (entry) => entry.scope?.stageId === "architecture_design"
     ),
     true,
+  );
+  assert.equal(
+    findTraceRecordsByEventType(traceRecords, "artifact_persisted").some(
+      (entry) => entry.scope?.stageId === "module_design",
+    ),
+    false,
   );
 }

@@ -6,6 +6,9 @@ import {
   createHelloServiceImplementationPlanDocument,
   createHelloServiceModuleDesignDocument,
   createHelloServiceRequirementDocument,
+  findTraceRecordsByCategory,
+  findTraceRecordsByEventType,
+  findTraceRecordsByStage,
   getTraceFilePath,
   loadTraceRecords,
   resetWorkspace,
@@ -34,15 +37,78 @@ export async function runHelloServiceSuccessTest() {
   );
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: requirementRunId });
+  const requirementTraceRecords = await loadTraceRecords(baselineTaskId, requirementRunId);
+  assert.equal(
+    findTraceRecordsByCategory(requirementTraceRecords, "contract").some(
+      (entry) => entry.scope?.stageId === "requirement_interpretation"
+        && entry.payload?.passed === true,
+    ),
+    true,
+  );
+
   await runCli(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: architectureRunId });
   const architectureTraceRecords = await loadTraceRecords(baselineTaskId, architectureRunId);
   assert.deepEqual(
     new Set(architectureTraceRecords.map((entry) => entry.category)),
     new Set(["trace", "contract", "review"]),
   );
+  assert.equal(
+    findTraceRecordsByCategory(architectureTraceRecords, "contract").some(
+      (entry) => entry.scope?.stageId === "architecture_design"
+        && entry.payload?.passed === true,
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCategory(architectureTraceRecords, "review").some(
+      (entry) => entry.scope?.stageId === "architecture_design",
+    ),
+    true,
+  );
+
   await runCli(["generate", "--stage", "module_design", "--workspace", workspaceRoot, "--target-module", "Workflow"], { taskId: baselineTaskId, runId: moduleRunId });
+  const moduleTraceRecords = await loadTraceRecords(baselineTaskId, moduleRunId);
+  assert.equal(
+    findTraceRecordsByCategory(moduleTraceRecords, "contract").some(
+      (entry) => entry.scope?.stageId === "module_design"
+        && entry.payload?.passed === true,
+    ),
+    true,
+  );
+
   await runCli(["generate", "--stage", "implementation_plan", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: implementationPlanRunId });
+  const implementationPlanTraceRecords = await loadTraceRecords(baselineTaskId, implementationPlanRunId);
+  assert.equal(
+    findTraceRecordsByCategory(implementationPlanTraceRecords, "contract").some(
+      (entry) => entry.scope?.stageId === "implementation_plan"
+        && entry.payload?.passed === true,
+    ),
+    true,
+  );
+
   await runCli(["generate", "--stage", "implementation_execution", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: implementationExecutionRunId });
+  const implementationExecutionTraceRecords = await loadTraceRecords(baselineTaskId, implementationExecutionRunId);
+  assert.equal(
+    findTraceRecordsByCategory(implementationExecutionTraceRecords, "contract").some(
+      (entry) => entry.scope?.stageId === "implementation_execution"
+        && entry.payload?.passed === true,
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCategory(implementationExecutionTraceRecords, "review").some(
+      (entry) => entry.scope?.stageId === "implementation_execution"
+        && entry.payload?.changedPaths?.includes("src/index.ts") === true,
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByEventType(implementationExecutionTraceRecords, "step_completed").some(
+      (entry) => entry.scope?.stageId === "implementation_execution",
+    ),
+    true,
+  );
+
   await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: validationRunId });
 
   assert.equal(
@@ -71,5 +137,11 @@ export async function runHelloServiceSuccessTest() {
   assert.deepEqual(
     new Set(traceRecords.map((entry) => entry.category)),
     new Set(["trace", "artifact"]),
+  );
+  assert.equal(
+    findTraceRecordsByStage(traceRecords, "validation").some(
+      (entry) => entry.payload?.eventType === "artifact_persisted",
+    ),
+    true,
   );
 }
