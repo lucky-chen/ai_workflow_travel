@@ -5,12 +5,14 @@ import {
   DefaultCLICommandParser,
   DefaultCLIRequestMapper,
 } from "../interface/cli/cli.js";
+import { loadWorkspaceRuntimeOptions } from "../app/workspace-local-env.js";
 import { createCliBaselineRuntimeOptions } from "../testing/scenario-runtime.js";
 
 async function main(): Promise<void> {
+  const workspaceRoot = readWorkspaceRootFromArgv(process.argv.slice(2));
   const runtime = process.env.SDLC_TEST_SCENARIO === "fixed_workspace_baseline"
     ? createApplicationRuntime(createCliBaselineRuntimeOptions())
-    : createApplicationRuntime();
+    : createApplicationRuntime(await loadWorkspaceRuntimeOptions(workspaceRoot));
   const fixedTaskId = process.env.SDLC_TEST_TASK_ID?.trim();
   const pipeline = fixedTaskId
     ? {
@@ -31,6 +33,19 @@ async function main(): Promise<void> {
   );
   const exitCode = await cli.run(process.argv.slice(2));
   process.exitCode = exitCode;
+}
+
+function readWorkspaceRootFromArgv(argv: string[]): string | undefined {
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === "--workspace") {
+      const value = argv[index + 1];
+      if (value && !value.startsWith("--")) {
+        return value;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 main().catch((error: unknown) => {

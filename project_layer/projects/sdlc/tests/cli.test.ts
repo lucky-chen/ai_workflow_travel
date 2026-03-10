@@ -176,6 +176,10 @@ async function testCliInitCopiesResources(workspaceRoot: string): Promise<void> 
     "utf8",
   );
   assert.equal(copiedStandard.includes("# Collaboration Standard"), true);
+
+  const localEnv = await readFile(path.join(workspaceRoot, "sdlc", "local_env.json"), "utf8");
+  assert.equal(localEnv.includes('"provider": "openai"'), true);
+  assert.equal(localEnv.includes('"api_key": "your-api-key"'), true);
 }
 
 async function testRequestMapperRequiresStage(): Promise<void> {

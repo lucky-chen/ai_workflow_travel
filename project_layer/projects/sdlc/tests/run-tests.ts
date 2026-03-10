@@ -26,6 +26,7 @@ import { runRequirementStageRunnerTests } from "./requirement/requirement-stage-
 import { runShellRunnerTests } from "./validation/shell-runner.test.js";
 import { createTempDir } from "./workflow/pipeline-test-helpers.js";
 import { runTraceTests } from "./shared/trace.test.js";
+import { runWorkspaceLocalEnvTests } from "./shared/workspace-local-env.test.js";
 import { runValidationModelTests } from "./validation/validation-model.test.js";
 import { runValidationStageRunnerTests } from "./validation/validation-stage-runner.test.js";
 
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
   await runRequirementStageRunnerTests();
   await runShellRunnerTests();
   await runTraceTests();
+  await runWorkspaceLocalEnvTests();
   await runValidationModelTests();
   await runValidationStageRunnerTests();
   process.stdout.write("All tests passed.\n");

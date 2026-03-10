@@ -1,0 +1,74 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import type { CompositionRootOptions } from "./composition-root.js";
+
+export interface WorkspaceLocalEnvConfig {
+  llm?: {
+    provider?: "openai" | "deepseek";
+    api_key?: string;
+    base_url?: string;
+    model?: string;
+  };
+}
+
+const DEFAULT_WORKSPACE_LOCAL_ENV: WorkspaceLocalEnvConfig = {
+  llm: {
+    provider: "openai",
+    api_key: "your-api-key",
+    base_url: "https://api.openai.com/v1",
+    model: "gpt-4.1-mini",
+  },
+};
+
+export function getDefaultWorkspaceLocalEnvContent(): string {
+  return `${JSON.stringify(DEFAULT_WORKSPACE_LOCAL_ENV, null, 2)}\n`;
+}
+
+export function resolveWorkspaceLocalEnvPath(workspaceRoot: string): string {
+  return path.join(workspaceRoot, "sdlc", "local_env.json");
+}
+
+export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promise<CompositionRootOptions> {
+  if (!workspaceRoot) {
+    return {};
+  }
+
+  const localEnvPath = resolveWorkspaceLocalEnvPath(workspaceRoot);
+
+  let raw: string;
+  try {
+    raw = await readFile(localEnvPath, "utf8");
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code === "ENOENT") {
+      return {};
+    }
+
+    throw error;
+  }
+
+  let parsed: WorkspaceLocalEnvConfig;
+  try {
+    parsed = JSON.parse(raw) as WorkspaceLocalEnvConfig;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid workspace local env JSON: ${localEnvPath}. ${message}`);
+  }
+
+  const llm = parsed.llm;
+  if (!llm?.provider || !llm.api_key || !llm.model || llm.api_key === "your-api-key") {
+    return {};
+  }
+
+  return {
+    llmExecutor: {
+      mode: "real",
+      realProvider: {
+        provider: llm.provider,
+        apiKey: llm.api_key,
+        baseUrl: llm.base_url,
+        model: llm.model,
+      },
+    },
+  };
+}

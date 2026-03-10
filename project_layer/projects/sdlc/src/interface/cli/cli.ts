@@ -1,5 +1,5 @@
 // CLI module: parses user commands, maps them to workflow requests, and renders basic output.
-import { cp, mkdir, readFile, readdir } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -8,6 +8,10 @@ import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import { ImplementationPlanContract } from "../../contract/implementation-plan-contract/implementation-plan-contract.js";
 import { resolveBundledResourcesDirectory } from "../../shared/resources/resource-resolver.js";
 import type { ChangedFile } from "../../shared/types/common.js";
+import {
+  getDefaultWorkspaceLocalEnvContent,
+  resolveWorkspaceLocalEnvPath,
+} from "../../app/workspace-local-env.js";
 
 export interface ParsedCommand {
   command: string;
@@ -281,12 +285,25 @@ export class ResourceWorkspaceInitializer implements WorkspaceInitializer {
   async initialize(workspaceRoot: string): Promise<string> {
     const targetRoot = path.join(workspaceRoot, "sdlc");
     const targetResourcesDirectory = path.join(targetRoot, "resources");
+    const targetLocalEnvPath = resolveWorkspaceLocalEnvPath(workspaceRoot);
     const sourceResourcesDirectory = await resolveBundledResourcesDirectory();
 
     await mkdir(targetRoot, { recursive: true });
     await cp(sourceResourcesDirectory, targetResourcesDirectory, { recursive: true });
+    await this.ensureLocalEnvFile(targetLocalEnvPath);
 
     return targetResourcesDirectory;
+  }
+
+  private async ensureLocalEnvFile(targetPath: string): Promise<void> {
+    try {
+      await writeFile(targetPath, getDefaultWorkspaceLocalEnvContent(), { encoding: "utf8", flag: "wx" });
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code !== "EEXIST") {
+        throw error;
+      }
+    }
   }
 }
 
