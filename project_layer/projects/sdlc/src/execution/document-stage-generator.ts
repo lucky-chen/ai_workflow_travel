@@ -31,6 +31,7 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.generationFinished,
       summary: output.summary,
+      payload: this.buildGenerationFinishedPayload(output),
     });
 
     return output;
@@ -43,6 +44,9 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
   }
   protected abstract getTemplateResourcePath(): string;
   protected abstract buildPrompt(inputDocument: string, template: string): LlmExecutionRequest;
+  protected buildGenerationFinishedPayload(_output: StageOutput): Record<string, unknown> | undefined {
+    return undefined;
+  }
 
   protected async executeGeneration(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     return this.llmExecutor.execute(request);

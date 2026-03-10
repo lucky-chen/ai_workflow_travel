@@ -24,7 +24,7 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
     nextStageId: "implementation_plan",
     runner: {
       async run(context: StageRunContext): Promise<StageOutput> {
-        const descriptor = JSON.parse(context.inputArtifacts.module_descriptors) as { name: string };
+        const descriptor = JSON.parse(context.inputArtifacts.module_descriptors) as { name: string; documentPath?: string };
         invocationOrder.push(descriptor.name);
 
         return {
@@ -35,7 +35,8 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
           artifacts: {
             artifactKey: "module_design_document",
             moduleName: descriptor.name,
-            module_design_document: resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
+            documentPath: descriptor.documentPath ?? resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
+            module_design_document: descriptor.documentPath ?? resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
             content: `# ${descriptor.name} Design`,
           },
         };
@@ -65,6 +66,20 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
             artifactKey: "architecture_document",
             architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
             content: createArchitectureDocument(),
+            design_document_breakdown: JSON.stringify([
+              {
+                name: "Workflow",
+                documentPath: "sdlc/docs/module_design/Workflow.md",
+                description: "covers the design of the `Workflow` module.",
+                responsibilities: ["covers the design of the `Workflow` module."],
+              },
+              {
+                name: "Data",
+                documentPath: "sdlc/docs/module_design/Data.md",
+                description: "covers the design of the `Data` module.",
+                responsibilities: ["covers the design of the `Data` module."],
+              },
+            ]),
           },
         },
         mergeInputArtifacts: (current, output) => ({
@@ -89,21 +104,13 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
 
     assert.equal(result.nextStageId, "implementation_plan");
     assert.deepEqual(invocationOrder, [
-      "Interface Layer",
       "Workflow",
-      "Execution",
-      "Contract",
-      "Quality Gate",
       "Data",
     ]);
     assert.equal(updatedModuleInputs.length, invocationOrder.length);
     assert.deepEqual(JSON.parse(result.nextInputArtifacts.module_design_documents), [
-      resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
+      "sdlc/docs/module_design/Workflow.md",
+      "sdlc/docs/module_design/Data.md",
     ]);
     assert.equal("module_design_document" in result.nextInputArtifacts, false);
   } finally {

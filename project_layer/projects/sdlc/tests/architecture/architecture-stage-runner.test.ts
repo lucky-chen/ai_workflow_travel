@@ -45,6 +45,23 @@ async function testArchitectureStageRunnerPersistsAcceptedDocument(workspaceRoot
     await readFile(path.join(workspaceRoot, resolveArchitectureArtifactPath(workspaceRoot)), "utf8"),
     content,
   );
+  const generationFinishedEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "generation_finished");
+  assert.deepEqual(generationFinishedEvent?.event.payload, {
+    designDocumentBreakdown: [
+      {
+        name: "Workflow",
+        documentPath: "sdlc/docs/module_design/Workflow.md",
+        description: "covers the design of the `Workflow` module.",
+        responsibilities: ["covers the design of the `Workflow` module."],
+      },
+      {
+        name: "Data",
+        documentPath: "sdlc/docs/module_design/Data.md",
+        description: "covers the design of the `Data` module.",
+        responsibilities: ["covers the design of the `Data` module."],
+      },
+    ],
+  });
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
     "generation_started",
@@ -220,8 +237,8 @@ function createArchitectureDocument(): string {
     "- CLI Process: hosts interface, workflow, execution, contract, and quality-gate modules in one runtime.",
     "- Shared Storage: persists artifacts, history, and trace records.",
     "",
-    "# 5. System Flow",
-    "## 5.1 Main Flow",
+    "# 5. System Interactions",
+    "## 5.1 Primary Interaction Path",
     "```text",
     "[User] -> [Workflow] -> [Execution] -> [Contract] -> [Quality Gate] -> [Data]",
     "```",
@@ -267,17 +284,8 @@ function createArchitectureDocument(): string {
     "- Module design document: module responsibilities and interfaces.",
     "- Implementation document: code-generation workplan and implementation result.",
     "## 7.2 Design Document Breakdown",
-    "The workflow documents each recurring stage shape explicitly.",
-    "### 7.2.1 Start Task",
-    "Capture task entry, resume point, and required inputs.",
-    "### 7.2.2 Generate Or Update Stage Artifact",
-    "Describe how generation updates the stage artifact.",
-    "### 7.2.3 Check Stage Result",
-    "Describe contract checks and stabilization rules.",
-    "### 7.2.4 Review And Decision",
-    "Describe review inputs, gate semantics, and acceptance points.",
-    "### 7.2.5 Store Artifact And History",
-    "Describe persistence of accepted artifacts and task history.",
+    "- `sdlc/docs/module_design/Workflow.md`: covers the design of the `Workflow` module.",
+    "- `sdlc/docs/module_design/Data.md`: covers the design of the `Data` module.",
     "",
     "# 8. Open Issues",
     "- How validation workspaces should be isolated for implementation stages.",

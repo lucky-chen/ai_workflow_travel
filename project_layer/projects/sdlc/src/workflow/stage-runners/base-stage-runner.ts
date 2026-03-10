@@ -84,6 +84,7 @@ export abstract class BaseStageRunner implements IStageRunner {
     artifactPath: string,
     summary: string,
     gateDecision?: GateDecision,
+    payload?: Record<string, unknown>,
   ): Promise<void> {
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.recordSharedPersistenceResult`,
@@ -92,6 +93,7 @@ export abstract class BaseStageRunner implements IStageRunner {
       summary,
       payload: {
         outputPaths: [artifactPath],
+        ...(payload ?? {}),
       },
       metadata: {
         filePath: artifactPath,

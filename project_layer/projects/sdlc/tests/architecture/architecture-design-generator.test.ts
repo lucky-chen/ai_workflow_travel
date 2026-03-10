@@ -23,7 +23,15 @@ export async function runArchitectureDesignGeneratorTests(): Promise<void> {
 }
 
 async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoot: string): Promise<void> {
-  const llmExecutor = new MockLlmExecutor("# Technical Architecture\n\nGenerated architecture content.\n");
+  const generatedArchitectureDocument = [
+    "# Technical Architecture",
+    "",
+    "## 7.2 Design Document Breakdown",
+    "- `sdlc/docs/module_design/Workflow.md`: covers the design of the `Workflow` module.",
+    "- `sdlc/docs/module_design/Data.md`: covers the design of the `Data` module.",
+    "",
+  ].join("\n");
+  const llmExecutor = new MockLlmExecutor(generatedArchitectureDocument);
   const generator = new ArchitectureDesignGenerator({ llmExecutor });
 
   const output = await generator.run({
@@ -42,7 +50,21 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
     summary: "Architecture design document generated.",
     artifacts: {
       artifactKey: "architecture_document",
-      content: "# Technical Architecture\n\nGenerated architecture content.\n",
+      content: generatedArchitectureDocument,
+      design_document_breakdown: JSON.stringify([
+        {
+          name: "Workflow",
+          documentPath: "sdlc/docs/module_design/Workflow.md",
+          description: "covers the design of the `Workflow` module.",
+          responsibilities: ["covers the design of the `Workflow` module."],
+        },
+        {
+          name: "Data",
+          documentPath: "sdlc/docs/module_design/Data.md",
+          description: "covers the design of the `Data` module.",
+          responsibilities: ["covers the design of the `Data` module."],
+        },
+      ]),
     },
   });
 

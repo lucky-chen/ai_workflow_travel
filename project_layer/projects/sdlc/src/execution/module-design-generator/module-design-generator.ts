@@ -7,11 +7,14 @@ import { DocumentStageGenerator } from "../document-stage-generator.js";
 export interface ModuleDescriptor {
   name: string;
   responsibilities: string[];
+  documentPath?: string;
+  description?: string;
 }
 
 export interface ModuleDesignArtifacts {
   artifactKey: "module_design_document";
   moduleName: string;
+  documentPath: string;
   content: string;
 }
 
@@ -83,6 +86,7 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
       metadata: {
         stage: "module_design",
         moduleName: payload.moduleDescriptor.name,
+        documentPath: payload.moduleDescriptor.documentPath ?? "",
       },
     };
   }
@@ -92,7 +96,6 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
     if (!moduleName) {
       throw new Error('Module design generation result must include metadata.moduleName.');
     }
-
     return {
       stageId: "module_design",
       success: true,
@@ -100,6 +103,7 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
       artifacts: {
         artifactKey: "module_design_document",
         moduleName,
+        documentPath: result.metadata?.documentPath ?? "",
         content: result.content,
       },
     };
@@ -114,6 +118,8 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
     return typeof candidate.name === "string"
       && candidate.name.length > 0
       && Array.isArray(candidate.responsibilities)
-      && candidate.responsibilities.every((item) => typeof item === "string");
+      && candidate.responsibilities.every((item) => typeof item === "string")
+      && (candidate.documentPath === undefined || typeof candidate.documentPath === "string")
+      && (candidate.description === undefined || typeof candidate.description === "string");
   }
 }

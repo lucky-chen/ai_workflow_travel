@@ -10,6 +10,7 @@ import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
 import { ModuleDesignContract } from "../../contract/module-design-contract/module-design-contract.js";
 import {
   ModuleDesignGenerator,
+  type ModuleDescriptor,
   type ModuleDesignArtifacts,
 } from "../../execution/module-design-generator/module-design-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
@@ -46,7 +47,7 @@ export class ModuleStageRunner extends BaseStageRunner {
       throw new Error(`Module design contract failed: ${contractResult.summary}`);
     }
 
-    const artifactPath = this.buildArtifactPath(context.workspaceRoot, output.artifacts.moduleName);
+    const artifactPath = this.readTargetPath(context.workspaceRoot, context, output.artifacts);
     const gateDecision = await this.reviewChanges(this.buildReviewRequest(context, artifactPath, output.artifacts));
     if (gateDecision.action !== "apply") {
       throw new Error(`Change review ended with action "${gateDecision.action}".`);
@@ -94,6 +95,15 @@ export class ModuleStageRunner extends BaseStageRunner {
     };
   }
 
+  private readTargetPath(workspaceRoot: string, context: StageRunContext, artifacts: ModuleDesignArtifacts): string {
+    if (artifacts.documentPath.trim().length > 0) {
+      return artifacts.documentPath;
+    }
+
+    const descriptor = this.readModuleDescriptor(context);
+    return descriptor.documentPath?.trim() || this.buildArtifactPath(workspaceRoot, artifacts.moduleName);
+  }
+
   private async recordPersistenceResult(
     context: StageRunContext,
     gateDecision: GateDecision,
@@ -105,5 +115,14 @@ export class ModuleStageRunner extends BaseStageRunner {
       `Accepted module-design artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
+  }
+
+  private readModuleDescriptor(context: StageRunContext): ModuleDescriptor {
+    const rawDescriptor = context.inputArtifacts.module_descriptors;
+    if (!rawDescriptor) {
+      throw new Error('Missing required input artifact "module_descriptors".');
+    }
+
+    return JSON.parse(rawDescriptor) as ModuleDescriptor;
   }
 }

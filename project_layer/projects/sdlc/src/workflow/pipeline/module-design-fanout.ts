@@ -8,10 +8,13 @@ import type {
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId } from "../../shared/types/common.js";
+import { parseDesignDocumentBreakdown, type DesignDocumentDescriptor } from "../../shared/architecture/design-document-breakdown.js";
 
 interface ModuleDescriptor {
   name: string;
   responsibilities: string[];
+  documentPath?: string;
+  description?: string;
 }
 
 export interface ModuleDesignFanoutInput {
@@ -82,8 +85,7 @@ export async function runSequentialModuleDesignFanout(
     "mergeInputArtifacts" | "resolveStageStatus" | "updateTaskAfterStageRun" | "onStageFailure"
   >,
 ): Promise<ArtifactMap> {
-  const architectureContent = readArchitectureContent(input.architectureOutput);
-  const moduleDescriptors = parseArchitectureModules(architectureContent);
+  const moduleDescriptors = readModuleDesignTargets(input.currentInputArtifacts, input.architectureOutput);
   const acceptedModuleDesignPaths: string[] = [];
   let accumulatedArtifacts = input.currentInputArtifacts;
 
@@ -115,6 +117,9 @@ export async function runSequentialModuleDesignFanout(
 
   const {
     module_design_document: _singleModuleDesignDocument,
+    module_descriptors: _moduleDescriptors,
+    design_document_breakdown: _designDocumentBreakdown,
+    documentPath: _documentPath,
     ...nextArtifacts
   } = accumulatedArtifacts;
 
@@ -171,4 +176,62 @@ function parseArchitectureModules(content: string): ModuleDescriptor[] {
       };
     })
     .filter((entry) => entry.name.length > 0);
+}
+
+function readModuleDesignTargets(
+  currentInputArtifacts: ArtifactMap,
+  architectureOutput: StageOutput,
+): ModuleDescriptor[] {
+  const serializedBreakdown = readSerializedBreakdown(currentInputArtifacts, architectureOutput);
+  if (serializedBreakdown) {
+    const parsed = parseSerializedBreakdown(serializedBreakdown);
+    if (parsed.length > 0) {
+      return parsed;
+    }
+  }
+
+  return parseArchitectureModules(readArchitectureContent(architectureOutput));
+}
+
+function readSerializedBreakdown(currentInputArtifacts: ArtifactMap, architectureOutput: StageOutput): string | null {
+  const fromOutput = typeof (architectureOutput.artifacts as Record<string, unknown>)?.design_document_breakdown === "string"
+    ? String((architectureOutput.artifacts as Record<string, unknown>).design_document_breakdown)
+    : null;
+  if (fromOutput?.trim()) {
+    return fromOutput;
+  }
+
+  const fromInput = currentInputArtifacts.design_document_breakdown;
+  return fromInput?.trim() ? fromInput : null;
+}
+
+function parseSerializedBreakdown(serializedBreakdown: string): ModuleDescriptor[] {
+  try {
+    const parsed = JSON.parse(serializedBreakdown) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter((entry): entry is DesignDocumentDescriptor => {
+        if (!entry || typeof entry !== "object") {
+          return false;
+        }
+
+        const candidate = entry as Record<string, unknown>;
+        return typeof candidate.name === "string"
+          && typeof candidate.documentPath === "string"
+          && typeof candidate.description === "string"
+          && Array.isArray(candidate.responsibilities)
+          && candidate.responsibilities.every((item) => typeof item === "string");
+      })
+      .map((entry) => ({
+        name: entry.name,
+        documentPath: entry.documentPath,
+        description: entry.description,
+        responsibilities: entry.responsibilities,
+      }));
+  } catch {
+    return [];
+  }
 }

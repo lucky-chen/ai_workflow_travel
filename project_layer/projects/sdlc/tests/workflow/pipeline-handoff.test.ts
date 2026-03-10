@@ -142,21 +142,13 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
         )
       ).length > 0
         ? JSON.stringify([
-          resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
           resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
-          resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
-          resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
-          resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
           resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         ])
         : "[]",
     ) as string[];
     assert.deepEqual(moduleDesignDocuments, [
-      resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
       resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
-      resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
       resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
     ]);
     assert.match(implementationExecutionContext.runId ?? "", /^\d+$/);
@@ -170,11 +162,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
         requirement_document: resolveRequirementArtifactPath(workspaceRoot),
         architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
         module_design_documents: JSON.stringify([
-          resolveModuleDesignArtifactPath(workspaceRoot, "Interface Layer"),
           resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
-          resolveModuleDesignArtifactPath(workspaceRoot, "Execution"),
-          resolveModuleDesignArtifactPath(workspaceRoot, "Contract"),
-          resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
           resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         ]),
         implementation_workplan: resolveImplementationPlanArtifactPath(workspaceRoot),
@@ -213,30 +201,6 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
     assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
       "task_started",
       "stage_started",
-      "contract_checked",
-      "gate_reviewed",
-      "artifact_persisted",
-      "stage_started",
-      "generation_started",
-      "generation_finished",
-      "contract_checked",
-      "gate_reviewed",
-      "artifact_persisted",
-      "stage_started",
-      "generation_started",
-      "generation_finished",
-      "contract_checked",
-      "gate_reviewed",
-      "artifact_persisted",
-      "stage_started",
-      "generation_started",
-      "generation_finished",
-      "contract_checked",
-      "gate_reviewed",
-      "artifact_persisted",
-      "stage_started",
-      "generation_started",
-      "generation_finished",
       "contract_checked",
       "gate_reviewed",
       "artifact_persisted",

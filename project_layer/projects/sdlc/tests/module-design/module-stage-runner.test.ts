@@ -39,14 +39,15 @@ async function testModuleStageRunnerPersistsAcceptedDocument(workspaceRoot: stri
       architecture_document: "# Technical Architecture\n\nArchitecture content.\n",
       module_descriptors: JSON.stringify({
         name: "Workflow",
+        documentPath: "docs/design/workflow-module.md",
         responsibilities: ["orchestrate stage execution", "coordinate stage handoff"],
       }),
     },
   });
 
-  assert.equal(output.artifacts.module_design_document, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"));
+  assert.equal(output.artifacts.module_design_document, "docs/design/workflow-module.md");
   assert.equal(
-    await readFile(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow")), "utf8"),
+    await readFile(path.join(workspaceRoot, "docs/design/workflow-module.md"), "utf8"),
     content,
   );
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
@@ -60,7 +61,7 @@ async function testModuleStageRunnerPersistsAcceptedDocument(workspaceRoot: stri
 }
 
 async function testModuleStageRunnerRejectStopsPersistence(workspaceRoot: string): Promise<void> {
-  await rm(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow")), { force: true });
+  await rm(path.join(workspaceRoot, "docs/design/workflow-module.md"), { force: true });
   const runner = new ModuleStageRunner({
     llmExecutor: new ModuleStageRunnerLlmExecutor(createModuleDesignDocument()),
     changeGate: new InMemoryChangeGate({
@@ -81,6 +82,7 @@ async function testModuleStageRunnerRejectStopsPersistence(workspaceRoot: string
         architecture_document: "# Technical Architecture\n\nArchitecture content.\n",
         module_descriptors: JSON.stringify({
           name: "Workflow",
+          documentPath: "docs/design/workflow-module.md",
           responsibilities: ["orchestrate stage execution"],
         }),
       },
@@ -88,13 +90,13 @@ async function testModuleStageRunnerRejectStopsPersistence(workspaceRoot: string
     /Change review ended with action "reject"\./,
   );
 
-  await assert.rejects(access(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"))));
+  await assert.rejects(access(path.join(workspaceRoot, "docs/design/workflow-module.md")));
 }
 
 async function testModuleStageRunnerContractFailure(
   workspaceRoot: string,
 ): Promise<void> {
-  await rm(path.join(workspaceRoot, resolveModuleDesignArtifactPath(workspaceRoot, "Workflow")), { force: true });
+  await rm(path.join(workspaceRoot, "docs/design/workflow-module.md"), { force: true });
   const runner = new ModuleStageRunner({
     llmExecutor: new ModuleStageRunnerLlmExecutor("# Workflow Design\n\nBroken output"),
     changeGate: new InMemoryChangeGate(),
@@ -110,6 +112,7 @@ async function testModuleStageRunnerContractFailure(
         architecture_document: "# Technical Architecture\n\nArchitecture content.\n",
         module_descriptors: JSON.stringify({
           name: "Workflow",
+          documentPath: "docs/design/workflow-module.md",
           responsibilities: ["orchestrate stage execution"],
         }),
       },

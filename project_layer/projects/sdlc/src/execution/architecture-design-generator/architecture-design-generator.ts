@@ -3,10 +3,12 @@ import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "../document-stage-generator.js";
+import { parseDesignDocumentBreakdown } from "../../shared/architecture/design-document-breakdown.js";
 
 export interface ArchitectureDesignArtifacts {
   artifactKey: "architecture_document";
   content: string;
+  design_document_breakdown: string;
 }
 
 export interface ArchitectureDesignGeneratorDependencies {
@@ -56,6 +58,7 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
   }
 
   protected async buildStageOutput(result: LlmExecutionResult): Promise<StageOutput<ArchitectureDesignArtifacts>> {
+    const designDocumentBreakdown = parseDesignDocumentBreakdown(result.content);
     return {
       stageId: "architecture_design",
       success: true,
@@ -63,7 +66,19 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
       artifacts: {
         artifactKey: "architecture_document",
         content: result.content,
+        design_document_breakdown: JSON.stringify(designDocumentBreakdown),
       },
+    };
+  }
+
+  protected buildGenerationFinishedPayload(output: StageOutput): Record<string, unknown> | undefined {
+    const artifacts = output.artifacts as Partial<ArchitectureDesignArtifacts>;
+    if (typeof artifacts.design_document_breakdown !== "string") {
+      return undefined;
+    }
+
+    return {
+      designDocumentBreakdown: JSON.parse(artifacts.design_document_breakdown) as unknown,
     };
   }
 }

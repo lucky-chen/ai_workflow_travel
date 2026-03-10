@@ -38,6 +38,8 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
       architecture_document: "# Technical Architecture\n\nArchitecture content.\n",
       module_descriptors: JSON.stringify({
         name: "Workflow",
+        documentPath: "sdlc/docs/module_design/Workflow.md",
+        description: "covers the design of the `Workflow` module.",
         responsibilities: ["orchestrate stage execution", "coordinate stage handoff"],
       }),
     },
@@ -50,6 +52,7 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
     artifacts: {
       artifactKey: "module_design_document",
       moduleName: "Workflow",
+      documentPath: "sdlc/docs/module_design/Workflow.md",
       content: "# Workflow Design\n\nGenerated module design content.\n",
     },
   });
@@ -65,12 +68,13 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
   const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
     architectureDocument: string;
-    moduleDescriptor: { name: string; responsibilities: string[] };
+    moduleDescriptor: { name: string; responsibilities: string[]; documentPath?: string };
     template: string;
   };
   assert.equal(payload.target, "module_design");
   assert.equal(payload.architectureDocument.includes("Architecture content."), true);
   assert.equal(payload.moduleDescriptor.name, "Workflow");
+  assert.equal(payload.moduleDescriptor.documentPath, "sdlc/docs/module_design/Workflow.md");
   assert.equal(payload.moduleDescriptor.responsibilities.length, 2);
   assert.equal(payload.template.includes("# {ModuleName} Design"), true);
 }

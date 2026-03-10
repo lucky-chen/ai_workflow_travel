@@ -26,7 +26,13 @@ export interface PipelineServiceDependencies {
 
 // Public API: workflow entry used by CLI or other callers to launch a task.
 export class PipelineService implements IPipeline {
-  private static readonly NON_FORWARD_ARTIFACT_KEYS = new Set(["artifactKey", "content", "summary", "moduleName"]);
+  private static readonly NON_FORWARD_ARTIFACT_KEYS = new Set([
+    "artifactKey",
+    "content",
+    "summary",
+    "moduleName",
+    "documentPath",
+  ]);
   private readonly registry: StageRegistry;
   private readonly launchValidator: LaunchValidator;
   private readonly traceRecorder?: ITraceRecorder;
