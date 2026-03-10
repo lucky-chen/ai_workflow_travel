@@ -1,146 +1,150 @@
-
 # 1. Background
 
 
-- This project is a simple hello service product for demonstrating a minimal interactive service experience.
-- The core scenario is that a user initiates a greeting request to the service.
-- The product should return a greeting to the user together with the current time.
+- This project is a simple client-server product for validating a basic request-response program flow.
+- The core scenario is that a client-side user enters one piece of text and sends it to the server.
+- The server returns the original text together with a fixed suffix so the result is easy to verify during testing.
 
 # 2. User Scenarios
 
 
-## 2.1 Caller
+## 2.1 Tester
 
 
-The caller wants to initiate a greeting interaction and receive a clear response from the service.
+The tester wants to enter text from the client side and quickly confirm that the server returns the expected result.
 
 ## 2.2 Developer
 
 
-The developer wants a minimal service product with clear behavior and low maintenance complexity.
+The developer wants a minimal client-server sample that is easy to implement, inspect, and maintain.
 
 ## 2.3 Test Team
 
 
-The team wants a simple product scenario that is easy to understand, demonstrate, and maintain.
+The team wants a small and repeatable validation product that can be used to confirm the basic correctness of the program.
 
 - tester
-  - confirm the service response matches the intended user experience
-  - confirm the returned information is complete and understandable
+  - enter different text inputs and verify the returned content
+  - confirm the client-server interaction remains stable across repeated runs
 - maintainer
-  - keep the product behavior stable over time
-  - confirm changes do not break the core greeting scenario
+  - keep the product behavior simple and predictable
+  - confirm later changes do not break the basic validation scenario
 
 # 3. Product Goals
 
 
-Provide a simple hello service that gives users a greeting response together with the current time.
-- support a complete greeting interaction from request to response
-- return clear and predictable response content
-- keep the product simple enough for demonstration and ongoing maintenance
+Provide a simple client-server product that returns the input text together with a fixed server-side suffix for validation use.
+- support one clear text request and response interaction
+- return content that is easy for testers to compare and verify
+- keep the product scope minimal for stable program validation
 
 # 4. Core Problems and Product Abilities
 
 
-## 4.1 A minimal service flow is needed
+## 4.1 A minimal validation interaction is needed
 
 
-- problem: Users need a minimal service product with a clear and understandable interaction.
-- ability: The product provides one simple greeting scenario that users can understand immediately.
+- problem: The team needs a very small product scenario to verify that a client can send text to a server and receive a response.
+- ability: The product provides one minimal text request and response interaction.
 
-## 4.2 The response must be easy to verify
-
-
-- problem: If the response content is unclear, users cannot easily understand the value of the product interaction.
-- ability: The product returns a clear greeting message so the core response is easy to understand.
-
-## 4.3 The response should show current runtime information
+## 4.2 The returned content must be easy to check
 
 
-- problem: Without time information, the response feels less informative and less connected to the current interaction.
-- ability: The product includes the current time in the response.
+- problem: If the returned content is unclear, testers cannot quickly determine whether the program behaves correctly.
+- ability: The product returns the original text together with a fixed suffix that is easy to compare.
 
-## 4.4 The project should remain small and focused
-
-
-- problem: Extra features would make a simple hello product harder to understand and maintain.
-- ability: The product scope stays focused on a single hello interaction.
-
-## 4.5 The service should support repeated testing
+## 4.3 The product should reflect a real client-server exchange
 
 
-- problem: A simple product loses value if its core interaction is not stable and repeatable.
-- ability: The product keeps its core greeting experience consistent and repeatable.
+- problem: A validation product loses value if it does not clearly show a complete client-to-server-to-client interaction.
+- ability: The product accepts text from the client side and returns the processed result from the server side.
+
+## 4.4 The scope must stay small and focused
+
+
+- problem: Extra features would make the validation target harder to understand and less stable.
+- ability: The product scope remains limited to one text echo-style interaction.
+
+## 4.5 The scenario should support repeated testing
+
+
+- problem: A validation scenario is less useful if the same test cannot be repeated consistently.
+- ability: The product supports repeated submission and repeated result checking with predictable behavior.
 
 # 5. User Journey
 
 
-## 5.1 Standard Flow
+## 5.1 Standard Journey
 
 
-### 5.1.1 Prepare to Use the Service
+### 5.1.1 Open the Client Entry
 
 
-The user reaches a usable hello service entry point.
+The tester reaches a usable client entry point for the validation product.
 
-The user expectation at this stage is simple:
-- the service is available
-- the interaction entry is clear
-- no extra setup is required for the core hello scenario
+The tester expectation at this stage is simple:
+- the client is available
+- the text input entry is visible
+- the interaction can start without extra business setup
 
-### 5.1.2 Initiate the Hello Interaction
+### 5.1.2 Enter and Submit Text
 
-The user sends a hello request to start the interaction.
 
-The user intent is not to complete a complex workflow.
-The user only wants to trigger one clear greeting interaction.
+The tester enters one piece of text and sends it to the server.
 
-### 5.1.3 Receive the Greeting Result
+The tester intent is straightforward:
+The tester only wants to trigger one clear request-response validation.
 
-The user receives a response that includes:
-- a greeting message
-- the current time
-- a result that is easy to understand at a glance
+### 5.1.3 Receive the Returned Result
+
+
+The tester receives a result that includes:
+- the original input text
+- a fixed suffix from the server
+- a response that is easy to read and compare
 
 ### 5.1.4 Confirm the Result Matches Expectations
 
-The user checks whether the returned result is complete, clear, and aligned with the intended hello experience.
+
+The tester checks whether the returned result is complete, clear, and aligned with the expected validation behavior.
 
 The expected confirmation points are:
-- the response is successful
-- the greeting content is present
-- the current time is present
-- the overall result is understandable
+- the request completes successfully
+- the original text is preserved in the response
+- the response includes `from server`
+- the full result is easy to verify
 
-### 5.1.5 Repeat the Same Interaction When Needed
+### 5.1.5 Repeat the Same Validation When Needed
 
-If the user wants to test again, the same hello interaction can be repeated without needing a different path or additional business context.
+
+If the tester wants to verify another case, the same interaction can be repeated with new text input.
 
 ### 5.1.6 Recheck After Product Changes
 
-When the product is updated, the team revisits the same user journey to confirm that the original hello experience still works as expected.
 
-## 5.2 Resume Support Entry Points
+When the product is updated, the team revisits the same user journey to confirm that the validation behavior still works as expected.
+
+## 5.2 Journey Resume Entry Points
 
 
 This journey can restart from practical user-facing checkpoints when enough context is already known.
 
 Supported resume entry points:
-- Service already available
-  The user can directly initiate the hello interaction without revisiting setup assumptions.
-- Response already received
-  The user or team can continue from result confirmation when the response is already available for review.
+- Client already available
+  The tester can directly enter text and start validation.
+- Result already returned
+  The tester or team can continue from checking whether the returned content is correct.
 - Product already changed
-  The team can resume from rechecking the same hello journey after a code or configuration update.
+  The team can resume from rerunning the same validation journey after a code or configuration update.
 
-## 5.3 Failure Handling
+## 5.3 Journey Failure Handling
 
 
-- If the service is not available, the user should receive clear feedback instead of an ambiguous or silent failure.
-- If the hello interaction cannot complete, the result must not be represented as a successful greeting response.
-- If the returned content is missing the greeting or the current time, the journey should be treated as incomplete.
-- If the returned result is hard to understand, the journey should be treated as not meeting the product goal.
-- After a failure is corrected, the team should rerun the same user journey to confirm the expected experience is restored.
+- If the client or server is not available, the tester should receive clear feedback instead of an ambiguous failure.
+- If the request cannot complete, the result must not be represented as a successful validation response.
+- If the returned content is missing the original text or `from server`, the journey should be treated as incomplete.
+- If the returned result is difficult to read or compare, the journey should be treated as not meeting the product goal.
+- After a failure is corrected, the team should rerun the same user journey to confirm the expected behavior is restored.
 
 # 6. Inputs and Outputs
 
@@ -148,21 +152,21 @@ Supported resume entry points:
 ## 6.1 Inputs
 
 
-- A user greeting request
-- Basic context needed for the product to return a response
+- One piece of text entered by the client-side user
+- The submit action that sends the text to the server
 
 ## 6.2 Prerequisites
 
 
-- The product is available for use
-- The user can access the service
+- The client can access the server
+- The validation product is available for use
 
 ## 6.3 Outputs
 
 
-- A greeting response for the user
-- The current time included in the returned result
-- A clear interaction outcome that can be understood by users and the team
+- A response containing the original input text
+- The fixed suffix `from server` in the returned result
+- A clear validation outcome that testers can confirm directly
 
 # 7 Scope and Non-Goals
 
@@ -171,31 +175,31 @@ Supported resume entry points:
 
 
 - Goals
-  - Support the basic greeting interaction
-  - Return a greeting together with the current time
+  - Support one basic client-to-server text submission
+  - Return the input text together with `from server`
 - Non-Goals
-  - Add unrelated business features
-  - Build a complex production-grade platform
+  - Add user accounts, permissions, or business workflows
+  - Build a complex production-grade service platform
 
 ## 7.2 V2: Available
 
 
 - Goals
-  - Improve response consistency and product usability
-  - Support more stable repeated interactions
+  - Improve response stability and repeated test usability
+  - Support clearer failure feedback during validation
 - Non-Goals
-  - Expand into a multi-feature business system
-  - Replace full service governance requirements
+  - Expand into a multi-feature business application
+  - Replace a full end-to-end system test platform
 
 ## 7.3 V3: General
 
 
 - Goals
-  - Extend the simple hello product into a more general lightweight service example
-  - Support limited expansion on top of the core greeting interaction
+  - Extend the sample into a slightly more general text validation service
+  - Preserve the original simple request-response validation value
 - Non-Goals
-  - Cover all advanced production service scenarios
-  - Remove the simplicity of the original hello test purpose
+  - Cover all advanced client-server scenarios
+  - Remove the simplicity of the original testing purpose
 
 # 8. Success Criteria
 
@@ -203,30 +207,30 @@ Supported resume entry points:
 ## 8.1 V1
 
 
-- A user can complete the hello interaction successfully
-- The product returns a clear greeting response
-- The returned result includes the current time
+- A tester can submit text from the client side successfully
+- The server returns the original text in the response
+- The response includes the fixed suffix `from server`
 
 ## 8.2 V2
 
 
-- Failed interactions produce understandable feedback
-- Repeated interactions keep producing clear results
+- Failed requests produce understandable feedback
+- Repeated validations keep producing predictable results
 - The product remains easy to understand and maintain
 
 ## 8.3 V3
 
 
-- The product can support small extensions without breaking the hello scenario
-- The service remains understandable as a lightweight sample
-- The original greeting experience remains clear and stable
+- The product can support small extensions without breaking the core validation scenario
+- The client-server validation flow remains clear and stable
+- The original simple testing purpose remains intact
 
 # 9. Risks
 
 
-- The project scope may drift beyond a simple hello test service.
-- The time information may become inconsistent if the product expression is not kept stable.
-- Extra features may reduce the clarity and simplicity of the product.
+- The project scope may drift beyond a simple validation product.
+- Later changes may alter the fixed response expression and reduce result consistency.
+- Extra features may make the product harder to use as a quick validation target.
 
 # 10. Constraints
 
@@ -234,24 +238,24 @@ Supported resume entry points:
 ## 10.1 Minimal Scope
 
 
-The product must stay focused on the hello test scenario and avoid unrelated feature expansion in the MVP stage.
+The product must stay focused on the simple text validation scenario and avoid unrelated feature expansion in the MVP stage.
 
-## 10.2 Fixed Greeting Content
-
-
-The successful response must contain a clear greeting to the user.
-
-## 10.3 Server-Returned Time
+## 10.2 Fixed Response Pattern
 
 
-The current time must be included as part of the returned result.
+The successful response must contain the original input text together with the fixed suffix `from server`.
+
+## 10.3 Client-Server Interaction
+
+
+The product must preserve a clear client-to-server request and server-to-client response pattern.
 
 ## 10.4 Clear Response Contract
 
 
-The response content must remain clear and understandable for users and the team.
+The response content must remain clear and directly verifiable for testers and the team.
 
-## 10.5 Test-Oriented Project
+## 10.5 Test-Oriented Product
 
 
-This project is primarily a simple demonstration product, so simplicity and repeatability take priority over feature richness.
+This project is primarily a validation product, so simplicity, predictability, and repeatability take priority over feature richness.

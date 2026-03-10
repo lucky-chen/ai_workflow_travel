@@ -218,6 +218,24 @@
 }
 -->
 
+### 4.6 Technology Choices
+
+<!--
+{
+  "section_contract": {
+    "section_id": "4.6",
+    "title": "Technology Choices",
+    "checkitems": [
+      "state the implementation technology choices for each major layer, partition, or module",
+      "keep the description at technology-stack selection level rather than implementation detail",
+      "make the mapping between architecture parts and technology choices explicit"
+    ],
+    "severity": "medium",
+    "expected_format": "- `{LayerOrModuleA}`: `{TechStackA}` for `{WhyOrResponsibilityA}`\n- `{LayerOrModuleB}`: `{TechStackB}` for `{WhyOrResponsibilityB}`\n- `{LayerOrModuleC}`: `{TechStackC}` for `{WhyOrResponsibilityC}`"
+  }
+}
+-->
+
 ---
 
 ## 5. System Interactions
@@ -420,10 +438,13 @@
     "section_id": "7.2",
     "title": "Design Document Breakdown",
     "checkitems": [
-      "break down follow-up design documents by major flow step or architecture area",
-      "list each document with its intended scope"
+      "output this section as a document directory list",
+      "list follow-up design documents that map directly to the modules identified in the architecture document",
+      "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
+      "state each document path together with its intended scope"
     ],
-    "severity": "medium"
+    "severity": "medium",
+    "expected_format": "- `{DocPathA}`: covers the design of `{ModuleOrInteractionA}`.\n- `{DocPathB}`: covers the design of `{ModuleOrInteractionB}`.\n- `{DocPathC}`: covers the design of `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document."
   }
 }
 -->
