@@ -48,7 +48,6 @@ export class LlmExecutorService implements ILlmExecutor {
 
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     await this.traceRecorder?.recordTrace({
-      taskId: "llm-executor",
       caller: "LlmExecutorService.execute",
       stageId: typeof request.metadata?.stageId === "string"
         ? request.metadata.stageId
@@ -71,7 +70,6 @@ export class LlmExecutorService implements ILlmExecutor {
     });
 
     await this.traceRecorder?.recordTrace({
-      taskId: "llm-executor",
       caller: "LlmExecutorService.execute",
       stageId: typeof request.metadata?.stageId === "string"
         ? request.metadata.stageId

@@ -16,14 +16,12 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
   const recorder = new InMemoryTraceRecorder();
 
   const ref1 = await recorder.recordTrace({
-    taskId: "task-1",
     stageId: "implementation",
     caller: "trace.test",
     eventType: "stage_started",
     summary: "Implementation started.",
   });
   const ref2 = await recorder.recordTrace({
-    taskId: "task-1",
     caller: "trace.test",
     eventType: "task_finished",
     summary: "Task finished.",
@@ -35,7 +33,6 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
     {
       ref: "trace-1",
       event: {
-        taskId: "task-1",
         stageId: "implementation",
         caller: "trace.test",
         eventType: "stage_started",
@@ -45,7 +42,6 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
     {
       ref: "trace-2",
       event: {
-        taskId: "task-1",
         caller: "trace.test",
         eventType: "task_finished",
         summary: "Task finished.",
@@ -105,9 +101,12 @@ async function testTraceServiceMirrorsTraceIntoWorkspace(): Promise<void> {
         : undefined),
     );
     const recorder = new TraceService(historyStore);
+    recorder.setScope({
+      taskId: "task-workspace",
+      runId: "run-trace",
+    });
 
     const ref = await recorder.recordTrace({
-      taskId: "task-workspace",
       runId: "run-trace",
       stageId: "architecture_design",
       caller: "trace.test",

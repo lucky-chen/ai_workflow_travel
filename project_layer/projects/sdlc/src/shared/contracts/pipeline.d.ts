@@ -67,11 +67,14 @@ export interface IArtifactStore {
     listArtifacts(query: ListArtifactRequest): Promise<string[]>;
 }
 export interface TraceEvent {
-    taskId: TaskId;
+    runId?: string;
     stageId?: StageId;
-    eventType: string;
+    caller: string;
+    eventType: TraceEventType;
     summary: string;
+    category?: string;
     metadata?: StringMap;
+    payload?: Record<string, unknown>;
 }
 export interface ITraceRecorder {
     recordTrace(event: TraceEvent): Promise<TraceRef>;

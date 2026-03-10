@@ -8,7 +8,6 @@ export class AgentTraceRecorderAdapter implements IAgentTraceRecorder {
 
   async record(event: AgentTraceEvent): Promise<string> {
     return this.traceRecorder.recordTrace({
-      taskId: "llm-executor",
       caller: "AgentTraceRecorderAdapter.record",
       eventType: this.toTraceEventType(event.eventType),
       summary: event.summary,

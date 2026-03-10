@@ -30,7 +30,6 @@ export class ArtifactStoreService implements IArtifactStore {
     await this.traceRecorder?.recordTrace({
       caller: "ArtifactStoreService.writeArtifact",
       category: "artifact",
-      taskId: request.taskId,
       stageId: request.stageId,
       eventType: "artifact_persisted",
       summary: `Artifact persisted to ${request.filePath}.`,
