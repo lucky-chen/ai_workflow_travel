@@ -40,11 +40,8 @@ export class TraceService implements ITraceRecorder {
 
   async recordTrace(event: TraceEvent): Promise<TraceRef> {
     const taskId = this.scope?.taskId;
-    const runId = event.runId ?? this.scope?.runId;
-    this.validateTraceEvent({
-      ...event,
-      runId,
-    });
+    const runId = this.scope?.runId;
+    this.validateTraceEvent(event);
     const resolvedTaskId = taskId as string;
     const resolvedRunId = runId as string;
     const payload = event.payload && Object.keys(event.payload).length > 0
@@ -76,7 +73,7 @@ export class TraceService implements ITraceRecorder {
       throw new Error('Trace event requires a non-empty "taskId".');
     }
 
-    if (!event.runId?.trim()) {
+    if (!this.scope?.runId?.trim()) {
       throw new Error('Trace event requires a non-empty "runId".');
     }
 

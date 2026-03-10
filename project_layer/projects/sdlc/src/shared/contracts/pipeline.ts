@@ -116,7 +116,6 @@ export interface IArtifactStore {
 }
 
 export interface TraceEvent {
-  runId?: string;
   stageId?: StageId;
   caller: string;
   eventType: TraceEventType;

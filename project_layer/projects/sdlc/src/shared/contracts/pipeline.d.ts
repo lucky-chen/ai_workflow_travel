@@ -67,7 +67,6 @@ export interface IArtifactStore {
     listArtifacts(query: ListArtifactRequest): Promise<string[]>;
 }
 export interface TraceEvent {
-    runId?: string;
     stageId?: StageId;
     caller: string;
     eventType: TraceEventType;

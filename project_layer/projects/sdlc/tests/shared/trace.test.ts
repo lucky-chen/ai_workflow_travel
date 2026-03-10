@@ -107,7 +107,6 @@ async function testTraceServiceMirrorsTraceIntoWorkspace(): Promise<void> {
     });
 
     const ref = await recorder.recordTrace({
-      runId: "run-trace",
       stageId: "architecture_design",
       caller: "trace.test",
       eventType: "stage_started",
