@@ -8,12 +8,12 @@
     },
     {
       "check_item": "requirement_scope_consistency",
-      "description": "The document should stay at product requirement level and remain consistent across user scenarios, workflow, scope, constraints, and success criteria.",
+      "description": "The document should stay at product requirement level and remain consistent across user scenarios, journey, scope, constraints, and success criteria.",
       "severity": "high"
     },
     {
-      "check_item": "workflow_and_goal_alignment",
-      "description": "Product goals, core problems, workflow, outputs, scope, and success criteria should remain logically aligned.",
+      "check_item": "journey_and_goal_alignment",
+      "description": "Product goals, core problems, journey, outputs, scope, and success criteria should remain logically aligned.",
       "severity": "high"
     }
   ]
@@ -226,33 +226,33 @@
 }
 -->
 
-# 5. User Workflow
+# 5. User Journey
 
 <!--
 {
   "section_contract": {
     "section_id": "5",
-    "title": "User Workflow",
+    "title": "User Journey",
     "checkitems": [
-      "describe the end-to-end user workflow and important control points",
-      "make main flow, resume support, and failure handling explicit",
-      "keep the workflow at product behavior level"
+      "describe the end-to-end user journey and important user-facing control points",
+      "make the main journey, resume support, and failure handling explicit",
+      "keep the journey at product behavior level rather than implementation level"
     ],
     "severity": "high"
   }
 }
 -->
 
-## 5.1 Standard Flow
+## 5.1 Standard Journey
 
 <!--
 {
   "section_contract": {
     "section_id": "5.1",
-    "title": "Standard Flow",
+    "title": "Standard Journey",
     "checkitems": [
-      "describe the standard end-to-end workflow in ordered stages",
-      "use one subsection per important workflow stage"
+      "describe the standard end-to-end user journey in ordered stages",
+      "use one subsection per important user journey stage"
     ],
     "severity": "medium"
   }
@@ -267,8 +267,8 @@
     "section_id": "5.1.1",
     "title": "{StageA}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageADescription}`"
@@ -284,8 +284,8 @@
     "section_id": "5.1.2",
     "title": "{StageB}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageBDescription}`"
@@ -301,8 +301,8 @@
     "section_id": "5.1.3",
     "title": "{StageC}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageCDescription}`"
@@ -318,8 +318,8 @@
     "section_id": "5.1.4",
     "title": "{StageD}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageDDescription}`"
@@ -335,8 +335,8 @@
     "section_id": "5.1.5",
     "title": "{StageE}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageEDescription}`"
@@ -352,8 +352,8 @@
     "section_id": "5.1.6",
     "title": "{StageF}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageFDescription}`"
@@ -369,8 +369,8 @@
     "section_id": "5.1.7",
     "title": "{StageG}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageGDescription}`"
@@ -386,8 +386,8 @@
     "section_id": "5.1.8",
     "title": "{StageH}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageHDescription}`"
@@ -403,8 +403,8 @@
     "section_id": "5.1.9",
     "title": "{StageI}",
     "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
+      "describe one user journey stage clearly",
+      "focus on what the user experiences or confirms at this stage"
     ],
     "severity": "medium",
     "expected_format": "`{StageIDescription}`"
@@ -412,15 +412,15 @@
 }
 -->
 
-## 5.2 Resume Support Entry Points
+## 5.2 Journey Resume Entry Points
 
 <!--
 {
   "section_contract": {
     "section_id": "5.2",
-    "title": "Resume Support Entry Points",
+    "title": "Journey Resume Entry Points",
     "checkitems": [
-      "list the supported resume entry points",
+      "list the supported journey resume entry points",
       "state when each entry point should be used"
     ],
     "severity": "medium",
@@ -429,16 +429,16 @@
 }
 -->
 
-## 5.3 Failure Handling
+## 5.3 Journey Failure Handling
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3",
-    "title": "Failure Handling",
+    "title": "Journey Failure Handling",
     "checkitems": [
-      "describe what happens when a workflow stage fails",
-      "make retry and rollback policy explicit"
+      "describe what happens when a journey stage fails",
+      "make retry and recovery policy explicit"
     ],
     "severity": "medium",
     "expected_format": "- `{FailureRule1}`\n- `{FailureRule2}`\n- `{FailureRule3}`\n- `{FailureRule4}`"

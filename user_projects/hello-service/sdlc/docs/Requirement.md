@@ -72,77 +72,75 @@ Provide a simple hello service that gives users a greeting response together wit
 - problem: A simple product loses value if its core interaction is not stable and repeatable.
 - ability: The product keeps its core greeting experience consistent and repeatable.
 
-# 5. User Workflow
+# 5. User Journey
 
 
 ## 5.1 Standard Flow
 
 
-### 5.1.1 Start Service
+### 5.1.1 Prepare to Use the Service
 
 
-The service is made available for user interaction.
+The user reaches a usable hello service entry point.
 
-### 5.1.2 Send Hello Request
+The user expectation at this stage is simple:
+- the service is available
+- the interaction entry is clear
+- no extra setup is required for the core hello scenario
 
+### 5.1.2 Initiate the Hello Interaction
 
-The user initiates a greeting request to the service.
+The user sends a hello request to start the interaction.
 
-### 5.1.3 Receive Request
+The user intent is not to complete a complex workflow.
+The user only wants to trigger one clear greeting interaction.
 
+### 5.1.3 Receive the Greeting Result
 
-The product accepts the user request and prepares the response.
+The user receives a response that includes:
+- a greeting message
+- the current time
+- a result that is easy to understand at a glance
 
-### 5.1.4 Generate Greeting
+### 5.1.4 Confirm the Result Matches Expectations
 
+The user checks whether the returned result is complete, clear, and aligned with the intended hello experience.
 
-The product generates a greeting response together with the current time.
+The expected confirmation points are:
+- the response is successful
+- the greeting content is present
+- the current time is present
+- the overall result is understandable
 
-### 5.1.5 Return Response
+### 5.1.5 Repeat the Same Interaction When Needed
 
+If the user wants to test again, the same hello interaction can be repeated without needing a different path or additional business context.
 
-The product returns the response to the user.
+### 5.1.6 Recheck After Product Changes
 
-### 5.1.6 Validate Result
-
-
-The user confirms that the returned result is clear and aligned with expectations.
-
-### 5.1.7 Repeat Request
-
-
-The user can repeat the same interaction when needed.
-
-### 5.1.8 Stop Service
-
-
-After the interaction is complete, the service can be closed or left available for later use.
-
-### 5.1.9 Update and Retest
-
-
-If the product behavior changes, the team revisits the same greeting scenario to confirm the expected experience remains intact.
+When the product is updated, the team revisits the same user journey to confirm that the original hello experience still works as expected.
 
 ## 5.2 Resume Support Entry Points
 
 
-Users can resume from selected intermediate stages when there is already enough confirmed context.
+This journey can restart from practical user-facing checkpoints when enough context is already known.
 
 Supported resume entry points:
-- Service already running
-  Users can begin directly from the greeting interaction when the product is already available.
-- Response already returned
-  Users can continue from reviewing the returned result when the interaction has already completed.
-- Project updated
-  Users can resume from rechecking the same greeting scenario after a product change.
+- Service already available
+  The user can directly initiate the hello interaction without revisiting setup assumptions.
+- Response already received
+  The user or team can continue from result confirmation when the response is already available for review.
+- Product already changed
+  The team can resume from rechecking the same hello journey after a code or configuration update.
 
 ## 5.3 Failure Handling
 
 
-- If the product is unavailable, the user should be informed clearly and allowed to try again later.
-- If a request cannot be completed, the product should avoid presenting a misleading successful result.
-- If the returned information is incomplete or unclear, the result should be treated as not meeting product expectations.
-- After a failed interaction, the team should correct the issue and reconfirm the core greeting scenario.
+- If the service is not available, the user should receive clear feedback instead of an ambiguous or silent failure.
+- If the hello interaction cannot complete, the result must not be represented as a successful greeting response.
+- If the returned content is missing the greeting or the current time, the journey should be treated as incomplete.
+- If the returned result is hard to understand, the journey should be treated as not meeting the product goal.
+- After a failure is corrected, the team should rerun the same user journey to confirm the expected experience is restored.
 
 # 6. Inputs and Outputs
 
