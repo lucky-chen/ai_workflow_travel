@@ -42,7 +42,7 @@ export class PipelineService implements IPipeline {
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
     const triggerReason = request.triggerReason ?? "new_run";
     const taskId = request.taskId ?? this.createTaskId();
-    const runId = this.createRunId();
+    const runId = request.runId?.trim() || this.createRunId();
     const runTask = async (): Promise<TaskId> => {
       this.registry.validate();
       this.launchValidator.validate(request, this.registry);
@@ -196,7 +196,7 @@ export class PipelineService implements IPipeline {
   }
 
   private createRunId(): string {
-    return `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    return String(Date.now());
   }
 
   private resolveStageStatus(output: StageOutput): "completed" | "failed" {

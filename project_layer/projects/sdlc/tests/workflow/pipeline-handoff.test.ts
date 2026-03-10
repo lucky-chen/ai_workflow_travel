@@ -154,7 +154,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       resolveModuleDesignArtifactPath(workspaceRoot, "Quality Gate"),
       resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
     ]);
-    assert.equal(implementationExecutionContext.runId?.startsWith("run-"), true);
+    assert.match(implementationExecutionContext.runId ?? "", /^\d+$/);
     assert.deepEqual(implementationExecutionContext, {
       taskId,
       runId: implementationExecutionContext.runId,

@@ -17,7 +17,6 @@ export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
   });
   return {
     artifactStorageRoot: process.env.SDLC_ARTIFACT_ROOT,
-    historyStorageRoot: process.env.SDLC_HISTORY_ROOT,
     llmExecutorInstance: llmExecutor,
     shellRunner: new MockShellRunner(),
     gitCommitter: new NoopGitCommitter(),

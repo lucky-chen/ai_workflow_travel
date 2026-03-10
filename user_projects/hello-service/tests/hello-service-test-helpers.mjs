@@ -9,7 +9,6 @@ const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const artifactRoot = path.join(workspaceRoot, ".artifact-store");
-const historyRoot = path.join(workspaceRoot, ".trace-history-store");
 
 export async function runCli(args, options = {}) {
   const { taskId = "hello-service-task", extraEnv = {} } = options;
@@ -22,7 +21,6 @@ export async function runCli(args, options = {}) {
       SDLC_TEST_SERVICE_NAME: "hello-service",
       SDLC_WORKSPACE_ROOT: workspaceRoot,
       SDLC_ARTIFACT_ROOT: artifactRoot,
-      SDLC_HISTORY_ROOT: historyRoot,
       ...extraEnv,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -47,7 +45,6 @@ export async function runCli(args, options = {}) {
 
 export async function resetWorkspace() {
   await rm(artifactRoot, { recursive: true, force: true });
-  await rm(historyRoot, { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "sdlc"), { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
 }

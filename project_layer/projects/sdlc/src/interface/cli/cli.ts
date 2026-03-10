@@ -99,6 +99,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     const stageOption = this.readSingleOption(command.options, "stage") ?? this.readSingleOption(command.options, "module");
     const workspace = this.readSingleOption(command.options, "workspace");
     const targetModule = this.readSingleOption(command.options, "target-module");
+    const runId = this.readSingleOption(command.options, "run-id");
 
     if (!stageOption) {
       throw new Error("Missing required option: --stage");
@@ -112,6 +113,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
 
     return {
       ...request,
+      ...(runId ? { runId } : {}),
       ...(targetModule ? { targetModule } : {}),
     };
   }
