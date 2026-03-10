@@ -8,7 +8,7 @@
     },
     {
       "check_item": "requirement_scope_consistency",
-      "description": "The document should stay at product requirement level and remain consistent across user scenarios, workflow, scope, constraints, and success criteria.",
+      "description": "The document should stay at product requirement level and remain consistent across user scenarios, journey, scope, constraints, and success criteria.",
       "severity": "high"
     },
     {

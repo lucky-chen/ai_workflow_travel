@@ -151,7 +151,7 @@
     "section_id": "3.1",
     "title": "Main Sequence Diagram",
     "checkitems": [
-      "show the main runtime interaction between caller, module, and collaborators",
+      "show the main runtime interaction between the initiating actor, the module, and its collaborators",
       "keep the flow focused on the primary success path"
     ],
     "severity": "medium",
@@ -259,7 +259,7 @@
     "section_id": "4.1.5",
     "title": "Module-Specific Rules",
     "checkitems": [
-      "add this subsection only when the module has important transformation, validation, mapping, or prompt-construction rules",
+      "add this subsection only when the module has important transformation, validation, mapping, or request-construction rules",
       "express stable rules that downstream modules depend on",
       "prefer bullets over long prose"
     ],

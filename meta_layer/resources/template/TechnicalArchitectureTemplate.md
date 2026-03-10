@@ -13,7 +13,7 @@
     },
     {
       "check_item": "cross_section_alignment",
-      "description": "Architecture style, dependency rules, runtime flow, design document breakdown, and open issues should remain logically consistent across sections.",
+      "description": "Architecture style, dependency rules, runtime interactions, design document breakdown, and open issues should remain logically consistent across sections.",
       "severity": "high"
     }
   ]
@@ -66,10 +66,10 @@
     "title": "In Scope",
     "checkitems": [
       "list only architecture-level concerns",
-      "focus on workflow, major modules, boundaries, and key constraints"
+      "focus on major runtime interactions, major modules, boundaries, and key constraints"
     ],
     "severity": "medium",
-    "expected_format": "- Overall workflow from requirement input to design generation, implementation generation, review, validation, and acceptance.\n- Major modules and their responsibilities at architecture level.\n- Collaboration boundaries and dependency direction between major parts of the system.\n- Key architecture constraints related to reviewability, controllability, validation, and evolution."
+    "expected_format": "- Overall system interaction and control flow at architecture level.\n- Major modules or subsystems and their responsibilities at architecture level.\n- Collaboration boundaries and dependency direction between major parts of the system.\n- Key architecture constraints related to reliability, operability, security, scalability, or evolution."
   }
 }
 -->
@@ -86,7 +86,7 @@
       "exclude storage schema, UI detail, and runbook detail unless they materially shape architecture"
     ],
     "severity": "medium",
-    "expected_format": "- Detailed module internals and implementation logic.\n- Detailed API contracts, prompt content, and parameter definitions inside each module.\n- Database schema details and storage-level design.\n- UI-level interaction design and visual behavior details.\n- Deployment runbooks, environment setup, and operational procedures.\n\nCross-module interaction contracts are covered at a lightweight shared-boundary level in a separate design document, not in full module-level detail here."
+    "expected_format": "- Detailed module internals and implementation logic.\n- Detailed API contracts, message formats, and parameter definitions inside each module.\n- Database schema details and storage-level design.\n- UI-level interaction design and visual behavior details.\n- Deployment runbooks, environment setup, and operational procedures.\n\nCross-module interaction contracts are covered at a lightweight shared-boundary level in a separate design document, not in full module-level detail here."
   }
 }
 -->
@@ -220,34 +220,34 @@
 
 ---
 
-## 5. System Flow
+## 5. System Interactions
 
 <!--
 {
   "section_contract": {
     "section_id": "5",
-    "title": "System Flow",
+    "title": "System Interactions",
     "checkitems": [
-      "describe only the runtime interactions needed to understand the system flow",
-      "focus on module collaboration, main flow, and control points rather than module internals",
-      "make the main execution path explicit"
+      "describe only the runtime interactions needed to understand the system behavior",
+      "focus on module collaboration, primary interaction paths, and control points rather than module internals",
+      "make the primary interaction path explicit"
     ],
     "severity": "medium"
   }
 }
 -->
 
-### 5.1 Main Flow
+### 5.1 Primary Interaction Path
 
 <!--
 {
   "section_contract": {
     "section_id": "5.1",
-    "title": "Main Flow",
+    "title": "Primary Interaction Path",
     "checkitems": [
-      "make the main execution or request path explicit",
-      "show the reusable control shape across stages",
-      "identify review, approval, validation, stage entry, retry, or control points where relevant"
+      "make the main execution, request, or event path explicit",
+      "show the reusable control shape across the main interaction path",
+      "identify gateways, retries, asynchronous handoffs, approvals, or other control points where relevant"
     ],
     "severity": "medium",
     "expected_format": "```text\n[Main flow diagram here]\n```\n\n1. `{Step1}`\n2. `{Step2}`\n3. `{Step3}`\n\n`{FlowSummary}`"
@@ -281,11 +281,11 @@
     "title": "Interaction Model",
     "checkitems": [
       "explain how modules collaborate at a high level",
-      "group interactions by major flow step or control point",
-      "keep this section at workflow-level interaction rather than module-internal detail"
+      "group interactions by major interaction step or control point",
+      "keep this section at cross-module interaction level rather than module-internal detail"
     ],
     "severity": "medium",
-    "expected_format": "This section describes workflow-level module interaction. The concrete public APIs for these cross-module calls are defined in `{CrossModuleDocPath}`."
+    "expected_format": "This section describes high-level cross-module interaction. The concrete public APIs or interface contracts for these calls are defined in `{CrossModuleDocPath}`."
   }
 }
 -->
@@ -407,7 +407,7 @@
       "keep the categories aligned with architecture boundaries"
     ],
     "severity": "medium",
-    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and common stage pipeline defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`"
+    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`"
   }
 }
 -->
