@@ -30,7 +30,7 @@ export type HistoryWorkspaceRootResolver = (taskId: TaskId) => string | HistoryT
 
 export class HistoryStoreService {
   constructor(
-    private readonly storageRoot: string = path.resolve(process.cwd(), "dist", "sdlc", "history_store"),
+    private readonly storageRoot?: string,
     private readonly workspaceRootResolver?: HistoryWorkspaceRootResolver,
   ) {}
 
@@ -40,13 +40,14 @@ export class HistoryStoreService {
     const resolvedTaskContext = this.resolveTaskContext(taskId);
     const runId = this.requireRunId(this.normalizeOptionalIdentifier(record.scope?.runId) ?? resolvedTaskContext.runId);
     const stageId = this.normalizeOptionalIdentifier(record.scope?.stageId);
+    const storageRoot = this.resolveStorageRoot(resolvedTaskContext.workspaceRoot);
     const persistedRecord: HistoryRecord = {
       ...record,
       scope: this.buildScope(taskId, runId, stageId),
       recordId,
     };
     const taskBucketName = this.resolveTaskBucketName(taskId, runId);
-    const targetPath = path.join(this.storageRoot, "records", `${taskBucketName}.json`);
+    const targetPath = path.join(storageRoot, "records", `${taskBucketName}.json`);
     const updatedBucket = await this.readBucket(targetPath);
     updatedBucket.push(persistedRecord);
     await this.writeBucket(targetPath, updatedBucket);
@@ -67,7 +68,7 @@ export class HistoryStoreService {
   }
 
   async listRecords(query: HistoryQuery = {}): Promise<HistoryRecord[]> {
-    const recordsDirectory = path.join(this.storageRoot, "records");
+    const recordsDirectory = path.join(this.resolveStorageRoot(), "records");
     const recordFiles = await this.listRecordFiles(recordsDirectory);
     const records = await Promise.all(
       recordFiles.map(async (entry) => {
@@ -142,6 +143,18 @@ export class HistoryStoreService {
     }
 
     return resolved;
+  }
+
+  private resolveStorageRoot(workspaceRoot?: string): string {
+    if (this.storageRoot) {
+      return this.storageRoot;
+    }
+
+    if (workspaceRoot) {
+      return path.resolve(workspaceRoot, "dist", "sdlc", "history_store");
+    }
+
+    return path.resolve(process.cwd(), "dist", "sdlc", "history_store");
   }
 
 

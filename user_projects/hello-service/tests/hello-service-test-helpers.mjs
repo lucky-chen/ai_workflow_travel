@@ -8,8 +8,9 @@ export const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta
 const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
+const serviceDistRoot = path.join(workspaceRoot, "dist");
 const artifactRoot = path.join(workspaceRoot, ".artifact-store");
-const historyStoreDirectory = path.join(sdlcProjectRoot, "dist", "sdlc", "history_store");
+const historyStoreDirectory = path.join(workspaceRoot, "dist", "sdlc", "history_store");
 const historyStoreRoot = path.join(historyStoreDirectory, "records");
 
 export async function runCli(args, options = {}) {
@@ -47,8 +48,8 @@ export async function runCli(args, options = {}) {
 }
 
 export async function resetWorkspace() {
+  await rm(serviceDistRoot, { recursive: true, force: true });
   await rm(artifactRoot, { recursive: true, force: true });
-  await rm(historyStoreDirectory, { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "sdlc"), { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
 }
