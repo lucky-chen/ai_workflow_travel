@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
-import path from "node:path";
 import {
   assertHelloServiceStageCallChain,
-  createHelloServiceArchitectureDocument,
-  createHelloServiceImplementationPlanDocument,
-  createHelloServiceModuleDesignDocument,
   findTraceRecordsByCategory,
+  findTraceRecordsByEventType,
   findTraceRecordsByStage,
   getTraceFilePath,
   loadTraceRecords,
@@ -69,25 +66,14 @@ export async function runHelloServiceSuccessTest() {
     expectStepCompleted: true,
     expectAgentExecutionFinished: true,
   });
+  assert.equal(
+    findTraceRecordsByCategory(implementationExecutionTraceRecords, "contract").some(
+      (entry) => entry.scope?.stageId === "implementation_execution" && entry.payload?.passed === true,
+    ),
+    true,
+  );
 
   await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: validationRunId });
-
-  assert.equal(
-    await readFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8"),
-    createHelloServiceArchitectureDocument(),
-  );
-  assert.equal(
-    await readFile(path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md"), "utf8"),
-    createHelloServiceModuleDesignDocument(),
-  );
-  assert.equal(
-    await readFile(path.join(workspaceRoot, "sdlc", "docs", "CodeGenerationExecutionPlan.md"), "utf8"),
-    createHelloServiceImplementationPlanDocument(),
-  );
-  assert.equal(
-    await readFile(path.join(workspaceRoot, "src", "index.ts"), "utf8"),
-    'export function hello(): string {\n  return "hello-service";\n}\n',
-  );
   const traceFilePath = await getTraceFilePath(baselineTaskId, validationRunId);
   await access(traceFilePath);
   const traceRecords = await loadTraceRecords(baselineTaskId, validationRunId);
@@ -101,4 +87,18 @@ export async function runHelloServiceSuccessTest() {
     ),
     true,
   );
+  assert.equal(
+    findTraceRecordsByEventType(traceRecords, "validation_finished").some(
+      (entry) => entry.scope?.stageId === "validation",
+    ),
+    true,
+  );
+  const validationArtifact = JSON.parse(
+    await readFile(
+      `${workspaceRoot}/.artifact-store/${baselineTaskId}/validation/reports/validation/ValidationResult.json`,
+      "utf8",
+    ),
+  );
+  assert.equal(validationArtifact.passed, true);
+  assert.equal(validationArtifact.command, `cd "${workspaceRoot}" && npm test`);
 }

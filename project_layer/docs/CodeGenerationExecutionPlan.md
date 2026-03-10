@@ -477,10 +477,11 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] verify downstream artifacts are not produced after contract failure
   - [x] verify contract success/failure leaves reviewable persisted history evidence
 - [ ] Batch 8: hello-service simple-project functional verification
-  - [ ] verify the generated hello-service implementation covers the current simple-project behavior
-  - [ ] verify the generated workspace documents stay mutually aligned around the simple hello-service scope
-  - [ ] verify validation output confirms the simple hello-service target remains runnable
-  - [ ] verify persisted history captures the hello-service functional verification results
+  - [x] separate baseline workflow verification from hello-service functional verification
+  - [x] verify the generated hello-service implementation covers the current simple-project behavior
+  - [x] verify the generated workspace documents stay mutually aligned around the simple hello-service scope
+  - [x] verify validation output confirms the simple hello-service target remains runnable
+  - [x] verify persisted history captures the hello-service functional verification results
 
 ### Step 12. Extend Toward Agent Capabilities
 
