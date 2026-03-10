@@ -12,6 +12,7 @@ export async function runArchitectureDesignContractTests(): Promise<void> {
     await testArchitectureContractPassesForStructuredDocument(workspaceRoot);
     await testArchitectureContractFailsForMissingSections(workspaceRoot);
     await testArchitectureContractFailsForPlaceholderAndBoundaryIssues(workspaceRoot);
+    await testArchitectureContractAcceptsFencedJsonLlmResult(workspaceRoot);
     await testArchitectureContractRejectsInvalidLlmResult(workspaceRoot);
     await testArchitectureContractLoadsTemplateContractSource();
     await testArchitectureContractBuildsPromptRequest(workspaceRoot);
@@ -149,6 +150,32 @@ async function testArchitectureContractRejectsInvalidLlmResult(workspaceRoot: st
     ),
     /Unexpected token|must contain/,
   );
+}
+
+async function testArchitectureContractAcceptsFencedJsonLlmResult(workspaceRoot: string): Promise<void> {
+  const contract = new ArchitectureDesignContract(new FencedJsonLlmExecutor());
+  const result = await contract.check(
+    {
+      taskId: "task-fenced",
+      stageId: "architecture_design",
+      attempt: 1,
+      workspaceRoot,
+      inputArtifacts: {},
+    },
+    {
+      stageId: "architecture_design",
+      success: true,
+      summary: "Architecture document generated.",
+      artifacts: {
+        artifactKey: "architecture_document",
+        content: createArchitectureDocument(),
+      },
+    },
+  );
+
+  assert.equal(result.passed, true);
+  assert.equal(result.summary, "Architecture design document passed contract checks.");
+  assert.deepEqual(result.issues, []);
 }
 
 async function testArchitectureContractLoadsTemplateContractSource(): Promise<void> {
@@ -497,6 +524,15 @@ class ArchitectureContractMockLlmExecutor implements ILlmExecutor {
           : "Architecture design document failed contract checks.",
         issues,
       }),
+      responseFormat: "json",
+    };
+  }
+}
+
+class FencedJsonLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: "```json\n{\"passed\":true,\"summary\":\"Architecture design document passed contract checks.\",\"issues\":[]}\n```",
       responseFormat: "json",
     };
   }

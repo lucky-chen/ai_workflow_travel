@@ -12,6 +12,7 @@ export async function runRequirementContractTests(): Promise<void> {
     await testRequirementContractPassesForStructuredDocument(workspaceRoot);
     await testRequirementContractFailsForMissingSections(workspaceRoot);
     await testRequirementContractFailsForTemplatePlaceholdersAndImplementationDetail(workspaceRoot);
+    await testRequirementContractAcceptsFencedJsonLlmResult(workspaceRoot);
     await testRequirementContractRejectsInvalidLlmResult(workspaceRoot);
     await testRequirementContractLoadsTemplateContractSource();
     await testRequirementContractBuildsPromptRequest(workspaceRoot);
@@ -136,6 +137,32 @@ async function testRequirementContractRejectsInvalidLlmResult(workspaceRoot: str
     ),
     /Unexpected token|must contain/,
   );
+}
+
+async function testRequirementContractAcceptsFencedJsonLlmResult(workspaceRoot: string): Promise<void> {
+  const contract = new RequirementContract(new FencedJsonLlmExecutor());
+  const result = await contract.check(
+    {
+      taskId: "task-fenced",
+      stageId: "requirement_interpretation",
+      attempt: 1,
+      workspaceRoot,
+      inputArtifacts: {},
+    },
+    {
+      stageId: "requirement_interpretation",
+      success: true,
+      summary: "Requirement document loaded.",
+      artifacts: {
+        artifactKey: "requirement_document",
+        content: createRequirementDocument(),
+      },
+    },
+  );
+
+  assert.equal(result.passed, true);
+  assert.equal(result.summary, "Requirement document passed contract checks.");
+  assert.deepEqual(result.issues, []);
 }
 
 async function testRequirementContractLoadsTemplateContractSource(): Promise<void> {
@@ -413,6 +440,15 @@ class RequirementContractMockLlmExecutor implements ILlmExecutor {
           : "Requirement document failed contract checks.",
         issues,
       }),
+      responseFormat: "json",
+    };
+  }
+}
+
+class FencedJsonLlmExecutor implements ILlmExecutor {
+  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    return {
+      content: "```json\n{\"passed\":true,\"summary\":\"Requirement document passed contract checks.\",\"issues\":[]}\n```",
       responseFormat: "json",
     };
   }

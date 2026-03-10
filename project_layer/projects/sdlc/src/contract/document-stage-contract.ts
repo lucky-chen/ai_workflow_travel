@@ -82,7 +82,7 @@ export abstract class DocumentStageContract implements IContractChecker {
   }
 
   protected parseExecutionResult(result: LlmExecutionResult): ContractExecutionResult {
-    const parsed = JSON.parse(result.content) as Partial<ContractExecutionResult>;
+    const parsed = this.parseContractExecutionContent(result.content) as Partial<ContractExecutionResult>;
     if (typeof parsed.passed !== "boolean") {
       throw new Error('Contract execution result must contain boolean field "passed".');
     }
@@ -115,6 +115,76 @@ export abstract class DocumentStageContract implements IContractChecker {
         };
       }),
     };
+  }
+
+  private parseContractExecutionContent(content: string): unknown {
+    try {
+      return JSON.parse(content);
+    } catch {
+      const normalized = content.trim();
+      const fenced = normalized.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+      if (fenced?.[1]) {
+        return JSON.parse(fenced[1].trim());
+      }
+
+      const objectSlice = this.extractFirstJsonObject(normalized);
+      if (objectSlice) {
+        return JSON.parse(objectSlice);
+      }
+
+      return JSON.parse(content);
+    }
+  }
+
+  private extractFirstJsonObject(content: string): string | null {
+    const start = content.indexOf("{");
+    if (start < 0) {
+      return null;
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = start; index < content.length; index += 1) {
+      const char = content[index];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+
+        if (char === "\\") {
+          escaped = true;
+          continue;
+        }
+
+        if (char === "\"") {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === "\"") {
+        inString = true;
+        continue;
+      }
+
+      if (char === "{") {
+        depth += 1;
+        continue;
+      }
+
+      if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          return content.slice(start, index + 1);
+        }
+      }
+    }
+
+    return null;
   }
 
   protected abstract buildContractResult(result: ContractExecutionResult): ContractCheckResult;
