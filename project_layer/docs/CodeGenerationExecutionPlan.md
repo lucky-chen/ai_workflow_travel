@@ -459,9 +459,10 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] verify implementation-generation artifacts remain stable under mock-LLM execution
   - [x] verify the combined simple-project artifacts remain aligned under mock-LLM execution
 - [ ] Batch 5: hello-service real-LLM call-chain verification
-  - [ ] add a real LLM-backed verification path for hello-service
-  - [ ] verify the hello-service black-box flow produces observable real-LLM module call evidence
-  - [ ] verify document-generation call flow remains aligned with the mock-LLM verification path under real LLM execution
+  - [x] add a real LLM-backed verification path for hello-service
+  - [x] verify the hello-service black-box flow produces observable real-LLM module call evidence
+  - [ ] verify `requirement_interpretation` real-LLM document-generation call flow
+  - [ ] verify `architecture_design` real-LLM document-generation call flow
   - [ ] verify implementation-generation call flow remains aligned with the mock-LLM verification path under real LLM execution
 - [ ] Batch 6: hello-service real-LLM artifact verification
   - [ ] verify document-generation artifacts remain aligned with the mock-LLM verification target under real LLM execution

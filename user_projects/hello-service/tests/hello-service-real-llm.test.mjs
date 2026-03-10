@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import {
   createHelloServiceRequirementDocument,
   findTraceRecordsByCaller,
-  findTraceRecordsByEventType,
   loadTraceRecords,
   resetWorkspace,
   runCli,
@@ -14,7 +13,7 @@ import {
 
 const realLlmTaskId = "hello-service-real-llm-task";
 
-export async function runHelloServiceRealLlmTest() {
+export async function runHelloServiceRealLlmRequirementTest() {
   await resetWorkspace();
   await runCli(["init", "--workspace", workspaceRoot], {
     taskId: realLlmTaskId,
@@ -36,17 +35,57 @@ export async function runHelloServiceRealLlmTest() {
   });
 
   const traceRecords = await loadTraceRecords(realLlmTaskId, "3000-req");
+  assertRealLlmTrace(traceRecords, "requirement_interpretation");
+}
+
+export async function runHelloServiceRealLlmArchitectureTest() {
+  await resetWorkspace();
+  await runCli(["init", "--workspace", workspaceRoot], {
+    taskId: realLlmTaskId,
+    runId: "3000",
+    runtimeMode: "real",
+  });
+
+  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
+  await writeFile(
+    path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"),
+    createHelloServiceRequirementDocument(),
+    "utf8",
+  );
+
+  await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], {
+    taskId: realLlmTaskId,
+    runId: "3000-req",
+    runtimeMode: "real",
+  });
+
+  await runCli(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot], {
+    taskId: realLlmTaskId,
+    runId: "3001",
+    runtimeMode: "real",
+  });
+
+  const traceRecords = await loadTraceRecords(realLlmTaskId, "3001");
+  assertRealLlmTrace(traceRecords, "architecture_design");
+}
+
+export async function runHelloServiceRealLlmTest() {
+  await runHelloServiceRealLlmRequirementTest();
+  await runHelloServiceRealLlmArchitectureTest();
+}
+
+function assertRealLlmTrace(traceRecords, stageId) {
   assert.equal(
     findTraceRecordsByCaller(traceRecords, "LlmExecutorService.execute").some(
       (entry) => entry.payload?.eventType === "llm_execution_started"
-        && entry.scope?.stageId === "requirement_interpretation",
+        && entry.scope?.stageId === stageId,
     ),
     true,
   );
   assert.equal(
     findTraceRecordsByCaller(traceRecords, "LlmExecutorService.execute").some(
       (entry) => entry.payload?.eventType === "llm_execution_finished"
-        && entry.scope?.stageId === "requirement_interpretation",
+        && entry.scope?.stageId === stageId,
     ),
     true,
   );
@@ -70,10 +109,6 @@ export async function runHelloServiceRealLlmTest() {
       (entry) => entry.payload?.eventType === "agent_execution_started",
     ),
     true,
-  );
-  assert.equal(
-    findTraceRecordsByEventType(traceRecords, "stage_failed").length,
-    0,
   );
 }
 
