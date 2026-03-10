@@ -65,14 +65,13 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
   const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
     architectureDocument: string;
-    moduleDescriptor: string;
+    moduleDescriptor: { name: string; responsibilities: string[] };
     template: string;
   };
   assert.equal(payload.target, "module_design");
   assert.equal(payload.architectureDocument.includes("Architecture content."), true);
-  const moduleDescriptor = JSON.parse(payload.moduleDescriptor) as { name: string; responsibilities: string[] };
-  assert.equal(moduleDescriptor.name, "Workflow");
-  assert.equal(moduleDescriptor.responsibilities.length, 2);
+  assert.equal(payload.moduleDescriptor.name, "Workflow");
+  assert.equal(payload.moduleDescriptor.responsibilities.length, 2);
   assert.equal(payload.template.includes("# {ModuleName} Design"), true);
 }
 

@@ -40,8 +40,8 @@ export class ModuleDesignContract extends DocumentStageContract {
           target: "module_design_contract_check",
           moduleName: moduleDesignOutput.artifacts.moduleName,
           generatedResult,
-          contractSpec: JSON.stringify(contractSpec),
-          requiredOutputShape: JSON.stringify({
+          contractSpec,
+          requiredOutputShape: {
             passed: "boolean",
             summary: "string",
             issues: [
@@ -51,7 +51,7 @@ export class ModuleDesignContract extends DocumentStageContract {
                 severity: "low | medium | high",
               },
             ],
-          }),
+          },
         },
       },
       responseFormat: "json",
@@ -74,11 +74,11 @@ export class ModuleDesignContract extends DocumentStageContract {
     const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       moduleName: string;
       generatedResult: string;
-      contractSpec: string;
+      contractSpec: ContractSpec;
     };
     const content = promptPayload.generatedResult;
     const moduleName = promptPayload.moduleName;
-    const contractSpec = JSON.parse(promptPayload.contractSpec) as ContractSpec;
+    const contractSpec = promptPayload.contractSpec;
     const issues: ContractIssue[] = [];
 
     if (content.length === 0) {

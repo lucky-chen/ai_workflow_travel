@@ -323,10 +323,9 @@ class ModulePipelineLlmExecutor implements ILlmExecutor {
     }
 
     const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
-      moduleDescriptor: string;
+      moduleDescriptor: { name: string; responsibilities: string[] };
     };
-    const moduleDescriptor = JSON.parse(payload.moduleDescriptor) as { name: string; responsibilities: string[] };
-    const moduleName = moduleDescriptor.name;
+    const moduleName = payload.moduleDescriptor.name;
 
     return {
       content: [

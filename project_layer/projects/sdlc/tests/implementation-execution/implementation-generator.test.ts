@@ -117,21 +117,20 @@ async function testImplementationGeneratorProducesPlannedChanges(
 
   const requestPayload = JSON.parse(normalizeUserPromptContent(llmExecutor.getLastRequest()!.prompt.userPrompt)) as {
     workplanRef: string;
-    workplan: string;
-    currentBatch: string;
-    upstreamContext: string;
+    workplan: { steps: Array<{ stepId: string }> };
+    currentBatch: { batchId: string };
+    upstreamContext: {
+      requirementDocument: string;
+      architectureDocument: string;
+      moduleDesignDocuments: Array<{ moduleName: string; content: string }>;
+    };
   };
   assert.equal(requestPayload.workplanRef, resolveImplementationPlanArtifactPath(workspaceRoot));
-  assert.equal((JSON.parse(requestPayload.workplan) as { steps: Array<{ stepId: string }> }).steps[0]?.stepId, "step-1");
-  assert.equal((JSON.parse(requestPayload.currentBatch) as { batchId: string }).batchId, "batch-1");
-  const upstreamContext = JSON.parse(requestPayload.upstreamContext) as {
-    requirementDocument: string;
-    architectureDocument: string;
-    moduleDesignDocuments: Array<{ moduleName: string; content: string }>;
-  };
-  assert.equal(upstreamContext.requirementDocument, "# requirement");
-  assert.equal(upstreamContext.architectureDocument, "# architecture");
-  assert.deepEqual(upstreamContext.moduleDesignDocuments, [
+  assert.equal(requestPayload.workplan.steps[0]?.stepId, "step-1");
+  assert.equal(requestPayload.currentBatch.batchId, "batch-1");
+  assert.equal(requestPayload.upstreamContext.requirementDocument, "# requirement");
+  assert.equal(requestPayload.upstreamContext.architectureDocument, "# architecture");
+  assert.deepEqual(requestPayload.upstreamContext.moduleDesignDocuments, [
     {
       moduleName: "module-design",
       content: "# module design",

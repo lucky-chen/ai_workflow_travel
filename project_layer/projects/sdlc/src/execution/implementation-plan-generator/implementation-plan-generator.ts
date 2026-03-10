@@ -79,7 +79,7 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator {
           target: "implementation_plan",
           requirementDocument: payload.requirementDocument,
           architectureDocument: payload.architectureDocument,
-          moduleDesignDocuments: JSON.stringify(payload.moduleDesignDocuments),
+          moduleDesignDocuments: payload.moduleDesignDocuments,
           template,
         },
       },

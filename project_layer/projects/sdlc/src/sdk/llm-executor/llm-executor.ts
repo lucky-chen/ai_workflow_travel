@@ -13,7 +13,7 @@ export type { LlmExecutorMode, LlmExecutorServiceDependencies } from "./llm-exec
 export type { RealLlmProvider, RealProviderConfig } from "ai-meta-agent-agent-runtime";
 
 export type PromptContent = string | string[];
-export type UserPromptInput = StringMap;
+export type UserPromptInput = Readonly<Record<string, unknown>>;
 
 export interface PromptInput {
   systemPrompt: PromptContent;

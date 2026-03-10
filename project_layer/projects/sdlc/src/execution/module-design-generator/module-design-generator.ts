@@ -75,7 +75,7 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
         userPrompt: {
           target: "module_design",
           architectureDocument: payload.architectureDocument,
-          moduleDescriptor: JSON.stringify(payload.moduleDescriptor),
+          moduleDescriptor: payload.moduleDescriptor,
           template,
         },
       },

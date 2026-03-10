@@ -12,14 +12,14 @@ export class ImplementationPromptBuilder {
         userPrompt: {
           target: "implementation",
           workplanRef: input.preparedStepContext.workplanRef,
-          workplan: JSON.stringify(input.preparedStepContext.workplan),
-          currentBatch: JSON.stringify(input.preparedStepContext.currentBatch),
-          upstreamContext: JSON.stringify(input.preparedStepContext.upstreamContext),
-          projectContext: JSON.stringify({
+          workplan: input.preparedStepContext.workplan,
+          currentBatch: input.preparedStepContext.currentBatch,
+          upstreamContext: input.preparedStepContext.upstreamContext,
+          projectContext: {
             rootPath: input.projectContext.rootPath,
             relevantFiles: input.projectContext.relevantFiles,
-          }),
-          requiredOutputShape: JSON.stringify({
+          },
+          requiredOutputShape: {
             summary: "string",
             changed_files: [
               {
@@ -28,7 +28,7 @@ export class ImplementationPromptBuilder {
                 content: "required for create and update",
               },
             ],
-          }),
+          },
         },
       },
       responseFormat: "json",

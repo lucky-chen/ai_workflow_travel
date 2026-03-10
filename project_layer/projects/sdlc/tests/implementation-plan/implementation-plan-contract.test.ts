@@ -175,8 +175,12 @@ async function testImplementationPlanContractBuildsPromptRequest(workspaceRoot: 
   const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
     target: string;
     generatedResult: string;
-    contractSpec: string;
-    upstreamContext: string;
+    contractSpec: typeof spec;
+    upstreamContext: {
+      requirement_document: string;
+      architecture_document: string;
+      module_design_documents: string[];
+    };
   };
 
   assert.equal(request.responseFormat, "json");
@@ -185,14 +189,9 @@ async function testImplementationPlanContractBuildsPromptRequest(workspaceRoot: 
   assert.equal(normalizeUserPromptContent({ system: request.prompt.systemPrompt }).includes("Return JSON"), true);
   assert.equal(payload.target, "implementation_plan_contract_check");
   assert.equal(payload.generatedResult.includes("# Code Generation Execution Plan"), true);
-  const upstreamContext = JSON.parse(payload.upstreamContext) as {
-    requirement_document: string;
-    architecture_document: string;
-    module_design_documents: string[];
-  };
-  assert.equal(upstreamContext.requirement_document, resolveRequirementArtifactPath("/tmp/workspace"));
-  assert.equal(upstreamContext.architecture_document, resolveArchitectureArtifactPath("/tmp/workspace"));
-  assert.deepEqual(upstreamContext.module_design_documents, [
+  assert.equal(payload.upstreamContext.requirement_document, resolveRequirementArtifactPath("/tmp/workspace"));
+  assert.equal(payload.upstreamContext.architecture_document, resolveArchitectureArtifactPath("/tmp/workspace"));
+  assert.deepEqual(payload.upstreamContext.module_design_documents, [
     resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
     resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);
@@ -237,12 +236,12 @@ class ImplementationPlanContractMockLlmExecutor implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: string;
+      contractSpec: {
+        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+      };
     };
     const content = payload.generatedResult;
-    const contractSpec = JSON.parse(payload.contractSpec) as {
-      document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
-    };
+    const contractSpec = payload.contractSpec;
     const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
 
     const structureContract = contractSpec.document_contracts.find((entry) => entry.check_item === "document_structure_complete");

@@ -256,7 +256,7 @@ async function testRequirementContractBuildsPromptRequest(workspaceRoot: string)
   const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
     target: string;
     generatedResult: string;
-    contractSpec: string;
+    contractSpec: typeof spec;
   };
 
   assert.equal(request.responseFormat, "json");
@@ -266,12 +266,12 @@ async function testRequirementContractBuildsPromptRequest(workspaceRoot: string)
   assert.equal(payload.target, "requirement_contract_check");
   assert.equal(payload.generatedResult.includes("# 1. Background"), true);
   assert.deepEqual(
-    (JSON.parse(payload.contractSpec) as typeof spec).document_contracts.map((entry) => entry.check_item),
+    payload.contractSpec.document_contracts.map((entry) => entry.check_item),
     spec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).specific_contract?.source, "dist/resources/contract/RequirementTemplate.contract.json");
-  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).specific_contract?.stage, "requirement_interpretation");
-  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).section_contracts.length, spec.section_contracts.length);
+  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/contract/RequirementTemplate.contract.json");
+  assert.equal(payload.contractSpec.specific_contract?.stage, "requirement_interpretation");
+  assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
 }
 
 async function testRequirementContractPrefersWorkspaceResourceSource(workspaceRoot: string): Promise<void> {
@@ -379,14 +379,14 @@ class RequirementContractMockLlmExecutor implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: string;
+      contractSpec: {
+        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+        section_contracts: Array<{ section_id: string; title: string }>;
+      };
     };
 
     const generatedResult = payload.generatedResult;
-    const contractSpec = JSON.parse(payload.contractSpec) as {
-      document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
-      section_contracts: Array<{ section_id: string; title: string }>;
-    };
+    const contractSpec = payload.contractSpec;
     const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
 
     if (generatedResult.length === 0) {

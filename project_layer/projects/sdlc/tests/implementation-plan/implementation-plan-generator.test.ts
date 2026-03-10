@@ -71,13 +71,13 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     target: string;
     requirementDocument: string;
     architectureDocument: string;
-    moduleDesignDocuments: string;
+    moduleDesignDocuments: string[];
     template: string;
   };
   assert.equal(payload.target, "implementation_plan");
   assert.equal(payload.requirementDocument, resolveRequirementArtifactPath("/tmp/workspace"));
   assert.equal(payload.architectureDocument, resolveArchitectureArtifactPath("/tmp/workspace"));
-  assert.deepEqual(JSON.parse(payload.moduleDesignDocuments), [
+  assert.deepEqual(payload.moduleDesignDocuments, [
     resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
     resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);

@@ -38,8 +38,8 @@ export class ArchitectureDesignContract extends DocumentStageContract {
         userPrompt: {
           target: "architecture_design_contract_check",
           generatedResult,
-          contractSpec: JSON.stringify(contractSpec),
-          requiredOutputShape: JSON.stringify({
+          contractSpec,
+          requiredOutputShape: {
             passed: "boolean",
             summary: "string",
             issues: [
@@ -49,7 +49,7 @@ export class ArchitectureDesignContract extends DocumentStageContract {
                 severity: "low | medium | high",
               },
             ],
-          }),
+          },
         },
       },
       responseFormat: "json",
@@ -71,10 +71,10 @@ export class ArchitectureDesignContract extends DocumentStageContract {
   protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
     const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: string;
+      contractSpec: ContractSpec;
     };
     const content = promptPayload.generatedResult;
-    const contractSpec = JSON.parse(promptPayload.contractSpec) as ContractSpec;
+    const contractSpec = promptPayload.contractSpec;
     const issues: ContractIssue[] = [];
 
     if (content.length === 0) {

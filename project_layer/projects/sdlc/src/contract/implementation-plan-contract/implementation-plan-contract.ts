@@ -102,13 +102,13 @@ export class ImplementationPlanContract extends DocumentStageContract {
         userPrompt: {
           target: "implementation_plan_contract_check",
           generatedResult,
-          contractSpec: JSON.stringify(contractSpec),
-          upstreamContext: JSON.stringify({
+          contractSpec,
+          upstreamContext: {
             requirement_document: context.inputArtifacts.requirement_document,
             architecture_document: context.inputArtifacts.architecture_document,
             module_design_documents: moduleDesignDocuments,
-          }),
-          requiredOutputShape: JSON.stringify({
+          },
+          requiredOutputShape: {
             passed: "boolean",
             summary: "string",
             issues: [
@@ -118,7 +118,7 @@ export class ImplementationPlanContract extends DocumentStageContract {
                 severity: "low | medium | high",
               },
             ],
-          }),
+          },
         },
       },
       responseFormat: "json",
@@ -140,10 +140,10 @@ export class ImplementationPlanContract extends DocumentStageContract {
   protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
     const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: string;
+      contractSpec: ContractSpec;
     };
     const content = promptPayload.generatedResult;
-    const contractSpec = JSON.parse(promptPayload.contractSpec) as ContractSpec;
+    const contractSpec = promptPayload.contractSpec;
     const issues: ContractIssue[] = [];
 
     if (content.length === 0) {
