@@ -12,9 +12,12 @@ import type { LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
 export type { LlmExecutorMode, LlmExecutorServiceDependencies } from "./llm-executor-factory.js";
 export type { RealLlmProvider, RealProviderConfig } from "ai-meta-agent-agent-runtime";
 
+export type PromptContent = string | string[];
+export type UserPromptInput = StringMap;
+
 export interface PromptInput {
-  systemPrompt: string;
-  userPrompt: string;
+  systemPrompt: PromptContent;
+  userPrompt: UserPromptInput;
 }
 
 export interface LlmExecutionRequest {
@@ -31,6 +34,14 @@ export interface LlmExecutionResult {
 
 export interface ILlmExecutor {
   execute(request: LlmExecutionRequest): Promise<LlmExecutionResult>;
+}
+
+export function normalizePromptContent(content: PromptContent): string {
+  return Array.isArray(content) ? content.join("\n\n") : content;
+}
+
+export function normalizeUserPromptContent(content: UserPromptInput): string {
+  return JSON.stringify(content, null, 2);
 }
 
 // Public API: shared LLM execution entry used by generation and contract modules.
@@ -67,11 +78,19 @@ export class LlmExecutorService implements ILlmExecutor {
       },
     });
 
+    const normalizedRequest = {
+      ...request,
+      prompt: {
+        systemPrompt: normalizePromptContent(request.prompt.systemPrompt),
+        userPrompt: normalizeUserPromptContent(request.prompt.userPrompt),
+      },
+    };
+
     const result = await this.agent.run({
-      request,
+      request: normalizedRequest,
       inputPayload: {
-        responseFormat: request.responseFormat,
-        metadata: request.metadata ?? {},
+        responseFormat: normalizedRequest.responseFormat,
+        metadata: normalizedRequest.metadata ?? {},
       },
     });
 

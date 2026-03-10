@@ -9,7 +9,12 @@ import { RequirementStageRunner } from "../../src/workflow/stage-runners/require
 import { ValidationStageRunner } from "../../src/workflow/stage-runners/validation-stage-runner.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 import { PipelineService } from "../../src/workflow/pipeline/pipeline.js";
 import { createModuleDesignFanoutContinuation } from "../../src/workflow/pipeline/module-design-fanout.js";
 import type { IStageRunner, StageDefinition, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
@@ -317,10 +322,11 @@ class ModulePipelineLlmExecutor implements ILlmExecutor {
       };
     }
 
-    const payload = JSON.parse(request.prompt.userPrompt) as {
-      moduleDescriptor: { name: string; responsibilities: string[] };
+    const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
+      moduleDescriptor: string;
     };
-    const moduleName = payload.moduleDescriptor.name;
+    const moduleDescriptor = JSON.parse(payload.moduleDescriptor) as { name: string; responsibilities: string[] };
+    const moduleName = moduleDescriptor.name;
 
     return {
       content: [

@@ -3,7 +3,13 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ArchitectureDesignGenerator } from "../../src/execution/architecture-design-generator/architecture-design-generator.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizePromptContent,
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 
 export async function runArchitectureDesignGeneratorTests(): Promise<void> {
   const workspaceRoot = await createTempDir("architecture-generator-");
@@ -42,9 +48,14 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
 
   assert.equal(llmExecutor.lastRequest?.responseFormat, "text");
   assert.equal(llmExecutor.lastRequest?.metadata?.stage, "architecture_design");
-  assert.equal(llmExecutor.lastRequest?.prompt.systemPrompt.includes("technical architecture document"), true);
+  assert.equal(
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("technical architecture document"),
+    true,
+  );
+  assert.equal(Array.isArray(llmExecutor.lastRequest?.prompt.systemPrompt), true);
+  assert.equal(typeof llmExecutor.lastRequest?.prompt.userPrompt, "object");
 
-  const payload = JSON.parse(llmExecutor.lastRequest?.prompt.userPrompt ?? "{}") as {
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
     inputDocument: string;
     template: string;
@@ -71,7 +82,7 @@ async function testArchitectureDesignGeneratorPrefersWorkspaceTemplate(workspace
     },
   });
 
-  const payload = JSON.parse(llmExecutor.lastRequest?.prompt.userPrompt ?? "{}") as {
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     template: string;
   };
   assert.equal(payload.template, "# Workspace Technical Architecture Template\n");

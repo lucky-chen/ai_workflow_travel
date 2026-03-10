@@ -35,18 +35,18 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
   protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
     return {
       prompt: {
-        systemPrompt:
-          "You generate a technical architecture document that follows the provided template structure. " +
+        systemPrompt: [
+          "You are a top-tier Senior Technical Architect with deep expertise and years of experience in full-stack architecture.",
+          "You generate a technical architecture document that follows the provided template structure.",
+          "When creating architecture documents, you must adhere to the document_contracts requirements found in the JSON header comment of the template file",
+          "hen drafting chapter content, ensure compliance with the requirements defined in the comments beneath each respective chapter. These comments follow JSON format and must be contained within the section_contract field.",
           "Return plain markdown only.",
-        userPrompt: JSON.stringify(
-          {
-            target: "architecture_design",
-            inputDocument,
-            template,
-          },
-          null,
-          2,
-        ),
+        ],
+        userPrompt: {
+          target: "architecture_design",
+          inputDocument,
+          template,
+        },
       },
       responseFormat: "text",
       metadata: {

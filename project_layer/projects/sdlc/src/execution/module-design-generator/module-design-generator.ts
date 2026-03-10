@@ -72,16 +72,12 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
         systemPrompt:
           "You generate a module design document that follows the provided template structure. " +
           "Return plain markdown only.",
-        userPrompt: JSON.stringify(
-          {
-            target: "module_design",
-            architectureDocument: payload.architectureDocument,
-            moduleDescriptor: payload.moduleDescriptor,
-            template,
-          },
-          null,
-          2,
-        ),
+        userPrompt: {
+          target: "module_design",
+          architectureDocument: payload.architectureDocument,
+          moduleDescriptor: JSON.stringify(payload.moduleDescriptor),
+          template,
+        },
       },
       responseFormat: "text",
       metadata: {

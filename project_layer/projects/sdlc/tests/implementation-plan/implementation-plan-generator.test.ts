@@ -3,7 +3,13 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ImplementationPlanGenerator } from "../../src/execution/implementation-plan-generator/implementation-plan-generator.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizePromptContent,
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 import {
   resolveArchitectureArtifactPath,
   resolveModuleDesignArtifactPath,
@@ -56,19 +62,22 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
 
   assert.equal(llmExecutor.lastRequest?.responseFormat, "text");
   assert.equal(llmExecutor.lastRequest?.metadata?.stage, "implementation_plan");
-  assert.equal(llmExecutor.lastRequest?.prompt.systemPrompt.includes("implementation workplan"), true);
+  assert.equal(
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("implementation workplan"),
+    true,
+  );
 
-  const payload = JSON.parse(llmExecutor.lastRequest?.prompt.userPrompt ?? "{}") as {
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
     requirementDocument: string;
     architectureDocument: string;
-    moduleDesignDocuments: string[];
+    moduleDesignDocuments: string;
     template: string;
   };
   assert.equal(payload.target, "implementation_plan");
   assert.equal(payload.requirementDocument, resolveRequirementArtifactPath("/tmp/workspace"));
   assert.equal(payload.architectureDocument, resolveArchitectureArtifactPath("/tmp/workspace"));
-  assert.deepEqual(payload.moduleDesignDocuments, [
+  assert.deepEqual(JSON.parse(payload.moduleDesignDocuments), [
     resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
     resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);

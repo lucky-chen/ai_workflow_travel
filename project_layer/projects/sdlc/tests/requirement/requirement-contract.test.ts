@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { RequirementContract } from "../../src/contract/requirement-contract/requirement-contract.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 
 export async function runRequirementContractTests(): Promise<void> {
   const workspaceRoot = await createTempDir("requirement-contract-");
@@ -224,7 +229,7 @@ async function testRequirementContractBuildsPromptRequest(workspaceRoot: string)
       },
       contractSpec: unknown,
     ): Promise<{
-      prompt: { systemPrompt: string; userPrompt: string };
+      prompt: { systemPrompt: string; userPrompt: Record<string, string> };
       responseFormat: "json";
       metadata?: Record<string, string>;
     }>;
@@ -248,29 +253,25 @@ async function testRequirementContractBuildsPromptRequest(workspaceRoot: string)
     spec,
   );
 
-  const payload = JSON.parse(request.prompt.userPrompt) as {
+  const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
     target: string;
     generatedResult: string;
-    contractSpec: {
-      document_contracts: Array<{ check_item: string }>;
-      section_contracts: Array<{ section_id: string }>;
-      specific_contract?: { source?: string; stage?: string };
-    };
+    contractSpec: string;
   };
 
   assert.equal(request.responseFormat, "json");
   assert.equal(request.metadata?.stage, "requirement_interpretation");
   assert.equal(request.metadata?.checkType, "contract");
-  assert.equal(request.prompt.systemPrompt.includes("Return JSON"), true);
+  assert.equal(normalizeUserPromptContent({ system: request.prompt.systemPrompt }).includes("Return JSON"), true);
   assert.equal(payload.target, "requirement_contract_check");
   assert.equal(payload.generatedResult.includes("# 1. Background"), true);
   assert.deepEqual(
-    payload.contractSpec.document_contracts.map((entry) => entry.check_item),
+    (JSON.parse(payload.contractSpec) as typeof spec).document_contracts.map((entry) => entry.check_item),
     spec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/contract/RequirementTemplate.contract.json");
-  assert.equal(payload.contractSpec.specific_contract?.stage, "requirement_interpretation");
-  assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
+  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).specific_contract?.source, "dist/resources/contract/RequirementTemplate.contract.json");
+  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).specific_contract?.stage, "requirement_interpretation");
+  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).section_contracts.length, spec.section_contracts.length);
 }
 
 async function testRequirementContractPrefersWorkspaceResourceSource(workspaceRoot: string): Promise<void> {
@@ -329,16 +330,16 @@ function createRequirementDocument(): string {
     "- problem: teams interpret rough requests differently.",
     "- ability: the product structures requirement content into a stable template.",
     "",
-    "# 5. User Workflow",
-    "## 5.1 Standard Flow",
+    "# 5. User Journey",
+    "## 5.1 Standard Journey",
     "### 5.1.1 Draft input",
     "User provides initial requirement context.",
     "### 5.1.2 Requirement normalization",
     "System organizes the requirement into the standard document.",
-    "## 5.2 Resume Support Entry Points",
+    "## 5.2 Journey Resume Entry Points",
     "- confirmed requirement draft",
     "  resume when the requirement is already reviewed.",
-    "## 5.3 Failure Handling",
+    "## 5.3 Journey Failure Handling",
     "- request clarification when key requirement context is missing.",
     "",
     "# 6. Inputs and Outputs",
@@ -376,16 +377,16 @@ function createRequirementDocument(): string {
 
 class RequirementContractMockLlmExecutor implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
-    const payload = JSON.parse(request.prompt.userPrompt) as {
+    const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: {
-        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
-        section_contracts: Array<{ section_id: string; title: string }>;
-      };
+      contractSpec: string;
     };
 
     const generatedResult = payload.generatedResult;
-    const contractSpec = payload.contractSpec;
+    const contractSpec = JSON.parse(payload.contractSpec) as {
+      document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+      section_contracts: Array<{ section_id: string; title: string }>;
+    };
     const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
 
     if (generatedResult.length === 0) {
@@ -423,10 +424,10 @@ class RequirementContractMockLlmExecutor implements ILlmExecutor {
       });
     }
 
-    const alignmentContract = contractSpec.document_contracts.find((entry) => entry.check_item === "workflow_and_goal_alignment");
+    const alignmentContract = contractSpec.document_contracts.find((entry) => entry.check_item === "journey_and_goal_alignment");
     if (!generatedResult.includes("# 3. Product Goals") || !/^\s*-\s+/m.test(extractSection(generatedResult, "# 3. Product Goals"))) {
       issues.push({
-        checkItem: alignmentContract?.check_item ?? "workflow_and_goal_alignment",
+        checkItem: alignmentContract?.check_item ?? "journey_and_goal_alignment",
         message: "Product Goals section should include concrete goal items.",
         severity: alignmentContract?.severity ?? "high",
       });

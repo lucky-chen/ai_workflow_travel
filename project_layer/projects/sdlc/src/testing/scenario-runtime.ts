@@ -1,6 +1,6 @@
 import type { CompositionRootOptions } from "../app/composition-root.js";
 import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
-import type { LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
+import type { LlmExecutorServiceDependencies } from "../sdk/llm-executor/llm-executor.js";
 import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
 import { ShellRunner } from "../workflow/validation/shell-runner.js";
 
@@ -36,8 +36,8 @@ interface ScriptedLlmExecutorDependencies {
 
 function createScenarioMockExecute(
   dependencies: ScriptedLlmExecutorDependencies,
-): (request: LlmExecutionRequest) => Promise<LlmExecutionResult> {
-  return async (request: LlmExecutionRequest): Promise<LlmExecutionResult> => {
+): NonNullable<LlmExecutorServiceDependencies["mockExecute"]> {
+  return async (request) => {
     if (request.metadata?.checkType === "contract") {
       const stageId = request.metadata?.stage;
       const shouldFail = typeof stageId === "string"
@@ -96,10 +96,13 @@ function createScenarioMockExecute(
   };
 }
 
-function buildTextResult(request: LlmExecutionRequest, content: string): LlmExecutionResult {
+function buildTextResult(
+  request: Parameters<NonNullable<LlmExecutorServiceDependencies["mockExecute"]>>[0],
+  content: string,
+) {
   return {
     content,
-    responseFormat: "text",
+    responseFormat: "text" as const,
     metadata: {
       ...(request.metadata ?? {}),
     },

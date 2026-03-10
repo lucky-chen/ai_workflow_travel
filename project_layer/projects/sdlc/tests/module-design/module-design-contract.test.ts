@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ModuleDesignContract } from "../../src/contract/module-design-contract/module-design-contract.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 
 export async function runModuleDesignContractTests(): Promise<void> {
   const workspaceRoot = await createTempDir("module-contract-");
@@ -209,7 +214,7 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
       },
       contractSpec: unknown,
     ): Promise<{
-      prompt: { systemPrompt: string; userPrompt: string };
+      prompt: { systemPrompt: string; userPrompt: Record<string, string> };
       responseFormat: "json";
       metadata?: Record<string, string>;
     }>;
@@ -234,31 +239,27 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
     spec,
   );
 
-  const payload = JSON.parse(request.prompt.userPrompt) as {
+  const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
     target: string;
     moduleName: string;
     generatedResult: string;
-    contractSpec: {
-      document_contracts: Array<{ check_item: string }>;
-      section_contracts: Array<{ section_id: string }>;
-      specific_contract?: { source?: string; stage?: string };
-    };
+    contractSpec: string;
   };
 
   assert.equal(request.responseFormat, "json");
   assert.equal(request.metadata?.stage, "module_design");
   assert.equal(request.metadata?.checkType, "contract");
-  assert.equal(request.prompt.systemPrompt.includes("Return JSON"), true);
+  assert.equal(normalizeUserPromptContent({ system: request.prompt.systemPrompt }).includes("Return JSON"), true);
   assert.equal(payload.target, "module_design_contract_check");
   assert.equal(payload.moduleName, "Workflow");
   assert.equal(payload.generatedResult.includes("# Workflow Design"), true);
   assert.deepEqual(
-    payload.contractSpec.document_contracts.map((entry) => entry.check_item),
+    (JSON.parse(payload.contractSpec) as typeof spec).document_contracts.map((entry) => entry.check_item),
     spec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/contract/ModuleDesignTemplate.contract.json");
-  assert.equal(payload.contractSpec.specific_contract?.stage, "module_design");
-  assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
+  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).specific_contract?.source, "dist/resources/contract/ModuleDesignTemplate.contract.json");
+  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).specific_contract?.stage, "module_design");
+  assert.equal((JSON.parse(payload.contractSpec) as typeof spec).section_contracts.length, spec.section_contracts.length);
 }
 
 async function createTempDir(prefix: string): Promise<string> {
@@ -389,17 +390,17 @@ function createModuleDesignDocument(): string {
 
 class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
-    const payload = JSON.parse(request.prompt.userPrompt) as {
+    const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       moduleName: string;
       generatedResult: string;
-      contractSpec: {
-        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
-        section_contracts: Array<{ section_id: string; title: string; severity: "low" | "medium" | "high" }>;
-      };
+      contractSpec: string;
     };
     const content = payload.generatedResult;
     const moduleName = payload.moduleName;
-    const contractSpec = payload.contractSpec;
+    const contractSpec = JSON.parse(payload.contractSpec) as {
+      document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+      section_contracts: Array<{ section_id: string; title: string; severity: "low" | "medium" | "high" }>;
+    };
     const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
 
     const requiredSections = ["2", "2.1", "3", "3.1", "4.1", "4.1.1", "4.1.2", "4.1.4", "4.2"];

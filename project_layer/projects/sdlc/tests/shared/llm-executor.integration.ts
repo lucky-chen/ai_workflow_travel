@@ -34,7 +34,7 @@ async function runProviderSmokeTest(localConfig: Awaited<ReturnType<typeof loadL
   const result = await executor.execute({
     prompt: {
       systemPrompt: "Return a short plain-text answer.",
-      userPrompt: "Reply with the word ok.",
+      userPrompt: { instruction: "Reply with the word ok." },
     },
     responseFormat: "text",
     metadata: {

@@ -4,7 +4,7 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
-import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
+import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
 
@@ -36,27 +36,23 @@ export class ModuleDesignContract extends DocumentStageContract {
         systemPrompt:
           "You check whether a module design document satisfies the provided contract spec. " +
           "Return JSON with passed, summary, and issues only.",
-        userPrompt: JSON.stringify(
-          {
-            target: "module_design_contract_check",
-            moduleName: moduleDesignOutput.artifacts.moduleName,
-            generatedResult,
-            contractSpec,
-            requiredOutputShape: {
-              passed: "boolean",
-              summary: "string",
-              issues: [
-                {
-                  checkItem: "string",
-                  message: "string",
-                  severity: "low | medium | high",
-                },
-              ],
-            },
-          },
-          null,
-          2,
-        ),
+        userPrompt: {
+          target: "module_design_contract_check",
+          moduleName: moduleDesignOutput.artifacts.moduleName,
+          generatedResult,
+          contractSpec: JSON.stringify(contractSpec),
+          requiredOutputShape: JSON.stringify({
+            passed: "boolean",
+            summary: "string",
+            issues: [
+              {
+                checkItem: "string",
+                message: "string",
+                severity: "low | medium | high",
+              },
+            ],
+          }),
+        },
       },
       responseFormat: "json",
       metadata: {
@@ -75,14 +71,14 @@ export class ModuleDesignContract extends DocumentStageContract {
   }
 
   protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
-    const promptPayload = JSON.parse(request.prompt.userPrompt) as {
+    const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       moduleName: string;
       generatedResult: string;
-      contractSpec: ContractSpec;
+      contractSpec: string;
     };
     const content = promptPayload.generatedResult;
     const moduleName = promptPayload.moduleName;
-    const contractSpec = promptPayload.contractSpec;
+    const contractSpec = JSON.parse(promptPayload.contractSpec) as ContractSpec;
     const issues: ContractIssue[] = [];
 
     if (content.length === 0) {

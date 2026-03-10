@@ -4,7 +4,7 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
-import type { LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
+import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
 import { DocumentStageContract } from "../document-stage-contract.js";
 import type { ImplementationWorkPlan, ImplementationWorkPlanBatch, ImplementationWorkPlanStatus, ImplementationWorkPlanStep } from "../../shared/contracts/implementation-workplan.js";
@@ -99,31 +99,27 @@ export class ImplementationPlanContract extends DocumentStageContract {
         systemPrompt:
           "You check whether an implementation workplan satisfies the provided contract spec. " +
           "Return JSON with passed, summary, and issues only.",
-        userPrompt: JSON.stringify(
-          {
-            target: "implementation_plan_contract_check",
-            generatedResult,
-            contractSpec,
-            upstreamContext: {
-              requirement_document: context.inputArtifacts.requirement_document,
-              architecture_document: context.inputArtifacts.architecture_document,
-              module_design_documents: moduleDesignDocuments,
-            },
-            requiredOutputShape: {
-              passed: "boolean",
-              summary: "string",
-              issues: [
-                {
-                  checkItem: "string",
-                  message: "string",
-                  severity: "low | medium | high",
-                },
-              ],
-            },
-          },
-          null,
-          2,
-        ),
+        userPrompt: {
+          target: "implementation_plan_contract_check",
+          generatedResult,
+          contractSpec: JSON.stringify(contractSpec),
+          upstreamContext: JSON.stringify({
+            requirement_document: context.inputArtifacts.requirement_document,
+            architecture_document: context.inputArtifacts.architecture_document,
+            module_design_documents: moduleDesignDocuments,
+          }),
+          requiredOutputShape: JSON.stringify({
+            passed: "boolean",
+            summary: "string",
+            issues: [
+              {
+                checkItem: "string",
+                message: "string",
+                severity: "low | medium | high",
+              },
+            ],
+          }),
+        },
       },
       responseFormat: "json",
       metadata: {
@@ -142,12 +138,12 @@ export class ImplementationPlanContract extends DocumentStageContract {
   }
 
   protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
-    const promptPayload = JSON.parse(request.prompt.userPrompt) as {
+    const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: ContractSpec;
+      contractSpec: string;
     };
     const content = promptPayload.generatedResult;
-    const contractSpec = promptPayload.contractSpec;
+    const contractSpec = JSON.parse(promptPayload.contractSpec) as ContractSpec;
     const issues: ContractIssue[] = [];
 
     if (content.length === 0) {

@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ImplementationPlanContract } from "../../src/contract/implementation-plan-contract/implementation-plan-contract.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 import {
   resolveArchitectureArtifactPath,
   resolveModuleDesignArtifactPath,
@@ -157,7 +162,7 @@ async function testImplementationPlanContractBuildsPromptRequest(workspaceRoot: 
       output: ReturnType<typeof createOutput>,
       contractSpec: unknown,
     ): Promise<{
-      prompt: { systemPrompt: string; userPrompt: string };
+      prompt: { systemPrompt: string; userPrompt: Record<string, string> };
       responseFormat: "json";
       metadata?: Record<string, string>;
     }>;
@@ -167,30 +172,27 @@ async function testImplementationPlanContractBuildsPromptRequest(workspaceRoot: 
     spec,
   );
 
-  const payload = JSON.parse(request.prompt.userPrompt) as {
+  const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
     target: string;
     generatedResult: string;
-    contractSpec: {
-      document_contracts: Array<{ check_item: string }>;
-      section_contracts: Array<{ section_id: string }>;
-      specific_contract?: { source?: string; stage?: string };
-    };
-    upstreamContext: {
-      requirement_document: string;
-      architecture_document: string;
-      module_design_documents: string[];
-    };
+    contractSpec: string;
+    upstreamContext: string;
   };
 
   assert.equal(request.responseFormat, "json");
   assert.equal(request.metadata?.stage, "implementation_plan");
   assert.equal(request.metadata?.checkType, "contract");
-  assert.equal(request.prompt.systemPrompt.includes("Return JSON"), true);
+  assert.equal(normalizeUserPromptContent({ system: request.prompt.systemPrompt }).includes("Return JSON"), true);
   assert.equal(payload.target, "implementation_plan_contract_check");
   assert.equal(payload.generatedResult.includes("# Code Generation Execution Plan"), true);
-  assert.equal(payload.upstreamContext.requirement_document, resolveRequirementArtifactPath("/tmp/workspace"));
-  assert.equal(payload.upstreamContext.architecture_document, resolveArchitectureArtifactPath("/tmp/workspace"));
-  assert.deepEqual(payload.upstreamContext.module_design_documents, [
+  const upstreamContext = JSON.parse(payload.upstreamContext) as {
+    requirement_document: string;
+    architecture_document: string;
+    module_design_documents: string[];
+  };
+  assert.equal(upstreamContext.requirement_document, resolveRequirementArtifactPath("/tmp/workspace"));
+  assert.equal(upstreamContext.architecture_document, resolveArchitectureArtifactPath("/tmp/workspace"));
+  assert.deepEqual(upstreamContext.module_design_documents, [
     resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
     resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);
@@ -233,14 +235,14 @@ async function createTempDir(prefix: string): Promise<string> {
 
 class ImplementationPlanContractMockLlmExecutor implements ILlmExecutor {
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
-    const payload = JSON.parse(request.prompt.userPrompt) as {
+    const payload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
       generatedResult: string;
-      contractSpec: {
-        document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
-      };
+      contractSpec: string;
     };
     const content = payload.generatedResult;
-    const contractSpec = payload.contractSpec;
+    const contractSpec = JSON.parse(payload.contractSpec) as {
+      document_contracts: Array<{ check_item: string; severity: "low" | "medium" | "high" }>;
+    };
     const issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }> = [];
 
     const structureContract = contractSpec.document_contracts.find((entry) => entry.check_item === "document_structure_complete");

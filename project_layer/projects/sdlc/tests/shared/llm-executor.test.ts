@@ -8,6 +8,7 @@ import { loadLocalConfig } from "./load-local-config.js";
 export async function runLlmExecutorTests(): Promise<void> {
   await testDefaultMockExecutor();
   await testLlmTraceRecorderIntegration();
+  await testPromptListsAreNormalizedBeforeExecution();
   await testRealExecutorTraceMetadata();
   await testLlmExecutorUsesAgentRuntimeTraceCheckpoints();
   await testCustomMockExecutor();
@@ -21,6 +22,37 @@ export async function runLlmExecutorTests(): Promise<void> {
   await testHttpErrorResponse();
 }
 
+async function testPromptListsAreNormalizedBeforeExecution(): Promise<void> {
+  let capturedSystemPrompt = "";
+  let capturedUserPrompt = "";
+  const executor = new LlmExecutorService({
+    mode: "mock",
+    mockExecute: async (request) => {
+      capturedSystemPrompt = request.prompt.systemPrompt;
+      capturedUserPrompt = request.prompt.userPrompt;
+      return {
+        content: "normalized",
+        responseFormat: request.responseFormat,
+      };
+    },
+  });
+
+  const result = await executor.execute({
+    prompt: {
+      systemPrompt: ["system part 1", "system part 2"],
+      userPrompt: {
+        part1: "user part 1",
+        part2: "user part 2",
+      },
+    },
+    responseFormat: "text",
+  });
+
+  assert.equal(result.content, "normalized");
+  assert.equal(capturedSystemPrompt, "system part 1\n\nsystem part 2");
+  assert.equal(capturedUserPrompt, "{\n  \"part1\": \"user part 1\",\n  \"part2\": \"user part 2\"\n}");
+}
+
 async function testLlmTraceRecorderIntegration(): Promise<void> {
   const traceRecorder = new InMemoryTraceRecorder();
   const executor = new LlmExecutorService({
@@ -31,7 +63,7 @@ async function testLlmTraceRecorderIntegration(): Promise<void> {
   const result = await executor.execute({
     prompt: {
       systemPrompt: "system",
-      userPrompt: "user",
+      userPrompt: { input: "user" },
     },
     responseFormat: "text",
   });
@@ -86,7 +118,7 @@ async function testRealExecutorTraceMetadata(): Promise<void> {
   await executor.execute({
     prompt: {
       systemPrompt: "system prompt",
-      userPrompt: "user prompt",
+      userPrompt: { input: "user prompt" },
     },
     responseFormat: "text",
   });
@@ -113,7 +145,7 @@ async function testLlmExecutorUsesAgentRuntimeTraceCheckpoints(): Promise<void> 
   const result = await executor.execute({
     prompt: {
       systemPrompt: "system",
-      userPrompt: "user",
+      userPrompt: { input: "user" },
     },
     responseFormat: "json",
     metadata: {
@@ -139,7 +171,7 @@ async function testDefaultMockExecutor(): Promise<void> {
   const mockResult = await mockExecutor.execute({
     prompt: {
       systemPrompt: "system",
-      userPrompt: "user",
+      userPrompt: { input: "user" },
     },
     responseFormat: "json",
     metadata: {
@@ -163,7 +195,7 @@ async function testCustomMockExecutor(): Promise<void> {
   const customMockResult = await customMockExecutor.execute({
     prompt: {
       systemPrompt: "system",
-      userPrompt: "user",
+      userPrompt: { input: "user" },
     },
     responseFormat: "json",
   });
@@ -192,7 +224,7 @@ async function testMockExecutorUsesRequestAwareHandler(): Promise<void> {
   const result = await executor.execute({
     prompt: {
       systemPrompt: "system",
-      userPrompt: "user",
+      userPrompt: { input: "user" },
     },
     responseFormat: "json",
     metadata: {
@@ -223,7 +255,7 @@ async function testRealExecutorRequiresApiKey(): Promise<void> {
     missingApiKeyExecutor.execute({
       prompt: {
         systemPrompt: "system",
-        userPrompt: "user",
+        userPrompt: { input: "user" },
       },
       responseFormat: "json",
     }),
@@ -243,7 +275,7 @@ async function testRealExecutorRequiresModel(): Promise<void> {
     missingModelExecutor.execute({
       prompt: {
         systemPrompt: "system",
-        userPrompt: "user",
+        userPrompt: { input: "user" },
       },
       responseFormat: "json",
     }),
@@ -274,7 +306,7 @@ async function testDeepSeekExecution(): Promise<void> {
   const realResult = await realExecutor.execute({
     prompt: {
       systemPrompt: "system",
-      userPrompt: "user",
+      userPrompt: { input: "user" },
     },
     responseFormat: "json",
     metadata: {
@@ -307,7 +339,7 @@ async function testOpenAiExecution(): Promise<void> {
   const openAiResult = await openAiExecutor.execute({
     prompt: {
       systemPrompt: "system prompt",
-      userPrompt: "user prompt",
+      userPrompt: { input: "user prompt" },
     },
     responseFormat: "text",
   });
@@ -328,7 +360,7 @@ async function testInvalidProviderResponse(): Promise<void> {
     invalidResponseExecutor.execute({
       prompt: {
         systemPrompt: "system",
-        userPrompt: "user",
+        userPrompt: { input: "user" },
       },
       responseFormat: "json",
     }),
@@ -359,7 +391,7 @@ async function testHttpErrorResponse(): Promise<void> {
     httpErrorExecutor.execute({
       prompt: {
         systemPrompt: "system",
-        userPrompt: "user",
+        userPrompt: { input: "user" },
       },
       responseFormat: "json",
     }),
@@ -393,7 +425,7 @@ function createAssertingFetch(expectedUrl: string, expectedModel: string, respon
     assert.equal(parsedBody.model, expectedModel);
     assert.deepEqual(parsedBody.messages, [
       { role: "system", content: "system prompt" },
-      { role: "user", content: "user prompt" },
+      { role: "user", content: "{\n  \"input\": \"user prompt\"\n}" },
     ]);
 
     return {

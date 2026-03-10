@@ -75,17 +75,13 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator {
         systemPrompt:
           "You generate an implementation workplan that follows the provided execution-plan template structure. " +
           "Return plain markdown only.",
-        userPrompt: JSON.stringify(
-          {
-            target: "implementation_plan",
-            requirementDocument: payload.requirementDocument,
-            architectureDocument: payload.architectureDocument,
-            moduleDesignDocuments: payload.moduleDesignDocuments,
-            template,
-          },
-          null,
-          2,
-        ),
+        userPrompt: {
+          target: "implementation_plan",
+          requirementDocument: payload.requirementDocument,
+          architectureDocument: payload.architectureDocument,
+          moduleDesignDocuments: JSON.stringify(payload.moduleDesignDocuments),
+          template,
+        },
       },
       responseFormat: "text",
       metadata: {

@@ -3,7 +3,13 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ModuleDesignGenerator } from "../../src/execution/module-design-generator/module-design-generator.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
+import {
+  normalizePromptContent,
+  normalizeUserPromptContent,
+  type ILlmExecutor,
+  type LlmExecutionRequest,
+  type LlmExecutionResult,
+} from "../../src/sdk/llm-executor/llm-executor.js";
 
 export async function runModuleDesignGeneratorTests(): Promise<void> {
   const workspaceRoot = await createTempDir("module-generator-");
@@ -51,18 +57,22 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
   assert.equal(llmExecutor.lastRequest?.responseFormat, "text");
   assert.equal(llmExecutor.lastRequest?.metadata?.stage, "module_design");
   assert.equal(llmExecutor.lastRequest?.metadata?.moduleName, "Workflow");
-  assert.equal(llmExecutor.lastRequest?.prompt.systemPrompt.includes("module design document"), true);
+  assert.equal(
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("module design document"),
+    true,
+  );
 
-  const payload = JSON.parse(llmExecutor.lastRequest?.prompt.userPrompt ?? "{}") as {
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
     architectureDocument: string;
-    moduleDescriptor: { name: string; responsibilities: string[] };
+    moduleDescriptor: string;
     template: string;
   };
   assert.equal(payload.target, "module_design");
   assert.equal(payload.architectureDocument.includes("Architecture content."), true);
-  assert.equal(payload.moduleDescriptor.name, "Workflow");
-  assert.equal(payload.moduleDescriptor.responsibilities.length, 2);
+  const moduleDescriptor = JSON.parse(payload.moduleDescriptor) as { name: string; responsibilities: string[] };
+  assert.equal(moduleDescriptor.name, "Workflow");
+  assert.equal(moduleDescriptor.responsibilities.length, 2);
   assert.equal(payload.template.includes("# {ModuleName} Design"), true);
 }
 
