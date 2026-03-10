@@ -9,6 +9,8 @@ const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const artifactRoot = path.join(workspaceRoot, ".artifact-store");
+const historyStoreDirectory = path.join(sdlcProjectRoot, "dist", "sdlc", "history_store");
+const historyStoreRoot = path.join(historyStoreDirectory, "records");
 
 export async function runCli(args, options = {}) {
   const { taskId = "hello-service-task", runId, extraEnv = {} } = options;
@@ -46,12 +48,13 @@ export async function runCli(args, options = {}) {
 
 export async function resetWorkspace() {
   await rm(artifactRoot, { recursive: true, force: true });
+  await rm(historyStoreDirectory, { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "sdlc"), { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
 }
 
 export async function findTraceFilePath(taskId) {
-  const traceDirectory = path.join(workspaceRoot, "sdlc", "trace");
+  const traceDirectory = historyStoreRoot;
   const entries = await readdir(traceDirectory, { withFileTypes: true });
   const match = entries
     .filter((entry) => entry.isFile() && entry.name.startsWith(`${taskId}_`) && entry.name.endsWith(".json"))
@@ -66,7 +69,7 @@ export async function findTraceFilePath(taskId) {
 }
 
 export async function getTraceFilePath(taskId, runId) {
-  return path.join(workspaceRoot, "sdlc", "trace", `${taskId}_${runId}.json`);
+  return path.join(historyStoreRoot, `${taskId}_${runId}.json`);
 }
 
 export async function loadTraceRecords(taskId, runId) {

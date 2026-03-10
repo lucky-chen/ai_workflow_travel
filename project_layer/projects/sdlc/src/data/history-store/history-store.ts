@@ -51,14 +51,6 @@ export class HistoryStoreService {
     updatedBucket.push(persistedRecord);
     await this.writeBucket(targetPath, updatedBucket);
 
-    const workspaceRoot = resolvedTaskContext.workspaceRoot;
-    if (workspaceRoot) {
-      await this.writeBucket(
-        path.join(workspaceRoot, "sdlc", "trace", `${taskBucketName}.json`),
-        updatedBucket,
-      );
-    }
-
     return recordId;
   }
 

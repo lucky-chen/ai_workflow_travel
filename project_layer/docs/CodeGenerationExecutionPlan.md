@@ -454,12 +454,12 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] verify contract success allows the hello-service workflow to continue through downstream stages
   - [x] verify contract-failure injection stops stage progression at the failed stage
   - [x] verify downstream artifacts are not produced after contract failure
-  - [x] verify contract success/failure leaves reviewable trace evidence in the hello-service workspace
+  - [x] verify contract success/failure leaves reviewable persisted history evidence
   - [x] automate success and failure acceptance coverage under `user_projects/hello-service/tests`
 - [x] Batch 3: hello-service llm-call verification
   - [x] verify hello-service baseline flow produces observable `SDK/LlmExecutor` call evidence
   - [x] verify llm call evidence covers at least document generation and implementation generation flow
-  - [x] verify the recorded llm-call evidence remains assertable from persisted trace output or another stable workspace-level signal
+  - [x] verify the recorded llm-call evidence remains assertable from persisted history output
   - [x] document that hello-service acceptance verifies llm integration boundaries rather than model-quality behavior
 
 ### Step 11. Extend Toward Agent Capabilities
