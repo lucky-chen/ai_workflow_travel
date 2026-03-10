@@ -85,6 +85,10 @@ export function findTraceRecordsByStage(records, stageId) {
   return records.filter((entry) => entry.scope?.stageId === stageId);
 }
 
+export function findTraceRecordsByCaller(records, caller) {
+  return records.filter((entry) => entry.caller === caller);
+}
+
 export function createHelloServiceRequirementDocument() {
   return [
     "# 1. Background",

@@ -9,6 +9,7 @@ export async function runLlmExecutorTests(): Promise<void> {
   await testLlmTraceRecorderIntegration();
   await testLlmExecutorUsesAgentRuntimeTraceCheckpoints();
   await testCustomMockExecutor();
+  await testMockExecutorUsesRequestAwareHandler();
   await testRealExecutorRequiresProvider();
   await testRealExecutorRequiresApiKey();
   await testRealExecutorRequiresModel();
@@ -116,6 +117,33 @@ async function testCustomMockExecutor(): Promise<void> {
       changed_files: [{ path: "a.ts", operation: "create", content: "export {};\n" }],
     }),
   );
+}
+
+async function testMockExecutorUsesRequestAwareHandler(): Promise<void> {
+  const executor = new LlmExecutorService({
+    mode: "mock",
+    mockExecute: async (request) => ({
+      content: request.metadata?.stage === "implementation"
+        ? "{\"summary\":\"scripted\",\"changed_files\":[]}"
+        : "scripted-text",
+      responseFormat: request.responseFormat,
+      metadata: request.metadata,
+    }),
+  });
+
+  const result = await executor.execute({
+    prompt: {
+      systemPrompt: "system",
+      userPrompt: "user",
+    },
+    responseFormat: "json",
+    metadata: {
+      stage: "implementation",
+    },
+  });
+
+  assert.equal(result.content, "{\"summary\":\"scripted\",\"changed_files\":[]}");
+  assert.equal(result.responseFormat, "json");
 }
 
 async function testRealExecutorRequiresProvider(): Promise<void> {

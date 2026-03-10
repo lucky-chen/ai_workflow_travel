@@ -7,6 +7,7 @@ import {
   createHelloServiceModuleDesignDocument,
   createHelloServiceRequirementDocument,
   findTraceRecordsByCategory,
+  findTraceRecordsByCaller,
   findTraceRecordsByEventType,
   findTraceRecordsByStage,
   getTraceFilePath,
@@ -65,6 +66,26 @@ export async function runHelloServiceSuccessTest() {
     ),
     true,
   );
+  assert.equal(
+    findTraceRecordsByCaller(architectureTraceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_started"
+        && entry.scope?.stageId === "architecture_design",
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(architectureTraceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_finished"
+        && entry.scope?.stageId === "architecture_design",
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(architectureTraceRecords, "AgentTraceRecorderAdapter.record").some(
+      (entry) => entry.payload?.eventType === "agent_plan_created",
+    ),
+    true,
+  );
 
   await runCli(["generate", "--stage", "module_design", "--workspace", workspaceRoot, "--target-module", "Workflow"], { taskId: baselineTaskId, runId: moduleRunId });
   const moduleTraceRecords = await loadTraceRecords(baselineTaskId, moduleRunId);
@@ -105,6 +126,26 @@ export async function runHelloServiceSuccessTest() {
   assert.equal(
     findTraceRecordsByEventType(implementationExecutionTraceRecords, "step_completed").some(
       (entry) => entry.scope?.stageId === "implementation_execution",
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(implementationExecutionTraceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_started"
+        && entry.scope?.stageId === "implementation",
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(implementationExecutionTraceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_finished"
+        && entry.scope?.stageId === "implementation",
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(implementationExecutionTraceRecords, "AgentTraceRecorderAdapter.record").some(
+      (entry) => entry.payload?.eventType === "agent_execution_finished",
     ),
     true,
   );

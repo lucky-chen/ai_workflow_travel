@@ -30,7 +30,7 @@ export type HistoryWorkspaceRootResolver = (taskId: TaskId) => string | HistoryT
 
 export class HistoryStoreService {
   constructor(
-    private readonly storageRoot: string = path.resolve(process.cwd(), "history_store"),
+    private readonly storageRoot: string = path.resolve(process.cwd(), "dist", "sdlc", "history_store"),
     private readonly workspaceRootResolver?: HistoryWorkspaceRootResolver,
   ) {}
 

@@ -11,6 +11,7 @@ export type ModelExecutionMode = "mock" | "real";
 export interface ModelExecutionDependencies {
   mode?: ModelExecutionMode;
   mockContent?: string;
+  mockExecute?: (request: LlmExecutionRequest) => Promise<LlmExecutionResult> | LlmExecutionResult;
   realProvider?: RealProviderConfig;
 }
 
@@ -30,15 +31,22 @@ export class ExecutionStrategySelector {
 
     return {
       mode: "mock",
-      executor: new MockModelExecutionBackend(dependencies.mockContent),
+      executor: new MockModelExecutionBackend(dependencies.mockContent, dependencies.mockExecute),
     };
   }
 }
 
 export class MockModelExecutionBackend implements IModelExecutionBackend {
-  constructor(private readonly mockContent?: string) {}
+  constructor(
+    private readonly mockContent?: string,
+    private readonly mockExecute?: (request: LlmExecutionRequest) => Promise<LlmExecutionResult> | LlmExecutionResult,
+  ) {}
 
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    if (this.mockExecute) {
+      return this.mockExecute(request);
+    }
+
     return {
       content:
         this.mockContent ??

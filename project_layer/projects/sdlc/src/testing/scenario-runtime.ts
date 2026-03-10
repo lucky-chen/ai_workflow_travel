@@ -1,23 +1,25 @@
 import type { CompositionRootOptions } from "../app/composition-root.js";
 import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
+import type { LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
 import type { ShellResult } from "../workflow/validation/shell-runner.js";
 import { ShellRunner } from "../workflow/validation/shell-runner.js";
 
 export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
   const serviceName = process.env.SDLC_TEST_SERVICE_NAME?.trim() || "baseline-service";
-  const llmExecutor = new ScriptedLlmExecutor({
-    serviceName,
-    architectureDocument: createScenarioArchitectureDocument(serviceName),
-    moduleDesignDocument: createScenarioModuleDesignDocument(serviceName),
-    implementationPlanDocument: createScenarioImplementationPlanDocument(serviceName),
-    contractFailureStages: readScenarioContractFailureStages(),
-    contractIssueCategories: readScenarioContractIssueCategories(),
-  });
   return {
     artifactStorageRoot: process.env.SDLC_ARTIFACT_ROOT,
-    llmExecutorInstance: llmExecutor,
+    llmExecutor: {
+      mode: "mock",
+      mockExecute: createScenarioMockExecute({
+        serviceName,
+        architectureDocument: createScenarioArchitectureDocument(serviceName),
+        moduleDesignDocument: createScenarioModuleDesignDocument(serviceName),
+        implementationPlanDocument: createScenarioImplementationPlanDocument(serviceName),
+        contractFailureStages: readScenarioContractFailureStages(),
+        contractIssueCategories: readScenarioContractIssueCategories(),
+      }),
+    },
     shellRunner: new MockShellRunner(),
     gitCommitter: new NoopGitCommitter(),
     changeGate: new InMemoryChangeGate(),
@@ -33,18 +35,18 @@ interface ScriptedLlmExecutorDependencies {
   contractIssueCategories: string[];
 }
 
-class ScriptedLlmExecutor implements ILlmExecutor {
-  constructor(private readonly dependencies: ScriptedLlmExecutorDependencies) {}
-
-  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+function createScenarioMockExecute(
+  dependencies: ScriptedLlmExecutorDependencies,
+): (request: LlmExecutionRequest) => Promise<LlmExecutionResult> {
+  return async (request: LlmExecutionRequest): Promise<LlmExecutionResult> => {
     if (request.metadata?.checkType === "contract") {
       const stageId = request.metadata?.stage;
       const shouldFail = typeof stageId === "string"
-        && this.dependencies.contractFailureStages.has(stageId);
+        && dependencies.contractFailureStages.has(stageId);
       return {
         content: JSON.stringify(
           shouldFail
-            ? this.buildFailedContractResult(stageId)
+            ? buildFailedContractResult(dependencies, stageId)
             : {
                 passed: true,
                 summary: "Document passed contract checks.",
@@ -57,20 +59,20 @@ class ScriptedLlmExecutor implements ILlmExecutor {
 
     switch (request.metadata?.stage) {
       case "architecture_design":
-        return this.buildTextResult(request, this.dependencies.architectureDocument);
+        return buildTextResult(request, dependencies.architectureDocument);
       case "module_design":
-        return this.buildTextResult(request, this.dependencies.moduleDesignDocument);
+        return buildTextResult(request, dependencies.moduleDesignDocument);
       case "implementation_plan":
-        return this.buildTextResult(request, this.dependencies.implementationPlanDocument);
+        return buildTextResult(request, dependencies.implementationPlanDocument);
       case "implementation":
         return {
           content: JSON.stringify({
-            summary: `Generated ${this.dependencies.serviceName} implementation baseline.`,
+            summary: `Generated ${dependencies.serviceName} implementation baseline.`,
             changed_files: [
               {
                 path: "src/index.ts",
                 operation: "create",
-                content: `export function hello(): string {\n  return "${this.dependencies.serviceName}";\n}\n`,
+                content: `export function hello(): string {\n  return "${dependencies.serviceName}";\n}\n`,
               },
             ],
           }),
@@ -92,30 +94,33 @@ class ScriptedLlmExecutor implements ILlmExecutor {
           },
         };
     }
-  }
+  };
+}
 
-  private buildTextResult(request: LlmExecutionRequest, content: string): LlmExecutionResult {
-    return {
-      content,
-      responseFormat: "text",
-      metadata: {
-        ...(request.metadata ?? {}),
-      },
-    };
-  }
+function buildTextResult(request: LlmExecutionRequest, content: string): LlmExecutionResult {
+  return {
+    content,
+    responseFormat: "text",
+    metadata: {
+      ...(request.metadata ?? {}),
+    },
+  };
+}
 
-  private buildFailedContractResult(stageId: string): {
-    passed: false;
-    summary: string;
-    issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }>;
-  } {
-    const issues = this.dependencies.contractIssueCategories.map((category) => buildScenarioContractIssue(stageId, category));
-    return {
-      passed: false,
-      summary: `${stageId} failed contract checks.`,
-      issues,
-    };
-  }
+function buildFailedContractResult(
+  dependencies: ScriptedLlmExecutorDependencies,
+  stageId: string,
+): {
+  passed: false;
+  summary: string;
+  issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }>;
+} {
+  const issues = dependencies.contractIssueCategories.map((category) => buildScenarioContractIssue(stageId, category));
+  return {
+    passed: false,
+    summary: `${stageId} failed contract checks.`,
+    issues,
+  };
 }
 
 class NoopGitCommitter implements IImplementationGitCommitter {
