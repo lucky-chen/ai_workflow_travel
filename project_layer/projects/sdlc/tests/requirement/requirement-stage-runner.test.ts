@@ -44,6 +44,15 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(workspaceRoot:
     await readFile(path.join(workspaceRoot, resolveRequirementArtifactPath(workspaceRoot)), "utf8"),
     content,
   );
+  assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, [
+    resolveRequirementArtifactPath(workspaceRoot),
+  ]);
+  assert.deepEqual(traceRecorder.getEvents()[2]?.event.payload?.outputPaths, [
+    resolveRequirementArtifactPath(workspaceRoot),
+  ]);
+  assert.deepEqual(traceRecorder.getEvents()[3]?.event.payload?.outputPaths, [
+    resolveRequirementArtifactPath(workspaceRoot),
+  ]);
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
     "contract_checked",

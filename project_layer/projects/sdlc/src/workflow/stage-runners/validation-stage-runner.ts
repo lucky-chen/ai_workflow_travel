@@ -44,6 +44,9 @@ export class ValidationStageRunner implements IStageRunner {
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
       summary: `Stage "${context.stageId}" started.`,
+      payload: {
+        inputPaths: [],
+      },
     });
 
     const projectPath = this.parseProjectPath(context);
@@ -69,6 +72,9 @@ export class ValidationStageRunner implements IStageRunner {
         stageId: context.stageId,
         eventType: TRACE_EVENT_TYPES.gateReviewed,
         summary: decision.summary,
+        payload: {
+          outputPaths: [VALIDATION_ARTIFACT_PATH],
+        },
         metadata: {
           action: decision.action,
           ...(decision.comment ? { comment: decision.comment } : {}),
@@ -93,6 +99,9 @@ export class ValidationStageRunner implements IStageRunner {
         stageId: context.stageId,
         eventType: TRACE_EVENT_TYPES.artifactPersisted,
         summary: `Validation result persisted to ${VALIDATION_ARTIFACT_PATH}.`,
+        payload: {
+          outputPaths: [VALIDATION_ARTIFACT_PATH],
+        },
         metadata: {
           filePath: VALIDATION_ARTIFACT_PATH,
         },

@@ -15,7 +15,6 @@ export async function runHelloServiceContractFailureTest() {
   const architectureFailureRunId = "2002";
 
   await resetWorkspace();
-  await runCli(["init", "--workspace", workspaceRoot], { taskId: failureTaskId, runId: "2000" });
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: failureTaskId, runId: requirementRunId });
   await runCli(

@@ -75,13 +75,29 @@ async function testImplementationStageRunnerApply(
   assert.deepEqual(traceRecorder.getEvents()[1]?.event.metadata, {
     passed: "true",
   });
+  assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, [
+    "sdlc/docs/CodeGenerationExecutionPlan.md",
+    "sdlc/docs/requirements/Requirement.md",
+    "sdlc/docs/architecture/TechnicalArchitecture.md",
+    "sdlc/docs/module_design/Workflow.md",
+  ]);
   assert.deepEqual(traceRecorder.getEvents()[2]?.event.metadata, {
     action: "apply",
   });
+  assert.deepEqual(traceRecorder.getEvents()[2]?.event.payload?.outputPaths, [
+    "src/generated.ts",
+    "src/existing.ts",
+    "obsolete.txt",
+  ]);
   assert.deepEqual(traceRecorder.getEvents()[3]?.event.metadata, {
     batchId: "batch-1",
     changedFileCount: "3",
   });
+  assert.deepEqual(traceRecorder.getEvents()[3]?.event.payload?.outputPaths, [
+    "src/generated.ts",
+    "src/existing.ts",
+    "obsolete.txt",
+  ]);
   assert.deepEqual(gitCommitter.calls, [
     {
       workspaceRoot,

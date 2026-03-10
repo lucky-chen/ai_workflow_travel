@@ -20,6 +20,10 @@ export function resolveArchitectureArtifactPath(workspaceRoot: string): string {
   return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "architecture", "TechnicalArchitecture.md");
 }
 
+export function resolveModuleDesignDirectoryPath(workspaceRoot: string): string {
+  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "module_design");
+}
+
 export function resolveModuleDesignArtifactPath(workspaceRoot: string, moduleName: string): string {
   return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "module_design", `${moduleName}.md`);
 }

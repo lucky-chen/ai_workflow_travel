@@ -310,6 +310,9 @@ export class ImplementationStageRunner extends BaseStageRunner {
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stepCompleted,
       summary: `Implementation batch "${batchId}" completed and accepted.`,
+      payload: {
+        outputPaths: changedFiles.map((file) => file.path),
+      },
       metadata: {
         batchId,
         changedFileCount: String(changedFiles.length),

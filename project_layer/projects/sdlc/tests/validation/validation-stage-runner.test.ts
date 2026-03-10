@@ -144,6 +144,13 @@ async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(
     "gate_reviewed",
     "artifact_persisted",
   ]);
+  assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, []);
+  assert.deepEqual(traceRecorder.getEvents()[2]?.event.payload?.outputPaths, [
+    "reports/validation/ValidationResult.json",
+  ]);
+  assert.deepEqual(traceRecorder.getEvents()[3]?.event.payload?.outputPaths, [
+    "reports/validation/ValidationResult.json",
+  ]);
 }
 
 function createContext(params?: Record<string, string>) {

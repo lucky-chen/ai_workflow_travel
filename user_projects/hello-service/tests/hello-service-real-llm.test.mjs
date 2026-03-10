@@ -13,12 +13,6 @@ const realLlmTaskId = "hello-service-real-llm-task";
 
 export async function runHelloServiceRealLlmRequirementTest() {
   await resetWorkspace();
-  await runCli(["init", "--workspace", workspaceRoot], {
-    taskId: realLlmTaskId,
-    runId: "3000",
-    runtimeMode: "real",
-  });
-
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], {
     taskId: realLlmTaskId,
     runId: "3000-req",
@@ -31,12 +25,6 @@ export async function runHelloServiceRealLlmRequirementTest() {
 
 export async function runHelloServiceRealLlmArchitectureTest() {
   await resetWorkspace();
-  await runCli(["init", "--workspace", workspaceRoot], {
-    taskId: realLlmTaskId,
-    runId: "3000",
-    runtimeMode: "real",
-  });
-
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], {
     taskId: realLlmTaskId,
     runId: "3000-req",

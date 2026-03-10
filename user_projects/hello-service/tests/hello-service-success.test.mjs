@@ -27,7 +27,6 @@ export async function runHelloServiceSuccessTest() {
   const validationRunId = "1006";
 
   await resetWorkspace();
-  await runCli(["init", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: "1000" });
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: requirementRunId });
   const requirementTraceRecords = await loadTraceRecords(baselineTaskId, requirementRunId);

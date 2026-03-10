@@ -14,6 +14,12 @@ import type {
   StageRunnerSharedDependencies,
 } from "../../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveImplementationPlanArtifactPath,
+  resolveModuleDesignDirectoryPath,
+  resolveRequirementArtifactPath,
+} from "./stage-artifact-paths.js";
 
 export interface BaseStageRunnerDependencies extends StageRunnerSharedDependencies {
   changeGate?: IChangeGate;
@@ -39,6 +45,9 @@ export abstract class BaseStageRunner implements IStageRunner {
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
       summary: `Stage "${context.stageId}" started.`,
+      payload: {
+        inputPaths: this.resolveStageInputPaths(context),
+      },
     });
   }
 
@@ -81,6 +90,9 @@ export abstract class BaseStageRunner implements IStageRunner {
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.artifactPersisted,
       summary,
+      payload: {
+        outputPaths: [artifactPath],
+      },
       metadata: {
         filePath: artifactPath,
         ...(gateDecision ? { action: gateDecision.action } : {}),
@@ -105,6 +117,7 @@ export abstract class BaseStageRunner implements IStageRunner {
       payload: {
         action: decision.action,
         changedPaths: changeRequest.changedPaths,
+        outputPaths: changeRequest.changedPaths,
         changedFiles: changeRequest.changedFiles,
         ...(decision.comment ? { comment: decision.comment } : {}),
       },
@@ -125,6 +138,54 @@ export abstract class BaseStageRunner implements IStageRunner {
     const targetPath = path.join(context.workspaceRoot, relativePath);
     await mkdir(path.dirname(targetPath), { recursive: true });
     await writeFile(targetPath, content, "utf8");
+  }
+
+  private resolveStageInputPaths(context: StageRunContext): string[] {
+    switch (context.stageId) {
+      case "requirement_interpretation":
+        return [resolveRequirementArtifactPath(context.workspaceRoot)];
+      case "architecture_design":
+        return [resolveRequirementArtifactPath(context.workspaceRoot)];
+      case "module_design":
+        return [resolveArchitectureArtifactPath(context.workspaceRoot)];
+      case "implementation_plan":
+        return [
+          resolveRequirementArtifactPath(context.workspaceRoot),
+          resolveArchitectureArtifactPath(context.workspaceRoot),
+          resolveModuleDesignDirectoryPath(context.workspaceRoot),
+        ];
+      case "implementation":
+      case "implementation_execution":
+        return this.resolveImplementationExecutionInputPaths(context);
+      default:
+        return [];
+    }
+  }
+
+  private resolveImplementationExecutionInputPaths(context: StageRunContext): string[] {
+    const outputPaths = [
+      resolveImplementationPlanArtifactPath(context.workspaceRoot),
+      resolveRequirementArtifactPath(context.workspaceRoot),
+      resolveArchitectureArtifactPath(context.workspaceRoot),
+    ];
+    const rawModuleDesignDocuments = context.inputArtifacts.module_design_documents;
+
+    if (!rawModuleDesignDocuments?.trim()) {
+      return outputPaths;
+    }
+
+    try {
+      const parsed = JSON.parse(rawModuleDesignDocuments) as unknown;
+      if (Array.isArray(parsed) && parsed.every((entry) => typeof entry === "string" && entry.endsWith(".md"))) {
+        outputPaths.push(...parsed);
+        return [...new Set(outputPaths)];
+      }
+    } catch {
+      // Ignore non-path serialized inputs and fall back to the canonical directory path.
+    }
+
+    outputPaths.push(resolveModuleDesignDirectoryPath(context.workspaceRoot));
+    return [...new Set(outputPaths)];
   }
 
 }
