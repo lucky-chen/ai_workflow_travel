@@ -302,8 +302,8 @@ async function createTempDir(prefix: string): Promise<string> {
 }
 
 async function seedWorkspace(workspaceRoot: string): Promise<void> {
-  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/requirements/Requirement.md", "# Requirement\n");
-  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/architecture/TechnicalArchitecture.md", "# Architecture\n");
+  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md", "# Requirement\n");
+  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md", "# Architecture\n");
   await writeWorkspaceFile(workspaceRoot, "sdlc/docs/module_design/alpha.md", "# Module Alpha\n");
   await writeWorkspaceFile(workspaceRoot, "sdlc/docs/module_design/beta.md", "# Module Beta\n");
 }

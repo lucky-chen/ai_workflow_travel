@@ -13,11 +13,11 @@ export function resolveImplementationPlanArtifactPath(workspaceRoot: string): st
 }
 
 export function resolveRequirementArtifactPath(workspaceRoot: string): string {
-  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md");
+  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "Requirement.md");
 }
 
 export function resolveArchitectureArtifactPath(workspaceRoot: string): string {
-  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "architecture", "TechnicalArchitecture.md");
+  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md");
 }
 
 export function resolveModuleDesignDirectoryPath(workspaceRoot: string): string {

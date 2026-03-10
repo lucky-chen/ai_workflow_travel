@@ -145,7 +145,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           startStageId: stageId,
           workspaceRoot,
           inputArtifacts: {
-            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/requirements/Requirement.md"),
+            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
           },
         };
       case "architecture_design":
@@ -153,7 +153,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           startStageId: stageId,
           workspaceRoot,
           inputArtifacts: {
-            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/requirements/Requirement.md"),
+            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
           },
         };
       case "module_design":
@@ -165,7 +165,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           startStageId: stageId,
           workspaceRoot,
           inputArtifacts: {
-            architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/architecture/TechnicalArchitecture.md"),
+            architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
             module_descriptors: JSON.stringify({
               name: targetModule,
               responsibilities: [],
@@ -177,8 +177,8 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           startStageId: stageId,
           workspaceRoot,
           inputArtifacts: {
-            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/requirements/Requirement.md"),
-            architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/architecture/TechnicalArchitecture.md"),
+            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
+            architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
             module_design_documents: JSON.stringify(
               await this.readWorkspaceDirectoryFiles(workspaceRoot, "sdlc/docs/module_design"),
             ),
@@ -218,8 +218,8 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           stepId: firstStep.stepId,
           batchId: firstBatch.batchId,
         }),
-        requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/requirements/Requirement.md"),
-        architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/architecture/TechnicalArchitecture.md"),
+        requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
+        architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
         module_design_documents: JSON.stringify(
           await this.readWorkspaceDirectoryPaths(workspaceRoot, "sdlc/docs/module_design"),
         ),

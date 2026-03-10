@@ -144,7 +144,7 @@ export async function runHelloServiceSuccessTest() {
   await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: validationRunId });
 
   assert.equal(
-    await readFile(path.join(workspaceRoot, "sdlc", "docs", "architecture", "TechnicalArchitecture.md"), "utf8"),
+    await readFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8"),
     createHelloServiceArchitectureDocument(),
   );
   assert.equal(

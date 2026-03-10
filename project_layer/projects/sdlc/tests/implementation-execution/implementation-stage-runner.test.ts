@@ -77,8 +77,8 @@ async function testImplementationStageRunnerApply(
   });
   assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, [
     "sdlc/docs/CodeGenerationExecutionPlan.md",
-    "sdlc/docs/requirements/Requirement.md",
-    "sdlc/docs/architecture/TechnicalArchitecture.md",
+    "sdlc/docs/Requirement.md",
+    "sdlc/docs/TechnicalArchitecture.md",
     "sdlc/docs/module_design/Workflow.md",
   ]);
   assert.deepEqual(traceRecorder.getEvents()[2]?.event.metadata, {

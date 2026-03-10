@@ -101,17 +101,17 @@ async function testWriteArtifactMirrorsWorkspaceWhenWorkspaceRootProvided(): Pro
     await store.writeArtifact({
       taskId: "task-workspace",
       stageId: "architecture_design",
-      filePath: "sdlc/docs/architecture/TechnicalArchitecture.md",
+      filePath: "sdlc/docs/TechnicalArchitecture.md",
       content: "workspace mirrored artifact",
       workspaceRoot,
     });
 
     assert.equal(
-      await readFile(path.join(storageRoot, "task-workspace", "architecture_design", "sdlc/docs/architecture/TechnicalArchitecture.md"), "utf8"),
+      await readFile(path.join(storageRoot, "task-workspace", "architecture_design", "sdlc/docs/TechnicalArchitecture.md"), "utf8"),
       "workspace mirrored artifact",
     );
     assert.equal(
-      await readFile(path.join(workspaceRoot, "sdlc/docs/architecture/TechnicalArchitecture.md"), "utf8"),
+      await readFile(path.join(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"), "utf8"),
       "workspace mirrored artifact",
     );
   } finally {
