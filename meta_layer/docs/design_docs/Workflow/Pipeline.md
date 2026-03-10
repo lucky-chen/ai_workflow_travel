@@ -120,6 +120,7 @@ Responsibilities:
 - load the current `StageDefinition` from `StageRegistry`
 - call the registered `IStageRunner`
 - decide whether to continue to the next stage or stop
+- stop after the current stage when the launch request declares single-step execution
 
 ### 2.3 `StageRegistry`
 
@@ -212,6 +213,13 @@ Shared trace taxonomy rule:
   - `validation_finished`
   - `step_completed`
 - workflow code should not introduce ad hoc trace event strings outside this shared taxonomy without first extending the contract
+
+Single-step execution rule:
+
+- `LaunchTaskRequest` may declare single-step execution intent.
+- When single-step execution is requested, `PipelineService` must run only the requested stage.
+- In single-step execution, `PipelineService` must ignore `StageDefinition.next_stage_id` and stage-continuation handlers after the current stage finishes.
+- This rule applies equally to normal generation stages and revision stages.
 
 Ownership rule:
 

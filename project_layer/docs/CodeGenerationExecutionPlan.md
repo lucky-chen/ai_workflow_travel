@@ -531,6 +531,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] register revision `StageDefinition` entries in `Workflow/Pipeline`
   - [ ] implement revision runner input assembly for `canonicalArtifactPath`, `revisedArtifactPath`, and upstream `inputArtifacts`
   - [ ] keep template and contract resource bindings canonical in revision mode
+  - [ ] stop after the current stage when revision is launched in CLI single-step mode
 - [ ] Batch 2: document generator revise-mode support
   - [ ] extend `DocumentStageGenerator` to support `revise` mode alongside `generate`
   - [ ] make revise mode read the canonical current artifact and write the revised candidate to `dist/sdlc/revision/{taskId}/{runId}/revised.md`

@@ -534,6 +534,7 @@ Workflow/Pipeline
 4. For non-validation stages, the generated result is checked by the corresponding `Contract/*` module and then submitted to `QualityGate/*` for review and decision; for validation stage, contract check is skipped and the validation result is submitted to `QualityGate/*` for final confirmation.
 5. During the stage flow, artifact results and workflow history are stored through the Data layer.
 6. After the stage finishes, Workflow/Pipeline decides whether to continue to the next stage, stop, retry, or wait for user action.
+7. When the CLI launches a stage in single-step mode, Workflow/Pipeline must stop after the current stage and must not trigger downstream continuation.
 7. The same main flow pattern is reused across requirement interpretation, design generation, implementation generation, and validation stages, with a validation-stage exception on contract only.
 
 Each stage follows the same control shape: load source or upstream artifacts, generate or update the stage artifact, check the result, review the result, and store the accepted output.
