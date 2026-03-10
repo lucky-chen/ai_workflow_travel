@@ -479,30 +479,6 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] verify validation output confirms the simple hello-service target remains runnable
   - [ ] verify persisted history captures the hello-service functional verification results
 
-### Step 11. Validate Expanded Baseline With `hello-service-complex`
-
-- [ ] Step 11 is not started
-- [ ] Architecture modules in scope
-  - [ ] `SDK/AgentRuntime`
-  - [ ] `SDK/LlmExecutor`
-  - [ ] workflow automation on top of completed stages
-  - [ ] `hello-service-complex` verification target
-- [ ] Batch 1: `hello-service-complex` requirement and architecture expansion
-  - [ ] define a richer `hello-service-complex` requirement target beyond the minimal hello baseline
-  - [ ] define `hello-service-complex` architecture for the richer runtime flow and module boundaries
-  - [ ] keep requirement and architecture artifacts aligned for `hello-service-complex`
-  - [ ] keep the `hello-service-complex` target small enough for stable black-box verification
-- [ ] Batch 2: `hello-service-complex` module design and implementation plan expansion
-  - [ ] expand `hello-service-complex` module-design outputs to cover the richer service scope
-  - [ ] evolve the implementation plan to reflect the expanded module and execution surface
-  - [ ] keep module-design outputs aligned with architecture responsibilities and dependency boundaries
-  - [ ] keep the implementation plan aligned with the expanded validation target
-- [ ] Batch 3: `hello-service-complex` workflow, functional, and acceptance verification
-  - [ ] verify the generated `hello-service-complex` implementation covers the expanded service behavior
-  - [ ] verify the generated workspace documents stay mutually aligned around the expanded `hello-service-complex` scope
-  - [ ] verify validation output confirms the expanded `hello-service-complex` target remains runnable
-  - [ ] confirm `hello-service-complex` validates a more complete SDLC capability scope
-
 ### Step 12. Extend Toward Agent Capabilities
 
 - [ ] Step 12 is not started
@@ -539,6 +515,62 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] richer workflow automation after core stages are complete
   - [ ] integration tests across `SDK/LlmExecutor` and `SDK/AgentRuntime`
 
+### Step 13. Deliver Stage-Local Document Revision Capability
+
+- [ ] Step 13 is not started
+- [ ] Architecture modules in scope
+  - [ ] `Interface/CLI`
+  - [ ] `Workflow/Pipeline`
+  - [ ] `Workflow/StageRunners`
+  - [ ] `Execution/DocumentStageGenerator`
+  - [ ] `Contract/*`
+  - [ ] `QualityGate/ChangeGate`
+  - [ ] `Data/ArtifactStore`
+- [ ] Batch 1: revision workflow and runner input assembly
+  - [ ] add revision-stage CLI request assembly with `commit` message input
+  - [ ] register revision `StageDefinition` entries in `Workflow/Pipeline`
+  - [ ] implement revision runner input assembly for `canonicalArtifactPath`, `revisedArtifactPath`, and upstream `inputArtifacts`
+  - [ ] keep template and contract resource bindings canonical in revision mode
+- [ ] Batch 2: document generator revise-mode support
+  - [ ] extend `DocumentStageGenerator` to support `revise` mode alongside `generate`
+  - [ ] make revise mode read the canonical current artifact and write the revised candidate to `dist/sdlc/revision/{taskId}/{runId}/revised.md`
+  - [ ] keep multi-turn interaction delegated to the underlying agent capability
+  - [ ] keep generator output aligned with the canonical stage `StageOutput.artifacts` shape
+- [ ] Batch 3: architecture-design revision vertical slice
+  - [ ] support `architecture_design` revision end-to-end with the existing architecture generator and contract
+  - [ ] reuse `ArchitectureDesignContract` directly for revision-mode contract checks
+  - [ ] overwrite `sdlc/docs/TechnicalArchitecture.md` only after review `apply`
+  - [ ] cover success and failure behavior in focused tests
+- [ ] Batch 4: document-stage revision generalization
+  - [ ] extend the same revise-mode flow to `requirement_interpretation`
+  - [ ] extend the same revise-mode flow to `module_design`
+  - [ ] extend the same revise-mode flow to `implementation_plan`
+  - [ ] confirm the shared revision flow keeps downstream stages untouched
+
+### Step 14. Validate Expanded Baseline With `hello-service-complex`
+
+- [ ] Step 14 is not started
+- [ ] Architecture modules in scope
+  - [ ] `SDK/AgentRuntime`
+  - [ ] `SDK/LlmExecutor`
+  - [ ] workflow automation on top of completed stages
+  - [ ] `hello-service-complex` verification target
+- [ ] Batch 1: `hello-service-complex` requirement and architecture expansion
+  - [ ] define a richer `hello-service-complex` requirement target beyond the minimal hello baseline
+  - [ ] define `hello-service-complex` architecture for the richer runtime flow and module boundaries
+  - [ ] keep requirement and architecture artifacts aligned for `hello-service-complex`
+  - [ ] keep the `hello-service-complex` target small enough for stable black-box verification
+- [ ] Batch 2: `hello-service-complex` module design and implementation plan expansion
+  - [ ] expand `hello-service-complex` module-design outputs to cover the richer service scope
+  - [ ] evolve the implementation plan to reflect the expanded module and execution surface
+  - [ ] keep module-design outputs aligned with architecture responsibilities and dependency boundaries
+  - [ ] keep the implementation plan aligned with the expanded validation target
+- [ ] Batch 3: `hello-service-complex` workflow, functional, and acceptance verification
+  - [ ] verify the generated `hello-service-complex` implementation covers the expanded service behavior
+  - [ ] verify the generated workspace documents stay mutually aligned around the expanded `hello-service-complex` scope
+  - [ ] verify validation output confirms the expanded `hello-service-complex` target remains runnable
+  - [ ] confirm `hello-service-complex` validates a more complete SDLC capability scope
+
 ## 4. Current Status Summary
 
 - [x] Step 1 has a usable V1 backbone
@@ -551,8 +583,9 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 8 is in progress
 - [x] Step 9 is completed
 - [ ] Step 10 is in progress
-- [ ] Step 11 is not started
 - [ ] Step 12 is not started
+- [ ] Step 13 is not started
+- [ ] Step 14 is not started
 
 ## 5. Verification Rule
 

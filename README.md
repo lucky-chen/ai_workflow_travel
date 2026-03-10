@@ -22,15 +22,15 @@ In most cases, it is difficult to turn a product idea into a runnable program di
 
 If AI can continuously generate and maintain key artifacts from requirements with lower time and staffing cost, product ideas can be validated faster and systems can keep evolving as requirements change.
 
-This project is not just about code generation. It is an `AI-RD-PLATFORM` built to start from requirements and produce outputs that are evolvable, reviewable, and verifiable.
+This project is not just about code generation. It is an AI-assisted engineering tool for turning R&D process standards into executable, reviewable, and verifiable workflow outputs.
 
 ## Product Positioning
 
-The `AI-RD-PLATFORM` turns requirements into stage-based artifacts and keeps those artifacts updated when requirements change.
+This tool turns requirements into stage-based artifacts and helps teams keep those artifacts aligned with their engineering process standards when requirements change.
 
 Core goals:
 
-1. Reduce the cost of turning requirements into product artifacts
+1. Reduce the cost of turning requirements into standardized engineering artifacts
 2. Support iterative updates after requirement changes
 3. Provide outputs that are reviewable, maintainable, and traceable
 
@@ -43,28 +43,28 @@ Core goals:
 ## Core Problems and Product Abilities
 
 1. Requirements are usually written in natural language and are not directly actionable
-   - The platform structures raw requirements into clearer, more executable inputs
+   - The tool structures raw requirements into clearer, more executable inputs
 2. The path from requirement to design, implementation, and validation is often disconnected
-   - The platform provides an end-to-end generation workflow
+   - The tool provides a staged generation workflow that follows defined process standards
 3. Requirement changes are frequent, and manually maintaining multi-stage artifacts is expensive
-   - The platform supports incremental updates based on existing artifacts instead of rebuilding everything
+   - The tool supports incremental updates based on existing artifacts instead of rebuilding everything
 4. AI output is hard to trust
-   - The platform exposes execution progress and pending changes, and requires confirmation before important modifications are applied
+   - The tool exposes execution progress and pending changes, and requires confirmation before important modifications are applied
 5. Generated results are hard to evaluate quickly
-   - The platform provides basic validation and test feedback to support further review and iteration
+   - The tool provides basic validation and test feedback to support further review and iteration
 
 ## User Workflow
 
 Standard flow:
 
 1. A **PM** creates or updates a requirement document and starts a task
-2. The **Platform** interprets the requirement and prepares intended changes
+2. The **Tool** interprets the requirement and prepares intended changes
 3. The **PM** reviews the interpreted requirement result and decides whether to continue, revise, or stop
-4. The **Platform** generates or updates design artifacts
+4. The **Tool** generates or updates design artifacts
 5. An **Engineer** reviews design changes and confirms whether they should be applied
-6. The **Platform** generates or updates implementation artifacts
+6. The **Tool** generates or updates implementation artifacts
 7. An **Engineer** reviews code changes and decides whether to accept or reject them
-8. The **Platform** runs validation or test steps and presents a result summary
+8. The **Tool** runs validation or test steps and presents a result summary
 9. The **PM** and **Engineer** accept the result together
 
 ## Inputs and Outputs
