@@ -81,7 +81,7 @@ export async function runHelloServiceSuccessTest() {
     true,
   );
   assert.equal(
-    findTraceRecordsByCaller(architectureTraceRecords, "AgentTraceRecorderAdapter.record").some(
+    findTraceRecordsByCaller(architectureTraceRecords, "DefaultPlanner.plan").some(
       (entry) => entry.payload?.eventType === "agent_plan_created",
     ),
     true,
@@ -144,7 +144,7 @@ export async function runHelloServiceSuccessTest() {
     true,
   );
   assert.equal(
-    findTraceRecordsByCaller(implementationExecutionTraceRecords, "AgentTraceRecorderAdapter.record").some(
+    findTraceRecordsByCaller(implementationExecutionTraceRecords, "DefaultExecutor.execute").some(
       (entry) => entry.payload?.eventType === "agent_execution_finished",
     ),
     true,

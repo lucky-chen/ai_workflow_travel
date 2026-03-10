@@ -9,6 +9,7 @@ import type {
 export function buildPlanCreatedEvent(runId: string, plan: ExecutionPlan): AgentTraceEvent {
   return {
     runId,
+    caller: "DefaultPlanner.plan",
     eventType: "agent_plan_created",
     summary: "Agent plan created.",
     payload: {
@@ -20,6 +21,7 @@ export function buildPlanCreatedEvent(runId: string, plan: ExecutionPlan): Agent
 export function buildExecutionStartedEvent(runId: string, plan: ExecutionPlan): AgentTraceEvent {
   return {
     runId,
+    caller: "DefaultExecutor.execute",
     eventType: "agent_execution_started",
     summary: "Agent execution started.",
     payload: {
@@ -32,6 +34,7 @@ export function buildExecutionStartedEvent(runId: string, plan: ExecutionPlan): 
 export function buildToolCalledEvent(runId: string, toolResult: McpToolResult): AgentTraceEvent {
   return {
     runId,
+    caller: "DefaultMcpGateway.callTool",
     eventType: "agent_tool_called",
     summary: `Agent tool called: ${toolResult.toolName}.`,
     payload: {
@@ -44,6 +47,7 @@ export function buildToolCalledEvent(runId: string, toolResult: McpToolResult): 
 export function buildToolResultRecordedEvent(runId: string, toolResult: McpToolResult): AgentTraceEvent {
   return {
     runId,
+    caller: "DefaultMcpGateway.callTool",
     eventType: "agent_tool_result_recorded",
     summary: `Agent tool result recorded: ${toolResult.toolName}.`,
     payload: {
@@ -59,6 +63,7 @@ export function buildExecutionFinishedEvent(
 ): AgentTraceEvent {
   return {
     runId,
+    caller: "DefaultExecutor.execute",
     eventType: "agent_execution_finished",
     summary: "Agent execution finished.",
     payload: {
@@ -74,6 +79,7 @@ export function buildObservationFinishedEvent(
 ): AgentTraceEvent {
   return {
     runId,
+    caller: "DefaultObserver.observe",
     eventType: "agent_observation_finished",
     summary: "Agent observation finished.",
     payload: {

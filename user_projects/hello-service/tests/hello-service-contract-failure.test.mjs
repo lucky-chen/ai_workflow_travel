@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   createHelloServiceRequirementDocument,
@@ -16,16 +16,20 @@ const failureTaskId = "hello-service-contract-failure-task";
 export async function runHelloServiceContractFailureTest() {
   const requirementRunId = "2001";
   const architectureFailureRunId = "2002";
+  const downstreamModulePath = path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md");
+  const sentinelModuleDocument = "# sentinel\n";
 
   await resetWorkspace();
   await runCli(["init", "--workspace", workspaceRoot], { taskId: failureTaskId, runId: "2000" });
 
   await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
+  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "module_design"), { recursive: true });
   await writeFile(
     path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"),
     createHelloServiceRequirementDocument(),
     "utf8",
   );
+  await writeFile(downstreamModulePath, sentinelModuleDocument, "utf8");
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: failureTaskId, runId: requirementRunId });
   await runCli(
@@ -40,9 +44,7 @@ export async function runHelloServiceContractFailureTest() {
     },
   );
 
-  await assert.rejects(
-    async () => access(path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md")),
-  );
+  assert.equal(await readFile(downstreamModulePath, "utf8"), sentinelModuleDocument);
 
   const traceRecords = await loadTraceRecords(failureTaskId, architectureFailureRunId);
   const contractRecords = findTraceRecordsByCategory(traceRecords, "contract");

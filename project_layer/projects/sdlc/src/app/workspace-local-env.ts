@@ -8,6 +8,7 @@ export interface WorkspaceLocalEnvConfig {
     api_key?: string;
     base_url?: string;
     model?: string;
+    timeout_ms?: number;
   };
 }
 
@@ -17,6 +18,7 @@ const DEFAULT_WORKSPACE_LOCAL_ENV: WorkspaceLocalEnvConfig = {
     api_key: "your-api-key",
     base_url: "https://api.openai.com/v1",
     model: "gpt-4.1-mini",
+    timeout_ms: 30000,
   },
 };
 
@@ -68,6 +70,7 @@ export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promi
         apiKey: llm.api_key,
         baseUrl: llm.base_url,
         model: llm.model,
+        timeoutMs: llm.timeout_ms,
       },
     },
   };

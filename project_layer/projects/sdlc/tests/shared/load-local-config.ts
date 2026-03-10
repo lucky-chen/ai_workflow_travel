@@ -7,6 +7,7 @@ export interface LocalConfig {
     api_key?: string;
     base_url?: string;
     model?: string;
+    timeout_ms?: number;
   };
 }
 

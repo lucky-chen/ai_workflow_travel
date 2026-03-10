@@ -37,9 +37,13 @@ export interface ILlmExecutor {
 export class LlmExecutorService implements ILlmExecutor {
   private readonly agent: IAgent;
   private readonly traceRecorder?: ITraceRecorder;
+  private readonly mode: "mock" | "real";
+  private readonly provider?: string;
 
   constructor(dependencies: LlmExecutorServiceDependencies & { traceRecorder?: ITraceRecorder } = {}) {
     this.traceRecorder = dependencies.traceRecorder;
+    this.mode = dependencies.mode ?? "mock";
+    this.provider = dependencies.realProvider?.provider;
     const agentTraceRecorder = this.traceRecorder
       ? new AgentTraceRecorderAdapter(this.traceRecorder)
       : undefined;
@@ -57,6 +61,8 @@ export class LlmExecutorService implements ILlmExecutor {
       eventType: TRACE_EVENT_TYPES.llmExecutionStarted,
       summary: "LLM execution started.",
       metadata: {
+        mode: this.mode,
+        ...(this.provider ? { provider: this.provider } : {}),
         responseFormat: request.responseFormat,
       },
     });
@@ -79,6 +85,8 @@ export class LlmExecutorService implements ILlmExecutor {
       eventType: TRACE_EVENT_TYPES.llmExecutionFinished,
       summary: "LLM execution finished.",
       metadata: {
+        mode: this.mode,
+        ...(this.provider ? { provider: this.provider } : {}),
         responseFormat: result.result.responseFormat,
       },
     });

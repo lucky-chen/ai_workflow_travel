@@ -89,6 +89,7 @@ async function testAgentTraceRecorderContract(): Promise<void> {
 
   const ref = await recorder.record({
     runId: "run-1",
+    caller: "TestAgentTraceRecorder.record",
     eventType: "agent_plan_created",
     summary: "Plan created.",
     payload: {
@@ -102,6 +103,7 @@ async function testAgentTraceRecorderContract(): Promise<void> {
       ref: "agent-trace-1",
       event: {
         runId: "run-1",
+        caller: "TestAgentTraceRecorder.record",
         eventType: "agent_plan_created",
         summary: "Plan created.",
         payload: {
@@ -193,6 +195,10 @@ async function testDefaultAgentRunsSinglePassAndRecordsTrace(): Promise<void> {
       "agent_observation_finished",
     ],
   );
+  assert.equal(
+    traceRecorder.getEvents().every((entry) => typeof entry.event.caller === "string" && entry.event.caller.length > 0),
+    true,
+  );
 }
 
 async function testDefaultAgentRecordsToolTrace(): Promise<void> {
@@ -227,6 +233,10 @@ async function testDefaultAgentRecordsToolTrace(): Promise<void> {
       "agent_execution_finished",
       "agent_observation_finished",
     ],
+  );
+  assert.equal(
+    traceRecorder.getEvents().every((entry) => typeof entry.event.caller === "string" && entry.event.caller.length > 0),
+    true,
   );
 }
 

@@ -24,11 +24,12 @@ export async function runWorkspaceLocalEnvTests(): Promise<void> {
 
 async function testDefaultContentShape(): Promise<void> {
   const parsed = JSON.parse(getDefaultWorkspaceLocalEnvContent()) as {
-    llm?: { provider?: string; api_key?: string; model?: string };
+    llm?: { provider?: string; api_key?: string; model?: string; timeout_ms?: number };
   };
   assert.equal(parsed.llm?.provider, "openai");
   assert.equal(parsed.llm?.api_key, "your-api-key");
   assert.equal(parsed.llm?.model, "gpt-4.1-mini");
+  assert.equal(parsed.llm?.timeout_ms, 30000);
 }
 
 async function testMissingLocalEnvFallsBackToDefaultMode(workspaceRoot: string): Promise<void> {
@@ -55,6 +56,7 @@ async function testValidLocalEnvEnablesRealMode(workspaceRoot: string): Promise<
           api_key: "test-api-key",
           base_url: "https://api.openai.com/v1",
           model: "gpt-4.1-mini",
+          timeout_ms: 15000,
         },
       },
       null,
@@ -72,6 +74,7 @@ async function testValidLocalEnvEnablesRealMode(workspaceRoot: string): Promise<
         apiKey: "test-api-key",
         baseUrl: "https://api.openai.com/v1",
         model: "gpt-4.1-mini",
+        timeoutMs: 15000,
       },
     },
   });

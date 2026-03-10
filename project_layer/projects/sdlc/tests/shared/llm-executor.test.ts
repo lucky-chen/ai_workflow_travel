@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import type { FetchLike } from "ai-meta-agent-agent-runtime";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import { LlmExecutorService } from "../../src/sdk/llm-executor/llm-executor.js";
+import { loadLocalConfig } from "./load-local-config.js";
 
 export async function runLlmExecutorTests(): Promise<void> {
   await testDefaultMockExecutor();
   await testLlmTraceRecorderIntegration();
+  await testRealExecutorTraceMetadata();
   await testLlmExecutorUsesAgentRuntimeTraceCheckpoints();
   await testCustomMockExecutor();
   await testMockExecutorUsesRequestAwareHandler();
@@ -43,6 +45,62 @@ async function testLlmTraceRecorderIntegration(): Promise<void> {
     "agent_observation_finished",
     "llm_execution_finished",
   ]);
+  assert.deepEqual(
+    traceRecorder.getEvents()
+      .filter((entry) => entry.event.caller === "LlmExecutorService.execute")
+      .map((entry) => entry.event.metadata?.mode),
+    ["mock", "mock"],
+  );
+}
+
+async function testRealExecutorTraceMetadata(): Promise<void> {
+  const localConfig = await loadLocalConfig();
+  const provider = localConfig.llm?.provider ?? "openai";
+  const model = localConfig.llm?.model ?? "gpt-4.1-mini";
+  const baseUrl = localConfig.llm?.base_url
+    ?? (provider === "deepseek" ? "https://api.deepseek.com/v1" : "https://api.openai.com/v1");
+  const expectedUrl = provider === "deepseek"
+    ? `${baseUrl.replace(/\/$/, "")}/chat/completions`
+    : `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+  const traceRecorder = new InMemoryTraceRecorder();
+  const executor = new LlmExecutorService({
+    mode: "real",
+    realProvider: {
+      provider,
+      apiKey: "test-api-key",
+      model,
+      baseUrl,
+      fetchFn: createAssertingFetch(expectedUrl, model, {
+        choices: [
+          {
+            message: {
+              content: `${provider} traced`,
+            },
+          },
+        ],
+      }),
+    },
+    traceRecorder,
+  });
+
+  await executor.execute({
+    prompt: {
+      systemPrompt: "system prompt",
+      userPrompt: "user prompt",
+    },
+    responseFormat: "text",
+  });
+
+  const llmEvents = traceRecorder.getEvents()
+    .filter((entry) => entry.event.caller === "LlmExecutorService.execute");
+  assert.equal(llmEvents.length, 2);
+  assert.deepEqual(
+    llmEvents.map((entry) => entry.event.metadata),
+    [
+      { mode: "real", provider, responseFormat: "text" },
+      { mode: "real", provider, responseFormat: "text" },
+    ],
+  );
 }
 
 async function testLlmExecutorUsesAgentRuntimeTraceCheckpoints(): Promise<void> {
