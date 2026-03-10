@@ -69,8 +69,8 @@ ALLOW:
 - **Shared Infrastructure**: A network (e.g., LAN, Internet) enabling HTTP communication between the Client and Server nodes.
 
 ### 4.6 Technology Choices
-- **Client Layer**: `HTML/JavaScript (or a lightweight native framework)` for providing a simple, portable user interface capable of making HTTP requests.
-- **Server Layer**: `Lightweight HTTP Server (e.g., Node.js/Express, Python/Flask)` for implementing a simple, stateless request handler with minimal operational overhead.
+- **Client Layer**: `HTML/JavaScript (lightweight framework)` for providing a simple, portable user interface capable of making HTTP requests.
+- **Server Layer**: `Lightweight HTTP Server (Node.js/Express)` for implementing a simple, stateless request handler with minimal operational overhead.
 
 ---
 
