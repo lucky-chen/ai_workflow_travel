@@ -97,6 +97,99 @@ export function findTraceRecordsByCaller(records, caller) {
   return records.filter((entry) => entry.caller === caller);
 }
 
+export function assertHelloServiceStageCallChain(
+  traceRecords,
+  {
+    workflowStageId,
+    llmStageId = workflowStageId,
+    runtimeMode,
+    expectContractPassed = true,
+    expectReviewPath,
+    expectStepCompleted = false,
+    expectAgentExecutionFinished = false,
+  },
+) {
+  if (expectContractPassed !== null) {
+    assert.equal(
+      findTraceRecordsByCategory(traceRecords, "contract").some(
+        (entry) => entry.scope?.stageId === workflowStageId && entry.payload?.passed === expectContractPassed,
+      ),
+      true,
+    );
+  }
+
+  assert.equal(
+    findTraceRecordsByCaller(traceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_started" && entry.scope?.stageId === llmStageId,
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(traceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_finished" && entry.scope?.stageId === llmStageId,
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(traceRecords, "LlmExecutorService.execute").some(
+      (entry) => entry.payload?.eventType === "llm_execution_started" && entry.payload?.metadata?.mode === runtimeMode,
+    ),
+    true,
+  );
+
+  if (runtimeMode === "real") {
+    assert.equal(
+      findTraceRecordsByCaller(traceRecords, "LlmExecutorService.execute").some(
+        (entry) => entry.payload?.eventType === "llm_execution_started"
+          && typeof entry.payload?.metadata?.provider === "string"
+          && entry.payload.metadata.provider.length > 0,
+      ),
+      true,
+    );
+  }
+
+  assert.equal(
+    findTraceRecordsByCaller(traceRecords, "DefaultPlanner.plan").some(
+      (entry) => entry.payload?.eventType === "agent_plan_created",
+    ),
+    true,
+  );
+  assert.equal(
+    findTraceRecordsByCaller(traceRecords, "DefaultExecutor.execute").some(
+      (entry) => entry.payload?.eventType === "agent_execution_started",
+    ),
+    true,
+  );
+
+  if (expectReviewPath) {
+    assert.equal(
+      findTraceRecordsByCategory(traceRecords, "review").some(
+        (entry) => entry.scope?.stageId === workflowStageId
+          && entry.payload?.changedPaths?.includes(expectReviewPath) === true,
+      ),
+      true,
+    );
+  }
+
+  if (expectStepCompleted) {
+    assert.equal(
+      findTraceRecordsByEventType(traceRecords, "step_completed").some(
+        (entry) => entry.scope?.stageId === workflowStageId,
+      ),
+      true,
+    );
+  }
+
+  if (expectAgentExecutionFinished) {
+    assert.equal(
+      findTraceRecordsByCaller(traceRecords, "DefaultExecutor.execute").some(
+        (entry) => entry.payload?.eventType === "agent_execution_finished",
+      ),
+      true,
+    );
+  }
+}
+
 export function createHelloServiceRequirementDocument() {
   return [
     "# 1. Background",

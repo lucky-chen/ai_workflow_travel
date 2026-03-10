@@ -459,12 +459,14 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] verify document-generation artifacts remain stable under mock-LLM execution
   - [x] verify implementation-generation artifacts remain stable under mock-LLM execution
   - [x] verify the combined simple-project artifacts remain aligned under mock-LLM execution
-- [ ] Batch 5: hello-service real-LLM call-chain verification
+- [x] Batch 5: hello-service real-LLM call-chain verification
   - [x] add a real LLM-backed verification path for hello-service
   - [x] verify the hello-service black-box flow produces observable real-LLM module call evidence
-  - [ ] verify `requirement_interpretation` real-LLM document-generation call flow
-  - [ ] verify `architecture_design` real-LLM document-generation call flow
-  - [ ] verify implementation-generation call flow remains aligned with the mock-LLM verification path under real LLM execution
+  - [x] verify `requirement_interpretation` call-chain evidence stays aligned between real-LLM and mock execution
+  - [x] verify `architecture_design` call-chain evidence stays aligned between real-LLM and mock execution
+  - [x] verify `module_design` call-chain evidence stays aligned between real-LLM and mock execution
+  - [x] verify `implementation_plan` call-chain evidence stays aligned between real-LLM and mock execution
+  - [x] verify `implementation_execution` call-chain evidence stays aligned between real-LLM and mock execution
 - [ ] Batch 6: hello-service real-LLM artifact verification
   - [ ] verify document-generation artifacts remain aligned with the mock-LLM verification target under real LLM execution
   - [ ] verify implementation-generation artifacts remain aligned with the mock-LLM verification target under real LLM execution
@@ -548,29 +550,29 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] extend the same revise-mode flow to `implementation_plan`
   - [ ] confirm the shared revision flow keeps downstream stages untouched
 
-### Step 14. Validate Expanded Baseline With `hello-service-complex`
+### Step 14. Validate Expanded Baseline With `TravelAi`
 
 - [ ] Step 14 is not started
 - [ ] Architecture modules in scope
   - [ ] `SDK/AgentRuntime`
   - [ ] `SDK/LlmExecutor`
   - [ ] workflow automation on top of completed stages
-  - [ ] `hello-service-complex` verification target
-- [ ] Batch 1: `hello-service-complex` requirement and architecture expansion
-  - [ ] define a richer `hello-service-complex` requirement target beyond the minimal hello baseline
-  - [ ] define `hello-service-complex` architecture for the richer runtime flow and module boundaries
-  - [ ] keep requirement and architecture artifacts aligned for `hello-service-complex`
-  - [ ] keep the `hello-service-complex` target small enough for stable black-box verification
-- [ ] Batch 2: `hello-service-complex` module design and implementation plan expansion
-  - [ ] expand `hello-service-complex` module-design outputs to cover the richer service scope
+  - [ ] `TravelAi` verification target
+- [ ] Batch 1: `TravelAi` requirement and architecture expansion
+  - [ ] define a richer `TravelAi` requirement target beyond the minimal hello baseline
+  - [ ] define `TravelAi` architecture for the richer runtime flow and module boundaries
+  - [ ] keep requirement and architecture artifacts aligned for `TravelAi`
+  - [ ] keep the `TravelAi` target small enough for stable black-box verification
+- [ ] Batch 2: `TravelAi` module design and implementation plan expansion
+  - [ ] expand `TravelAi` module-design outputs to cover the richer service scope
   - [ ] evolve the implementation plan to reflect the expanded module and execution surface
   - [ ] keep module-design outputs aligned with architecture responsibilities and dependency boundaries
   - [ ] keep the implementation plan aligned with the expanded validation target
-- [ ] Batch 3: `hello-service-complex` workflow, functional, and acceptance verification
-  - [ ] verify the generated `hello-service-complex` implementation covers the expanded service behavior
-  - [ ] verify the generated workspace documents stay mutually aligned around the expanded `hello-service-complex` scope
-  - [ ] verify validation output confirms the expanded `hello-service-complex` target remains runnable
-  - [ ] confirm `hello-service-complex` validates a more complete SDLC capability scope
+- [ ] Batch 3: `TravelAi` workflow, functional, and acceptance verification
+  - [ ] verify the generated `TravelAi` implementation covers the expanded service behavior
+  - [ ] verify the generated workspace documents stay mutually aligned around the expanded `TravelAi` scope
+  - [ ] verify validation output confirms the expanded `TravelAi` target remains runnable
+  - [ ] confirm `TravelAi` validates a more complete SDLC capability scope
 
 ## 4. Current Status Summary
 

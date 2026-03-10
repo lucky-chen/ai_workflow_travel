@@ -2,12 +2,11 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  assertHelloServiceStageCallChain,
   createHelloServiceArchitectureDocument,
   createHelloServiceImplementationPlanDocument,
   createHelloServiceModuleDesignDocument,
   findTraceRecordsByCategory,
-  findTraceRecordsByCaller,
-  findTraceRecordsByEventType,
   findTraceRecordsByStage,
   getTraceFilePath,
   loadTraceRecords,
@@ -30,13 +29,10 @@ export async function runHelloServiceSuccessTest() {
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: requirementRunId });
   const requirementTraceRecords = await loadTraceRecords(baselineTaskId, requirementRunId);
-  assert.equal(
-    findTraceRecordsByCategory(requirementTraceRecords, "contract").some(
-      (entry) => entry.scope?.stageId === "requirement_interpretation"
-        && entry.payload?.passed === true,
-    ),
-    true,
-  );
+  assertHelloServiceStageCallChain(requirementTraceRecords, {
+    workflowStageId: "requirement_interpretation",
+    runtimeMode: "mock",
+  });
 
   await runCli(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: architectureRunId });
   const architectureTraceRecords = await loadTraceRecords(baselineTaskId, architectureRunId);
@@ -44,102 +40,35 @@ export async function runHelloServiceSuccessTest() {
     new Set(architectureTraceRecords.map((entry) => entry.category)),
     new Set(["trace", "contract", "review"]),
   );
-  assert.equal(
-    findTraceRecordsByCategory(architectureTraceRecords, "contract").some(
-      (entry) => entry.scope?.stageId === "architecture_design"
-        && entry.payload?.passed === true,
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCategory(architectureTraceRecords, "review").some(
-      (entry) => entry.scope?.stageId === "architecture_design",
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCaller(architectureTraceRecords, "LlmExecutorService.execute").some(
-      (entry) => entry.payload?.eventType === "llm_execution_started"
-        && entry.scope?.stageId === "architecture_design",
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCaller(architectureTraceRecords, "LlmExecutorService.execute").some(
-      (entry) => entry.payload?.eventType === "llm_execution_finished"
-        && entry.scope?.stageId === "architecture_design",
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCaller(architectureTraceRecords, "DefaultPlanner.plan").some(
-      (entry) => entry.payload?.eventType === "agent_plan_created",
-    ),
-    true,
-  );
+  assertHelloServiceStageCallChain(architectureTraceRecords, {
+    workflowStageId: "architecture_design",
+    runtimeMode: "mock",
+  });
 
   await runCli(["generate", "--stage", "module_design", "--workspace", workspaceRoot, "--target-module", "Workflow"], { taskId: baselineTaskId, runId: moduleRunId });
   const moduleTraceRecords = await loadTraceRecords(baselineTaskId, moduleRunId);
-  assert.equal(
-    findTraceRecordsByCategory(moduleTraceRecords, "contract").some(
-      (entry) => entry.scope?.stageId === "module_design"
-        && entry.payload?.passed === true,
-    ),
-    true,
-  );
+  assertHelloServiceStageCallChain(moduleTraceRecords, {
+    workflowStageId: "module_design",
+    runtimeMode: "mock",
+  });
 
   await runCli(["generate", "--stage", "implementation_plan", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: implementationPlanRunId });
   const implementationPlanTraceRecords = await loadTraceRecords(baselineTaskId, implementationPlanRunId);
-  assert.equal(
-    findTraceRecordsByCategory(implementationPlanTraceRecords, "contract").some(
-      (entry) => entry.scope?.stageId === "implementation_plan"
-        && entry.payload?.passed === true,
-    ),
-    true,
-  );
+  assertHelloServiceStageCallChain(implementationPlanTraceRecords, {
+    workflowStageId: "implementation_plan",
+    runtimeMode: "mock",
+  });
 
   await runCli(["generate", "--stage", "implementation_execution", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: implementationExecutionRunId });
   const implementationExecutionTraceRecords = await loadTraceRecords(baselineTaskId, implementationExecutionRunId);
-  assert.equal(
-    findTraceRecordsByCategory(implementationExecutionTraceRecords, "contract").some(
-      (entry) => entry.scope?.stageId === "implementation_execution"
-        && entry.payload?.passed === true,
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCategory(implementationExecutionTraceRecords, "review").some(
-      (entry) => entry.scope?.stageId === "implementation_execution"
-        && entry.payload?.changedPaths?.includes("src/index.ts") === true,
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByEventType(implementationExecutionTraceRecords, "step_completed").some(
-      (entry) => entry.scope?.stageId === "implementation_execution",
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCaller(implementationExecutionTraceRecords, "LlmExecutorService.execute").some(
-      (entry) => entry.payload?.eventType === "llm_execution_started"
-        && entry.scope?.stageId === "implementation",
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCaller(implementationExecutionTraceRecords, "LlmExecutorService.execute").some(
-      (entry) => entry.payload?.eventType === "llm_execution_finished"
-        && entry.scope?.stageId === "implementation",
-    ),
-    true,
-  );
-  assert.equal(
-    findTraceRecordsByCaller(implementationExecutionTraceRecords, "DefaultExecutor.execute").some(
-      (entry) => entry.payload?.eventType === "agent_execution_finished",
-    ),
-    true,
-  );
+  assertHelloServiceStageCallChain(implementationExecutionTraceRecords, {
+    workflowStageId: "implementation_execution",
+    llmStageId: "implementation",
+    runtimeMode: "mock",
+    expectReviewPath: "src/index.ts",
+    expectStepCompleted: true,
+    expectAgentExecutionFinished: true,
+  });
 
   await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: validationRunId });
 
