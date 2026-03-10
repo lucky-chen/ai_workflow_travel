@@ -36,12 +36,13 @@ export async function runCliTests(): Promise<void> {
 async function testCommandParser(workspaceRoot: string): Promise<void> {
   const parser = new DefaultCLICommandParser();
   assert.deepEqual(
-    parser.parse(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot]),
+    parser.parse(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot, "--single-step"]),
     {
       command: "generate",
       options: {
         stage: "architecture_design",
         workspace: workspaceRoot,
+        "single-step": "true",
       },
     },
   );
@@ -55,10 +56,12 @@ async function testRequestMapper(workspaceRoot: string): Promise<void> {
       options: {
         stage: "implementation_plan",
         workspace: workspaceRoot,
+        "single-step": "true",
       },
     }),
     {
       startStageId: "implementation_plan",
+      stopAfterCurrentStage: true,
       workspaceRoot,
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -103,11 +106,13 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
     "architecture_design",
     "--workspace",
     workspaceRoot,
+    "--single-step",
   ]);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(capturedRequest, {
     startStageId: "architecture_design",
+    stopAfterCurrentStage: true,
     workspaceRoot,
     inputArtifacts: {
       requirement_document: "# Requirement\n",

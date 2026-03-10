@@ -53,6 +53,8 @@ export interface WorkspaceInitializer {
 }
 
 export class DefaultCLICommandParser implements CLICommandParser {
+  private static readonly FLAG_OPTIONS = new Set(["single-step"]);
+
   parse(argv: string[]): ParsedCommand {
     const [command, ...rest] = argv;
     if (!command) {
@@ -67,6 +69,11 @@ export class DefaultCLICommandParser implements CLICommandParser {
       }
 
       const key = token.slice(2);
+      if (DefaultCLICommandParser.FLAG_OPTIONS.has(key)) {
+        options[key] = "true";
+        continue;
+      }
+
       const value = rest[index + 1];
       if (!value || value.startsWith("--")) {
         throw new Error(`Missing value for CLI option: --${key}`);
@@ -100,6 +107,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     const workspace = this.readSingleOption(command.options, "workspace");
     const targetModule = this.readSingleOption(command.options, "target-module");
     const runId = this.readSingleOption(command.options, "run-id");
+    const singleStep = this.readBooleanFlag(command.options, "single-step");
 
     if (!stageOption) {
       throw new Error("Missing required option: --stage");
@@ -114,6 +122,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     return {
       ...request,
       ...(runId ? { runId } : {}),
+      ...(singleStep ? { stopAfterCurrentStage: true } : {}),
       ...(targetModule ? { targetModule } : {}),
     };
   }
@@ -132,6 +141,19 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     }
 
     return value;
+  }
+
+  private readBooleanFlag(options: ParsedCommand["options"], key: string): boolean {
+    const value = options[key];
+    if (typeof value === "undefined") {
+      return false;
+    }
+
+    if (Array.isArray(value)) {
+      throw new Error(`Option "--${key}" must be provided at most once.`);
+    }
+
+    return value === "true";
   }
 
   private async buildWorkspaceLaunchRequest(

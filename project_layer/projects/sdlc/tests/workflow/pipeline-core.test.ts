@@ -12,6 +12,7 @@ export async function runPipelineCoreTests(workspaceRoot: string): Promise<void>
   await testMissingRequiredArtifact(workspaceRoot);
   await testDuplicateStageRegistration();
   await testStageContinuationAndMerge(workspaceRoot);
+  await testSingleStepStopsAfterCurrentStage(workspaceRoot);
   await testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot);
   await testFailureStopsContinuation(workspaceRoot);
   await testInvalidNextStageValidation(workspaceRoot);
@@ -354,6 +355,72 @@ async function testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot
     sourceDoc: "source.md",
     stageAArtifact: "a.md",
     continuationArtifact: "continued.md",
+  });
+}
+
+async function testSingleStepStopsAfterCurrentStage(workspaceRoot: string): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  const stageA: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage A completed.",
+        artifacts: {
+          generatedSpec: "generated-spec.md",
+        },
+      };
+    },
+  };
+  const stageB: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Stage B completed.",
+        artifacts: {},
+      };
+    },
+  };
+
+  const pipeline = new PipelineService({
+    registry: createRegistry(
+      {
+        stageId: "stage-a",
+        launchRequirements: ["sourceDoc"],
+        runner: stageA,
+        nextStageId: "stage-b",
+      },
+      {
+        stageId: "stage-b",
+        launchRequirements: ["generatedSpec"],
+        runner: stageB,
+        nextStageId: null,
+      },
+    ),
+  });
+
+  const taskId = await pipeline.launchTask({
+    startStageId: "stage-a",
+    stopAfterCurrentStage: true,
+    workspaceRoot,
+    inputArtifacts: {
+      sourceDoc: "source.md",
+    },
+  });
+
+  assert.equal(invocationContexts.length, 1);
+  assert.equal(pipeline.getTaskStatus(taskId), "completed");
+  assert.deepEqual(pipeline.getTaskRecord(taskId)?.inputArtifacts, {
+    sourceDoc: "source.md",
+  });
+  assert.equal(pipeline.getTaskRecord(taskId)?.currentStageId, "stage-a");
+  assert.deepEqual(pipeline.getLastOutput(taskId)?.artifacts, {
+    generatedSpec: "generated-spec.md",
   });
 }
 

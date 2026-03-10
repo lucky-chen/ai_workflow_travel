@@ -131,6 +131,11 @@ export class PipelineService implements IPipeline {
           break;
         }
 
+        if (request.stopAfterCurrentStage) {
+          currentInputArtifacts = this.mergeInputArtifacts(currentInputArtifacts, output);
+          break;
+        }
+
         const continuation = await this.runStageContinuation(stage, {
           taskId,
           stageId: currentStageId,

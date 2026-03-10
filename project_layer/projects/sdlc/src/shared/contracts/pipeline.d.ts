@@ -28,7 +28,9 @@ export interface TaskRecord {
 export interface LaunchTaskRequest {
     startStageId: StageId;
     taskId?: TaskId;
+    runId?: string;
     triggerReason?: "new_run" | "stage_entry";
+    stopAfterCurrentStage?: boolean;
     workspaceRoot: string;
     inputArtifacts: ArtifactMap;
     params?: StringMap;
