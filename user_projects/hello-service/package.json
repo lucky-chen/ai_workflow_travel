@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node ./tests/run-workspace-shell-check.mjs"
+    "test": "node ./scripts/run-workspace-shell-check.mjs"
   }
 }

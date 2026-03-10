@@ -82,8 +82,9 @@ export async function runHelloServiceSuccessTest() {
     new Set(["trace", "artifact"]),
   );
   assert.equal(
-    findTraceRecordsByStage(traceRecords, "validation").some(
-      (entry) => entry.payload?.eventType === "artifact_persisted",
+    findTraceRecordsByCategory(traceRecords, "artifact").some(
+      (entry) => entry.scope?.stageId === "validation"
+        && entry.payload?.filePath === "reports/validation/ValidationResult.json",
     ),
     true,
   );

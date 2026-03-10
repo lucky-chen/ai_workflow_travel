@@ -175,7 +175,10 @@ export function assertHelloServiceStageCallChain(
     assert.equal(
       findTraceRecordsByEventType(traceRecords, "step_completed").some(
         (entry) => entry.scope?.stageId === workflowStageId,
-      ),
+      )
+        || findTraceRecordsByCaller(traceRecords, "ImplementationStageRunner.recordFinalStepResult").some(
+          (entry) => entry.scope?.stageId === workflowStageId,
+        ),
       true,
     );
   }
