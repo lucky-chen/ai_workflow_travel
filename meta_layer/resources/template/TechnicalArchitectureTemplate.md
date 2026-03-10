@@ -282,10 +282,13 @@
     "title": "Core Modules",
     "checkitems": [
       "list only the modules needed to understand the architecture",
-      "keep responsibilities high level"
+      "keep responsibilities high level",
+      "module names must use English identifiers only",
+      "module names must start with an uppercase letter",
+      "module names must not contain spaces"
     ],
     "severity": "medium",
-    "expected_format": "- `{ModuleA}`: `{ResponsibilityA}`\n- `{ModuleB}`: `{ResponsibilityB}`\n- `{ModuleC}`: `{ResponsibilityC}`"
+    "expected_format": "- `ModuleA`: `{ResponsibilityA}`\n- `ModuleB`: `{ResponsibilityB}`\n- `ModuleC`: `{ResponsibilityC}`"
   }
 }
 -->
