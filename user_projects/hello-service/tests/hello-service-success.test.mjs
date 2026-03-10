@@ -6,8 +6,8 @@ import {
   createHelloServiceImplementationPlanDocument,
   createHelloServiceModuleDesignDocument,
   createHelloServiceRequirementDocument,
-  findTraceFilePath,
-  loadAllTraceRecords,
+  getTraceFilePath,
+  loadTraceRecords,
   resetWorkspace,
   runCli,
   workspaceRoot,
@@ -16,8 +16,15 @@ import {
 const baselineTaskId = "hello-service-task";
 
 export async function runHelloServiceSuccessTest() {
+  const requirementRunId = "1001";
+  const architectureRunId = "1002";
+  const moduleRunId = "1003";
+  const implementationPlanRunId = "1004";
+  const implementationExecutionRunId = "1005";
+  const validationRunId = "1006";
+
   await resetWorkspace();
-  await runCli(["init", "--workspace", workspaceRoot], { taskId: baselineTaskId });
+  await runCli(["init", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: "1000" });
 
   await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
   await writeFile(
@@ -26,12 +33,17 @@ export async function runHelloServiceSuccessTest() {
     "utf8",
   );
 
-  await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: baselineTaskId });
-  await runCli(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot], { taskId: baselineTaskId });
-  await runCli(["generate", "--stage", "module_design", "--workspace", workspaceRoot, "--target-module", "Workflow"], { taskId: baselineTaskId });
-  await runCli(["generate", "--stage", "implementation_plan", "--workspace", workspaceRoot], { taskId: baselineTaskId });
-  await runCli(["generate", "--stage", "implementation_execution", "--workspace", workspaceRoot], { taskId: baselineTaskId });
-  await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId });
+  await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: requirementRunId });
+  await runCli(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: architectureRunId });
+  const architectureTraceRecords = await loadTraceRecords(baselineTaskId, architectureRunId);
+  assert.deepEqual(
+    new Set(architectureTraceRecords.map((entry) => entry.category)),
+    new Set(["trace", "contract", "review"]),
+  );
+  await runCli(["generate", "--stage", "module_design", "--workspace", workspaceRoot, "--target-module", "Workflow"], { taskId: baselineTaskId, runId: moduleRunId });
+  await runCli(["generate", "--stage", "implementation_plan", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: implementationPlanRunId });
+  await runCli(["generate", "--stage", "implementation_execution", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: implementationExecutionRunId });
+  await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: validationRunId });
 
   assert.equal(
     await readFile(path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"), "utf8"),
@@ -53,12 +65,11 @@ export async function runHelloServiceSuccessTest() {
     await readFile(path.join(workspaceRoot, "src", "index.ts"), "utf8"),
     'export function hello(): string {\n  return "hello-service";\n}\n',
   );
-  const traceFilePath = await findTraceFilePath(baselineTaskId);
+  const traceFilePath = await getTraceFilePath(baselineTaskId, validationRunId);
   await access(traceFilePath);
-
-  const traceRecords = await loadAllTraceRecords(baselineTaskId);
+  const traceRecords = await loadTraceRecords(baselineTaskId, validationRunId);
   assert.deepEqual(
     new Set(traceRecords.map((entry) => entry.category)),
-    new Set(["trace", "contract", "review", "artifact"]),
+    new Set(["trace", "artifact"]),
   );
 }

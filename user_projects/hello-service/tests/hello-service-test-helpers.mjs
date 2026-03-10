@@ -11,8 +11,9 @@ const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const artifactRoot = path.join(workspaceRoot, ".artifact-store");
 
 export async function runCli(args, options = {}) {
-  const { taskId = "hello-service-task", extraEnv = {} } = options;
-  const child = spawn(process.execPath, [cliEntry, ...args], {
+  const { taskId = "hello-service-task", runId, extraEnv = {} } = options;
+  const commandArgs = runId ? [...args, "--run-id", runId] : args;
+  const child = spawn(process.execPath, [cliEntry, ...commandArgs], {
     cwd: sdlcProjectRoot,
     env: {
       ...process.env,
@@ -64,23 +65,12 @@ export async function findTraceFilePath(taskId) {
   return path.join(traceDirectory, match.name);
 }
 
-export async function loadAllTraceRecords(taskId) {
-  const traceDirectory = path.join(workspaceRoot, "sdlc", "trace");
-  const entries = await readdir(traceDirectory, { withFileTypes: true });
-  const matchingFiles = entries
-    .filter((entry) => entry.isFile() && entry.name.startsWith(`${taskId}_`) && entry.name.endsWith(".json"))
-    .map((entry) => path.join(traceDirectory, entry.name))
-    .sort();
+export async function getTraceFilePath(taskId, runId) {
+  return path.join(workspaceRoot, "sdlc", "trace", `${taskId}_${runId}.json`);
+}
 
-  if (matchingFiles.length === 0) {
-    throw new Error(`Missing trace file for task "${taskId}".`);
-  }
-
-  const recordGroups = await Promise.all(
-    matchingFiles.map(async (filePath) => JSON.parse(await readFile(filePath, "utf8"))),
-  );
-
-  return recordGroups.flat();
+export async function loadTraceRecords(taskId, runId) {
+  return JSON.parse(await readFile(await getTraceFilePath(taskId, runId), "utf8"));
 }
 
 export function createHelloServiceRequirementDocument() {
