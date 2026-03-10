@@ -4,9 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import {
   getDefaultWorkspaceLocalEnvContent,
+  loadWorkspaceLocalEnvConfig,
   loadWorkspaceRuntimeOptions,
+  resolveConfiguredResourcesRoot,
   resolveWorkspaceLocalEnvPath,
 } from "../../src/app/workspace-local-env.js";
+import { resolveResourcePath } from "../../src/shared/resources/resource-resolver.js";
 
 export async function runWorkspaceLocalEnvTests(): Promise<void> {
   const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "workspace-local-env-"));
@@ -16,6 +19,8 @@ export async function runWorkspaceLocalEnvTests(): Promise<void> {
     await testMissingLocalEnvFallsBackToDefaultMode(workspaceRoot);
     await testPlaceholderLocalEnvDoesNotEnableRealMode(workspaceRoot);
     await testValidLocalEnvEnablesRealMode(workspaceRoot);
+    await testConfiguredResourcesRootIsParsed(workspaceRoot);
+    await testResolveResourcePathPrefersConfiguredResourcesRoot(workspaceRoot);
     await testInvalidJsonThrowsClearError(workspaceRoot);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -24,8 +29,10 @@ export async function runWorkspaceLocalEnvTests(): Promise<void> {
 
 async function testDefaultContentShape(): Promise<void> {
   const parsed = JSON.parse(getDefaultWorkspaceLocalEnvContent()) as {
+    resources?: { root_dir?: string };
     llm?: { provider?: string; api_key?: string; model?: string; timeout_ms?: number };
   };
+  assert.equal(parsed.resources?.root_dir, "../../meta_layer/resources");
   assert.equal(parsed.llm?.provider, "openai");
   assert.equal(parsed.llm?.api_key, "your-api-key");
   assert.equal(parsed.llm?.model, "gpt-4.1-mini");
@@ -78,6 +85,51 @@ async function testValidLocalEnvEnablesRealMode(workspaceRoot: string): Promise<
       },
     },
   });
+}
+
+async function testConfiguredResourcesRootIsParsed(workspaceRoot: string): Promise<void> {
+  const localEnvPath = await ensureWorkspaceLocalEnvPath(workspaceRoot);
+  await writeFile(
+    localEnvPath,
+    JSON.stringify(
+      {
+        resources: {
+          root_dir: "../shared-resources",
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  assert.equal(resolveConfiguredResourcesRoot(workspaceRoot, config), path.resolve(workspaceRoot, "../shared-resources"));
+}
+
+async function testResolveResourcePathPrefersConfiguredResourcesRoot(workspaceRoot: string): Promise<void> {
+  const sharedResourcesRoot = path.resolve(workspaceRoot, "../shared-resources");
+  const templatePath = path.join(sharedResourcesRoot, "template", "RequirementTemplate.md");
+  await mkdir(path.dirname(templatePath), { recursive: true });
+  await writeFile(templatePath, "# shared requirement template\n", "utf8");
+
+  const localEnvPath = await ensureWorkspaceLocalEnvPath(workspaceRoot);
+  await writeFile(
+    localEnvPath,
+    JSON.stringify(
+      {
+        resources: {
+          root_dir: "../shared-resources",
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const resolved = await resolveResourcePath("template/RequirementTemplate.md", workspaceRoot);
+  assert.equal(resolved, templatePath);
 }
 
 async function testInvalidJsonThrowsClearError(workspaceRoot: string): Promise<void> {

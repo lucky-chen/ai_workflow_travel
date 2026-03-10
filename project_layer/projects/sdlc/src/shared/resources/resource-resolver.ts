@@ -1,6 +1,10 @@
 import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  loadWorkspaceLocalEnvConfig,
+  resolveConfiguredResourcesRoot,
+} from "../../app/workspace-local-env.js";
 
 export async function resolveWorkspaceResourcePath(
   workspaceRoot: string | undefined,
@@ -11,6 +15,24 @@ export async function resolveWorkspaceResourcePath(
   }
 
   const candidate = path.join(workspaceRoot, "sdlc", "resources", relativePath);
+  return await pathExists(candidate) ? candidate : null;
+}
+
+async function resolveConfiguredResourcePath(
+  workspaceRoot: string | undefined,
+  relativePath: string,
+): Promise<string | null> {
+  if (!workspaceRoot) {
+    return null;
+  }
+
+  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  const configuredRoot = resolveConfiguredResourcesRoot(workspaceRoot, config);
+  if (!configuredRoot) {
+    return null;
+  }
+
+  const candidate = path.join(configuredRoot, relativePath);
   return await pathExists(candidate) ? candidate : null;
 }
 
@@ -30,6 +52,11 @@ export async function resolveResourcePath(
   relativePath: string,
   workspaceRoot?: string,
 ): Promise<string> {
+  const configuredResourcePath = await resolveConfiguredResourcePath(workspaceRoot, relativePath);
+  if (configuredResourcePath) {
+    return configuredResourcePath;
+  }
+
   const workspaceResourcePath = await resolveWorkspaceResourcePath(workspaceRoot, relativePath);
   if (workspaceResourcePath) {
     return workspaceResourcePath;
@@ -50,9 +77,16 @@ export async function describeResourcePath(
   workspaceRoot?: string,
 ): Promise<string> {
   const normalizedPath = path.normalize(absolutePath);
+  const configuredResourcesRoot = workspaceRoot
+    ? resolveConfiguredResourcesRoot(workspaceRoot, await loadWorkspaceLocalEnvConfig(workspaceRoot))
+    : null;
   const workspaceResourcesRoot = workspaceRoot
     ? path.join(workspaceRoot, "sdlc", "resources")
     : null;
+
+  if (configuredResourcesRoot && isWithinRoot(normalizedPath, configuredResourcesRoot)) {
+    return toPosixPath(path.join("configured_resources", path.relative(configuredResourcesRoot, normalizedPath)));
+  }
 
   if (workspaceResourcesRoot && isWithinRoot(normalizedPath, workspaceResourcesRoot)) {
     return toPosixPath(path.join("workspace", "sdlc", "resources", path.relative(workspaceResourcesRoot, normalizedPath)));

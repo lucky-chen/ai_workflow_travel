@@ -3,6 +3,9 @@ import path from "node:path";
 import type { CompositionRootOptions } from "./composition-root.js";
 
 export interface WorkspaceLocalEnvConfig {
+  resources?: {
+    root_dir?: string;
+  };
   llm?: {
     provider?: "openai" | "deepseek";
     api_key?: string;
@@ -13,6 +16,9 @@ export interface WorkspaceLocalEnvConfig {
 }
 
 const DEFAULT_WORKSPACE_LOCAL_ENV: WorkspaceLocalEnvConfig = {
+  resources: {
+    root_dir: "../../meta_layer/resources",
+  },
   llm: {
     provider: "openai",
     api_key: "your-api-key",
@@ -30,7 +36,7 @@ export function resolveWorkspaceLocalEnvPath(workspaceRoot: string): string {
   return path.join(workspaceRoot, "sdlc", "local_env.json");
 }
 
-export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promise<CompositionRootOptions> {
+export async function loadWorkspaceLocalEnvConfig(workspaceRoot?: string): Promise<WorkspaceLocalEnvConfig> {
   if (!workspaceRoot) {
     return {};
   }
@@ -57,6 +63,23 @@ export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promi
     throw new Error(`Invalid workspace local env JSON: ${localEnvPath}. ${message}`);
   }
 
+  return parsed;
+}
+
+export function resolveConfiguredResourcesRoot(
+  workspaceRoot: string,
+  config: WorkspaceLocalEnvConfig,
+): string | null {
+  const configuredRoot = config.resources?.root_dir?.trim();
+  if (!configuredRoot) {
+    return null;
+  }
+
+  return path.resolve(workspaceRoot, configuredRoot);
+}
+
+export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promise<CompositionRootOptions> {
+  const parsed = await loadWorkspaceLocalEnvConfig(workspaceRoot);
   const llm = parsed.llm;
   if (!llm?.provider || !llm.api_key || !llm.model || llm.api_key === "your-api-key") {
     return {};
