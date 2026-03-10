@@ -103,7 +103,7 @@
   - [x] Workflow 主线阶段流转
   - [x] 基于 CLI 的阶段启动与任务执行
   - [x] Requirement、Architecture、Module Design、Implementation Plan、Implementation Execution、Validation 阶段
-  - [ ] 更丰富的 CLI 交互流程
+  - [x] 更丰富的 CLI 交互流程
 - `project_layer/projects/agent_runtime`
   - [x] AgentRuntime V1 单轮执行基础能力
   - [x] Agent 抽象、runtime 执行循环与 trace 集成

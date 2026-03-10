@@ -103,7 +103,7 @@ Main outputs:
   - [x] Workflow stage flow
   - [x] CLI-based stage launch and task execution
   - [x] Requirement, architecture, module design, implementation plan, implementation execution, and validation stages
-  - [ ] richer CLI interaction flow
+  - [x] richer CLI interaction flow
 - `project_layer/projects/agent_runtime`
   - [x] AgentRuntime V1 single-turn execution foundation
   - [x] Agent abstraction, runtime execution loop, and trace integration
