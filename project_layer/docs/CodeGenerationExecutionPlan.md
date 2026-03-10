@@ -433,38 +433,78 @@ This step delivers the shared runtime backbone used by all stages.
 
 ### Step 10. Validate Baseline With `hello-service`
 
-- [x] Step 10 is completed
+- [ ] Step 10 is in progress
 - [x] Architecture modules in scope
   - [x] `SDK/AgentRuntime`
   - [x] `SDK/LlmExecutor`
   - [x] workflow automation on top of completed stages
   - [x] `hello-service` verification target
-- [x] Batch 1: hello-service end-to-end baseline verification
+- [x] Batch 1: hello-service baseline target preparation
   - [x] create or prepare one minimal `hello-service` target
+  - [x] baseline evidence is automated in `tests/hello-service/hello-service-baseline.test.ts`
+  - [x] verification currently uses a temporary hello-service workspace rather than a committed sample app under `user_projects/hello-service`
+- [x] Batch 2: hello-service baseline capability black-box verification
   - [x] verify the CLI can launch from `workspace` without explicit artifact path arguments
   - [x] verify document artifacts are produced under `workspace/sdlc/docs`
   - [x] verify `implementation_execution` targets `workspace/src`
   - [x] verify validation runs against `workspace`
   - [x] capture validation evidence for the runnable backbone
-  - [x] record scope limits and follow-up gaps before broader agent capability expansion
-  - [x] Verification note
-    - [x] baseline evidence is automated in `tests/hello-service/hello-service-baseline.test.ts`
-    - [x] verification currently uses a temporary hello-service workspace rather than a committed sample app under `user_projects/hello-service`
-- [x] Batch 2: hello-service contract-path verification
+- [x] Batch 3: hello-service mock-LLM call-chain verification
+  - [x] verify hello-service baseline flow produces observable `SDK/LlmExecutor` call evidence under mock-LLM execution
+  - [x] verify llm call evidence covers document generation stages under mock-LLM execution
+  - [x] verify llm call evidence covers implementation generation flow under mock-LLM execution
+  - [x] verify the recorded llm-call evidence remains assertable from persisted history output under mock-LLM execution
+- [x] Batch 4: hello-service mock-LLM artifact verification
+  - [x] verify document-generation artifacts remain stable under mock-LLM execution
+  - [x] verify implementation-generation artifacts remain stable under mock-LLM execution
+  - [x] verify the combined simple-project artifacts remain aligned under mock-LLM execution
+- [ ] Batch 5: hello-service real-LLM call-chain verification
+  - [ ] add a real LLM-backed verification path for hello-service
+  - [ ] verify the hello-service black-box flow produces observable real-LLM module call evidence
+  - [ ] verify document-generation call flow remains aligned with the mock-LLM verification path under real LLM execution
+  - [ ] verify implementation-generation call flow remains aligned with the mock-LLM verification path under real LLM execution
+- [ ] Batch 6: hello-service real-LLM artifact verification
+  - [ ] verify document-generation artifacts remain aligned with the mock-LLM verification target under real LLM execution
+  - [ ] verify implementation-generation artifacts remain aligned with the mock-LLM verification target under real LLM execution
+  - [ ] verify the recorded real-LLM evidence remains assertable from persisted history output
+- [x] Batch 7: hello-service simple-project workflow and contract verification
   - [x] verify contract success allows the hello-service workflow to continue through downstream stages
   - [x] verify contract-failure injection stops stage progression at the failed stage
   - [x] verify downstream artifacts are not produced after contract failure
   - [x] verify contract success/failure leaves reviewable persisted history evidence
-  - [x] automate success and failure acceptance coverage under `user_projects/hello-service/tests`
-- [x] Batch 3: hello-service llm-call verification
-  - [x] verify hello-service baseline flow produces observable `SDK/LlmExecutor` call evidence
-  - [x] verify llm call evidence covers at least document generation and implementation generation flow
-  - [x] verify the recorded llm-call evidence remains assertable from persisted history output
-  - [x] document that hello-service acceptance verifies llm integration boundaries rather than model-quality behavior
+- [ ] Batch 8: hello-service simple-project functional verification
+  - [ ] verify the generated hello-service implementation covers the current simple-project behavior
+  - [ ] verify the generated workspace documents stay mutually aligned around the simple hello-service scope
+  - [ ] verify validation output confirms the simple hello-service target remains runnable
+  - [ ] verify persisted history captures the hello-service functional verification results
 
-### Step 11. Extend Toward Agent Capabilities
+### Step 11. Validate Expanded Baseline With `hello-service-complex`
 
 - [ ] Step 11 is not started
+- [ ] Architecture modules in scope
+  - [ ] `SDK/AgentRuntime`
+  - [ ] `SDK/LlmExecutor`
+  - [ ] workflow automation on top of completed stages
+  - [ ] `hello-service-complex` verification target
+- [ ] Batch 1: `hello-service-complex` requirement and architecture expansion
+  - [ ] define a richer `hello-service-complex` requirement target beyond the minimal hello baseline
+  - [ ] define `hello-service-complex` architecture for the richer runtime flow and module boundaries
+  - [ ] keep requirement and architecture artifacts aligned for `hello-service-complex`
+  - [ ] keep the `hello-service-complex` target small enough for stable black-box verification
+- [ ] Batch 2: `hello-service-complex` module design and implementation plan expansion
+  - [ ] expand `hello-service-complex` module-design outputs to cover the richer service scope
+  - [ ] evolve the implementation plan to reflect the expanded module and execution surface
+  - [ ] keep module-design outputs aligned with architecture responsibilities and dependency boundaries
+  - [ ] keep the implementation plan aligned with the expanded validation target
+- [ ] Batch 3: `hello-service-complex` workflow, functional, and acceptance verification
+  - [ ] verify the generated `hello-service-complex` implementation covers the expanded service behavior
+  - [ ] verify the generated workspace documents stay mutually aligned around the expanded `hello-service-complex` scope
+  - [ ] verify validation output confirms the expanded `hello-service-complex` target remains runnable
+  - [ ] confirm `hello-service-complex` validates a more complete SDLC capability scope
+
+### Step 12. Extend Toward Agent Capabilities
+
+- [ ] Step 12 is not started
 - [ ] Architecture modules in scope
   - [ ] `SDK/AgentRuntime`
   - [ ] `SDK/LlmExecutor`
@@ -509,8 +549,9 @@ This step delivers the shared runtime backbone used by all stages.
 - [x] Step 7 is completed
 - [x] Step 8 is in progress
 - [x] Step 9 is completed
-- [x] Step 10 is completed
+- [ ] Step 10 is in progress
 - [ ] Step 11 is not started
+- [ ] Step 12 is not started
 
 ## 5. Verification Rule
 

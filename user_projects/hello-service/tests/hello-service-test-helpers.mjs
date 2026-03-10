@@ -8,25 +8,32 @@ export const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta
 const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
-const serviceDistRoot = path.join(workspaceRoot, "dist");
+const serviceDistSdlcRoot = path.join(workspaceRoot, "dist", "sdlc");
 const artifactRoot = path.join(workspaceRoot, ".artifact-store");
+const workspaceSdlcRoot = path.join(workspaceRoot, "sdlc");
 const historyStoreDirectory = path.join(workspaceRoot, "dist", "sdlc", "history_store");
 const historyStoreRoot = path.join(historyStoreDirectory, "records");
+const workspaceLocalEnvPath = path.join(workspaceSdlcRoot, "local_env.json");
 
 export async function runCli(args, options = {}) {
-  const { taskId = "hello-service-task", runId, extraEnv = {} } = options;
+  const { taskId = "hello-service-task", runId, extraEnv = {}, runtimeMode = "mock" } = options;
   const commandArgs = runId ? [...args, "--run-id", runId] : args;
+  const baseEnv = {
+    ...process.env,
+    SDLC_TEST_TASK_ID: taskId,
+    SDLC_WORKSPACE_ROOT: workspaceRoot,
+    SDLC_ARTIFACT_ROOT: artifactRoot,
+    ...extraEnv,
+  };
+  const scenarioEnv = runtimeMode === "mock"
+    ? {
+        SDLC_TEST_SCENARIO: "fixed_workspace_baseline",
+        SDLC_TEST_SERVICE_NAME: "hello-service",
+      }
+    : {};
   const child = spawn(process.execPath, [cliEntry, ...commandArgs], {
     cwd: sdlcProjectRoot,
-    env: {
-      ...process.env,
-      SDLC_TEST_SCENARIO: "fixed_workspace_baseline",
-      SDLC_TEST_TASK_ID: taskId,
-      SDLC_TEST_SERVICE_NAME: "hello-service",
-      SDLC_WORKSPACE_ROOT: workspaceRoot,
-      SDLC_ARTIFACT_ROOT: artifactRoot,
-      ...extraEnv,
-    },
+    env: { ...baseEnv, ...scenarioEnv },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -48,10 +55,33 @@ export async function runCli(args, options = {}) {
 }
 
 export async function resetWorkspace() {
-  await rm(serviceDistRoot, { recursive: true, force: true });
+  await rm(serviceDistSdlcRoot, { recursive: true, force: true });
   await rm(artifactRoot, { recursive: true, force: true });
-  await rm(path.join(workspaceRoot, "sdlc"), { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
+}
+
+export async function readWorkspaceLocalEnvConfig() {
+  try {
+    return JSON.parse(await readFile(workspaceLocalEnvPath, "utf8"));
+  } catch (error) {
+    const nodeError = error;
+    if (nodeError && typeof nodeError === "object" && "code" in nodeError && nodeError.code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export async function hasRealLlmConfig() {
+  const config = await readWorkspaceLocalEnvConfig();
+  const llm = config?.llm;
+  return Boolean(
+    llm?.provider
+      && llm?.api_key
+      && llm.api_key !== "your-api-key"
+      && llm?.model,
+  );
 }
 
 export async function findTraceFilePath(taskId) {
