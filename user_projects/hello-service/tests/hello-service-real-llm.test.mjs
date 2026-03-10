@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  createHelloServiceRequirementDocument,
   findTraceRecordsByCaller,
   loadTraceRecords,
   resetWorkspace,
@@ -20,13 +18,6 @@ export async function runHelloServiceRealLlmRequirementTest() {
     runId: "3000",
     runtimeMode: "real",
   });
-
-  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
-  await writeFile(
-    path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"),
-    createHelloServiceRequirementDocument(),
-    "utf8",
-  );
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], {
     taskId: realLlmTaskId,
@@ -45,13 +36,6 @@ export async function runHelloServiceRealLlmArchitectureTest() {
     runId: "3000",
     runtimeMode: "real",
   });
-
-  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
-  await writeFile(
-    path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"),
-    createHelloServiceRequirementDocument(),
-    "utf8",
-  );
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], {
     taskId: realLlmTaskId,

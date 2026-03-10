@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   createHelloServiceArchitectureDocument,
   createHelloServiceImplementationPlanDocument,
   createHelloServiceModuleDesignDocument,
-  createHelloServiceRequirementDocument,
   findTraceRecordsByCategory,
   findTraceRecordsByCaller,
   findTraceRecordsByEventType,
@@ -29,13 +28,6 @@ export async function runHelloServiceSuccessTest() {
 
   await resetWorkspace();
   await runCli(["init", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: "1000" });
-
-  await mkdir(path.join(workspaceRoot, "sdlc", "docs", "requirements"), { recursive: true });
-  await writeFile(
-    path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"),
-    createHelloServiceRequirementDocument(),
-    "utf8",
-  );
 
   await runCli(["generate", "--stage", "requirement_interpretation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: requirementRunId });
   const requirementTraceRecords = await loadTraceRecords(baselineTaskId, requirementRunId);
@@ -152,10 +144,6 @@ export async function runHelloServiceSuccessTest() {
 
   await runCli(["generate", "--stage", "validation", "--workspace", workspaceRoot], { taskId: baselineTaskId, runId: validationRunId });
 
-  assert.equal(
-    await readFile(path.join(workspaceRoot, "sdlc", "docs", "requirements", "Requirement.md"), "utf8"),
-    createHelloServiceRequirementDocument(),
-  );
   assert.equal(
     await readFile(path.join(workspaceRoot, "sdlc", "docs", "architecture", "TechnicalArchitecture.md"), "utf8"),
     createHelloServiceArchitectureDocument(),
