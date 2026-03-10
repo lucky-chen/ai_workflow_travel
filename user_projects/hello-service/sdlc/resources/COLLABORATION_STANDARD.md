@@ -35,6 +35,8 @@ This document defines the shared collaboration standard for all work under `proj
 
 - If a requested change is too large, Codex must split it into multiple independent batches instead of submitting one large modification at once.
 - Each batch should remain independently understandable, reviewable, and verifiable.
+- Execution-plan batches should normally stay at a moderate size and avoid being too large or too fragmented.
+- When practical, one batch should contain about 2 to 4 concrete task items.
 - Each round of code changes must stay within at most one execution-plan batch scope.
 - Codex must not implement tasks from multiple batches in the same modification round unless the user explicitly requests an exception.
 - Avoid mixing unrelated refactors, behavior changes, and architecture adjustments into the same batch when they can be separated.
