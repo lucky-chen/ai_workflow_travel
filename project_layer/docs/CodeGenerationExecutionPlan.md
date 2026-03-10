@@ -400,6 +400,7 @@ This step delivers the shared runtime backbone used by all stages.
   - [x] converge CLI launch input to `workspace` as the single project root input
   - [x] keep review as runtime-inline CLI interaction and do not introduce a standalone `review` command
   - [x] remove explicit CLI artifact-path arguments from the baseline launch flow
+  - [ ] add CLI-declared `single-step` execution mode and stop after the current stage when it is requested
   - [x] support `init` to copy bundled SDLC resources into `workspace/sdlc/resources`
   - [x] cover workspace-rooted launch behavior in CLI tests
 - [x] Batch 2: workspace path and artifact layout alignment
@@ -531,7 +532,6 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] register revision `StageDefinition` entries in `Workflow/Pipeline`
   - [ ] implement revision runner input assembly for `canonicalArtifactPath`, `revisedArtifactPath`, and upstream `inputArtifacts`
   - [ ] keep template and contract resource bindings canonical in revision mode
-  - [ ] stop after the current stage when revision is launched in CLI single-step mode
 - [ ] Batch 2: document generator revise-mode support
   - [ ] extend `DocumentStageGenerator` to support `revise` mode alongside `generate`
   - [ ] make revise mode read the canonical current artifact and write the revised candidate to `dist/sdlc/revision/{taskId}/{runId}/revised.md`
