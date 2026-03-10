@@ -6,7 +6,6 @@ import {
   createHelloServiceRequirementDocument,
   findTraceRecordsByCaller,
   findTraceRecordsByEventType,
-  hasRealLlmConfig,
   loadTraceRecords,
   resetWorkspace,
   runCli,
@@ -16,10 +15,6 @@ import {
 const realLlmTaskId = "hello-service-real-llm-task";
 
 export async function runHelloServiceRealLlmTest() {
-  if (!(await hasRealLlmConfig())) {
-    throw new Error("hello-service real LLM test requires a valid workspace local_env.json.");
-  }
-
   await resetWorkspace();
   await runCli(["init", "--workspace", workspaceRoot], {
     taskId: realLlmTaskId,

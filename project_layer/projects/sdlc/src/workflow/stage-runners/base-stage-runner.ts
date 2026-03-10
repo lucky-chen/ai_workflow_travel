@@ -50,18 +50,22 @@ export abstract class BaseStageRunner implements IStageRunner {
     return contractChecker.check(context, output);
   }
 
-  protected async recordSharedContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
+  protected async recordSharedContractResult(
+    context: StageRunContext,
+    result: ContractCheckResult,
+  ): Promise<void> {
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.recordSharedContractResult`,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.contractChecked,
-      summary,
+      summary: result.summary,
       category: "contract",
       payload: {
-        passed,
+        passed: result.passed,
+        issues: result.issues,
       },
       metadata: {
-        passed: String(passed),
+        passed: String(result.passed),
       },
     });
   }

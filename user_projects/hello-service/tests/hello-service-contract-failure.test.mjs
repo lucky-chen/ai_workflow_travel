@@ -52,6 +52,10 @@ export async function runHelloServiceContractFailureTest() {
   assert.equal(contractRecords[0]?.scope?.stageId, "architecture_design");
   assert.equal(contractRecords[0]?.payload?.passed, false);
   assert.equal(contractRecords[0]?.summary.includes("failed contract checks"), true);
+  assert.deepEqual(
+    contractRecords[0]?.payload?.issues?.map((issue) => issue.checkItem),
+    ["architecture_design-structure", "architecture_design-alignment"],
+  );
 
   assert.equal(
     findTraceRecordsByEventType(traceRecords, "stage_failed").some(

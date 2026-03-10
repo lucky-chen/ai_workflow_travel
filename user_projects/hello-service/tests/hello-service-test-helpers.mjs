@@ -10,10 +10,8 @@ const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdl
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const serviceDistSdlcRoot = path.join(workspaceRoot, "dist", "sdlc");
 const artifactRoot = path.join(workspaceRoot, ".artifact-store");
-const workspaceSdlcRoot = path.join(workspaceRoot, "sdlc");
 const historyStoreDirectory = path.join(workspaceRoot, "dist", "sdlc", "history_store");
 const historyStoreRoot = path.join(historyStoreDirectory, "records");
-const workspaceLocalEnvPath = path.join(workspaceSdlcRoot, "local_env.json");
 
 export async function runCli(args, options = {}) {
   const { taskId = "hello-service-task", runId, extraEnv = {}, runtimeMode = "mock" } = options;
@@ -58,30 +56,6 @@ export async function resetWorkspace() {
   await rm(serviceDistSdlcRoot, { recursive: true, force: true });
   await rm(artifactRoot, { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
-}
-
-export async function readWorkspaceLocalEnvConfig() {
-  try {
-    return JSON.parse(await readFile(workspaceLocalEnvPath, "utf8"));
-  } catch (error) {
-    const nodeError = error;
-    if (nodeError && typeof nodeError === "object" && "code" in nodeError && nodeError.code === "ENOENT") {
-      return null;
-    }
-
-    throw error;
-  }
-}
-
-export async function hasRealLlmConfig() {
-  const config = await readWorkspaceLocalEnvConfig();
-  const llm = config?.llm;
-  return Boolean(
-    llm?.provider
-      && llm?.api_key
-      && llm.api_key !== "your-api-key"
-      && llm?.model,
-  );
 }
 
 export async function findTraceFilePath(taskId) {

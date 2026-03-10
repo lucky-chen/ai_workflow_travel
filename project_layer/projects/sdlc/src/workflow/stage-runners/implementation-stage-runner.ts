@@ -51,7 +51,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
 
     const contractResult = await this.runContractCheck(this.dependencies.contractChecker, context, output);
-    await this.recordSharedContractResult(context, contractResult.passed, contractResult.summary);
+    await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
       throw new Error(`Implementation contract failed: ${contractResult.summary}`);
     }
