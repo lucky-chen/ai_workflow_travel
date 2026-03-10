@@ -36,6 +36,7 @@ export type TraceEventType = (typeof TRACE_EVENT_TYPES)[keyof typeof TRACE_EVENT
 
 export interface StageRunContext {
   taskId: TaskId;
+  runId?: string;
   stageId: StageId;
   attempt: number;
   workspaceRoot: string;
@@ -55,6 +56,7 @@ export type TaskStatus = "pending" | "running" | "failed" | "completed";
 
 export interface TaskRecord {
   taskId: TaskId;
+  runId?: string;
   startStageId: StageId;
   currentStageId: StageId;
   attempt: number;
@@ -113,7 +115,8 @@ export interface IArtifactStore {
 }
 
 export interface TraceEvent {
-  taskId: TaskId;
+  taskId?: TaskId;
+  runId?: string;
   stageId?: StageId;
   caller: string;
   eventType: TraceEventType;
@@ -121,6 +124,11 @@ export interface TraceEvent {
   category?: string;
   metadata?: StringMap;
   payload?: Record<string, unknown>;
+}
+
+export interface TraceScope {
+  taskId: TaskId;
+  runId: string;
 }
 
 export interface ITraceRecorder {

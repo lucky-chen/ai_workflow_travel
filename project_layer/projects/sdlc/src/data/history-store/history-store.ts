@@ -7,8 +7,9 @@ export interface HistoryRecord {
   category: string;
   caller?: string;
   scope?: {
-    taskId?: TaskId;
-    stageId?: StageId;
+    taskId: TaskId;
+    runId: string;
+    stageId: StageId | null;
   };
   summary?: string;
   payload: Record<string, unknown>;
@@ -20,7 +21,12 @@ export interface HistoryQuery {
   stageId?: StageId;
 }
 
-export type HistoryWorkspaceRootResolver = (taskId: TaskId) => string | undefined;
+export interface HistoryTaskContext {
+  workspaceRoot?: string;
+  runId?: string;
+}
+
+export type HistoryWorkspaceRootResolver = (taskId: TaskId) => string | HistoryTaskContext | undefined;
 
 export class HistoryStoreService {
   constructor(
@@ -31,19 +37,21 @@ export class HistoryStoreService {
   async writeRecord(record: HistoryRecord): Promise<TraceRef> {
     const recordId = record.recordId ?? `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const taskId = this.requireTaskId(record.scope?.taskId);
+    const resolvedTaskContext = this.resolveTaskContext(taskId);
+    const runId = this.requireRunId(this.normalizeOptionalIdentifier(record.scope?.runId) ?? resolvedTaskContext.runId);
     const stageId = this.normalizeOptionalIdentifier(record.scope?.stageId);
     const persistedRecord: HistoryRecord = {
       ...record,
-      ...(taskId || stageId ? { scope: this.buildScope(taskId, stageId) } : {}),
+      scope: this.buildScope(taskId, runId, stageId),
       recordId,
     };
-    const taskBucketName = this.resolveTaskBucketName(taskId);
+    const taskBucketName = this.resolveTaskBucketName(taskId, runId);
     const targetPath = path.join(this.storageRoot, "records", `${taskBucketName}.json`);
     const updatedBucket = await this.readBucket(targetPath);
     updatedBucket.push(persistedRecord);
     await this.writeBucket(targetPath, updatedBucket);
 
-    const workspaceRoot = taskId ? this.workspaceRootResolver?.(taskId) : undefined;
+    const workspaceRoot = resolvedTaskContext.workspaceRoot;
     if (workspaceRoot) {
       await this.writeBucket(
         path.join(workspaceRoot, "sdlc", "trace", `${taskBucketName}.json`),
@@ -101,23 +109,49 @@ export class HistoryStoreService {
     throw new Error('History record requires a non-empty "taskId".');
   }
 
-  private buildScope(taskId?: TaskId, stageId?: StageId): {
-    taskId?: TaskId;
-    stageId?: StageId;
+  private buildScope(taskId: TaskId, runId: string, stageId?: StageId): {
+    taskId: TaskId;
+    runId: string;
+    stageId: StageId | null;
   } {
     return {
-      ...(taskId ? { taskId } : {}),
-      ...(stageId ? { stageId } : {}),
+      taskId,
+      runId,
+      stageId: stageId ?? null,
     };
   }
 
-  private normalizeOptionalIdentifier<T extends string>(value?: T): T | undefined {
-    return value?.trim() ? value : undefined;
+  private requireRunId(runId?: string): string {
+    if (runId?.trim()) {
+      return runId;
+    }
+
+    throw new Error('History record requires a non-empty "runId".');
   }
 
-  private resolveTaskBucketName(taskId?: TaskId): string {
-    return taskId ?? "_global";
+  private normalizeOptionalIdentifier<T extends string | null>(value?: T): Exclude<T, null> | undefined {
+    return typeof value === "string" && value.trim() ? value as Exclude<T, null> : undefined;
   }
+
+  private resolveTaskBucketName(taskId?: TaskId, runId?: string): string {
+    return runId ? `${taskId ?? "_global"}_${runId}` : (taskId ?? "_global");
+  }
+
+  private resolveTaskContext(taskId: TaskId): HistoryTaskContext {
+    const resolved = this.workspaceRootResolver?.(taskId);
+    if (!resolved) {
+      return {};
+    }
+
+    if (typeof resolved === "string") {
+      return {
+        workspaceRoot: resolved,
+      };
+    }
+
+    return resolved;
+  }
+
 
   private async readBucket(targetPath: string): Promise<HistoryRecord[]> {
     try {

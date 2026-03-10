@@ -95,7 +95,15 @@ function createApplicationServicesWithTaskRuntimeStore(
 ): ApplicationServices {
   const historyStore = new HistoryStoreService(
     options.historyStorageRoot,
-    (taskId) => taskRuntimeStore.getWorkspaceRoot(taskId),
+    (taskId) => {
+      const task = taskRuntimeStore.getTaskRecord(taskId);
+      return task
+        ? {
+            workspaceRoot: task.workspaceRoot,
+            runId: task.runId,
+          }
+        : undefined;
+    },
   );
   const traceRecorder = new TraceService(historyStore);
   const artifactStore = new ArtifactStoreService(options.artifactStorageRoot, traceRecorder);

@@ -59,10 +59,12 @@ async function testTraceServicePersistsHistory(): Promise<void> {
 
   try {
     const historyStore = new HistoryStoreService(storageRoot);
-    const recorder = new TraceService(historyStore);
+    const recorder = new TraceService(historyStore, {
+      taskId: "task-1",
+      runId: "run-1",
+    });
 
     const ref = await recorder.recordTrace({
-      taskId: "task-1",
       stageId: "implementation",
       caller: "trace.test",
       eventType: "stage_started",
@@ -76,6 +78,7 @@ async function testTraceServicePersistsHistory(): Promise<void> {
     assert.equal(record.category, "trace");
     assert.deepEqual(record.scope, {
       taskId: "task-1",
+      runId: "run-1",
       stageId: "implementation",
     });
     assert.equal(record.summary, "Implementation started.");
@@ -97,12 +100,15 @@ async function testTraceServiceMirrorsTraceIntoWorkspace(): Promise<void> {
   try {
     const historyStore = new HistoryStoreService(
       storageRoot,
-      (taskId) => (taskId === "task-workspace" ? workspaceRoot : undefined),
+      (taskId) => (taskId === "task-workspace"
+        ? { workspaceRoot, runId: "run-trace" }
+        : undefined),
     );
     const recorder = new TraceService(historyStore);
 
     const ref = await recorder.recordTrace({
       taskId: "task-workspace",
+      runId: "run-trace",
       stageId: "architecture_design",
       caller: "trace.test",
       eventType: "stage_started",
@@ -111,13 +117,13 @@ async function testTraceServiceMirrorsTraceIntoWorkspace(): Promise<void> {
 
     const mirroredRecord = JSON.parse(
       await readFile(
-        path.join(workspaceRoot, "sdlc", "trace", "task-workspace.json"),
+        path.join(workspaceRoot, "sdlc", "trace", "task-workspace_run-trace.json"),
         "utf8",
       ),
     ) as Array<{
       recordId: string;
       category: string;
-      scope: { taskId: string; stageId: string };
+      scope: { taskId: string; runId: string; stageId: string };
       summary: string;
     }>;
 
@@ -126,6 +132,7 @@ async function testTraceServiceMirrorsTraceIntoWorkspace(): Promise<void> {
     assert.equal(mirroredRecord[0]?.category, "trace");
     assert.deepEqual(mirroredRecord[0]?.scope, {
       taskId: "task-workspace",
+      runId: "run-trace",
       stageId: "architecture_design",
     });
     assert.equal(mirroredRecord[0]?.summary, "Architecture started.");

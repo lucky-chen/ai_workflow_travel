@@ -3,6 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   createHelloServiceRequirementDocument,
+  loadAllTraceRecords,
   resetWorkspace,
   runCli,
   workspaceRoot,
@@ -37,9 +38,7 @@ export async function runHelloServiceContractFailureTest() {
     async () => access(path.join(workspaceRoot, "sdlc", "docs", "module_design", "Workflow.md")),
   );
 
-  const traceRecords = JSON.parse(
-    await readFile(path.join(workspaceRoot, "sdlc", "trace", `${failureTaskId}.json`), "utf8"),
-  );
+  const traceRecords = await loadAllTraceRecords(failureTaskId);
   assert.equal(
     traceRecords.some(
       (entry) => entry.payload?.eventType === "stage_failed"

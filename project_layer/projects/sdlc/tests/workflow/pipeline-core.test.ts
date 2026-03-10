@@ -56,8 +56,10 @@ async function testSingleStageLaunch(workspaceRoot: string): Promise<void> {
   });
 
   assert.equal(taskId.startsWith("task-"), true);
+  assert.equal(receivedContext?.runId?.startsWith("run-"), true);
   assert.deepEqual(receivedContext, {
     taskId,
+    runId: receivedContext?.runId,
     stageId: "implementation",
     attempt: 1,
     workspaceRoot,
@@ -183,8 +185,10 @@ async function testStageContinuationAndMerge(workspaceRoot: string): Promise<voi
   });
 
   assert.equal(continuedContexts.length, 2);
+  assert.equal(continuedContexts[1]?.runId?.startsWith("run-"), true);
   assert.deepEqual(continuedContexts[1], {
     taskId: continuedTaskId,
+    runId: continuedContexts[1]?.runId,
     stageId: "stage-b",
     attempt: 1,
     workspaceRoot,

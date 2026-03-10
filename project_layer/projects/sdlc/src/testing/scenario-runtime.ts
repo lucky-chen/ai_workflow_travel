@@ -12,6 +12,8 @@ export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
     architectureDocument: createScenarioArchitectureDocument(serviceName),
     moduleDesignDocument: createScenarioModuleDesignDocument(serviceName),
     implementationPlanDocument: createScenarioImplementationPlanDocument(serviceName),
+    contractFailureStages: readScenarioContractFailureStages(),
+    contractIssueCategories: readScenarioContractIssueCategories(),
   });
   return {
     artifactStorageRoot: process.env.SDLC_ARTIFACT_ROOT,
@@ -28,6 +30,8 @@ interface ScriptedLlmExecutorDependencies {
   architectureDocument: string;
   moduleDesignDocument: string;
   implementationPlanDocument: string;
+  contractFailureStages: Set<string>;
+  contractIssueCategories: string[];
 }
 
 class ScriptedLlmExecutor implements ILlmExecutor {
@@ -35,12 +39,19 @@ class ScriptedLlmExecutor implements ILlmExecutor {
 
   async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
     if (request.metadata?.checkType === "contract") {
+      const stageId = request.metadata?.stage;
+      const shouldFail = typeof stageId === "string"
+        && this.dependencies.contractFailureStages.has(stageId);
       return {
-        content: JSON.stringify({
-          passed: true,
-          summary: "Document passed contract checks.",
-          issues: [],
-        }),
+        content: JSON.stringify(
+          shouldFail
+            ? this.buildFailedContractResult(stageId)
+            : {
+                passed: true,
+                summary: "Document passed contract checks.",
+                issues: [],
+              },
+        ),
         responseFormat: "json",
       };
     }
@@ -91,6 +102,19 @@ class ScriptedLlmExecutor implements ILlmExecutor {
       metadata: {
         ...(request.metadata ?? {}),
       },
+    };
+  }
+
+  private buildFailedContractResult(stageId: string): {
+    passed: false;
+    summary: string;
+    issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }>;
+  } {
+    const issues = this.dependencies.contractIssueCategories.map((category) => buildScenarioContractIssue(stageId, category));
+    return {
+      passed: false,
+      summary: `${stageId} failed contract checks.`,
+      issues,
     };
   }
 }
@@ -169,4 +193,70 @@ function createScenarioImplementationPlanDocument(serviceName: string): string {
     "## 4. Implementation Execution State",
     "- [ ] batch-1",
   ].join("\n");
+}
+
+function readScenarioContractFailureStages(): Set<string> {
+  const value = process.env.SDLC_TEST_CONTRACT_FAILURE_STAGES?.trim();
+  if (!value) {
+    return new Set();
+  }
+
+  return new Set(
+    value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  );
+}
+
+function readScenarioContractIssueCategories(): string[] {
+  const value = process.env.SDLC_TEST_CONTRACT_ISSUE_CATEGORIES?.trim();
+  if (!value) {
+    return ["structure"];
+  }
+
+  const categories = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  return categories.length > 0 ? categories : ["structure"];
+}
+
+function buildScenarioContractIssue(
+  stageId: string,
+  category: string,
+): { checkItem: string; message: string; severity: "low" | "medium" | "high" } {
+  switch (category) {
+    case "structure":
+      return {
+        checkItem: `${stageId}-structure`,
+        message: `${stageId} is missing required structure sections.`,
+        severity: "high",
+      };
+    case "scope":
+      return {
+        checkItem: `${stageId}-scope`,
+        message: `${stageId} includes content outside the expected scope.`,
+        severity: "medium",
+      };
+    case "alignment":
+      return {
+        checkItem: `${stageId}-alignment`,
+        message: `${stageId} is not aligned with upstream design artifacts.`,
+        severity: "high",
+      };
+    case "placeholder":
+      return {
+        checkItem: `${stageId}-placeholder`,
+        message: `${stageId} still contains unresolved template placeholders.`,
+        severity: "medium",
+      };
+    default:
+      return {
+        checkItem: `${stageId}-${category}`,
+        message: `${stageId} failed scripted contract category "${category}".`,
+        severity: "medium",
+      };
+  }
 }

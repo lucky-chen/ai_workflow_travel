@@ -36,7 +36,6 @@ export abstract class BaseStageRunner implements IStageRunner {
   protected async recordStageStart(context: StageRunContext): Promise<void> {
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.recordStageStart`,
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
       summary: `Stage "${context.stageId}" started.`,
@@ -54,7 +53,6 @@ export abstract class BaseStageRunner implements IStageRunner {
   protected async recordSharedContractResult(context: StageRunContext, passed: boolean, summary: string): Promise<void> {
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.recordSharedContractResult`,
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.contractChecked,
       summary,
@@ -76,7 +74,6 @@ export abstract class BaseStageRunner implements IStageRunner {
   ): Promise<void> {
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.recordSharedPersistenceResult`,
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.artifactPersisted,
       summary,
@@ -97,7 +94,6 @@ export abstract class BaseStageRunner implements IStageRunner {
 
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.reviewChanges`,
-      taskId: changeRequest.taskId,
       stageId: changeRequest.stageId,
       eventType: TRACE_EVENT_TYPES.gateReviewed,
       summary: decision.summary,
@@ -126,4 +122,5 @@ export abstract class BaseStageRunner implements IStageRunner {
     await mkdir(path.dirname(targetPath), { recursive: true });
     await writeFile(targetPath, content, "utf8");
   }
+
 }

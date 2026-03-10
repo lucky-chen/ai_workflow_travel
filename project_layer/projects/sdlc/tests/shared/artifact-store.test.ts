@@ -127,7 +127,10 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
   try {
     const store = new ArtifactStoreService(
       storageRoot,
-      new TraceService(new HistoryStoreService(historyRoot)),
+      new TraceService(new HistoryStoreService(historyRoot), {
+        taskId: "task-history",
+        runId: "run-history",
+      }),
     );
 
     await store.writeArtifact({
@@ -138,10 +141,10 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
     });
 
     const historyRecords = JSON.parse(
-      await readFile(path.join(historyRoot, "records", "task-history.json"), "utf8"),
+      await readFile(path.join(historyRoot, "records", "task-history_run-history.json"), "utf8"),
     ) as Array<{
       category: string;
-      scope: { taskId: string; stageId: string };
+      scope: { taskId: string; runId: string; stageId: string };
       summary: string;
       payload: { filePath: string; mirroredToWorkspace: boolean };
     }>;
@@ -150,6 +153,7 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
     assert.equal(historyRecords[0]?.category, "artifact");
     assert.deepEqual(historyRecords[0]?.scope, {
       taskId: "task-history",
+      runId: "run-history",
       stageId: "module_design",
     });
     assert.equal(historyRecords[0]?.payload.filePath, "sdlc/docs/module_design/Workflow.md");

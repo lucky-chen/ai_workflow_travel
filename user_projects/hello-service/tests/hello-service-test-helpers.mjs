@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rm } from "node:fs/promises";
+import { readFile, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
@@ -50,6 +50,40 @@ export async function resetWorkspace() {
   await rm(historyRoot, { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "sdlc"), { recursive: true, force: true });
   await rm(path.join(workspaceRoot, "src"), { recursive: true, force: true });
+}
+
+export async function findTraceFilePath(taskId) {
+  const traceDirectory = path.join(workspaceRoot, "sdlc", "trace");
+  const entries = await readdir(traceDirectory, { withFileTypes: true });
+  const match = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(`${taskId}_`) && entry.name.endsWith(".json"))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .at(-1);
+
+  if (!match) {
+    throw new Error(`Missing trace file for task "${taskId}".`);
+  }
+
+  return path.join(traceDirectory, match.name);
+}
+
+export async function loadAllTraceRecords(taskId) {
+  const traceDirectory = path.join(workspaceRoot, "sdlc", "trace");
+  const entries = await readdir(traceDirectory, { withFileTypes: true });
+  const matchingFiles = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(`${taskId}_`) && entry.name.endsWith(".json"))
+    .map((entry) => path.join(traceDirectory, entry.name))
+    .sort();
+
+  if (matchingFiles.length === 0) {
+    throw new Error(`Missing trace file for task "${taskId}".`);
+  }
+
+  const recordGroups = await Promise.all(
+    matchingFiles.map(async (filePath) => JSON.parse(await readFile(filePath, "utf8"))),
+  );
+
+  return recordGroups.flat();
 }
 
 export function createHelloServiceRequirementDocument() {

@@ -19,6 +19,7 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
       category: "trace",
       scope: {
         taskId: "task-1",
+        runId: "run-a",
         stageId: "implementation",
       },
       summary: "Implementation started.",
@@ -32,6 +33,7 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
     assert.equal(record.category, "trace");
     assert.deepEqual(record.scope, {
       taskId: "task-1",
+      runId: "run-a",
       stageId: "implementation",
     });
 
@@ -39,6 +41,7 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
       category: "trace",
       scope: {
         taskId: "task-2",
+        runId: "run-b",
         stageId: "task_finished",
       },
       summary: "Task finished.",
@@ -54,15 +57,16 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
     assert.equal(taskScopedRecords.length, 1);
     assert.equal(taskScopedRecords[0]?.recordId, recordId);
     const taskBucket = JSON.parse(
-      await readFile(path.join(storageRoot, "records", "task-1.json"), "utf8"),
+      await readFile(path.join(storageRoot, "records", "task-1_run-a.json"), "utf8"),
     ) as Array<{
       recordId: string;
-      scope: { taskId: string; stageId: string };
+      scope: { taskId: string; runId: string; stageId: string };
     }>;
     assert.equal(taskBucket.length, 1);
     assert.equal(taskBucket[0]?.recordId, recordId);
     assert.deepEqual(taskBucket[0]?.scope, {
       taskId: "task-1",
+      runId: "run-a",
       stageId: "implementation",
     });
   } finally {
@@ -83,12 +87,15 @@ async function testHistoryStoreMirrorsAllCategoriesIntoWorkspaceTraceDirectory()
   try {
     const store = new HistoryStoreService(
       storageRoot,
-      (taskId) => (taskId === "task-history" ? workspaceRoot : undefined),
+      (taskId) => (taskId === "task-history"
+        ? { workspaceRoot, runId: "run-history" }
+        : undefined),
     );
     const recordId = await store.writeRecord({
       category: "review",
       scope: {
         taskId: "task-history",
+        runId: "run-history",
         stageId: "architecture_design",
       },
       summary: "Review comment captured.",
@@ -99,13 +106,13 @@ async function testHistoryStoreMirrorsAllCategoriesIntoWorkspaceTraceDirectory()
 
     const mirroredRecord = JSON.parse(
       await readFile(
-        path.join(workspaceRoot, "sdlc", "trace", "task-history.json"),
+        path.join(workspaceRoot, "sdlc", "trace", "task-history_run-history.json"),
         "utf8",
       ),
     ) as Array<{
       recordId: string;
       category: string;
-      scope: { taskId: string; stageId: string };
+      scope: { taskId: string; runId: string; stageId: string };
       summary: string;
       payload: Record<string, unknown>;
     }>;
@@ -115,6 +122,7 @@ async function testHistoryStoreMirrorsAllCategoriesIntoWorkspaceTraceDirectory()
     assert.equal(mirroredRecord[0]?.category, "review");
     assert.deepEqual(mirroredRecord[0]?.scope, {
       taskId: "task-history",
+      runId: "run-history",
       stageId: "architecture_design",
     });
     assert.equal(mirroredRecord[0]?.summary, "Review comment captured.");
@@ -138,6 +146,7 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
         category: "trace",
         scope: {
           taskId: "",
+          runId: "run-invalid",
           stageId: "architecture_design",
         },
         summary: "Missing task id.",
@@ -146,10 +155,26 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
       /taskId/,
     );
 
+    await assert.rejects(
+      store.writeRecord({
+        category: "trace",
+        scope: {
+          taskId: "task-1",
+          runId: "",
+          stageId: null,
+        },
+        summary: "Missing run id.",
+        payload: {},
+      }),
+      /runId/,
+    );
+
     const recordId = await store.writeRecord({
       category: "trace",
       scope: {
         taskId: "task-1",
+        runId: "run-1",
+        stageId: null,
       },
       summary: "Missing stage id is allowed.",
       payload: {},
@@ -157,6 +182,8 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
     const record = await store.getRecord(recordId);
     assert.deepEqual(record.scope, {
       taskId: "task-1",
+      runId: "run-1",
+      stageId: null,
     });
   } finally {
     await rm(storageRoot, { recursive: true, force: true });

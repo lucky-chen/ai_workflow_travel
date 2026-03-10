@@ -15,6 +15,7 @@ import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js"
 import { LaunchValidator } from "./launch-validator.js";
 import { StageRegistry } from "./stage-registry.js";
 import { TaskRuntimeStore } from "./task-runtime-store.js";
+import { TraceService } from "../../quality-gate/trace/trace-recorder.js";
 
 export interface PipelineServiceDependencies {
   registry: StageRegistry;
@@ -41,129 +42,141 @@ export class PipelineService implements IPipeline {
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
     const triggerReason = request.triggerReason ?? "new_run";
     const taskId = request.taskId ?? this.createTaskId();
-    this.registry.validate();
-    this.launchValidator.validate(request, this.registry);
+    const runId = this.createRunId();
+    const runTask = async (): Promise<TaskId> => {
+      this.registry.validate();
+      this.launchValidator.validate(request, this.registry);
 
-    if (triggerReason === "new_run" || !this.getTaskRecord(taskId)) {
-      this.taskRuntimeStore.createTask(taskId, request.startStageId, request.workspaceRoot, request.inputArtifacts);
-    } else {
-      const existingTask = this.getTaskRecord(taskId);
-      if (!existingTask) {
-        throw new Error(`Task "${taskId}" is not registered.`);
+      if (triggerReason === "new_run" || !this.getTaskRecord(taskId)) {
+        this.taskRuntimeStore.createTask(taskId, request.startStageId, request.workspaceRoot, request.inputArtifacts, runId);
+      } else {
+        const existingTask = this.getTaskRecord(taskId);
+        if (!existingTask) {
+          throw new Error(`Task "${taskId}" is not registered.`);
+        }
+
+        this.taskRuntimeStore.updateTask(taskId, {
+          runId,
+          startStageId: request.startStageId,
+          currentStageId: request.startStageId,
+          attempt: existingTask.attempt + 1,
+          status: "pending",
+          workspaceRoot: request.workspaceRoot,
+          inputArtifacts: request.inputArtifacts,
+          lastOutput: undefined,
+        });
       }
 
       this.taskRuntimeStore.updateTask(taskId, {
-        startStageId: request.startStageId,
-        currentStageId: request.startStageId,
-        attempt: existingTask.attempt + 1,
-        status: "pending",
-        workspaceRoot: request.workspaceRoot,
-        inputArtifacts: request.inputArtifacts,
-        lastOutput: undefined,
+        status: "running",
       });
-    }
+      await this.traceRecorder?.recordTrace({
+        caller: "PipelineService.launchTask",
+        stageId: request.startStageId,
+        eventType: TRACE_EVENT_TYPES.taskStarted,
+        summary: `Task "${taskId}" started at stage "${request.startStageId}".`,
+      });
 
-    this.taskRuntimeStore.updateTask(taskId, {
-      status: "running",
-    });
-    await this.traceRecorder?.recordTrace({
-      taskId,
-      caller: "PipelineService.launchTask",
-      stageId: request.startStageId,
-      eventType: TRACE_EVENT_TYPES.taskStarted,
-      summary: `Task "${taskId}" started at stage "${request.startStageId}".`,
-    });
+      let currentStageId: StageId | undefined = request.startStageId;
+      let currentInputArtifacts: ArtifactMap = request.inputArtifacts;
 
-    let currentStageId: StageId | undefined = request.startStageId;
-    let currentInputArtifacts: ArtifactMap = request.inputArtifacts;
+      while (currentStageId) {
+        const stage = this.registry.get(currentStageId);
+        const context: StageRunContext = {
+          taskId,
+          runId: this.getTaskRecord(taskId)?.runId ?? runId,
+          stageId: currentStageId,
+          attempt: this.getTaskRecord(taskId)?.attempt ?? 1,
+          workspaceRoot: request.workspaceRoot,
+          inputArtifacts: currentInputArtifacts,
+          params: request.params,
+        };
 
-    while (currentStageId) {
-      const stage = this.registry.get(currentStageId);
-      const context: StageRunContext = {
-        taskId,
-        stageId: currentStageId,
-        attempt: this.getTaskRecord(taskId)?.attempt ?? 1,
-        workspaceRoot: request.workspaceRoot,
-        inputArtifacts: currentInputArtifacts,
-        params: request.params,
-      };
+        let output: StageOutput;
+        try {
+          output = await stage.runner.run(context);
+        } catch (error) {
+          this.taskRuntimeStore.updateTask(taskId, {
+            currentStageId,
+            inputArtifacts: currentInputArtifacts,
+            status: "failed",
+          });
+          await this.traceRecorder?.recordTrace({
+            caller: "PipelineService.launchTask",
+            stageId: currentStageId,
+            eventType: TRACE_EVENT_TYPES.stageFailed,
+            summary: error instanceof Error
+              ? error.message
+              : `Stage "${currentStageId}" failed.`,
+          });
+          break;
+        }
 
-      let output: StageOutput;
-      try {
-        output = await stage.runner.run(context);
-      } catch (error) {
         this.taskRuntimeStore.updateTask(taskId, {
           currentStageId,
           inputArtifacts: currentInputArtifacts,
-          status: "failed",
+          lastOutput: output,
         });
-        await this.traceRecorder?.recordTrace({
+
+        if (this.resolveStageStatus(output) === "failed") {
+          this.taskRuntimeStore.updateTask(taskId, {
+            status: "failed",
+          });
+          await this.traceRecorder?.recordTrace({
+            caller: "PipelineService.launchTask",
+            stageId: currentStageId,
+            eventType: TRACE_EVENT_TYPES.stageFailed,
+            summary: `Stage "${currentStageId}" failed.`,
+          });
+          break;
+        }
+
+        const continuation = await this.runStageContinuation(stage, {
           taskId,
-          caller: "PipelineService.launchTask",
           stageId: currentStageId,
-          eventType: TRACE_EVENT_TYPES.stageFailed,
-          summary: error instanceof Error
-            ? error.message
-            : `Stage "${currentStageId}" failed.`,
+          nextStageId: stage.nextStageId,
+          attempt: context.attempt,
+          workspaceRoot: request.workspaceRoot,
+          inputArtifacts: currentInputArtifacts,
+          stageOutput: output,
+          params: request.params,
         });
-        break;
+        if (continuation) {
+          currentInputArtifacts = continuation.nextInputArtifacts;
+          currentStageId = continuation.nextStageId;
+          continue;
+        }
+
+        currentInputArtifacts = this.mergeInputArtifacts(currentInputArtifacts, output);
+        currentStageId = stage.nextStageId ?? undefined;
       }
 
-      this.taskRuntimeStore.updateTask(taskId, {
-        currentStageId,
-        inputArtifacts: currentInputArtifacts,
-        lastOutput: output,
-      });
-
-      if (this.resolveStageStatus(output) === "failed") {
+      if (this.getTaskStatus(taskId) === "running") {
         this.taskRuntimeStore.updateTask(taskId, {
-          status: "failed",
+          status: "completed",
         });
-        await this.traceRecorder?.recordTrace({
-          taskId,
-          caller: "PipelineService.launchTask",
-          stageId: currentStageId,
-          eventType: TRACE_EVENT_TYPES.stageFailed,
-          summary: `Stage "${currentStageId}" failed.`,
-        });
-        break;
       }
 
-      const continuation = await this.runStageContinuation(stage, {
-        taskId,
-        stageId: currentStageId,
-        nextStageId: stage.nextStageId,
-        attempt: context.attempt,
-        workspaceRoot: request.workspaceRoot,
-        inputArtifacts: currentInputArtifacts,
-        stageOutput: output,
-        params: request.params,
+      await this.traceRecorder?.recordTrace({
+        caller: "PipelineService.launchTask",
+        stageId: this.getTaskRecord(taskId)?.currentStageId ?? request.startStageId,
+        eventType: TRACE_EVENT_TYPES.taskFinished,
+        summary: `Task "${taskId}" finished.`,
       });
-      if (continuation) {
-        currentInputArtifacts = continuation.nextInputArtifacts;
-        currentStageId = continuation.nextStageId;
-        continue;
+
+      return taskId;
+    };
+
+    if (this.traceRecorder instanceof TraceService) {
+      this.traceRecorder.setScope({ taskId, runId });
+      try {
+        return await runTask();
+      } finally {
+        this.traceRecorder.setScope(undefined);
       }
-
-      currentInputArtifacts = this.mergeInputArtifacts(currentInputArtifacts, output);
-      currentStageId = stage.nextStageId ?? undefined;
     }
 
-    if (this.getTaskStatus(taskId) === "running") {
-      this.taskRuntimeStore.updateTask(taskId, {
-        status: "completed",
-      });
-    }
-
-    await this.traceRecorder?.recordTrace({
-      taskId,
-      caller: "PipelineService.launchTask",
-      stageId: this.getTaskRecord(taskId)?.currentStageId ?? request.startStageId,
-      eventType: TRACE_EVENT_TYPES.taskFinished,
-      summary: `Task "${taskId}" finished.`,
-    });
-
-    return taskId;
+    return runTask();
   }
 
   getLastOutput(taskId: TaskId): StageOutput | undefined {
@@ -180,6 +193,10 @@ export class PipelineService implements IPipeline {
 
   private createTaskId(): TaskId {
     return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private createRunId(): string {
+    return `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
   private resolveStageStatus(output: StageOutput): "completed" | "failed" {
@@ -252,7 +269,6 @@ export class PipelineService implements IPipeline {
           status: "failed",
         });
         await this.traceRecorder?.recordTrace({
-          taskId: context.taskId,
           caller: "PipelineService.runStageContinuation",
           stageId,
           eventType: TRACE_EVENT_TYPES.stageFailed,

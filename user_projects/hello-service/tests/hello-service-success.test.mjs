@@ -6,6 +6,8 @@ import {
   createHelloServiceImplementationPlanDocument,
   createHelloServiceModuleDesignDocument,
   createHelloServiceRequirementDocument,
+  findTraceFilePath,
+  loadAllTraceRecords,
   resetWorkspace,
   runCli,
   workspaceRoot,
@@ -51,11 +53,10 @@ export async function runHelloServiceSuccessTest() {
     await readFile(path.join(workspaceRoot, "src", "index.ts"), "utf8"),
     'export function hello(): string {\n  return "hello-service";\n}\n',
   );
-  await access(path.join(workspaceRoot, "sdlc", "trace", `${baselineTaskId}.json`));
+  const traceFilePath = await findTraceFilePath(baselineTaskId);
+  await access(traceFilePath);
 
-  const traceRecords = JSON.parse(
-    await readFile(path.join(workspaceRoot, "sdlc", "trace", `${baselineTaskId}.json`), "utf8"),
-  );
+  const traceRecords = await loadAllTraceRecords(baselineTaskId);
   assert.deepEqual(
     new Set(traceRecords.map((entry) => entry.category)),
     new Set(["trace", "contract", "review", "artifact"]),

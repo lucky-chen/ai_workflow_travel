@@ -15,7 +15,6 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
   async run(context: StageRunContext): Promise<StageOutput> {
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.run`,
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.generationStarted,
       summary: `Generation started for stage "${context.stageId}".`,
@@ -29,7 +28,6 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
 
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.run`,
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.generationFinished,
       summary: output.summary,

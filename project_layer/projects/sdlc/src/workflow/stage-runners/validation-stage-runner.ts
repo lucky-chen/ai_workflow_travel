@@ -41,7 +41,6 @@ export class ValidationStageRunner implements IStageRunner {
   async run(context: StageRunContext): Promise<ValidationStageOutput> {
     await this.dependencies.traceRecorder?.recordTrace({
       caller: "ValidationStageRunner.run",
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
       summary: `Stage "${context.stageId}" started.`,
@@ -54,7 +53,6 @@ export class ValidationStageRunner implements IStageRunner {
 
     await this.dependencies.traceRecorder?.recordTrace({
       caller: "ValidationStageRunner.run",
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.validationFinished,
       summary: output.summary,
@@ -68,7 +66,6 @@ export class ValidationStageRunner implements IStageRunner {
       const decision = await this.dependencies.changeGate.review(this.buildReviewRequest(context, output));
       await this.dependencies.traceRecorder?.recordTrace({
         caller: "ValidationStageRunner.run",
-        taskId: context.taskId,
         stageId: context.stageId,
         eventType: TRACE_EVENT_TYPES.gateReviewed,
         summary: decision.summary,
@@ -93,7 +90,6 @@ export class ValidationStageRunner implements IStageRunner {
 
       await this.dependencies.traceRecorder?.recordTrace({
         caller: "ValidationStageRunner.run",
-        taskId: context.taskId,
         stageId: context.stageId,
         eventType: TRACE_EVENT_TYPES.artifactPersisted,
         summary: `Validation result persisted to ${VALIDATION_ARTIFACT_PATH}.`,

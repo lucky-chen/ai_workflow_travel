@@ -307,7 +307,6 @@ export class ImplementationStageRunner extends BaseStageRunner {
   ): Promise<void> {
     await this.traceRecorder?.recordTrace({
       caller: "ImplementationStageRunner.recordFinalStepResult",
-      taskId: context.taskId,
       stageId: context.stageId,
       eventType: TRACE_EVENT_TYPES.stepCompleted,
       summary: `Implementation batch "${batchId}" completed and accepted.`,

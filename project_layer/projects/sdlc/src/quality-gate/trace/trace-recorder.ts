@@ -1,6 +1,6 @@
 // Trace recorder module: records task and stage events in memory for workflow visibility.
 import type { TraceRef } from "../../shared/types/common.js";
-import type { ITraceRecorder, TraceEvent } from "../../shared/contracts/pipeline.js";
+import type { ITraceRecorder, TraceEvent, TraceScope } from "../../shared/contracts/pipeline.js";
 import { HistoryStoreService } from "../../data/history-store/history-store.js";
 
 export class InMemoryTraceRecorder implements ITraceRecorder {
@@ -29,10 +29,25 @@ export class InMemoryTraceRecorder implements ITraceRecorder {
 }
 
 export class TraceService implements ITraceRecorder {
-  constructor(private readonly historyStore: HistoryStoreService) {}
+  private scope?: TraceScope;
+
+  constructor(
+    private readonly historyStore: HistoryStoreService,
+    scope?: TraceScope,
+  ) {
+    this.scope = scope;
+  }
 
   async recordTrace(event: TraceEvent): Promise<TraceRef> {
-    this.validateTraceEvent(event);
+    const taskId = event.taskId ?? this.scope?.taskId;
+    const runId = event.runId ?? this.scope?.runId;
+    this.validateTraceEvent({
+      ...event,
+      taskId,
+      runId,
+    });
+    const resolvedTaskId = taskId as string;
+    const resolvedRunId = runId as string;
     const payload = event.payload && Object.keys(event.payload).length > 0
       ? event.payload
       : {
@@ -44,15 +59,28 @@ export class TraceService implements ITraceRecorder {
       category: event.category ?? "trace",
       caller: event.caller,
       scope: {
-        taskId: event.taskId,
-        ...(event.stageId ? { stageId: event.stageId } : {}),
+        taskId: resolvedTaskId,
+        runId: resolvedRunId,
+        stageId: event.stageId ?? null,
       },
       summary: event.summary,
       payload,
     });
   }
 
+  setScope(scope?: TraceScope): void {
+    this.scope = scope;
+  }
+
   private validateTraceEvent(event: TraceEvent): void {
+    if (!event.taskId?.trim()) {
+      throw new Error('Trace event requires a non-empty "taskId".');
+    }
+
+    if (!event.runId?.trim()) {
+      throw new Error('Trace event requires a non-empty "runId".');
+    }
+
     if (!event.caller?.trim()) {
       throw new Error('Trace event requires a non-empty "caller".');
     }
