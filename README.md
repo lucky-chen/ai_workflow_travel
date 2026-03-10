@@ -109,6 +109,10 @@ Main outputs:
   - [x] Agent abstraction, runtime execution loop, and trace integration
   - [ ] AgentRuntime V2 memory support
   - [ ] AgentRuntime-managed multi-turn continuation
+- `hello-service`
+  - [x] baseline capability black-box test
+  - [ ] llm call chain black-box test
+  - [x] validate complete SDLC capability with hello-service
 - `AI Travel`
   - [ ] AI Travel end-to-end delivery goal
   - [ ] AI Travel output quality and controllability improvement

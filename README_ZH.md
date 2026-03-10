@@ -109,6 +109,10 @@
   - [x] Agent 抽象、runtime 执行循环与 trace 集成
   - [ ] AgentRuntime V2 memory support
   - [ ] AgentRuntime-managed multi-turn continuation
+- `hello-service`
+  - [x] 基线能力黑盒测试
+  - [ ] LLM 调用链路黑盒测试
+  - [x] 用 hello-service 验证完备的 SDLC 能力
 - `AI Travel`
   - [ ] AI Travel 端到端交付目标
   - [ ] AI Travel 输出质量与可控性提升
