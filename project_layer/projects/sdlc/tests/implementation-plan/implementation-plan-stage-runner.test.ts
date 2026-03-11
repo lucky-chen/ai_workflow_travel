@@ -11,7 +11,7 @@ import {
   resolveImplementationPlanArtifactPath,
   resolveModuleDesignArtifactPath,
   resolveRequirementArtifactPath,
-  resolveStageContractFailureArtifactPath,
+  resolveStageGeneratedArtifactPath,
 } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runImplementationPlanStageRunnerTests(): Promise<void> {
@@ -57,6 +57,16 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(workspa
     await readFile(path.join(workspaceRoot, implementationPlanPath), "utf8"),
     content,
   );
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "CodeGenerationExecutionPlan.generated.md"),
+      ),
+      "utf8",
+    ),
+    content,
+  );
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
     "generation_started",
@@ -91,6 +101,16 @@ async function testImplementationPlanStageRunnerRejectStopsPersistence(workspace
   );
 
   await assert.rejects(access(path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot))));
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "CodeGenerationExecutionPlan.generated.md"),
+      ),
+      "utf8",
+    ),
+    createImplementationPlanDocument(),
+  );
 }
 
 async function testImplementationPlanStageRunnerContractFailure(
@@ -112,14 +132,16 @@ async function testImplementationPlanStageRunnerContractFailure(
     }),
     /Implementation plan contract failed:/,
   );
-  const failureArtifact = JSON.parse(
+  assert.equal(
     await readFile(
-      path.join(workspaceRoot, resolveStageContractFailureArtifactPath(workspaceRoot, "implementation_plan")),
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "CodeGenerationExecutionPlan.generated.md"),
+      ),
       "utf8",
     ),
-  ) as { failedAt: string; summary: string };
-  assert.equal(failureArtifact.failedAt, "contract_check");
-  assert.equal(failureArtifact.summary, "Implementation workplan failed contract checks.");
+    "# Code Generation Execution Plan\nBroken",
+  );
 }
 
 function createInputArtifacts() {

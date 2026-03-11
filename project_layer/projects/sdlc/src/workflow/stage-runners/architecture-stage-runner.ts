@@ -40,10 +40,10 @@ export class ArchitectureStageRunner extends BaseStageRunner {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ArchitectureDesignArtifacts>;
+    await this.persistGeneratedStageArtifact(context, output, "TechnicalArchitecture.generated.md");
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
-      await this.persistContractFailureReview(context, output, contractResult);
       throw new Error(`Architecture contract failed: ${contractResult.summary}`);
     }
 

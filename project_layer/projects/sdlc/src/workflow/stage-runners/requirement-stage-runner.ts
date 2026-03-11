@@ -25,10 +25,10 @@ export class RequirementStageRunner extends BaseStageRunner {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context);
+    await this.persistGeneratedStageArtifact(context, output, "Requirement.generated.md");
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
-      await this.persistContractFailureReview(context, output, contractResult);
       throw new Error(`Requirement contract failed: ${contractResult.summary}`);
     }
 

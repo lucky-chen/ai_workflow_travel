@@ -41,10 +41,14 @@ export class ModuleStageRunner extends BaseStageRunner {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ModuleDesignArtifacts>;
+    await this.persistGeneratedStageArtifact(
+      context,
+      output,
+      `${output.artifacts.moduleName}.generated.md`,
+    );
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
-      await this.persistContractFailureReview(context, output, contractResult);
       throw new Error(`Module design contract failed: ${contractResult.summary}`);
     }
 

@@ -6,7 +6,10 @@ import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-ga
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { RequirementStageRunner } from "../../src/workflow/stage-runners/requirement-stage-runner.js";
-import { resolveRequirementArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
+import {
+  resolveRequirementArtifactPath,
+  resolveStageGeneratedArtifactPath,
+} from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runRequirementStageRunnerTests(): Promise<void> {
   const workspaceRoot = await createTempDir("requirement-workspace-");
@@ -42,6 +45,16 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(workspaceRoot:
   assert.equal(output.artifacts.requirement_document, resolveRequirementArtifactPath(workspaceRoot));
   assert.equal(
     await readFile(path.join(workspaceRoot, resolveRequirementArtifactPath(workspaceRoot)), "utf8"),
+    content,
+  );
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "requirement_interpretation", "Requirement.generated.md"),
+      ),
+      "utf8",
+    ),
     content,
   );
   assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, [
@@ -87,6 +100,16 @@ async function testRequirementStageRunnerRejectStopsPersistence(workspaceRoot: s
   );
 
   await assert.rejects(access(path.join(workspaceRoot, resolveRequirementArtifactPath(workspaceRoot))));
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "requirement_interpretation", "Requirement.generated.md"),
+      ),
+      "utf8",
+    ),
+    createRequirementDocument(),
+  );
 }
 
 async function createTempDir(prefix: string): Promise<string> {

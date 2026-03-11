@@ -8,7 +8,7 @@ import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../.
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
 import {
   resolveArchitectureArtifactPath,
-  resolveStageContractFailureArtifactPath,
+  resolveStageGeneratedArtifactPath,
 } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runArchitectureStageRunnerTests(): Promise<void> {
@@ -46,6 +46,16 @@ async function testArchitectureStageRunnerPersistsAcceptedDocument(workspaceRoot
   assert.equal(output.artifacts.architecture_document, resolveArchitectureArtifactPath(workspaceRoot));
   assert.equal(
     await readFile(path.join(workspaceRoot, resolveArchitectureArtifactPath(workspaceRoot)), "utf8"),
+    content,
+  );
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "architecture_design", "TechnicalArchitecture.generated.md"),
+      ),
+      "utf8",
+    ),
     content,
   );
   const generationFinishedEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "generation_finished");
@@ -101,6 +111,16 @@ async function testArchitectureStageRunnerRejectStopsPersistence(workspaceRoot: 
   );
 
   await assert.rejects(access(path.join(workspaceRoot, resolveArchitectureArtifactPath(workspaceRoot))));
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "architecture_design", "TechnicalArchitecture.generated.md"),
+      ),
+      "utf8",
+    ),
+    createArchitectureDocument(),
+  );
 }
 
 async function testArchitectureStageRunnerContractFailure(
@@ -124,14 +144,16 @@ async function testArchitectureStageRunnerContractFailure(
     }),
     /Architecture contract failed:/,
   );
-  const failureArtifact = JSON.parse(
+  assert.equal(
     await readFile(
-      path.join(workspaceRoot, resolveStageContractFailureArtifactPath(workspaceRoot, "architecture_design")),
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "architecture_design", "TechnicalArchitecture.generated.md"),
+      ),
       "utf8",
     ),
-  ) as { failedAt: string; summary: string };
-  assert.equal(failureArtifact.failedAt, "contract_check");
-  assert.equal(failureArtifact.summary, "Architecture design document failed contract checks.");
+    "# 1. Purpose\nBroken output",
+  );
 }
 
 async function createTempDir(prefix: string): Promise<string> {

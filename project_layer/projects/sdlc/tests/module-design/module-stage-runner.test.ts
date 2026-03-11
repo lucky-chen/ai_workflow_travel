@@ -8,7 +8,7 @@ import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../.
 import { ModuleStageRunner } from "../../src/workflow/stage-runners/module-stage-runner.js";
 import {
   resolveModuleDesignArtifactPath,
-  resolveStageContractFailureArtifactPath,
+  resolveStageGeneratedArtifactPath,
 } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
 
 export async function runModuleStageRunnerTests(): Promise<void> {
@@ -53,6 +53,16 @@ async function testModuleStageRunnerPersistsAcceptedDocument(workspaceRoot: stri
     await readFile(path.join(workspaceRoot, "docs/design/workflow-module.md"), "utf8"),
     content,
   );
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "module_design", "Workflow.generated.md"),
+      ),
+      "utf8",
+    ),
+    content,
+  );
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
     "generation_started",
@@ -94,6 +104,16 @@ async function testModuleStageRunnerRejectStopsPersistence(workspaceRoot: string
   );
 
   await assert.rejects(access(path.join(workspaceRoot, "docs/design/workflow-module.md")));
+  assert.equal(
+    await readFile(
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "module_design", "Workflow.generated.md"),
+      ),
+      "utf8",
+    ),
+    createModuleDesignDocument(),
+  );
 }
 
 async function testModuleStageRunnerContractFailure(
@@ -122,14 +142,16 @@ async function testModuleStageRunnerContractFailure(
     }),
     /Module design contract failed:/,
   );
-  const failureArtifact = JSON.parse(
+  assert.equal(
     await readFile(
-      path.join(workspaceRoot, resolveStageContractFailureArtifactPath(workspaceRoot, "module_design")),
+      path.join(
+        workspaceRoot,
+        resolveStageGeneratedArtifactPath(workspaceRoot, "module_design", "Workflow.generated.md"),
+      ),
       "utf8",
     ),
-  ) as { failedAt: string; summary: string };
-  assert.equal(failureArtifact.failedAt, "contract_check");
-  assert.equal(failureArtifact.summary, "Module design document failed contract checks.");
+    "# Workflow Design\n\nBroken output",
+  );
 }
 
 async function createTempDir(prefix: string): Promise<string> {

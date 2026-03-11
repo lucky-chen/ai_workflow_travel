@@ -28,6 +28,6 @@ export function resolveModuleDesignArtifactPath(workspaceRoot: string, moduleNam
   return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "module_design", `${moduleName}.md`);
 }
 
-export function resolveStageContractFailureArtifactPath(workspaceRoot: string, stageId: string): string {
-  return resolveRelativeWorkspacePath(workspaceRoot, "dist", "sdlc", "stage", stageId, "contract-failure.json");
+export function resolveStageGeneratedArtifactPath(workspaceRoot: string, stageId: string, fileName: string): string {
+  return resolveRelativeWorkspacePath(workspaceRoot, "dist", "sdlc", "stage", stageId, fileName);
 }

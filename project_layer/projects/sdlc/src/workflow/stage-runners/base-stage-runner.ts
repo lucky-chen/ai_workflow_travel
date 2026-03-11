@@ -19,7 +19,7 @@ import {
   resolveImplementationPlanArtifactPath,
   resolveModuleDesignDirectoryPath,
   resolveRequirementArtifactPath,
-  resolveStageContractFailureArtifactPath,
+  resolveStageGeneratedArtifactPath,
 } from "./stage-artifact-paths.js";
 
 export interface BaseStageRunnerDependencies extends StageRunnerSharedDependencies {
@@ -143,24 +143,22 @@ export abstract class BaseStageRunner implements IStageRunner {
     await writeFile(targetPath, content, "utf8");
   }
 
-  protected async persistContractFailureReview(
+  protected async persistGeneratedStageArtifact(
     context: StageRunContext,
     output: StageOutput,
-    result: ContractCheckResult,
+    fileName: string,
   ): Promise<string> {
-    const artifactPath = resolveStageContractFailureArtifactPath(context.workspaceRoot, context.stageId);
+    const artifacts = output.artifacts as Record<string, unknown> | undefined;
+    const content = artifacts?.content;
+    if (typeof content !== "string" || content.trim().length === 0) {
+      throw new Error(`Stage "${context.stageId}" generated output must include non-empty artifacts.content.`);
+    }
+
+    const artifactPath = resolveStageGeneratedArtifactPath(context.workspaceRoot, context.stageId, fileName);
     await this.writeWorkspaceFile(
       context,
       artifactPath,
-      `${JSON.stringify({
-        stageId: context.stageId,
-        taskId: context.taskId,
-        attempt: context.attempt,
-        failedAt: "contract_check",
-        summary: result.summary,
-        issues: result.issues,
-        output,
-      }, null, 2)}\n`,
+      content,
     );
     return artifactPath;
   }
