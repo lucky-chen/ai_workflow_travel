@@ -576,6 +576,19 @@ This step delivers the shared runtime backbone used by all stages.
   - [ ] verify validation output confirms the expanded `TravelAi` target remains runnable
   - [ ] confirm `TravelAi` validates a more complete SDLC capability scope
 
+### Deferred Architecture Modeling Todo
+
+- [ ] define an `ArchitectureModel` intermediate artifact parsed from architecture documents
+- [ ] model `layers` as first-class architecture descriptors
+- [ ] model `modules` with explicit owning `layer`
+- [ ] model `designItems` as architecture breakdown work items instead of assuming every item is a single module
+- [ ] model `relationships` for layer-level and module-level dependency or interaction constraints
+- [ ] make `architecture_design` emit the parsed architecture model alongside markdown artifacts
+- [ ] make `module_design` consume structured design-item context instead of relying only on prose architecture input
+- [ ] make `implementation_plan` consume the same structured design-item context to constrain plan scope and task splitting
+- [ ] use the parsed architecture model in downstream validation and out-of-scope checks
+- [ ] document the architecture-model parsing source mapping from `4.2`, `5.2`, `5.3`, and `7.2`
+
 ## 4. Current Status Summary
 
 - [x] Step 1 has a usable V1 backbone

@@ -42,6 +42,15 @@ This document defines the shared collaboration standard for all work under `proj
 - Avoid mixing unrelated refactors, behavior changes, and architecture adjustments into the same batch when they can be separated.
 - Do not submit one oversized change set when the work can be delivered in smaller reviewable increments.
 
+## 3.3 Communication Standard
+
+- Communication must prioritize logic, structure, and direct reasoning.
+- Avoid filler phrases, rhetorical summaries, and verbal padding such as "一句话", "简单说", or equivalent low-information transitions.
+- Do not restate the same conclusion multiple times with different wording.
+- Prefer a single clear statement of conclusion, followed by supporting reasons or impact when needed.
+- Keep emotional tone out of technical discussion. Avoid reassurance, cheerleading, or expressive language that does not add decision value.
+- When a conclusion is uncertain, state the uncertainty, the reason, and the current best judgment directly.
+
 ## 4. Git Commit Rule
 
 - After each completed round of engineering file changes, Codex must create one git commit.
