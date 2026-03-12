@@ -2,24 +2,24 @@
 
 ## 1. Purpose
 
-Define the overall technical architecture of the `Text Validation Product` platform.
+Define the overall technical architecture of the Text Validation Client-Server platform.
 
-- **Team members**: provide a shared high-level baseline for understanding the system's client-server structure and validation flow.
-- **Senior engineers**: review architecture direction and boundaries to ensure the product remains focused on its minimal validation purpose.
-- **Junior engineers**: understand the simple system and module structure as a foundation for future design or implementation work.
+- Team members: provide a shared high-level baseline for the team.
+- Senior engineers: review architecture direction and boundaries.
+- Junior engineers: understand system and module structure for later design and implementation.
 
 ## 2. Scope
 
 ### 2.1 In Scope
 - Overall system interaction and control flow at architecture level.
 - Major modules or subsystems and their responsibilities at architecture level.
-- Collaboration boundaries and dependency direction between the client and server.
-- Key architecture constraints related to simplicity, predictability, and the fixed response contract.
+- Collaboration boundaries and dependency direction between major parts of the system.
+- Key architecture constraints related to reliability, operability, security, scalability, or evolution.
 
 ### 2.2 Out of Scope
 - Detailed module internals and implementation logic.
 - Detailed API contracts, message formats, and parameter definitions inside each module.
-- Database schema details and storage-level design (no persistent storage is required).
+- Database schema details and storage-level design.
 - UI-level interaction design and visual behavior details.
 - Deployment runbooks, environment setup, and operational procedures.
 
@@ -28,57 +28,51 @@ Cross-module interaction contracts are covered at a lightweight shared-boundary 
 ---
 
 ## 3. Design Drivers
-- **Functional Driver: Minimal Validation Scenario**: The architecture must be structured to support exactly one clear client-server text request and response interaction, as this is the core product ability.
-- **Functional Driver: Predictable Output**: The fixed response pattern (input text + "from server") is a key product constraint that must be enforced by the server-side architecture.
-- **Non-Functional Driver: Simplicity & Maintainability**: The architecture must prioritize a simple, understandable structure to serve as a stable validation target, avoiding unnecessary complexity that would obscure the validation flow.
-- **Non-Functional Driver: Repeatability**: The architecture must support stateless, idempotent interactions to enable repeated testing with consistent results.
+- **Functional Driver**: Support a single, clear text request-response validation interaction.
+- **Verifiability Driver**: Return predictable, easily verifiable content for test confirmation.
+- **Simplicity Driver**: Maintain minimal scope and architectural complexity to serve as a stable validation target.
+- **Repeatability Driver**: Support consistent, repeated test execution without side effects.
+- **Clarity Driver**: Preserve a clear client-server interaction pattern that mirrors real program flow.
 
 ---
 
 # 4. Architecture Design
 
 ### 4.1 Architecture Style
-The system adopts a **layered client-server** architecture. This style clearly separates client-side presentation and request initiation from server-side request processing and response generation, directly reflecting the required user journey.
+The system adopts a **Client-Server** architecture.
 
 ### 4.2 Layers or Partitions
-- **Client Layer**: Responsible for providing a user interface for text input, initiating requests to the server, and displaying the validation response.
-- **Server Layer**: Responsible for receiving client requests, processing the input text by appending the fixed suffix, and returning the formatted response.
+- **ClientLayer**: Responsible for user input capture, request dispatch, and response presentation.
+- **ServerLayer**: Responsible for request reception, text processing, and response generation.
 
 ### 4.3 Allowed Dependencies
 ALLOW:
-- `Client Layer` -> `Server Layer` (for submitting validation requests)
+- `ClientLayer` -> `ServerLayer`
+- `ServerLayer` -> (none - for V1)
 
 ### 4.4 High-level Diagram
 ```text
-            [User]
-               |
-               v
-        +--------------+
-        | Client Layer |
-        | (UI / Logic) |
-        +--------------+
-               |
-               | (HTTP Request: Text)
-               v
-        +--------------+
-        | Server Layer |
-        | (Validation  |
-        |   Service)   |
-        +--------------+
-               |
-               | (HTTP Response: Text + "from server")
-               v
-            [User]
+    +------------+         HTTP POST         +------------+
+    |            | ----------------------->  |            |
+    |   Client   |                           |   Server   |
+    |   Layer    | <-----------------------  |   Layer    |
+    |            |        HTTP 200 OK        |            |
+    +------------+                           +------------+
+         |                                        |
+         | User Input Text                        | Appends suffix
+         |                                        | "from server"
+         v                                        v
+    [Text Input]                           [Text Processor]
 ```
 
 ### 4.5 Runtime Topology
-- **Client Runtime**: Typically a web browser or a simple standalone application. It hosts the Client Layer.
-- **Server Runtime**: A single, stateless application server process (e.g., a web server). It hosts the Server Layer.
-- **Shared Infrastructure**: A network (HTTP/HTTPS) connecting the client and server runtimes.
+- **ClientRuntime**: A web browser or lightweight standalone application hosting the client interface.
+- **ServerRuntime**: A single HTTP server instance handling validation requests.
+- **SharedInfrastructure**: Network connectivity between client and server.
 
 ### 4.6 Technology Choices
-- **Client Layer**: A simple HTML/JavaScript web interface or a lightweight desktop framework. Chosen for rapid development, ease of access for testers, and clear separation of concerns.
-- **Server Layer**: A lightweight web application framework (Node.js). Chosen for simplicity, fast request handling, and ease of maintaining the stateless, fixed-response logic.
+- **ClientLayer**: HTML/JavaScript for web-based validation; allows quick access and minimal setup for testers.
+- **ServerLayer**: Lightweight HTTP server framework (e.g., node.js) for V1; chosen for simplicity and fast implementation of the single endpoint.
 
 ---
 
@@ -86,57 +80,114 @@ ALLOW:
 
 ### 5.1 Primary Interaction Path
 ```text
-User -> ClientUI -> ClientNetwork -> ServerEndpoint -> ValidationService -> ServerNetwork -> ClientUI -> User
+[User] -> [ClientInterface] -> [ClientLayer] -> [ServerEndpoint] -> [ServerLayer] -> [Response] -> [ClientLayer] -> [User]
 ```
 
-1.  **User Input & Request Initiation**: The user enters text into the Client UI and triggers a submission.
-2.  **Request Transmission**: The Client Layer packages the text into an HTTP request and sends it to a predefined Server Layer endpoint.
-3.  **Request Processing**: The Server Layer receives the request, extracts the text, and applies the business rule (appends "from server").
-4.  **Response Transmission**: The Server Layer packages the formatted result into an HTTP response and sends it back to the client.
-5.  **Result Display**: The Client Layer receives the response, extracts the result, and displays it to the user for verification.
+1. **User Action**: User enters text and triggers submission via the ClientInterface.
+2. **Request Dispatch**: ClientLayer packages the text into an HTTP POST request and sends it to the ServerEndpoint.
+3. **Request Processing**: ServerLayer receives the request, extracts the text, appends the fixed suffix `"from server"`, and constructs the response.
+4. **Response Return**: ServerLayer returns the processed text in an HTTP 200 OK response.
+5. **Result Presentation**: ClientLayer receives the response and presents the full result to the user for verification.
 
-**Flow Summary**: A synchronous, request-response interaction where the server's behavior is purely functional and deterministic based on the input.
+The flow is synchronous and request-response oriented, with no branching or complex state management.
 
 ### 5.2 Core Modules
-- **ClientInterface**: Provides the UI for text input and response display. Handles user interaction and request triggering.
-- **ClientNetworkAdapter**: Responsible for HTTP communication with the server.
-- **ServerEndpoint**: Exposes the HTTP endpoint, handles request parsing, and response serialization.
-- **ValidationService**: Contains the core application logic: concatenates the input text with the fixed suffix "from server".
+
+- **ClientLayer**
+  - **ClientInterface**
+    - responsibility: Provide the user-facing entry point for text input and result display.
+    - inputs: User text input via UI controls.
+    - outputs: Formatted request to ClientDispatcher; formatted result display to user.
+    - ownership boundary: Owns the user interaction surface.
+  - **ClientDispatcher**
+    - responsibility: Handle HTTP communication with the server.
+    - inputs: Text payload from ClientInterface.
+    - outputs: HTTP request to ServerEndpoint; processed HTTP response to ClientInterface.
+    - ownership boundary: Owns the network client logic and request lifecycle.
+
+- **ServerLayer**
+  - **ServerEndpoint**
+    - responsibility: Expose the single HTTP endpoint for receiving validation requests.
+    - inputs: HTTP POST request containing user text.
+    - outputs: HTTP response containing processed text.
+    - ownership boundary: Owns the public API surface and request routing.
+  - **TextProcessor**
+    - responsibility: Apply the fixed business logic (appending `"from server"`) to the input text.
+    - inputs: Raw text string from the request.
+    - outputs: Processed text string with suffix appended.
+    - ownership boundary: Owns the core validation transformation logic.
 
 ### 5.3 Interaction Model
-This section describes high-level cross-module interaction. The concrete public APIs or interface contracts for these calls are defined in `design/client_server_contract.md`.
-1.  **Client-Server Interaction**: `ClientNetworkAdapter` calls `ServerEndpoint` via an HTTP POST request containing the user's text.
-2.  **Server Internal Processing**: `ServerEndpoint` delegates the received text to the `ValidationService` for processing and receives the formatted string back.
-3.  **Response Return**: `ServerEndpoint` returns the formatted string via HTTP response to the `ClientNetworkAdapter`, which passes it to the `ClientInterface` for display.
+This section describes high-level cross-module interaction
+#### 5.3.1 Primary Validation Scenario
+- user scenario: Tester submits text for validation.
+- stage position: V1 (CurrentScope)
+- goal: Complete the request-response validation loop and present verifiable result.
+
+##### 5.3.1.1 Text Submission and Processing
+- summary: The end-to-end flow from user input to result display.
+- modules involved: ClientInterface, ClientDispatcher, ServerEndpoint, TextProcessor
+- control focus: Synchronous request-response handoff.
+
+```plantuml
+@startuml
+actor User
+participant ClientInterface
+participant ClientDispatcher
+participant ServerEndpoint
+participant TextProcessor
+User -> ClientInterface: Enter text, submit
+ClientInterface -> ClientDispatcher: Package text payload
+ClientDispatcher -> ServerEndpoint: HTTP POST /validate {text}
+ServerEndpoint -> TextProcessor: Process(text)
+TextProcessor -> ServerEndpoint: Return text + "from server"
+ServerEndpoint -> ClientDispatcher: HTTP 200 OK {result}
+ClientDispatcher -> ClientInterface: Deliver result
+ClientInterface -> User: Display result
+@enduml
+```
+
+##### 5.3.1.2 Error Handling (V2 Extension)
+- summary: Basic error feedback when the primary path fails.
+- modules involved: ClientDispatcher, ServerEndpoint
+- control focus: HTTP error code propagation and user notification.
+- stage position: V2 (FutureStage)
+
+```text
+ClientDispatcher -> ServerEndpoint: HTTP POST /validate {text}
+ServerEndpoint -> ClientDispatcher: HTTP 4xx/5xx {error}
+ClientDispatcher -> ClientInterface: Deliver error state
+```
 
 ### 5.4 Key Considerations
-- **Statelessness**: The Server Layer holds no session state. Each request is processed independently, ensuring repeatability.
-- **Fixed Logic Isolation**: The rule for appending "from server" is encapsulated within the `ValidationService`. This isolates the core product constraint, making it easy to verify and maintain.
-- **Clear Failure Boundary**: Network or server failures must be communicated clearly by the `ClientInterface` (e.g., "Server unavailable"), not mistaken for a successful validation response.
+- **Statelessness**: The ServerLayer is stateless; each request is independent, supporting repeatability.
+- **Predictable Output**: The TextProcessor's logic is fixed and deterministic, ensuring consistent validation results.
+- **Clear Boundary**: The HTTP interface between ClientDispatcher and ServerEndpoint defines a clean separation of concerns.
 
 ---
 
 ## 6. Non-Functional Considerations
 
 ### 6.1 High Availability
-- **Why it matters**:
-  - While not a production service, the product must be reliably available during testing sessions to serve its validation purpose.
-- **Architectural support**:
-  - The stateless Server Layer allows it to be restarted without impact on the validation scenario.
-  - The Client Layer can provide clear feedback if the server is unreachable, supporting the "clear failure" user journey.
+- Why it matters:
+  - As a validation tool, sporadic unavailability would disrupt testing workflows.
+- Architectural support:
+  - The stateless ServerLayer allows for straightforward process restarts.
+  - For V2, consider a simple health check endpoint for basic operational monitoring.
 
 ### 6.2 High Scalability
-- **Why it matters**:
-  - The product is designed for low, predictable concurrency (single or few testers). Architectural complexity for horizontal scaling is explicitly out of scope, aligning with minimal scope constraints.
-- **Architectural support**:
-  - The stateless server design is inherently amenable to scaling if future requirements change, but this is not a current driver.
+- Why it matters:
+  - While current load is minimal, the architecture should not prevent parallel test execution.
+- Architectural support:
+  - Stateless design allows horizontal scaling of the ServerLayer if needed.
+  - No shared state or database dependencies eliminate scaling bottlenecks.
 
 ### 6.3 High Performance
-- **Why it matters**:
-  - Testers require fast, predictable response times for an efficient validation loop.
-- **Architectural support**:
-  - The simple, synchronous request path with minimal processing logic inherently supports low latency.
-  - The technology stack is chosen for lightweight, fast request handling.
+- Why it matters:
+  - Fast response times ensure efficient validation cycles for testers.
+- Architectural support:
+  - Minimal processing logic (string concatenation) guarantees low latency.
+  - Direct client-server communication without intermediate hops.
 
 ---
 
@@ -145,18 +196,18 @@ This section describes high-level cross-module interaction. The concrete public 
 ### 7.1 Design Document Categories
 Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.
 
-- **Module Design**: Details the internal structure, components, and logic of a single architecture module (Client or Server).
-- **Interaction Contract Design**: Defines the precise API specifications, data formats, and error handling for communication between the Client and Server layers.
+- **Module Design**: Detailed internal design for a single architectural module.
+- **Cross-Module Interaction**: Definition of shared APIs and communication contracts between modules.
+- **Shared Contracts**: Canonical definitions of data structures used across module boundaries.
 
 ### 7.2 Design Document Breakdown
-- `design/client_module.md`: covers the design of the `ClientInterface` and `ClientNetworkAdapter` modules.
-- `design/server_module.md`: covers the design of the `ServerEndpoint` and `ValidationService` modules.
-- `design/client_server_contract.md`: covers the design of the HTTP API contract between the Client and Server layers.
-
-The document directory should correspond to the modules and key interactions explicitly listed in the architecture document.
+- [`client_layer_design`](./design_docs/client_layer_design.md): covers `ClientInterface` and `ClientDispatcher` modules.
+- [`server_layer_design`](./design_docs/server_layer_design.md): covers `ServerEndpoint` and `TextProcessor` modules.
+- [`cross_module_interaction_contracts`](./design_docs/cross_module_interaction_contracts.md): covers the HTTP API contract between `ClientDispatcher` and `ServerEndpoint`.
 
 ---
 
 ## 8. Open Issues
-- **Scope Integrity**: How to formally guard against architectural drift (e.g., accidental introduction of a database or user sessions) that would violate the minimal scope constraint?
-- **Suffix Consistency**: The fixed suffix ("from server") is a key contract. Should a mechanism be introduced to validate this in the build/deployment pipeline to prevent accidental changes?
+- **Network Configuration**: Assumes client and server can communicate over HTTP; specific network constraints (proxies, firewalls) are not yet addressed.
+- **Error Feedback Detail**: V2 error handling requires definition of error message format and user presentation.
+- **Deployment Packaging**: The exact packaging (e.g., Docker container for server, static hosting for client) is deferred to implementation planning.
