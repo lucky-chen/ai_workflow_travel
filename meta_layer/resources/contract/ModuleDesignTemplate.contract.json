@@ -7,7 +7,7 @@
     },
     {
       "check_item": "section_contract_alignment",
-      "description": "Each major section should be described by an explicit SectionContract-style comment including section_id, title, expected_format, and hints.",
+      "description": "Each major section should follow the expected section structure, code-block requirements, and formatting rules defined by the template contract.",
       "severity": "high"
     },
     {
@@ -76,7 +76,7 @@
         "do not restate every field unless it affects responsibilities or boundaries"
       ],
       "severity": "medium",
-      "expected_format": "### 2.2 `PrimaryService`\n\nRole:\n\n- `{PrimaryRole}`\n\nResponsibilities:\n\n- `{Responsibility1}`\n- `{Responsibility2}`\n- `{Responsibility3}`"
+      "expected_format": "#### 2.2.x `PrimaryService`\n\nRole:\n\n- `{PrimaryRole}`\n\nResponsibilities:\n\n- `{Responsibility1}`\n- `{Responsibility2}`\n- `{Responsibility3}`"
     },
     {
       "section_id": "3",
@@ -155,7 +155,7 @@
       "section_id": "4.1.5",
       "title": "Module-Specific Rules",
       "checkitems": [
-        "add this subsection only when the module has important transformation, validation, mapping, or prompt-construction rules",
+        "add this subsection only when the module has important transformation, validation, mapping, or request-construction rules",
         "express stable rules that downstream modules depend on",
         "prefer bullets over long prose"
       ],

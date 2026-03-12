@@ -444,14 +444,14 @@ class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {
         severity: alignmentContract?.severity ?? "high",
       });
     }
-    if (!sectionContainsCodeBlock(content, "#### 4.1.2 Input Types", "ts")) {
+    if (!sectionContainsCodeBlock(content, "#### 4.1.2 Input Types", ["ts", "typescript"])) {
       issues.push({
         checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
         message: "Input Types section should define input structure in a TypeScript code block.",
         severity: alignmentContract?.severity ?? "high",
       });
     }
-    if (!sectionContainsCodeBlock(content, "#### 4.1.4 Output Types", "ts")) {
+    if (!sectionContainsCodeBlock(content, "#### 4.1.4 Output Types", ["ts", "typescript"])) {
       issues.push({
         checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
         message: "Output Types section should define output structure in a TypeScript code block.",
@@ -544,9 +544,10 @@ function extractSection(content: string, heading: string): string {
   return rest.slice(0, nextHeadingOffset).trim();
 }
 
-function sectionContainsCodeBlock(content: string, heading: string, language: string): boolean {
+function sectionContainsCodeBlock(content: string, heading: string, languages: string | string[]): boolean {
   const section = extractSection(content, heading);
-  return section.includes(`\`\`\`${language}`);
+  const accepted = Array.isArray(languages) ? languages : [languages];
+  return accepted.some((language) => section.includes(`\`\`\`${language}`));
 }
 
 function hasNonCodeProse(sectionContent: string): boolean {

@@ -143,7 +143,7 @@ export class ModuleDesignContract extends DocumentStageContract {
       });
     }
 
-    if (!this.sectionContainsCodeBlock(content, "#### 4.1.2 Input Types", "ts")) {
+    if (!this.sectionContainsCodeBlock(content, "#### 4.1.2 Input Types", ["ts", "typescript"])) {
       issues.push({
         checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
         message: "Input Types section should define input structure in a TypeScript code block.",
@@ -151,7 +151,7 @@ export class ModuleDesignContract extends DocumentStageContract {
       });
     }
 
-    if (!this.sectionContainsCodeBlock(content, "#### 4.1.4 Output Types", "ts")) {
+    if (!this.sectionContainsCodeBlock(content, "#### 4.1.4 Output Types", ["ts", "typescript"])) {
       issues.push({
         checkItem: alignmentContract?.check_item ?? "section_contract_alignment",
         message: "Output Types section should define output structure in a TypeScript code block.",
@@ -233,10 +233,13 @@ export class ModuleDesignContract extends DocumentStageContract {
     return [...candidates];
   }
 
-  private sectionContainsCodeBlock(content: string, heading: string, language: string): boolean {
+  private sectionContainsCodeBlock(content: string, heading: string, languages: string | string[]): boolean {
     const section = this.extractSection(content, heading);
-    const pattern = new RegExp("```" + language + "[\\s\\S]+?```");
-    return pattern.test(section);
+    const accepted = Array.isArray(languages) ? languages : [languages];
+    return accepted.some((language) => {
+      const pattern = new RegExp("```" + language + "[\\s\\S]+?```");
+      return pattern.test(section);
+    });
   }
 
   private hasNonCodeProse(section: string): boolean {
