@@ -15,6 +15,8 @@ export async function runModuleDesignContractTests(): Promise<void> {
 
   try {
     await testModuleDesignContractPassesForStructuredDocument(workspaceRoot);
+    await testModuleDesignContractPassesWithoutRuntimeTypes(workspaceRoot);
+    await testModuleDesignContractPassesWithTypeBasedPublicApi(workspaceRoot);
     await testModuleDesignContractFailsForMissingSections(workspaceRoot);
     await testModuleDesignContractFailsForFormatAndConsistencyIssues(workspaceRoot);
     await testModuleDesignContractRejectsInvalidLlmResult(workspaceRoot);
@@ -43,6 +45,64 @@ async function testModuleDesignContractPassesForStructuredDocument(workspaceRoot
         artifactKey: "module_design_document",
         moduleName: "Workflow",
         content: createModuleDesignDocument(),
+      },
+    },
+  );
+
+  assert.deepEqual(result, {
+    passed: true,
+    summary: "Module design document passed contract checks.",
+    issues: [],
+  });
+}
+
+async function testModuleDesignContractPassesWithoutRuntimeTypes(workspaceRoot: string): Promise<void> {
+  const contract = new ModuleDesignContract(new ModuleDesignContractMockLlmExecutor());
+  const result = await contract.check(
+    {
+      taskId: "task-1b",
+      stageId: "module_design",
+      attempt: 1,
+      workspaceRoot,
+      inputArtifacts: {},
+    },
+    {
+      stageId: "module_design",
+      success: true,
+      summary: "Module design document generated.",
+      artifacts: {
+        artifactKey: "module_design_document",
+        moduleName: "Workflow",
+        content: createModuleDesignDocumentWithoutRuntimeTypes(),
+      },
+    },
+  );
+
+  assert.deepEqual(result, {
+    passed: true,
+    summary: "Module design document passed contract checks.",
+    issues: [],
+  });
+}
+
+async function testModuleDesignContractPassesWithTypeBasedPublicApi(workspaceRoot: string): Promise<void> {
+  const contract = new ModuleDesignContract(new ModuleDesignContractMockLlmExecutor());
+  const result = await contract.check(
+    {
+      taskId: "task-1c",
+      stageId: "module_design",
+      attempt: 1,
+      workspaceRoot,
+      inputArtifacts: {},
+    },
+    {
+      stageId: "module_design",
+      success: true,
+      summary: "Module design document generated.",
+      artifacts: {
+        artifactKey: "module_design_document",
+        moduleName: "Workflow",
+        content: createModuleDesignDocumentWithTypeBasedPublicApi(),
       },
     },
   );
@@ -386,6 +446,41 @@ function createModuleDesignDocument(): string {
     "- keep runtime context minimal",
     "- avoid embedding module-internal execution logic here",
   ].join("\n");
+}
+
+function createModuleDesignDocumentWithoutRuntimeTypes(): string {
+  return createModuleDesignDocument().replace(
+    [
+      "#### 4.1.3 Runtime Types",
+      "```ts",
+      "interface StageRuntime {",
+      "  stageId: string",
+      "  nextStageId?: string",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+    "",
+  );
+}
+
+function createModuleDesignDocumentWithTypeBasedPublicApi(): string {
+  return createModuleDesignDocument().replace(
+    [
+      "```ts",
+      "interface IPipeline {",
+      "  launchTask(request: LaunchTaskRequest): Promise<string>",
+      "}",
+      "```",
+    ].join("\n"),
+    [
+      "```typescript",
+      "type PipelineApi = {",
+      "  launchTask: (request: LaunchTaskRequest) => Promise<string>",
+      "}",
+      "```",
+    ].join("\n"),
+  );
 }
 
 class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {

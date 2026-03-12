@@ -111,10 +111,12 @@
       "title": "Public API",
       "checkitems": [
         "define only the public API that upstream modules need to call",
-        "keep the API structure stable and minimal"
+        "keep the API structure stable and minimal",
+        "express the public API in a TypeScript code block",
+        "the public API may use interface, type, class signature, or other stable TypeScript boundary forms"
       ],
       "severity": "medium",
-      "expected_format": "```typescript\ninterface I{ModuleName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```"
+      "expected_format": "```typescript\ninterface I{ModuleName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {ModuleName}Api = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
     },
     {
       "section_id": "4.1.2",
@@ -134,10 +136,12 @@
       "title": "Runtime Types",
       "checkitems": [
         "define internal runtime structures only when they are necessary for understanding the design",
-        "keep runtime types implementation-oriented but concise"
+        "when present, express runtime types in a TypeScript code block",
+        "runtime types may use interface, type, class, or other concise TypeScript structures",
+        "this subsection may be omitted when the module does not own meaningful runtime types"
       ],
       "severity": "medium",
-      "expected_format": "```typescript\ninterface {RuntimeTypeA} {\n  {RuntimeFieldA}: {RuntimeFieldTypeA}\n}\n\ninterface {RuntimeTypeB} {\n  {RuntimeFieldB}: {RuntimeFieldTypeB}\n}\n```"
+      "expected_format": "```typescript\ninterface {RuntimeTypeA} {\n  {RuntimeFieldA}: {RuntimeFieldTypeA}\n}\n\ntype {RuntimeTypeB} = {\n  {RuntimeFieldB}: {RuntimeFieldTypeB}\n}\n```\n\nThis subsection may be omitted when runtime types are not needed."
     },
     {
       "section_id": "4.1.4",
