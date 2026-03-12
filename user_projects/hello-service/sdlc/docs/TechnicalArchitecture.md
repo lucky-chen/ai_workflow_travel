@@ -201,9 +201,9 @@ Different design documents have different focus. All of them must still follow t
 - **Shared Contracts**: Canonical definitions of data structures used across module boundaries.
 
 ### 7.2 Design Document Breakdown
-- [`client_layer_design`](./design_docs/client_layer_design.md): covers `ClientInterface` and `ClientDispatcher` modules.
-- [`server_layer_design`](./design_docs/server_layer_design.md): covers `ServerEndpoint` and `TextProcessor` modules.
-- [`cross_module_interaction_contracts`](./design_docs/cross_module_interaction_contracts.md): covers the HTTP API contract between `ClientDispatcher` and `ServerEndpoint`.
+- [`client_layer_design`](./module_design/client_layer_design.md): covers `ClientInterface` and `ClientDispatcher` modules.
+- [`server_layer_design`](./module_design/server_layer_design.md): covers `ServerEndpoint` and `TextProcessor` modules.
+- [`cross_module_interaction_contracts`](./module_design/cross_module_interaction_contracts.md): covers the HTTP API contract between `ClientDispatcher` and `ServerEndpoint`.
 
 ---
 

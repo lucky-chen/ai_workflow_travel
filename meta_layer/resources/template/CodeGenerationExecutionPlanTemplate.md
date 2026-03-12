@@ -32,6 +32,7 @@ The implementation should be delivered in this order:
 
 ## 3. Execution Steps
 
+<!--
 Runtime parsing shape:
 
 ```ts
@@ -62,10 +63,11 @@ Markdown-to-structure mapping rule:
 - `- [ ] Batch {n}: {batch_name}` defines one `ImplementationWorkPlanBatch`
 - task bullet lines under one batch define `ImplementationWorkPlanBatch.tasks`
 - one `implementation_execution` run targets one accepted batch, not one whole step
+-->
 
 ### Step {n}. Deliver {step_name}
 
-- [ ] `Step {n} is not started`
+- [ ] Step {n} is not started
 - [ ] Architecture modules in scope
   - [ ] `{module_1}`
   - [ ] `{module_2}`
@@ -85,7 +87,7 @@ Markdown-to-structure mapping rule:
 
 ### Step {n+1}. Deliver {next_step_name}
 
-- [ ] `Step {n+1} is not started`
+- [ ] Step {n+1} is not started
 - [ ] Architecture modules in scope
   - [ ] `{module_1}`
   - [ ] `{module_2}`

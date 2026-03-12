@@ -72,6 +72,7 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     requirementDocument: string;
     architectureDocument: string;
     moduleDesignDocuments: string[];
+    sharedCollaborationStandardPath: string;
     template: string;
   };
   assert.equal(payload.target, "implementation_plan");
@@ -81,7 +82,12 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
     resolveModuleDesignArtifactPath("/tmp/workspace", "Data"),
   ]);
+  assert.equal(payload.sharedCollaborationStandardPath, "meta_layer/resources/COLLABORATION_STANDARD.md");
   assert.equal(payload.template.includes("# Code Generation Execution Plan Template"), true);
+  assert.equal(
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("cite the provided shared collaboration standard document path exactly"),
+    true,
+  );
 }
 
 async function testImplementationPlanGeneratorRequiresRequirementDocument(workspaceRoot: string): Promise<void> {

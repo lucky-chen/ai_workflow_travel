@@ -7,14 +7,15 @@ Define the stable HTTP API contract between the `ClientDispatcher` and `ServerEn
 
 ### 1.2 Involved Modules
 This module design directly involves:
-- `design_docs/cross_module_interaction_contracts`
+- `ClientDispatcher`
+- `ServerEndpoint`
 
 This module design collaborates with:
-- `ClientLayer/ClientDispatcher`
-- `ServerLayer/ServerEndpoint`
+- `ClientInterface`
+- `TextProcessor`
 
 ### 1.3 Core Functions
-`cross_module_interaction_contracts` is the `shared boundary API` module.
+`cross_module_interaction_contracts` defines the shared HTTP boundary between `ClientDispatcher` and `ServerEndpoint`.
 
 Its core functions are:
 - Define the request format for text validation.
@@ -22,7 +23,7 @@ Its core functions are:
 - Define the error response format for text validation (V2).
 - Specify the HTTP method, endpoint, and headers for the interaction.
 
-`cross_module_interaction_contracts` does not implement client network logic, implement server request handling, or define internal module structures.
+`cross_module_interaction_contracts` does not implement client network logic, implement server request handling, or define internal runtime structures inside either side of the boundary.
 
 ## 2. Core Classes
 
@@ -94,39 +95,20 @@ interface ValidationApiContract {
 
 #### 4.1.2 Input Types
 ```typescript
-/**
- * The request payload sent from the ClientDispatcher to the ServerEndpoint.
- */
 interface ValidationRequest {
     text: string;
 }
 ```
 
 #### 4.1.3 Runtime Types
-```typescript
-/**
- * Structure for internal request validation and parsing before processing.
- * Used by the ServerEndpoint to interpret the incoming HTTP request body.
- */
-interface ParsedValidationRequest {
-    rawBody: string;
-    parsedPayload: ValidationRequest | null;
-    isValid: boolean;
-}
-```
+This design item does not define module-owned runtime types. Internal request parsing state remains inside `ServerEndpoint` and is out of scope for this shared contract document.
 
 #### 4.1.4 Output Types
 ```typescript
-/**
- * The success response payload returned from the ServerEndpoint to the ClientDispatcher.
- */
 interface ValidationResponse {
     result: string;
 }
 
-/**
- * The error response payload for V2, returned for HTTP 4xx or 5xx statuses.
- */
 interface ErrorResponse {
     error: {
         code: string;

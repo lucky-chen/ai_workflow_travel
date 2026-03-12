@@ -3,19 +3,20 @@
 ## 1. Goal
 
 ### 1.1 Purpose
-`ClientLayer` module design for text validation user interface and server communication.
+Define the detailed design of the `ClientInterface` and `ClientDispatcher` modules for text validation input, request dispatch, and result presentation.
 
 ### 1.2 Involved Modules
 This module design directly involves:
 
-- `ClientLayer`
+- `ClientInterface`
+- `ClientDispatcher`
 
 This module design collaborates with:
 
-- `ServerLayer`
+- `ServerEndpoint`
 
 ### 1.3 Core Functions
-`ClientLayer` is the user interaction and network dispatch module.
+`client_layer_design` defines the user interaction and network dispatch behavior owned by `ClientInterface` and `ClientDispatcher`.
 
 Its core functions are:
 
@@ -24,7 +25,7 @@ Its core functions are:
 - Handle HTTP communication with the server endpoint
 - Present processed results and error states to the user
 
-`ClientLayer` does not perform text transformation logic, define server-side validation rules, or manage server-side operational concerns.
+`client_layer_design` does not perform text transformation logic, define server-side validation rules, or manage server-side operational concerns.
 
 ## 2. Core Classes
 

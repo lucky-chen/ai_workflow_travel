@@ -3,7 +3,7 @@
 ## 1. Goal
 
 ### 1.1 Purpose
-This module design document details the internal structure and design of the ServerLayer, specifically covering the `ServerEndpoint` and `TextProcessor` modules.
+Define the detailed design of the `ServerEndpoint` and `TextProcessor` modules that receive validation requests and produce deterministic responses.
 
 ### 1.2 Involved Modules
 This module design directly involves:
@@ -22,7 +22,7 @@ Their core functions are:
 - `TextProcessor`: Apply the fixed transformation logic (appending `"from server"`) to the input text.
 - `ServerEndpoint`: Format and return the processed text in an HTTP 200 OK response.
 
-`ServerLayer` does not handle user interface presentation, manage client-side state, or perform any persistence or database operations.
+This design does not handle user interface presentation, manage client-side state, or perform any persistence or database operations.
 
 ## 2. Core Classes
 
@@ -91,7 +91,7 @@ deactivate ServerEndpoint
 
 #### 4.1.1 Public API
 ```typescript
-interface ValidationServer {
+interface ServerEndpoint {
   handlePostRequest(req: ValidationRequest): ValidationResponse;
 }
 ```
@@ -102,7 +102,6 @@ interface ValidationRequest {
   text: string;
 }
 ```
-No prose outside code blocks.
 
 #### 4.1.4 Output Types
 ```typescript
@@ -110,7 +109,6 @@ interface ValidationResponse {
   result: string;
 }
 ```
-No prose outside code blocks.
 
 #### 4.1.5 Module-Specific Rules
 - The `TextProcessor.process` method must append the exact string `"from server"` (including a leading space) to the input text.

@@ -18,6 +18,7 @@ interface ImplementationPlanGeneratorInputPayload {
   requirementDocument: string;
   architectureDocument: string;
   moduleDesignDocuments: string[];
+  sharedCollaborationStandardPath: string;
 }
 
 export class ImplementationPlanGenerator extends DocumentStageGenerator<ImplementationPlanGeneratorInputPayload> {
@@ -58,6 +59,7 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator<Implemen
       requirementDocument,
       architectureDocument,
       moduleDesignDocuments,
+      sharedCollaborationStandardPath: "meta_layer/resources/COLLABORATION_STANDARD.md",
     };
   }
 
@@ -70,12 +72,14 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator<Implemen
       prompt: {
         systemPrompt:
           "You generate an implementation workplan that follows the provided execution-plan template structure. " +
+          "In section 1.1 Collaboration Rule, cite the provided shared collaboration standard document path exactly and keep the fixed scope statement from the template. " +
           "Return plain markdown only.",
         userPrompt: {
           target: "implementation_plan",
           requirementDocument: inputDocument.requirementDocument,
           architectureDocument: inputDocument.architectureDocument,
           moduleDesignDocuments: inputDocument.moduleDesignDocuments,
+          sharedCollaborationStandardPath: inputDocument.sharedCollaborationStandardPath,
           template,
         },
       },

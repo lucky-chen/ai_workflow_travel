@@ -73,10 +73,11 @@
         "contain architecture modules in scope",
         "contain one or more batch-oriented delivery items",
         "allow step names, modules, and batch counts to vary by project",
-        "make each batch individually addressable as one implementation-execution unit"
+        "make each batch individually addressable as one implementation-execution unit",
+        "allow the step status line and the architecture-scope label to appear with or without backticks as long as the markdown structure remains parseable"
       ],
       "severity": "high",
-      "expected_format": "- [ ] `Step {n} is not started`\n- [ ] `Architecture modules in scope`\n  - [ ] `{module_1}`\n- [ ] `Batch 1: {batch_1_name}`"
+      "expected_format": "- [ ] Step {n} is not started\n- [ ] Architecture modules in scope\n  - [ ] `{module_1}`\n- [ ] `Batch 1: {batch_1_name}`"
     }
   ]
 }
