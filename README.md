@@ -3,17 +3,24 @@
 # Purpose
 
 1. Exploring and understanding what AI is
-   - 1.1 Explore AI principles and capability boundaries: AI is fundamentally a probabilistic model. It is powerful, but it also produces hallucinations.
-   - 1.2 Understand the practical engineering capabilities around AI, including prompt, agent, context, and mcp.
-   - 1.3 Understand industry practice and experience in real-world AI adoption.
+
+   1.1 Explore AI principles and capability boundaries: AI is fundamentally a probabilistic model. It is powerful, but it also produces hallucinations.
+
+   1.2 Understand the practical engineering capabilities around AI, including prompt, agent, context, and mcp.
+
+   1.3 Understand industry practice and experience in real-world AI adoption.
 
 2. Inferring how to collaborate with AI based on its characteristics
-   - 2.1 At a high level, the key is improving the ability to recognize needs and break problems down, which means turning uncertain needs into more concrete and deterministic problems step by step. AI performs very well on small deterministic problems, but when facing large highly uncertain problems, it often lacks clear direction and the process and outcome can easily go out of control.
-   - 2.2 Taking software engineers as an example, the center of gravity should shift more toward exploring product needs and turning them into architecture design, module design, and executable task breakdowns. For the smaller concrete tasks after decomposition, AI can often generate good code, while engineers focus on review and quality control.
+
+   2.1 At a high level, the key is improving the ability to recognize needs and break problems down, which means turning uncertain needs into more concrete and deterministic problems step by step. AI performs very well on small deterministic problems, but when facing large highly uncertain problems, it often lacks clear direction and the process and outcome can easily go out of control.
+
+   2.2 Taking software engineers as an example, the center of gravity should shift more toward exploring product needs and turning them into architecture design, module design, and executable task breakdowns. For the smaller concrete tasks after decomposition, AI can often generate good code, while engineers focus on review and quality control.
 
 3. Validating the theory and exploration in practice
-   - 3.1 Use the software development lifecycle project `sdlc` to validate the methodological inference in 2.2, and continue turning the verified norms into tools.
-   - 3.2 Use a user-oriented Travel product to validate the importance of identifying uncertain needs. High-ROI needs are often hidden in places with many people, complex scenarios, dense problems, and high uncertainty at the start, which is also where AI currently fails most easily.
+
+   3.1 Use the software development lifecycle project `sdlc` to validate the methodological inference in 2.2, and continue turning the verified norms into tools.
+
+   3.2 Use a user-oriented Travel product to validate the importance of identifying uncertain needs. High-ROI needs are often hidden in places with many people, complex scenarios, dense problems, and high uncertainty at the start, which is also where AI currently fails most easily.
 
 > Summary: AI is more like a group of very capable but not fully controllable racehorses. The key is not to rely on it blindly, but to first define the goal, path, and constraints, then direct it toward the result.
 
