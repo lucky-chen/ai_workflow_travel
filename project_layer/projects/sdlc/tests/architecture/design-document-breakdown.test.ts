@@ -33,22 +33,22 @@ async function testParseDesignDocumentBreakdownUsesFileNameAsName(): Promise<voi
 async function testParseDesignDocumentBreakdownSupportsMarkdownLinks(): Promise<void> {
   const content = [
     "## 7.2 Design Document Breakdown",
-    "- [plan_service](./module_design/plan_service.md): covers `PlanService`.",
-    "- [trip_repository](./module_design/trip_repository.md): covers `TripRepository`.",
+    "- [plan_service.md](./module_design/plan_service.md)：覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。",
+    "- [trip_repository.md](./module_design/trip_repository.md)：覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。",
   ].join("\n");
 
   assert.deepEqual(parseDesignDocumentBreakdown(content), [
     {
       name: "plan_service",
       documentPath: "./module_design/plan_service.md",
-      description: "covers `PlanService`.",
-      responsibilities: ["covers `PlanService`."],
+      description: "覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。",
+      responsibilities: ["覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。"],
     },
     {
       name: "trip_repository",
       documentPath: "./module_design/trip_repository.md",
-      description: "covers `TripRepository`.",
-      responsibilities: ["covers `TripRepository`."],
+      description: "覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。",
+      responsibilities: ["覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。"],
     },
   ]);
 }

@@ -27,8 +27,8 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
     "# Technical Architecture",
     "",
     "## 7.2 Design Document Breakdown",
-    "- `sdlc/docs/module_design/Workflow.md`: covers the design of the `Workflow` module.",
-    "- `sdlc/docs/module_design/Data.md`: covers the design of the `Data` module.",
+    "- [plan_service.md](./module_design/plan_service.md)：覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。",
+    "- [trip_repository.md](./module_design/trip_repository.md)：覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。",
     "",
   ].join("\n");
   const llmExecutor = new MockLlmExecutor(generatedArchitectureDocument);
@@ -53,16 +53,16 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
       content: generatedArchitectureDocument,
       design_document_breakdown: JSON.stringify([
         {
-          name: "Workflow",
-          documentPath: "sdlc/docs/module_design/Workflow.md",
-          description: "covers the design of the `Workflow` module.",
-          responsibilities: ["covers the design of the `Workflow` module."],
+          name: "plan_service",
+          documentPath: "./module_design/plan_service.md",
+          description: "覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。",
+          responsibilities: ["覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。"],
         },
         {
-          name: "Data",
-          documentPath: "sdlc/docs/module_design/Data.md",
-          description: "covers the design of the `Data` module.",
-          responsibilities: ["covers the design of the `Data` module."],
+          name: "trip_repository",
+          documentPath: "./module_design/trip_repository.md",
+          description: "覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。",
+          responsibilities: ["覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。"],
         },
       ]),
     },

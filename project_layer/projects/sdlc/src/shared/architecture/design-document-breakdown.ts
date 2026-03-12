@@ -24,7 +24,7 @@ export function parseDesignDocumentBreakdown(content: string): DesignDocumentDes
 }
 
 function parseDesignDocumentLine(line: string): DesignDocumentDescriptor | null {
-  const match = line.match(/^- (?:`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)):\s*(.+)$/);
+  const match = line.match(/^- (?:`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))[:：]\s*(.+)$/);
   if (!match) {
     return null;
   }
