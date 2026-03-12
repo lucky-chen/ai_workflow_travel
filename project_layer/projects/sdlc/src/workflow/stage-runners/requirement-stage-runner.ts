@@ -1,8 +1,8 @@
 import type { GateDecision, IChangeGate, ITraceRecorder, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
-import { RequirementContract } from "../../contract/requirement-contract/requirement-contract.js";
-import { RequirementGenerator, type RequirementArtifacts } from "../../execution/requirement-generator/requirement-generator.js";
+import { RequirementContract } from "../../contract/requirement-contract.js";
+import { RequirementGenerator, type RequirementArtifacts } from "../../execution/requirement-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 import { resolveRequirementArtifactPath } from "./stage-artifact-paths.js";
 

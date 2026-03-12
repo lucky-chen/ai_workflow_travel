@@ -7,11 +7,11 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
-import { ArchitectureDesignContract } from "../../contract/architecture-design-contract/architecture-design-contract.js";
+import { ArchitectureDesignContract } from "../../contract/architecture-design-contract.js";
 import {
   ArchitectureDesignGenerator,
   type ArchitectureDesignArtifacts,
-} from "../../execution/architecture-design-generator/architecture-design-generator.js";
+} from "../../execution/architecture-design-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 import { resolveArchitectureArtifactPath } from "./stage-artifact-paths.js";
 

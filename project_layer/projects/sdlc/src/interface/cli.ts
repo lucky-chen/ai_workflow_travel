@@ -3,15 +3,15 @@ import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../../shared/contracts/pipeline.js";
-import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
-import { ImplementationPlanContract } from "../../contract/implementation-plan-contract/implementation-plan-contract.js";
-import { resolveBundledResourcesDirectory } from "../../shared/resources/resource-resolver.js";
-import type { ChangedFile } from "../../shared/types/common.js";
+import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES } from "../shared/contracts/pipeline.js";
+import { ImplementationPlanContract } from "../contract/implementation-plan-contract.js";
+import { resolveBundledResourcesDirectory } from "../shared/resource-resolver.js";
+import type { ChangedFile } from "../shared/types/common.js";
 import {
   getDefaultWorkspaceLocalEnvContent,
   resolveWorkspaceLocalEnvPath,
-} from "../../app/workspace-local-env.js";
+} from "../app/workspace-local-env.js";
 
 export interface ParsedCommand {
   command: string;

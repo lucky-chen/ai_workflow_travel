@@ -1,7 +1,7 @@
 import type { IStageGenerator, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
 import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../shared/contracts/pipeline.js";
-import { resolveResourcePath } from "../shared/resources/resource-resolver.js";
+import { resolveResourcePath } from "../shared/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import type { ArtifactMap } from "../shared/types/common.js";
 import { readFile } from "node:fs/promises";

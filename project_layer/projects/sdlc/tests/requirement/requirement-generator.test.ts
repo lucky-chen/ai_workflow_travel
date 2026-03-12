@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { RequirementGenerator } from "../../src/execution/requirement-generator/requirement-generator.js";
+import { RequirementGenerator } from "../../src/execution/requirement-generator.js";
 
 export async function runRequirementGeneratorTests(): Promise<void> {
   const workspaceRoot = await createTempDir("requirement-generator-");

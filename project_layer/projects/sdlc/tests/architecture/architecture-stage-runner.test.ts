@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import { InMemoryChangeGate } from "../../src/quality-gate/change-gate.js";
+import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
 import {

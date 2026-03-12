@@ -1,8 +1,8 @@
 import type { CompositionRootOptions } from "../app/composition-root.js";
-import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
+import { InMemoryChangeGate } from "../quality-gate/change-gate.js";
 import type { LlmExecutorServiceDependencies } from "../sdk/llm-executor/llm-executor.js";
 import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
-import { ShellRunner } from "../workflow/validation/shell-runner.js";
+import { ShellRunner } from "../workflow/shell-runner.js";
 
 export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
   const serviceName = process.env.SDLC_TEST_SERVICE_NAME?.trim() || "baseline-service";

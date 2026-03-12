@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { ChangeReviewPresenter, InMemoryChangeGate, InteractiveChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
+import { ChangeReviewPresenter, InMemoryChangeGate, InteractiveChangeGate } from "../../src/quality-gate/change-gate.js";
 
 export async function runChangeGateTests(): Promise<void> {
   await testDefaultGateDecision();

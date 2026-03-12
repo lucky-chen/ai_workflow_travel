@@ -9,7 +9,7 @@ import {
   resolveConfiguredResourcesRoot,
   resolveWorkspaceLocalEnvPath,
 } from "../../src/app/workspace-local-env.js";
-import { resolveResourcePath } from "../../src/shared/resources/resource-resolver.js";
+import { resolveResourcePath } from "../../src/shared/resource-resolver.js";
 
 export async function runWorkspaceLocalEnvTests(): Promise<void> {
   const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "workspace-local-env-"));

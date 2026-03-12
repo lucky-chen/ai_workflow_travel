@@ -1,14 +1,14 @@
 // Artifact store module: defines the local persistence entry for stage artifacts.
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { FilePath } from "../../shared/types/common.js";
+import type { FilePath } from "../shared/types/common.js";
 import type {
   GetArtifactRequest,
   IArtifactStore,
   ITraceRecorder,
   ListArtifactRequest,
   WriteArtifactRequest,
-} from "../../shared/contracts/pipeline.js";
+} from "../shared/contracts/pipeline.js";
 
 export class ArtifactStoreService implements IArtifactStore {
   // Storage layout: {storageRoot or workspaceRoot/dist/sdlc/artifact_store}/{taskId}/{stageId}/{filePath}

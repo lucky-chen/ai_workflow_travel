@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { ShellRunner } from "../validation/shell-runner.js";
+import { ShellRunner } from "../shell-runner.js";
 
 export interface ImplementationGitCommitContext {
   workspaceRoot: string;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { HistoryStoreService } from "../../src/data/history-store/history-store.js";
+import { HistoryStoreService } from "../../src/data/history-store.js";
 
 export async function runHistoryStoreTests(): Promise<void> {
   await testHistoryStoreWriteReadAndList();

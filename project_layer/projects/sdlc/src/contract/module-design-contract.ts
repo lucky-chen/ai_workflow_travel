@@ -3,10 +3,10 @@ import type {
   ContractIssue,
   StageOutput,
   StageRunContext,
-} from "../../shared/contracts/pipeline.js";
-import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
-import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
-import { DocumentStageContract } from "../document-stage-contract.js";
+} from "../shared/contracts/pipeline.js";
+import { normalizeUserPromptContent, type LlmExecutionRequest } from "../sdk/llm-executor/llm-executor.js";
+import type { ContractExecutionResult, ContractSpec } from "./document-stage-contract.js";
+import { DocumentStageContract } from "./document-stage-contract.js";
 
 interface ModuleDesignArtifacts {
   artifactKey: "module_design_document";

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ModuleDesignContract } from "../../src/contract/module-design-contract/module-design-contract.js";
+import { ModuleDesignContract } from "../../src/contract/module-design-contract.js";
 import {
   normalizeUserPromptContent,
   type ILlmExecutor,

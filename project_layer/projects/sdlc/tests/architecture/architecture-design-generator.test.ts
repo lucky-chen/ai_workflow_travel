@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ArchitectureDesignGenerator } from "../../src/execution/architecture-design-generator/architecture-design-generator.js";
+import { ArchitectureDesignGenerator } from "../../src/execution/architecture-design-generator.js";
 import {
   normalizePromptContent,
   normalizeUserPromptContent,

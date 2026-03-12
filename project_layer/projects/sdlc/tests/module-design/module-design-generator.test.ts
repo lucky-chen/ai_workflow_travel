@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ModuleDesignGenerator } from "../../src/execution/module-design-generator/module-design-generator.js";
+import { ModuleDesignGenerator } from "../../src/execution/module-design-generator.js";
 import {
   normalizePromptContent,
   normalizeUserPromptContent,

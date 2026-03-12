@@ -8,7 +8,7 @@ import type {
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId } from "../../shared/types/common.js";
-import { parseDesignDocumentBreakdown, type DesignDocumentDescriptor } from "../../shared/architecture/design-document-breakdown.js";
+import { parseDesignDocumentBreakdown, type DesignDocumentDescriptor } from "../../shared/design-document-breakdown.js";
 
 interface ModuleDescriptor {
   name: string;

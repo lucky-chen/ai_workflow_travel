@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
-import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import { ArtifactStoreService } from "../../src/data/artifact-store.js";
+import { InMemoryChangeGate } from "../../src/quality-gate/change-gate.js";
+import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import { ValidationStageRunner } from "../../src/workflow/stage-runners/validation-stage-runner.js";
-import type { ShellResult } from "../../src/workflow/validation/shell-runner.js";
-import { ShellRunner } from "../../src/workflow/validation/shell-runner.js";
+import type { ShellResult } from "../../src/workflow/shell-runner.js";
+import { ShellRunner } from "../../src/workflow/shell-runner.js";
 
 export async function runValidationStageRunnerTests(): Promise<void> {
   const storageRoot = await createTempDir("validation-stage-runner-storage-");

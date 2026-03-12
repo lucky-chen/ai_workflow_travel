@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import { PipelineService } from "../../src/workflow/pipeline/pipeline.js";
 import { StageRegistry } from "../../src/workflow/pipeline/stage-registry.js";
 import type { IStageRunner, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";

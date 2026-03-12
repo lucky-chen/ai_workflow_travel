@@ -4,7 +4,7 @@ import {
   ConsoleTraceViewer,
   DefaultCLICommandParser,
   DefaultCLIRequestMapper,
-} from "../interface/cli/cli.js";
+} from "../interface/cli.js";
 import { loadWorkspaceRuntimeOptions } from "../app/workspace-local-env.js";
 import { createCliBaselineRuntimeOptions } from "../testing/scenario-runtime.js";
 

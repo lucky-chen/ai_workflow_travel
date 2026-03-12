@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ImplementationPlanGenerator } from "../../src/execution/implementation-plan-generator/implementation-plan-generator.js";
+import { ImplementationPlanGenerator } from "../../src/execution/implementation-plan-generator.js";
 import {
   normalizePromptContent,
   normalizeUserPromptContent,

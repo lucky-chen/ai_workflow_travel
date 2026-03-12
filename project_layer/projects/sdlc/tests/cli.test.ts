@@ -9,7 +9,7 @@ import {
   DefaultCLICommandParser,
   DefaultCLIRequestMapper,
   ResourceWorkspaceInitializer,
-} from "../src/interface/cli/cli.js";
+} from "../src/interface/cli.js";
 import type { IPipeline, LaunchTaskRequest } from "../src/shared/contracts/pipeline.js";
 
 export async function runCliTests(): Promise<void> {

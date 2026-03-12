@@ -1,6 +1,6 @@
 // Change gate module: returns a stable review decision for change requests.
-import type { IReviewInteraction, ReviewSession } from "../../interface/cli/cli.js";
-import type { ChangeReviewRequest, GateDecision, IChangeGate } from "../../shared/contracts/pipeline.js";
+import type { IReviewInteraction, ReviewSession } from "../interface/cli.js";
+import type { ChangeReviewRequest, GateDecision, IChangeGate } from "../shared/contracts/pipeline.js";
 
 export interface InMemoryChangeGateDependencies {
   decision?: GateDecision;

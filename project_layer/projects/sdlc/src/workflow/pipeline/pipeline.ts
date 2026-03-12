@@ -15,7 +15,7 @@ import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js"
 import { LaunchValidator } from "./launch-validator.js";
 import { StageRegistry } from "./stage-registry.js";
 import { TaskRuntimeStore } from "./task-runtime-store.js";
-import { TraceService } from "../../quality-gate/trace/trace-recorder.js";
+import { TraceService } from "../../quality-gate/trace-recorder.js";
 
 export interface PipelineServiceDependencies {
   registry: StageRegistry;

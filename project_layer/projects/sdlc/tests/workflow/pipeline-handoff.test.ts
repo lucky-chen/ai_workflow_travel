@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile, rm } from "node:fs/promises";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
+import { ArtifactStoreService } from "../../src/data/artifact-store.js";
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
 import { ImplementationPlanStageRunner } from "../../src/workflow/stage-runners/implementation-plan-stage-runner.js";
 import { ModuleStageRunner } from "../../src/workflow/stage-runners/module-stage-runner.js";
 import { RequirementStageRunner } from "../../src/workflow/stage-runners/requirement-stage-runner.js";
 import { ValidationStageRunner } from "../../src/workflow/stage-runners/validation-stage-runner.js";
-import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import { InMemoryChangeGate } from "../../src/quality-gate/change-gate.js";
+import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import {
   normalizeUserPromptContent,
   type ILlmExecutor,
@@ -18,8 +18,8 @@ import {
 import { PipelineService } from "../../src/workflow/pipeline/pipeline.js";
 import { createModuleDesignFanoutContinuation } from "../../src/workflow/pipeline/module-design-fanout.js";
 import type { IStageRunner, StageDefinition, StageOutput, StageRunContext } from "../../src/shared/contracts/pipeline.js";
-import type { ShellResult } from "../../src/workflow/validation/shell-runner.js";
-import { ShellRunner } from "../../src/workflow/validation/shell-runner.js";
+import type { ShellResult } from "../../src/workflow/shell-runner.js";
+import { ShellRunner } from "../../src/workflow/shell-runner.js";
 import {
   resolveArchitectureArtifactPath,
   resolveImplementationPlanArtifactPath,

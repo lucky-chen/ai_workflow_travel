@@ -7,12 +7,12 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
-import { ModuleDesignContract } from "../../contract/module-design-contract/module-design-contract.js";
+import { ModuleDesignContract } from "../../contract/module-design-contract.js";
 import {
   ModuleDesignGenerator,
   type ModuleDescriptor,
   type ModuleDesignArtifacts,
-} from "../../execution/module-design-generator/module-design-generator.js";
+} from "../../execution/module-design-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 import { resolveModuleDesignArtifactPath } from "./stage-artifact-paths.js";
 

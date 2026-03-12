@@ -3,14 +3,14 @@ import type {
   ContractIssue,
   StageOutput,
   StageRunContext,
-} from "../../shared/contracts/pipeline.js";
-import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
-import type { RequirementArtifacts } from "../../execution/requirement-generator/requirement-generator.js";
+} from "../shared/contracts/pipeline.js";
+import { normalizeUserPromptContent, type LlmExecutionRequest } from "../sdk/llm-executor/llm-executor.js";
+import type { RequirementArtifacts } from "../execution/requirement-generator.js";
 import {
   DocumentStageContract,
   type ContractSpec,
   type ContractExecutionResult,
-} from "../document-stage-contract.js";
+} from "./document-stage-contract.js";
 
 export class RequirementContract extends DocumentStageContract {
   protected getContractResourcePath(): string {

@@ -1,7 +1,7 @@
 // Trace recorder module: records task and stage events in memory for workflow visibility.
-import type { TraceRef } from "../../shared/types/common.js";
-import type { ITraceRecorder, TraceEvent, TraceScope } from "../../shared/contracts/pipeline.js";
-import { HistoryStoreService } from "../../data/history-store/history-store.js";
+import type { TraceRef } from "../shared/types/common.js";
+import type { ITraceRecorder, TraceEvent, TraceScope } from "../shared/contracts/pipeline.js";
+import { HistoryStoreService } from "../data/history-store.js";
 
 export class InMemoryTraceRecorder implements ITraceRecorder {
   private readonly events: Array<{ ref: TraceRef; event: TraceEvent }> = [];

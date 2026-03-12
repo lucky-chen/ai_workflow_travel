@@ -1,4 +1,4 @@
-import type { IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
+import type { IStageGenerator, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
 
 export interface RequirementArtifacts {
   artifactKey: "requirement_document";

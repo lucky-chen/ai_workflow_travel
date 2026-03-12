@@ -9,7 +9,7 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
-import { ShellRunner, type ShellResult } from "../validation/shell-runner.js";
+import { ShellRunner, type ShellResult } from "../shell-runner.js";
 
 export interface ValidationStageArtifacts {
   artifactKey: "validation_result";

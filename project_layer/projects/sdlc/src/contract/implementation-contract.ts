@@ -6,9 +6,9 @@ import type {
   ImplementationStageArtifacts,
   StageOutput,
   StageRunContext,
-} from "../../shared/contracts/pipeline.js";
-import type { ChangedFile } from "../../shared/types/common.js";
-import { ShellRunner } from "../../workflow/validation/shell-runner.js";
+} from "../shared/contracts/pipeline.js";
+import type { ChangedFile } from "../shared/types/common.js";
+import { ShellRunner } from "../workflow/shell-runner.js";
 
 export interface ExecutionEnvironment {
   generatedResult: {

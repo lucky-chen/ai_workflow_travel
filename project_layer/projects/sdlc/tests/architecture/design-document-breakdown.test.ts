@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { parseDesignDocumentBreakdown } from "../../src/shared/architecture/design-document-breakdown.js";
+import { parseDesignDocumentBreakdown } from "../../src/shared/design-document-breakdown.js";
 
 export async function runDesignDocumentBreakdownTests(): Promise<void> {
   await testParseDesignDocumentBreakdownUsesFileNameAsName();

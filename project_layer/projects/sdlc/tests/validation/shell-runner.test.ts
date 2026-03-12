@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { ShellRunner } from "../../src/workflow/validation/shell-runner.js";
+import { ShellRunner } from "../../src/workflow/shell-runner.js";
 
 export async function runShellRunnerTests(): Promise<void> {
   await testShellRunnerRejectsEmptyCommand();

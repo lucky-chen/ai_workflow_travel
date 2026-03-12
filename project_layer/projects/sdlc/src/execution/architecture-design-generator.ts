@@ -1,9 +1,9 @@
-import type { StageOutput } from "../../shared/contracts/pipeline.js";
-import type { ITraceRecorder } from "../../shared/contracts/pipeline.js";
-import type { ArtifactMap } from "../../shared/types/common.js";
-import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../sdk/llm-executor/llm-executor.js";
-import { DocumentStageGenerator } from "../document-stage-generator.js";
-import { parseDesignDocumentBreakdown } from "../../shared/architecture/design-document-breakdown.js";
+import type { StageOutput } from "../shared/contracts/pipeline.js";
+import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
+import type { ArtifactMap } from "../shared/types/common.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
+import { DocumentStageGenerator } from "./document-stage-generator.js";
+import { parseDesignDocumentBreakdown } from "../shared/design-document-breakdown.js";
 
 export interface ArchitectureDesignArtifacts {
   artifactKey: "architecture_document";

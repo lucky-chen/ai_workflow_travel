@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import type { FetchLike } from "ai-meta-agent-agent-runtime";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import { LlmExecutorService } from "../../src/sdk/llm-executor/llm-executor.js";
 import { loadLocalConfig } from "./load-local-config.js";
 

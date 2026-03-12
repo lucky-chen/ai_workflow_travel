@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
-import { HistoryStoreService } from "../../src/data/history-store/history-store.js";
-import { TraceService } from "../../src/quality-gate/trace/trace-recorder.js";
+import { ArtifactStoreService } from "../../src/data/artifact-store.js";
+import { HistoryStoreService } from "../../src/data/history-store.js";
+import { TraceService } from "../../src/quality-gate/trace-recorder.js";
 
 export async function runArtifactStoreTests(): Promise<void> {
   await testWriteAndReadArtifact();

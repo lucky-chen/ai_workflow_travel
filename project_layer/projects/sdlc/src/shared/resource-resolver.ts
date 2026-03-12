@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   loadWorkspaceLocalEnvConfig,
   resolveConfiguredResourcesRoot,
-} from "../../app/workspace-local-env.js";
+} from "../app/workspace-local-env.js";
 
 export async function resolveWorkspaceResourcePath(
   workspaceRoot: string | undefined,

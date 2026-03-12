@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ImplementationContract } from "../../src/contract/implementation-contract/implementation-contract.js";
+import { ImplementationContract } from "../../src/contract/implementation-contract.js";
 import { ChangeApplier } from "../../src/execution/implementation-generator/change-applier.js";
 import type { IContractChecker } from "../../src/shared/contracts/pipeline.js";
 

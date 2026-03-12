@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store/artifact-store.js";
+import { ArtifactStoreService } from "../../src/data/artifact-store.js";
 import { ImplementationGenerator } from "../../src/execution/implementation-generator/implementation-generator.js";
-import { ImplementationContract } from "../../src/contract/implementation-contract/implementation-contract.js";
-import { InMemoryChangeGate } from "../../src/quality-gate/change-gate/change-gate.js";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace/trace-recorder.js";
+import { ImplementationContract } from "../../src/contract/implementation-contract.js";
+import { InMemoryChangeGate } from "../../src/quality-gate/change-gate.js";
+import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import type { IImplementationGitCommitter } from "../../src/workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../../src/workflow/stage-runners/implementation-stage-runner.js";
 import { resolveImplementationPlanArtifactPath } from "../../src/workflow/stage-runners/stage-artifact-paths.js";

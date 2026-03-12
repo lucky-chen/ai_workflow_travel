@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import type { ContractCheckResult, IContractChecker, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
-import { describeResourcePath, resolveResourcePath } from "../shared/resources/resource-resolver.js";
+import { describeResourcePath, resolveResourcePath } from "../shared/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 
 export interface ContractSpec {

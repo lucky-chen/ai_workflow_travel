@@ -3,11 +3,11 @@ import type {
   ContractIssue,
   StageOutput,
   StageRunContext,
-} from "../../shared/contracts/pipeline.js";
-import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../sdk/llm-executor/llm-executor.js";
-import type { ContractExecutionResult, ContractSpec } from "../document-stage-contract.js";
-import { DocumentStageContract } from "../document-stage-contract.js";
-import type { ImplementationWorkPlan, ImplementationWorkPlanBatch, ImplementationWorkPlanStatus, ImplementationWorkPlanStep } from "../../shared/contracts/implementation-workplan.js";
+} from "../shared/contracts/pipeline.js";
+import { normalizeUserPromptContent, type LlmExecutionRequest } from "../sdk/llm-executor/llm-executor.js";
+import type { ContractExecutionResult, ContractSpec } from "./document-stage-contract.js";
+import { DocumentStageContract } from "./document-stage-contract.js";
+import type { ImplementationWorkPlan, ImplementationWorkPlanBatch, ImplementationWorkPlanStatus, ImplementationWorkPlanStep } from "../shared/contracts/implementation-workplan.js";
 
 interface ImplementationPlanArtifacts {
   artifactKey: "implementation_workplan";

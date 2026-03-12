@@ -1,9 +1,9 @@
-import { ArtifactStoreService } from "../data/artifact-store/artifact-store.js";
-import { HistoryStoreService } from "../data/history-store/history-store.js";
-import { ImplementationContract } from "../contract/implementation-contract/implementation-contract.js";
+import { ArtifactStoreService } from "../data/artifact-store.js";
+import { HistoryStoreService } from "../data/history-store.js";
+import { ImplementationContract } from "../contract/implementation-contract.js";
 import { ImplementationGenerator } from "../execution/implementation-generator/implementation-generator.js";
-import { InMemoryChangeGate } from "../quality-gate/change-gate/change-gate.js";
-import { TraceService } from "../quality-gate/trace/trace-recorder.js";
+import { InMemoryChangeGate } from "../quality-gate/change-gate.js";
+import { TraceService } from "../quality-gate/trace-recorder.js";
 import {
   LlmExecutorService,
   type ILlmExecutor,
@@ -21,12 +21,12 @@ import { ImplementationStageRunner } from "../workflow/stage-runners/implementat
 import { ModuleStageRunner } from "../workflow/stage-runners/module-stage-runner.js";
 import { RequirementStageRunner } from "../workflow/stage-runners/requirement-stage-runner.js";
 import { ValidationStageRunner } from "../workflow/stage-runners/validation-stage-runner.js";
-import { ShellRunner } from "../workflow/validation/shell-runner.js";
+import { ShellRunner } from "../workflow/shell-runner.js";
 import {
   ContractResultBuilder,
   DefaultExecutionEnvironmentPreparer,
   ShellCommandTestRunner,
-} from "../contract/implementation-contract/implementation-contract.js";
+} from "../contract/implementation-contract.js";
 
 export interface ApplicationServices {
   artifactStore: ArtifactStoreService;

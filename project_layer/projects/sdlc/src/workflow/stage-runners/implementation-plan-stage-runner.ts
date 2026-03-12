@@ -7,11 +7,11 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import type { ILlmExecutor } from "../../sdk/llm-executor/llm-executor.js";
-import { ImplementationPlanContract } from "../../contract/implementation-plan-contract/implementation-plan-contract.js";
+import { ImplementationPlanContract } from "../../contract/implementation-plan-contract.js";
 import {
   ImplementationPlanGenerator,
   type ImplementationPlanArtifacts,
-} from "../../execution/implementation-plan-generator/implementation-plan-generator.js";
+} from "../../execution/implementation-plan-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
 import { resolveImplementationPlanArtifactPath } from "./stage-artifact-paths.js";
 

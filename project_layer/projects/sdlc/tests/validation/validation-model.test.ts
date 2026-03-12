@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { ValidationStageRunner } from "../../src/workflow/stage-runners/validation-stage-runner.js";
-import type { ShellResult } from "../../src/workflow/validation/shell-runner.js";
+import type { ShellResult } from "../../src/workflow/shell-runner.js";
 
 export async function runValidationModelTests(): Promise<void> {
   await testValidationUsesWorkspaceRoot();
