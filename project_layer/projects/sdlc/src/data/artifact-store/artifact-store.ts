@@ -11,9 +11,9 @@ import type {
 } from "../../shared/contracts/pipeline.js";
 
 export class ArtifactStoreService implements IArtifactStore {
-  // Storage layout: {storageRoot}/{taskId}/{stageId}/{filePath}
+  // Storage layout: {storageRoot or workspaceRoot/dist/sdlc/artifact_store}/{taskId}/{stageId}/{filePath}
   constructor(
-    private readonly storageRoot: string = path.resolve(process.cwd(), "artifact_store"),
+    private readonly storageRoot?: string,
     private readonly traceRecorder?: ITraceRecorder,
   ) {}
 
@@ -51,7 +51,7 @@ export class ArtifactStoreService implements IArtifactStore {
 
   // Public API: artifact query entry used to inspect stored stage files by directory.
   async listArtifacts(query: ListArtifactRequest): Promise<string[]> {
-    const baseDirectory = path.join(this.getStageDirectory(query.taskId, query.stageId), query.rootDir);
+    const baseDirectory = path.join(this.getStageDirectory(query.taskId, query.stageId, query.workspaceRoot), query.rootDir);
     return this.walkRelativePaths(baseDirectory);
   }
 
@@ -59,12 +59,25 @@ export class ArtifactStoreService implements IArtifactStore {
     taskId: string;
     stageId: string;
     filePath: string;
+    workspaceRoot?: string;
   }): string {
-    return path.join(this.getStageDirectory(request.taskId, request.stageId), request.filePath);
+    return path.join(this.getStageDirectory(request.taskId, request.stageId, request.workspaceRoot), request.filePath);
   }
 
-  private getStageDirectory(taskId: string, stageId: string): string {
-    return path.join(this.storageRoot, taskId, stageId);
+  private getStageDirectory(taskId: string, stageId: string, workspaceRoot?: string): string {
+    return path.join(this.resolveStorageRoot(workspaceRoot), taskId, stageId);
+  }
+
+  private resolveStorageRoot(workspaceRoot?: string): string {
+    if (this.storageRoot) {
+      return this.storageRoot;
+    }
+
+    if (!workspaceRoot?.trim()) {
+      throw new Error('Artifact store requires "workspaceRoot" when no explicit storageRoot is configured.');
+    }
+
+    return path.resolve(workspaceRoot, "dist", "sdlc", "artifact_store");
   }
 
   private async writeFileAt(targetPath: string, content: string): Promise<void> {

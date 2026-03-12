@@ -102,12 +102,14 @@ export interface GetArtifactRequest {
   taskId: TaskId;
   stageId: StageId;
   filePath: FilePath;
+  workspaceRoot?: string;
 }
 
 export interface ListArtifactRequest {
   taskId: TaskId;
   stageId: StageId;
   rootDir: FilePath;
+  workspaceRoot?: string;
 }
 
 export interface IArtifactStore {

@@ -135,6 +135,7 @@ async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(
       taskId: "task-validation",
       stageId: "validation",
       filePath: "reports/validation/ValidationResult.json",
+      workspaceRoot: "/tmp/validation-workspace",
     }),
     JSON.stringify(output.artifacts, null, 2),
   );

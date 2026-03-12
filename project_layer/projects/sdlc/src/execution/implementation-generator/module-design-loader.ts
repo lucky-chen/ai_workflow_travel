@@ -15,6 +15,7 @@ export class ModuleDesignLoader {
       taskId: context.taskId,
       stageId: context.params?.moduleDesignStageId ?? context.stageId,
       filePath: ref,
+      workspaceRoot: context.workspaceRoot,
     });
 
     return {

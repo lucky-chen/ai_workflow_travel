@@ -92,6 +92,7 @@ export class ValidationStageRunner implements IStageRunner {
         stageId: context.stageId,
         filePath: VALIDATION_ARTIFACT_PATH,
         content: JSON.stringify(output.artifacts, null, 2),
+        workspaceRoot: context.workspaceRoot,
       });
 
       await this.dependencies.traceRecorder?.recordTrace({

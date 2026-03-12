@@ -8,6 +8,7 @@ import { TraceService } from "../../src/quality-gate/trace/trace-recorder.js";
 
 export async function runArtifactStoreTests(): Promise<void> {
   await testWriteAndReadArtifact();
+  await testDefaultStorageRootUsesWorkspaceDistDirectory();
   await testWriteArtifactMirrorsWorkspaceWhenWorkspaceRootProvided();
   await testWriteArtifactPersistsHistoryRecord();
   await testListArtifactsWithinRoot();
@@ -88,6 +89,45 @@ async function testListArtifactsWithinRoot(): Promise<void> {
     assert.deepEqual(artifacts, ["a.md", "nested/b.md"]);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
+  }
+}
+
+async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void> {
+  const workspaceRoot = await createTempDir("artifact-default-workspace-");
+
+  try {
+    const store = new ArtifactStoreService();
+
+    await store.writeArtifact({
+      taskId: "task-default",
+      stageId: "validation",
+      filePath: "reports/validation/ValidationResult.json",
+      content: "default workspace artifact",
+      workspaceRoot,
+    });
+
+    const persistedPath = path.join(
+      workspaceRoot,
+      "dist",
+      "sdlc",
+      "artifact_store",
+      "task-default",
+      "validation",
+      "reports/validation/ValidationResult.json",
+    );
+
+    assert.equal(await readFile(persistedPath, "utf8"), "default workspace artifact");
+    assert.equal(
+      await store.getArtifact({
+        taskId: "task-default",
+        stageId: "validation",
+        filePath: "reports/validation/ValidationResult.json",
+        workspaceRoot,
+      }),
+      "default workspace artifact",
+    );
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
 
