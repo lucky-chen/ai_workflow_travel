@@ -97,9 +97,9 @@ Its core functions are:
 - derive actionable task, reminder, booking, and entry projections from a validated current plan
 - keep action projection stable across whole-plan and local-day update flows
 - support explicit action add/remove edits initiated by upstream application flows
-- return projection bundles in a form that can be persisted by the submit owner
+- return projection bundles for submit owners and directly persist action-only changes in action-owned flows
 
-`ActionService` does not own plan generation, execute device actions, or persist final writes independently of the submit owner.
+`ActionService` does not own plan generation, execute device actions, or take over whole-plan and local-schedule submission ownership from `PlanService` or `ScheduleService`.
 
 ## 2. Core Classes
 
@@ -146,12 +146,14 @@ class ActionProjector
 class ActionRuleSet
 class EntryInfoProjector
 class ActionEditApplier
+interface ITripRepository
 
 IActionService <|.. ActionService
 ActionService --> ActionProjector
 ActionService --> ActionRuleSet
 ActionService --> EntryInfoProjector
 ActionService --> ActionEditApplier
+ActionService --> ITripRepository
 @enduml
 ```
 
@@ -183,7 +185,7 @@ Responsibilities:
 
 - expose stable projection and edit APIs to upstream modules
 - keep projection logic independent from plan solving logic
-- return derived bundles without taking ownership of final persistence
+- return derived bundles for caller-owned submissions and directly commit action-only updates when the action domain owns the change
 
 ### 2.2 `ActionProjector`
 
@@ -260,6 +262,7 @@ actor PlanService
 participant ActionService
 participant ActionProjector
 participant EntryInfoProjector
+participant TripRepository
 
 PlanService -> ActionService: project(actionProjectionInput)
 ActionService -> ActionProjector: buildActions(plan)
@@ -309,6 +312,7 @@ ActionService --> PlanService: actionBundle
 interface IActionService {
   project(input: ActionProjectionInput): Promise<ActionBundle>
   edit(input: ActionEditInput): Promise<ActionBundle>
+  persistEdit(input: ActionPersistInput): Promise<ActionPersistResult>
 }
 ```
 
@@ -346,6 +350,13 @@ interface ActionEditInput {
   currentPlan: Record<string, unknown>
   editOperation: 'create_action' | 'delete_action'
   actionInput: Record<string, unknown>
+}
+
+interface ActionPersistInput {
+  tripId: string
+  username: string
+  currentPlan: Record<string, unknown>
+  actionBundle: ActionBundle
 }
 ```
 
@@ -407,6 +418,12 @@ interface ActionBundle {
   actions: ProjectedAction[]
   entryInfo: ProjectedEntryInfo[]
 }
+
+interface ActionPersistResult {
+  tripId: string
+  plan: Record<string, unknown>
+  updatedAt?: string
+}
 ```
 
 #### 4.1.5 Module-Specific Rules
@@ -430,7 +447,7 @@ interface ActionBundle {
 - `ActionService` only consumes validated plan-shaped input and must not depend on raw LLM output.
 - Projection rules must be deterministic for the same plan input and projection scope.
 - Manual action edits may change the action bundle but must not rewrite plan semantics.
-- `ActionService` returns derived bundles only; final persistence remains owned by the caller's submission boundary.
+- Whole-plan and local-schedule submissions remain owned by `PlanService` or `ScheduleService`; action-only edit flows may be persisted directly by `ActionService` through `TripRepository`.
 
 ### 4.2 Constraints
 
@@ -453,4 +470,5 @@ interface ActionBundle {
 - `ActionService` must stay downstream of validated plan data and upstream of terminal execution.
 - The module cannot assume a final action field contract beyond the stable bundle shape required by current collaborators.
 - `ActionService` does not own usernames, ownership checks, or repository transaction boundaries.
+- Direct repository writes by `ActionService` are limited to action-domain changes and must not become a backdoor for plan mutation orchestration.
 - External execution adapters such as map, calendar, or booking apps remain out of scope.

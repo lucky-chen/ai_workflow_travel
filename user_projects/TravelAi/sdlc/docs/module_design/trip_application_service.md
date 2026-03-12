@@ -70,6 +70,7 @@ This module design collaborates with:
 - `./module_design/schedule_service.md`
 - `./module_design/action_service.md`
 - `./module_design/trip_record_service.md`
+- `./module_design/v3_summary_extension.md`
 - `./module_design/experience_layer.md`
 
 ### 1.3 Core Functions
@@ -95,6 +96,7 @@ This module design collaborates with:
 Its core functions are:
 
 - accept external trip, plan, schedule, action, record, and summary requests
+- keep an extension routing slot for future recommendation requests
 - bind requests to a stable username-scoped application context
 - route requests to the correct downstream capability module with minimal command shaping
 - return unified response envelopes back to `TravelClientService`
@@ -150,6 +152,8 @@ interface IPlanService
 interface IScheduleService
 interface IActionService
 interface ITripRecordService
+interface IV3SummaryExtension
+interface IRecommendationExtension
 
 ITripApplicationService <|.. TripApplicationService
 TripApplicationService --> UsernameContextResolver
@@ -161,6 +165,8 @@ RequestRouter --> IPlanService
 RequestRouter --> IScheduleService
 RequestRouter --> IActionService
 RequestRouter --> ITripRecordService
+RequestRouter --> IV3SummaryExtension
+RequestRouter ..> IRecommendationExtension
 @enduml
 ```
 
@@ -215,6 +221,7 @@ Role:
 Responsibilities:
 
 - map external request types to `PlanService`, `ScheduleService`, `ActionService`, or `TripRecordService`
+- map summary requests to `V3SummaryExtension` and preserve a stable route slot for future recommendation extension
 - keep routing lightweight and deterministic
 - avoid embedding downstream solve logic
 
@@ -337,6 +344,8 @@ type ApplicationRequest =
   | ScheduleApplicationRequest
   | ActionApplicationRequest
   | RecordApplicationRequest
+  | SummaryApplicationRequest
+  | RecommendationApplicationRequest
 
 interface PlanApplicationRequest {
   route: 'plan'
@@ -358,6 +367,18 @@ interface ActionApplicationRequest {
 
 interface RecordApplicationRequest {
   route: 'record'
+  username: string
+  payload: Record<string, unknown>
+}
+
+interface SummaryApplicationRequest {
+  route: 'summary'
+  username: string
+  payload: Record<string, unknown>
+}
+
+interface RecommendationApplicationRequest {
+  route: 'recommendation'
   username: string
   payload: Record<string, unknown>
 }
@@ -386,7 +407,7 @@ interface UsernameContext {
 }
 
 interface RoutedCommand {
-  target: 'plan' | 'schedule' | 'action' | 'record'
+  target: 'plan' | 'schedule' | 'action' | 'record' | 'summary' | 'recommendation'
   username: string
   command: Record<string, unknown>
 }
@@ -441,6 +462,7 @@ interface ApplicationResponse {
 - `TripApplicationService` must always attach username scope before calling downstream modules.
 - Request validation at this layer is limited to route shape, required fields, and minimal ownership context.
 - The application layer may reshape local-adjustment input into a `ScheduleService` command, but it must not absorb schedule-solving logic.
+- `summary` is an active routed capability, while `recommendation` remains an explicit extension route slot that may be unimplemented in the current stage.
 - Response formatting should remain thin and avoid inventing business summaries beyond downstream outputs.
 
 ### 4.2 Constraints
