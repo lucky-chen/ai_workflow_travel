@@ -33,6 +33,8 @@ export interface ContractExecutionResult {
 }
 
 export abstract class DocumentStageContract implements IContractChecker {
+  private static readonly contractCache = new Map<string, ContractSpec>();
+
   constructor(private readonly llmExecutor?: ILlmExecutor) {}
 
   async check(context: StageRunContext, output: StageOutput): Promise<ContractCheckResult> {
@@ -51,8 +53,11 @@ export abstract class DocumentStageContract implements IContractChecker {
 
   protected async loadSpecificContract(context?: StageRunContext): Promise<ContractSpec> {
     const contractFilePath = await resolveResourcePath(this.getContractResourcePath(), context?.workspaceRoot);
-    const content = await readFile(contractFilePath, "utf8");
-    const parsed = JSON.parse(content) as ContractSpec;
+    const cached = DocumentStageContract.contractCache.get(contractFilePath);
+    const parsed = cached ?? JSON.parse(await readFile(contractFilePath, "utf8")) as ContractSpec;
+    if (!cached) {
+      DocumentStageContract.contractCache.set(contractFilePath, parsed);
+    }
     const baseSpec: ContractSpec = {
       document_contracts: parsed.document_contracts,
       section_contracts: parsed.section_contracts,

@@ -20,12 +20,12 @@ interface ImplementationPlanGeneratorInputPayload {
   moduleDesignDocuments: string[];
 }
 
-export class ImplementationPlanGenerator extends DocumentStageGenerator {
+export class ImplementationPlanGenerator extends DocumentStageGenerator<ImplementationPlanGeneratorInputPayload> {
   constructor(dependencies: ImplementationPlanGeneratorDependencies) {
     super(dependencies.llmExecutor, dependencies.traceRecorder);
   }
 
-  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<string> {
+  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<ImplementationPlanGeneratorInputPayload> {
     const requirementDocument = inputArtifacts.requirement_document;
     if (!requirementDocument) {
       throw new Error('Missing required input artifact "requirement_document".');
@@ -54,22 +54,18 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator {
       throw new Error('Input artifact "module_design_documents" must contain a non-empty string array.');
     }
 
-    const payload: ImplementationPlanGeneratorInputPayload = {
+    return {
       requirementDocument,
       architectureDocument,
       moduleDesignDocuments,
     };
-
-    return JSON.stringify(payload);
   }
 
   protected getTemplateResourcePath(): string {
     return "template/CodeGenerationExecutionPlanTemplate.md";
   }
 
-  protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
-    const payload = JSON.parse(inputDocument) as ImplementationPlanGeneratorInputPayload;
-
+  protected buildPrompt(inputDocument: ImplementationPlanGeneratorInputPayload, template: string): LlmExecutionRequest {
     return {
       prompt: {
         systemPrompt:
@@ -77,9 +73,9 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator {
           "Return plain markdown only.",
         userPrompt: {
           target: "implementation_plan",
-          requirementDocument: payload.requirementDocument,
-          architectureDocument: payload.architectureDocument,
-          moduleDesignDocuments: payload.moduleDesignDocuments,
+          requirementDocument: inputDocument.requirementDocument,
+          architectureDocument: inputDocument.architectureDocument,
+          moduleDesignDocuments: inputDocument.moduleDesignDocuments,
           template,
         },
       },

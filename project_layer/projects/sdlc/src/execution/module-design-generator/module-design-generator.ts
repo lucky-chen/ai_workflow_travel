@@ -28,12 +28,12 @@ interface ModuleDesignGeneratorInputPayload {
   moduleDescriptor: ModuleDescriptor;
 }
 
-export class ModuleDesignGenerator extends DocumentStageGenerator {
+export class ModuleDesignGenerator extends DocumentStageGenerator<ModuleDesignGeneratorInputPayload> {
   constructor(dependencies: ModuleDesignGeneratorDependencies) {
     super(dependencies.llmExecutor, dependencies.traceRecorder);
   }
 
-  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<string> {
+  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<ModuleDesignGeneratorInputPayload> {
     const architectureDocument = inputArtifacts.architecture_document;
     if (!architectureDocument) {
       throw new Error('Missing required input artifact "architecture_document".');
@@ -55,21 +55,17 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
       throw new Error('Input artifact "module_descriptors" must contain exactly one valid ModuleDescriptor.');
     }
 
-    const payload: ModuleDesignGeneratorInputPayload = {
+    return {
       architectureDocument,
       moduleDescriptor: parsed,
     };
-
-    return JSON.stringify(payload);
   }
 
   protected getTemplateResourcePath(): string {
     return "template/ModuleDesignTemplate.md";
   }
 
-  protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
-    const payload = JSON.parse(inputDocument) as ModuleDesignGeneratorInputPayload;
-
+  protected buildPrompt(inputDocument: ModuleDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
     return {
       prompt: {
         systemPrompt:
@@ -77,16 +73,16 @@ export class ModuleDesignGenerator extends DocumentStageGenerator {
           "Return plain markdown only.",
         userPrompt: {
           target: "module_design",
-          architectureDocument: payload.architectureDocument,
-          moduleDescriptor: payload.moduleDescriptor,
+          architectureDocument: inputDocument.architectureDocument,
+          moduleDescriptor: inputDocument.moduleDescriptor,
           template,
         },
       },
       responseFormat: "text",
       metadata: {
         stage: "module_design",
-        moduleName: payload.moduleDescriptor.name,
-        documentPath: payload.moduleDescriptor.documentPath ?? "",
+        moduleName: inputDocument.moduleDescriptor.name,
+        documentPath: inputDocument.moduleDescriptor.documentPath ?? "",
       },
     };
   }

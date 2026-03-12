@@ -47,6 +47,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
     const preparedContext = await this.prepareExecutionContext(context);
     const preparedStepContext = this.parsePreparedStepContext(preparedContext.inputArtifacts.prepared_step_context);
+    const currentExecutionPointer = this.parseCurrentExecutionPointer(preparedContext.inputArtifacts.current_step);
     const output = await this.dependencies.generator.run(preparedContext);
     await this.changeApplier.applyChangedFiles(output.artifacts.changedFiles, context.workspaceRoot);
 
@@ -73,11 +74,11 @@ export class ImplementationStageRunner extends BaseStageRunner {
     const nextCurrentStep = this.resolveNextCurrentStep(
       preparedStepContext.workplan,
       preparedStepContext.currentBatch.batchId,
-      preparedContext.inputArtifacts.current_step,
+      currentExecutionPointer,
     );
     await this.gitCommitter.commit({
       workspaceRoot: context.workspaceRoot,
-      stepId: this.parseCurrentExecutionPointer(preparedContext.inputArtifacts.current_step).stepId,
+      stepId: currentExecutionPointer.stepId,
       batchId: preparedStepContext.currentBatch.batchId,
     });
 
@@ -262,9 +263,8 @@ export class ImplementationStageRunner extends BaseStageRunner {
   private resolveNextCurrentStep(
     workplan: ImplementationWorkPlan,
     currentBatchId: string,
-    rawCurrentStep: string | undefined,
+    currentPointer: CurrentExecutionPointer,
   ): CurrentExecutionPointer | null {
-    const currentPointer = this.parseCurrentExecutionPointer(rawCurrentStep);
     const stepIndex = workplan.steps.findIndex((step) => step.stepId === currentPointer.stepId);
     if (stepIndex < 0) {
       throw new Error(`Current execution step "${currentPointer.stepId}" was not found in parsed implementation workplan.`);

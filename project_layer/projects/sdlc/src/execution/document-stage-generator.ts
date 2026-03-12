@@ -6,7 +6,9 @@ import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../s
 import type { ArtifactMap } from "../shared/types/common.js";
 import { readFile } from "node:fs/promises";
 
-export abstract class DocumentStageGenerator implements IStageGenerator {
+export abstract class DocumentStageGenerator<TInput = string> implements IStageGenerator {
+  private static readonly resourceCache = new Map<string, string>();
+
   constructor(
     private readonly llmExecutor: ILlmExecutor,
     private readonly traceRecorder?: ITraceRecorder,
@@ -37,13 +39,20 @@ export abstract class DocumentStageGenerator implements IStageGenerator {
     return output;
   }
 
-  protected abstract loadInputDocument(inputArtifacts: ArtifactMap): Promise<string>;
+  protected abstract loadInputDocument(inputArtifacts: ArtifactMap): Promise<TInput>;
   protected async loadTemplate(context: StageRunContext): Promise<string> {
     const templatePath = await resolveResourcePath(this.getTemplateResourcePath(), context.workspaceRoot);
-    return readFile(templatePath, "utf8");
+    const cached = DocumentStageGenerator.resourceCache.get(templatePath);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const template = await readFile(templatePath, "utf8");
+    DocumentStageGenerator.resourceCache.set(templatePath, template);
+    return template;
   }
   protected abstract getTemplateResourcePath(): string;
-  protected abstract buildPrompt(inputDocument: string, template: string): LlmExecutionRequest;
+  protected abstract buildPrompt(inputDocument: TInput, template: string): LlmExecutionRequest;
   protected buildGenerationFinishedPayload(_output: StageOutput): Record<string, unknown> | undefined {
     return undefined;
   }
