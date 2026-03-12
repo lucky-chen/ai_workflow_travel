@@ -1,4 +1,5 @@
 import { runArchitectureStageRunnerTests } from "./architecture/architecture-stage-runner.test.js";
+import { runDesignDocumentBreakdownTests } from "./architecture/design-document-breakdown.test.js";
 import { runCompositionRootTests } from "./app/composition-root.test.js";
 import { runArtifactStoreTests } from "./shared/artifact-store.test.js";
 import { runArchitectureDesignGeneratorTests } from "./architecture/architecture-design-generator.test.js";
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   await runArtifactStoreTests();
   await runArchitectureDesignGeneratorTests();
   await runArchitectureDesignContractTests();
+  await runDesignDocumentBreakdownTests();
   await runArchitectureStageRunnerTests();
   await runCompositionRootTests();
   await runChangeGateTests();

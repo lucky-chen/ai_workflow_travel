@@ -24,38 +24,28 @@ export function parseDesignDocumentBreakdown(content: string): DesignDocumentDes
 }
 
 function parseDesignDocumentLine(line: string): DesignDocumentDescriptor | null {
-  const match = line.match(/^- `([^`]+)`:\s*(.+)$/);
+  const match = line.match(/^- (?:`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)):\s*(.+)$/);
   if (!match) {
     return null;
   }
 
-  const documentPath = normalizeDocumentPath(match[1]);
-  const description = match[2].trim();
+  const rawDocumentPath = match[1] ?? match[3] ?? "";
+  const documentPath = normalizeDocumentPath(rawDocumentPath);
+  const description = match[4].trim();
   if (documentPath.length === 0 || description.length === 0) {
     return null;
   }
 
   return {
-    name: inferDocumentName(documentPath, description),
+    name: inferDocumentName(documentPath),
     documentPath,
     description,
     responsibilities: [description],
   };
 }
 
-function inferDocumentName(documentPath: string, description: string): string {
-  const backtickedTerms = [...description.matchAll(/`([^`]+)`/g)].map((match) => match[1].trim());
-  const meaningfulTerms = backtickedTerms.filter((term) => !term.includes("/") && !term.endsWith(".md"));
-  if (meaningfulTerms.length > 0) {
-    return meaningfulTerms[0];
-  }
-
-  const baseName = path.posix.basename(documentPath, path.posix.extname(documentPath));
-  return baseName
-    .split(/[-_]/g)
-    .filter((part) => part.length > 0)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
+function inferDocumentName(documentPath: string): string {
+  return path.posix.basename(documentPath, path.posix.extname(documentPath));
 }
 
 function extractSection(content: string, headings: string[]): string {
