@@ -191,8 +191,6 @@ User
 
 这一节只说明按层级分组后的模块能力；分层职责以 `4.2 Layers or Partitions` 为准。
 
-#### 5.2.1 Module Capabilities
-
 - **ExperienceLayer**
   - `TravelUI`
     - 功能：承接用户输入、计划查看、待办查看、日程查看、入口点击和局部调整交互。
@@ -728,17 +726,17 @@ GET /summary/current => request { summaryQuery { tripId } } => response { summar
 
 ### 7.2 Design Document Breakdown
 
-- [`plan_service.md`](./module_design/plan_service.md)：覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。
-- [`schedule_service.md`](./module_design/schedule_service.md)：覆盖 `ScheduleService` 的设计，包括单日日程生成与局部调整。
-- [`action_service.md`](./module_design/action_service.md)：覆盖 `ActionService` 的设计，包括 action 生成与刷新。
-- [`trip_record_service.md`](./module_design/trip_record_service.md)：覆盖 `TripRecordService` 的设计，包括 TripRecord 数据沉淀与总结输入组织。
-- [`trip_application_service.md`](./module_design/trip_application_service.md)：覆盖 `TripApplicationService` 的设计，包括请求接入、路由、校验和轻量协调边界。
-- [`trip_domain_model.md`](./module_design/trip_domain_model.md)：覆盖 `TripDomainModel` 的设计，包括核心领域对象、业务合法性判断和共享领域约束边界。
-- [`plan_normalizer.md`](./module_design/plan_normalizer.md)：覆盖 `PlanNormalizer` 的设计，包括候选结果归一化和稳定结构输出边界。
-- [`provider_hub.md`](./module_design/provider_hub.md)：覆盖 `ProviderHub` 以及外部信息系统 adapter 边界的设计。
-- [`trip_repository.md`](./module_design/trip_repository.md)：覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。
-- [`experience_layer.md`](./module_design/experience_layer.md)：覆盖 `TravelUI`、`TravelClientService`、`TerminalService` 的协作方式、本地状态承接、`LocalExecutionProtocol` 和端上交互边界。
-- [`v3_summary_extension.md`](./module_design/v3_summary_extension.md)：覆盖 `V3` 总结能力如何基于 `TripRecord` 和当前 `plan` 结果接入现有主干。
+- [plan_service.md](./module_design/plan_service.md)：覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。
+- [schedule_service.md](./module_design/schedule_service.md)：覆盖 `ScheduleService` 的设计，包括单日日程生成与局部调整。
+- [action_service.md](./module_design/action_service.md)：覆盖 `ActionService` 的设计，包括 action 生成与刷新。
+- [trip_record_service.md](./module_design/trip_record_service.md)：覆盖 `TripRecordService` 的设计，包括 TripRecord 数据沉淀与总结输入组织。
+- [trip_application_service.md](./module_design/trip_application_service.md)：覆盖 `TripApplicationService` 的设计，包括请求接入、路由、校验和轻量协调边界。
+- [trip_domain_model.md](./module_design/trip_domain_model.md)：覆盖 `TripDomainModel` 的设计，包括核心领域对象、业务合法性判断和共享领域约束边界。
+- [plan_normalizer.md](./module_design/plan_normalizer.md)：覆盖 `PlanNormalizer` 的设计，包括候选结果归一化和稳定结构输出边界。
+- [provider_hub.md](./module_design/provider_hub.md)：覆盖 `ProviderHub` 以及外部信息系统 adapter 边界的设计。
+- [trip_repository.md](./module_design/trip_repository.md)：覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。
+- [experience_layer.md](./module_design/experience_layer.md)：覆盖 `TravelUI`、`TravelClientService`、`TerminalService` 的协作方式、本地状态承接、`LocalExecutionProtocol` 和端上交互边界。
+- [v3_summary_extension.md](./module_design/v3_summary_extension.md)：覆盖 `V3` 总结能力如何基于 `TripRecord` 和当前 `plan` 结果接入现有主干。
 
 文档目录应与架构文档中明确列出的模块与关键交互保持一致。
 

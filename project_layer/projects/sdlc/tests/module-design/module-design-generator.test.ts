@@ -64,19 +64,66 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
     normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("module design document"),
     true,
   );
+  assert.equal(
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("generator internals"),
+    true,
+  );
 
   const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
     architectureDocument: string;
     moduleDescriptor: { name: string; responsibilities: string[]; documentPath?: string };
-    template: string;
+    templateRules: { document_contracts: Array<{ check_item: string }>; section_contracts: Array<{ section_id: string; checkitems: string[] }> };
+    templateSkeleton: string;
   };
   assert.equal(payload.target, "module_design");
   assert.equal(payload.architectureDocument.includes("Architecture content."), true);
   assert.equal(payload.moduleDescriptor.name, "Workflow");
   assert.equal(payload.moduleDescriptor.documentPath, "sdlc/docs/module_design/Workflow.md");
   assert.equal(payload.moduleDescriptor.responsibilities.length, 2);
-  assert.equal(payload.template.includes("# {ModuleName} Design"), true);
+  assert.equal(payload.templateRules.document_contracts.length > 0, true);
+  assert.equal(payload.templateRules.section_contracts.some((entry) => entry.section_id === "4.1.2"), true);
+  assert.equal(
+    payload.templateRules.section_contracts.some(
+      (entry) => entry.section_id === "1.1"
+        && entry.checkitems.some((item) => item.includes("keep the purpose concise"))
+        && !entry.checkitems.some((item) => item.includes("inline-markdown format")),
+    ),
+    true,
+  );
+  assert.equal(
+    payload.templateRules.section_contracts.some(
+      (entry) => entry.section_id === "1.3"
+        && entry.checkitems.some((item) => item.includes("current design item identity")),
+    ),
+    true,
+  );
+  assert.equal(
+    payload.templateRules.section_contracts.some(
+      (entry) => entry.section_id === "4.1.1"
+        && entry.checkitems.some((item) => item.includes("actual exposed boundary or contract surface")),
+    ),
+    true,
+  );
+  assert.equal(
+    payload.templateRules.section_contracts.some(
+      (entry) => entry.section_id === "4.1.2"
+        && entry.checkitems.some((item) => item.includes("short code comments are optional"))
+        && entry.checkitems.some((item) => item.includes("do not add explanatory prose before or after the code block")),
+    ),
+    true,
+  );
+  assert.equal(
+    payload.templateRules.section_contracts.some(
+      (entry) => entry.section_id === "4.1.4"
+        && entry.checkitems.some((item) => item.includes("short code comments are optional"))
+        && entry.checkitems.some((item) => item.includes("do not add explanatory prose before or after the code block")),
+    ),
+    true,
+  );
+  assert.equal(payload.templateSkeleton.includes("# {ModuleName} Design"), true);
+  assert.equal(payload.templateSkeleton.includes("document_contracts"), false);
+  assert.equal(payload.templateSkeleton.includes("section_contract"), false);
 }
 
 async function testModuleDesignGeneratorRequiresArchitectureDocument(workspaceRoot: string): Promise<void> {

@@ -1,8 +1,9 @@
 import type { StageOutput } from "../shared/contracts/pipeline.js";
-import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
+import type { ITraceRecorder, StageRunContext } from "../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "./document-stage-generator.js";
+import { loadModuleDesignTemplateSpec } from "../shared/module-design-template-spec.js";
 
 export interface ModuleDescriptor {
   name: string;
@@ -65,17 +66,26 @@ export class ModuleDesignGenerator extends DocumentStageGenerator<ModuleDesignGe
     return "template/ModuleDesignTemplate.md";
   }
 
+  protected async loadTemplate(context: StageRunContext): Promise<string> {
+    const spec = await loadModuleDesignTemplateSpec(context.workspaceRoot);
+    return JSON.stringify(spec);
+  }
+
   protected buildPrompt(inputDocument: ModuleDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
+    const templateSpec = JSON.parse(template) as Awaited<ReturnType<typeof loadModuleDesignTemplateSpec>>;
     return {
       prompt: {
         systemPrompt:
           "You generate a module design document that follows the provided template structure. " +
+          "Treat template rules as authoring instructions only, not as output content. " +
+          "Do not copy template comments, contract schema names, generator internals, or validation internals into the document unless the architecture explicitly defines them. " +
           "Return plain markdown only.",
         userPrompt: {
           target: "module_design",
           architectureDocument: inputDocument.architectureDocument,
           moduleDescriptor: inputDocument.moduleDescriptor,
-          template,
+          templateRules: templateSpec.contractSpec,
+          templateSkeleton: templateSpec.outputSkeleton,
         },
       },
       responseFormat: "text",

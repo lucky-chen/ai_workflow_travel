@@ -4,6 +4,7 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../shared/contracts/pipeline.js";
+import { loadModuleDesignTemplateSpec } from "../shared/module-design-template-spec.js";
 import { normalizeUserPromptContent, type LlmExecutionRequest } from "../sdk/llm-executor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "./document-stage-contract.js";
 import { DocumentStageContract } from "./document-stage-contract.js";
@@ -16,11 +17,15 @@ interface ModuleDesignArtifacts {
 
 export class ModuleDesignContract extends DocumentStageContract {
   protected getContractResourcePath(): string {
-    return "contract/ModuleDesignTemplate.contract.json";
+    return "template/ModuleDesignTemplate.md";
   }
 
   protected getStageId(): string {
     return "module_design";
+  }
+
+  protected async loadSpecificContract(context?: StageRunContext): Promise<ContractSpec> {
+    return (await loadModuleDesignTemplateSpec(context?.workspaceRoot)).contractSpec;
   }
 
   protected async buildCheckRequest(

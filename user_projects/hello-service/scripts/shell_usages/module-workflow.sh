@@ -11,6 +11,6 @@ STDERR_LOG="$LOG_DIR/module-workflow.stderr.log"
 
 cd "$REPO_ROOT"
 mkdir -p "$LOG_DIR"
-node project_layer/projects/sdlc/bin/sdlc.js generate --stage module_design --workspace "$WORKSPACE_ROOT" --target-module "Client Server Contract" --single-step \
+node project_layer/projects/sdlc/bin/sdlc.js generate --stage module_design --workspace "$WORKSPACE_ROOT" --target-module server_layer_design --single-step \
   > >(tee "$STDOUT_LOG") \
   2> >(tee "$STDERR_LOG" >&2)

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { ModuleDesignContract } from "../../src/contract/module-design-contract.js";
@@ -223,27 +223,9 @@ async function testModuleDesignContractLoadsTemplateContractSource(): Promise<vo
       specific_contract?: Record<string, unknown>;
     }>;
   }).loadSpecificContract();
-  const rawSpec = JSON.parse(
-    await readFile(
-      path.resolve(
-        process.cwd(),
-        "..",
-        "..",
-        "..",
-        "meta_layer",
-        "resources",
-        "contract",
-        "ModuleDesignTemplate.contract.json",
-      ),
-      "utf8",
-    ),
-  ) as { document_contracts: Array<{ check_item: string }> };
-
-  assert.deepEqual(
-    spec.document_contracts.map((entry) => entry.check_item),
-    rawSpec.document_contracts.map((entry) => entry.check_item),
-  );
-  assert.equal(spec.specific_contract?.source, "dist/resources/contract/ModuleDesignTemplate.contract.json");
+  assert.equal(spec.document_contracts.length > 0, true);
+  assert.equal(spec.section_contracts.some((entry) => entry.section_id === "4.1.3"), true);
+  assert.equal(spec.specific_contract?.source, "dist/resources/template/ModuleDesignTemplate.md");
   assert.equal(spec.specific_contract?.stage, "module_design");
 }
 
@@ -317,7 +299,7 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
     payload.contractSpec.document_contracts.map((entry) => entry.check_item),
     spec.document_contracts.map((entry) => entry.check_item),
   );
-  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/contract/ModuleDesignTemplate.contract.json");
+  assert.equal(payload.contractSpec.specific_contract?.source, "dist/resources/template/ModuleDesignTemplate.md");
   assert.equal(payload.contractSpec.specific_contract?.stage, "module_design");
   assert.equal(payload.contractSpec.section_contracts.length, spec.section_contracts.length);
 }

@@ -29,6 +29,30 @@
 - 预计收益：一站式旅行助手可以提升整段旅程的效率和体验。
   简要说明：如果 TravelAi 能逐步覆盖地点推荐、行前规划、过程助手和结束后整理，就能降低决策、执行和整理成本，提升行程可执行性，并增强用户的持续使用价值；具体落地范围以版本规划为准。
 
+## 1.1 Market Coverage and User Scale
+
+- 广义市场空间较大，且旅游消费已经恢复到高位。
+  简要说明：2024 年国内出游人次达到 56.15 亿、国内旅游总花费达到 5.75 万亿元；2024 年全球国际游客到达量约 14 亿人次。按总量看，旅游是万亿消费、十亿级出行人次的大市场。
+- 本产品面向“需要规划的自由行市场”。
+  简要说明：按产品切入判断，可服务市场可按千万级用户、亿级规划需求理解；对应的是一个足以支撑持续商业化的垂直市场，核心收益来自会员订阅、规划增值服务，以及机酒门票等导购分成机会。
+
+## 1.2 User Pain Points
+
+- 核心痛点集中在三件事：信息分散、规划成本高、计划缺少后续承接。
+  简要说明：具体用户场景、问题表现和优先级以 `2. User Scenarios` 为主，本节只用于说明市场机会来自自由行用户在旅行前、中、后的连续痛点。
+
+## 1.4 Reference Notes
+
+- 市场规模参考：
+  [中国政府网：2024 年国内出游人次 56.15 亿、总花费 5.75 万亿元](https://www.gov.cn/lianbo/bumen/202501/content_7000418.htm)
+  [UN Tourism：2024 年全球国际游客约 14 亿，2025 年 Q1 约 3 亿且同比增长 5%](https://www.unwto.org/un-tourism-world-tourism-barometer-data)
+- 竞品与市场信号参考：
+  [Booking.com：AI Trip Planner](https://news.booking.com/bookingcom-launches-new-ai-trip-planner-to-enhance-travel-planning-experience/)
+  [Booking.com：2025 年旅行预测中 41% 旅客对 AI 个性化行程感兴趣](https://news.booking.com/bookingcom-enhances-travel-planning-with-new-ai-powered-features--for-easier-smarter-decisions/)
+  [Wanderlog：支持协作、路线优化、预算和 AI Assistant](https://wanderlog.com/)
+  [TripIt：自动汇总 itinerary 与提醒](https://www.tripit.com/web)
+  [Mindtrip：AI 对话式规划与多人协作](https://mindtrip.ai/)
+
 # 2. User Scenarios
 
 ## 2.1 还没决定去哪里，但已经有出游意愿的用户
@@ -59,6 +83,15 @@ TravelAi 是一款面向自由行场景的 AI 旅行助手，目标是围绕一�
 - 行前规划：将模糊需求转化为可使用的旅行方案，不只输出一份行程文档，还形成结构化的日程、待办、预算和预订建议。
 - 过程助手：在旅行进行中负责展示计划、记录变化、提供建议和组织入口，并借助手机、电脑等执行层能力完成提醒、导航、查询和动态调整。
 - 结束后整理：沉淀旅行过程中的关键记录、消费、地点和素材索引，帮助用户完成轻量留存与复盘。
+
+## 3.1 Existing Platforms vs TravelAi
+
+| 对比对象 | 主要解决的问题 | 优点 | 局限 | TravelAi 对比 |
+| --- | --- | --- | --- | --- |
+| OTA 和内容平台 | 帮用户查信息、做比选、完成预订 | 信息多、库存真实、用户基础大，适合搜索和交易 | 大多只覆盖单个环节，用户仍要自己拼完整计划 | TravelAi 更强调把分散信息组织成一份可执行计划，并继续承接后续调整 |
+| itinerary 工具 | 帮用户整理已有预订和日程 | 地图视图、日程管理、路线展示较强 | 通常偏手动整理，依赖用户先收集和录入内容 | TravelAi 更偏主动规划，直接从需求出发生成方案 |
+| AI 行程产品 | 帮用户快速生成个性化旅行建议 | 对话式生成效率高，更接近“帮用户做计划” | 不少产品偏一次性生成，后续细化、变化处理和总结承接不足 | TravelAi 更强调围绕同一份当前生效计划持续服务，而不是只生成一次内容 |
+| TravelAi | 帮用户完成规划、调整、过程承接和轻量总结 | 关注可执行性，输出按天行程、预算、住宿区域、待办和 action | 早期范围更聚焦，不以交易闭环和全量目的地覆盖为目标 | 优势在于把规划前、中、后的关键环节串成一条连续链路 |
 
 # 4. Core Problems and Product Abilities
 

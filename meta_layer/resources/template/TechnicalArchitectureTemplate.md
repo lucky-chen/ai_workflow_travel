@@ -15,6 +15,26 @@
       "check_item": "cross_section_alignment",
       "description": "Architecture style, dependency rules, runtime interactions, design document breakdown, and open issues should remain logically consistent across sections.",
       "severity": "high"
+    },
+    {
+      "check_item": "architecture_level_boundary",
+      "description": "The document must stay at architecture level. Detailed API fields, prompt wording, storage schema, and module-internal retry or algorithm logic should be moved to follow-up design documents.",
+      "severity": "high"
+    },
+    {
+      "check_item": "interaction_structure_clarity",
+      "description": "Primary Interaction Path should describe the reusable backbone. Interaction Model may expand by scenario or stage, but each scenario must stay focused on module collaboration, control handoff, and ownership boundaries.",
+      "severity": "medium"
+    },
+    {
+      "check_item": "scope_stage_clarity",
+      "description": "If future-stage capabilities are mentioned, they must be explicitly labeled so readers can distinguish target architecture from current delivery scope.",
+      "severity": "medium"
+    },
+    {
+      "check_item": "design_doc_derivation",
+      "description": "Core Modules should list only architecture-relevant modules, and follow-up design documents should be derived from the architecture rather than copied from an existing folder tree.",
+      "severity": "medium"
     }
   ]
 }
@@ -209,7 +229,7 @@
     "title": "Runtime Topology",
     "checkitems": [
       "describe the backend runtime and deployment view in a lightweight way",
-      "clarify which major parts run together, which parts may be separated, and how shared storage is used",
+      "clarify which major parts run together, which parts may be separated, and how shared infrastructure is used",
       "keep the content at runtime topology level rather than deployment runbook detail"
     ],
     "severity": "medium",
@@ -282,13 +302,15 @@
     "title": "Core Modules",
     "checkitems": [
       "list only the modules needed to understand the architecture",
-      "keep responsibilities high level",
+      "group modules in a way that stays aligned with the architecture partitions when useful",
+      "keep each module description at architecture level and focus on responsibility, boundary, and collaboration role",
+      "allow lightweight notes on key inputs, outputs, or ownership boundaries only when they help explain the architecture",
       "module names must use English identifiers only",
       "module names must start with an uppercase letter",
       "module names must not contain spaces"
     ],
     "severity": "medium",
-    "expected_format": "- `ModuleA`: `{ResponsibilityA}`\n- `ModuleB`: `{ResponsibilityB}`\n- `ModuleC`: `{ResponsibilityC}`"
+    "expected_format": "This section may be organized by architecture layer or partition when that improves readability.\n\n- **`LayerOrPartitionA`**\n  - `ModuleA`\n    - responsibility: `{ResponsibilityA}`\n    - inputs: `{InputBoundaryA}`\n    - outputs: `{OutputBoundaryA}`\n    - ownership boundary: `{OwnershipBoundaryA}`\n  - `ModuleB`\n    - responsibility: `{ResponsibilityB}`\n    - inputs: `{InputBoundaryB}`\n    - outputs: `{OutputBoundaryB}`\n\n- **`LayerOrPartitionB`**\n  - `ModuleC`\n    - responsibility: `{ResponsibilityC}`\n\nKeep the notes lightweight and architecture-oriented. Not every module needs every field, but the structure should stay consistent within the section. Do not split this section into an additional mandatory module-capabilities subsection."
   }
 }
 -->
@@ -302,11 +324,12 @@
     "title": "Interaction Model",
     "checkitems": [
       "explain how modules collaborate at a high level",
-      "group interactions by major interaction step or control point",
+      "group interactions by major interaction step, user scenario, or control point",
+      "make it clear which interactions belong to the current mainline and which are future-stage extensions when relevant",
       "keep this section at cross-module interaction level rather than module-internal detail"
     ],
     "severity": "medium",
-    "expected_format": "This section describes high-level cross-module interaction. The concrete public APIs or interface contracts for these calls are defined in `{CrossModuleDocPath}`."
+    "expected_format": "This section describes high-level cross-module interaction. The concrete public APIs or interface contracts for these calls are defined in `{CrossModuleDocPath}`.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section in two main steps:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`\n\nWithin each `5.3.x.x` interaction case, continue to deeper levels only when needed for readability. The deepest useful level should typically be one of these structures:\n\n```plantuml\n@startuml\nactor User\nparticipant ModuleA\nparticipant ModuleB\nUser -> ModuleA: `{Action}`\nModuleA -> ModuleB: `{Delegation}`\nModuleB -> ModuleA: `{Result}`\n@enduml\n```\n\n```text\n{METHOD} {PATH} => request { `{RequestShape}` } => response { `{ResponseShape}` }\n```\n\nUse `plantuml` for cross-module interaction views and `text` for lightweight public API or shared interface shapes. These views should capture only the shared boundary and collaboration path that matter at architecture level.\n\nFor each scenario, prefer this information order:\n- user scenario or trigger\n- current stage versus future-stage position\n- interaction goal\n- interaction cases under `5.3.x.x`\n- lightweight shared interaction shape when needed\n\nDo not include detailed request fields, storage schema, or module-internal algorithms here."
   }
 }
 -->
@@ -428,7 +451,7 @@
       "keep the categories aligned with architecture boundaries"
     ],
     "severity": "medium",
-    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`"
+    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`\n\nTypical categories may include module design documents, cross-module interaction documents, shared contract documents, and runtime or data-boundary documents."
   }
 }
 -->
@@ -437,18 +460,20 @@
 
 <!--
 {
-  "section_contract": {
-    "section_id": "7.2",
-    "title": "Design Document Breakdown",
-    "checkitems": [
-      "output this section as a document directory list",
-      "list follow-up design documents that map directly to the modules identified in the architecture document",
-      "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
-      "state each document path together with its intended scope"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{DocPathA}`: covers the design of `{ModuleOrInteractionA}`.\n- `{DocPathB}`: covers the design of `{ModuleOrInteractionB}`.\n- `{DocPathC}`: covers the design of `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document."
-  }
+    "section_contract": {
+      "section_id": "7.2",
+      "title": "Design Document Breakdown",
+      "checkitems": [
+        "output this section as a document directory list",
+        "list follow-up design documents that map directly to the modules identified in the architecture document",
+        "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
+        "state each document path together with its intended scope",
+        "use markdown link format as `[document_name](document_path)`",
+        "document_name must not contain spaces"
+      ],
+      "severity": "high",
+      "expected_format": "- [`document_name_a`](./design_docs/document_name_a.md): covers `{ModuleOrInteractionA}`.\n- [`document_name_b`](./design_docs/document_name_b.md): covers `{ModuleOrInteractionB}`.\n- [`document_name_c`](./design_docs/document_name_c.md): covers `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format `[document_name](document_path)`\n- `document_name` must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nThe breakdown should prefer stable architecture-aligned slices, for example:\n- one document per major module or subsystem when that module has meaningful internal design work\n- one document for a repeated cross-module interaction pattern when multiple modules rely on the same collaboration shape\n- one document for shared contracts when multiple modules depend on the same canonical structure"
+    }
 }
 -->
 

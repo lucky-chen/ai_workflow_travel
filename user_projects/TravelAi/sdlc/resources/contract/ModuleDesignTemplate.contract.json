@@ -7,7 +7,7 @@
     },
     {
       "check_item": "section_contract_alignment",
-      "description": "Each major section should follow the expected section structure, code-block requirements, and formatting rules defined by the template contract.",
+      "description": "Each major section should be described by an explicit SectionContract-style comment including section_id, title, expected_format, and hints.",
       "severity": "high"
     },
     {
@@ -76,7 +76,7 @@
         "do not restate every field unless it affects responsibilities or boundaries"
       ],
       "severity": "medium",
-      "expected_format": "#### 2.2.x `PrimaryService`\n\nRole:\n\n- `{PrimaryRole}`\n\nResponsibilities:\n\n- `{Responsibility1}`\n- `{Responsibility2}`\n- `{Responsibility3}`"
+      "expected_format": "### 2.2 `PrimaryService`\n\nRole:\n\n- `{PrimaryRole}`\n\nResponsibilities:\n\n- `{Responsibility1}`\n- `{Responsibility2}`\n- `{Responsibility3}`"
     },
     {
       "section_id": "3",
@@ -111,12 +111,10 @@
       "title": "Public API",
       "checkitems": [
         "define only the public API that upstream modules need to call",
-        "keep the API structure stable and minimal",
-        "express the public API in a TypeScript code block",
-        "the public API may use interface, type, class signature, or other stable TypeScript boundary forms"
+        "keep the API structure stable and minimal"
       ],
       "severity": "medium",
-      "expected_format": "```typescript\ninterface I{ModuleName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {ModuleName}Api = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
+      "expected_format": "```typescript\ninterface I{ModuleName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```"
     },
     {
       "section_id": "4.1.2",
@@ -136,13 +134,10 @@
       "title": "Runtime Types",
       "checkitems": [
         "define internal runtime structures only when they are necessary for understanding the design",
-        "when present, express runtime types in a TypeScript code block",
-        "runtime types may use interface, type, class, or other concise TypeScript structures",
-        "omit the entire subsection when the module does not own meaningful runtime types",
-        "do not keep this subsection with prose-only not-applicable statements"
+        "keep runtime types implementation-oriented but concise"
       ],
       "severity": "medium",
-      "expected_format": "```typescript\ninterface {RuntimeTypeA} {\n  {RuntimeFieldA}: {RuntimeFieldTypeA}\n}\n\ntype {RuntimeTypeB} = {\n  {RuntimeFieldB}: {RuntimeFieldTypeB}\n}\n```\n\nor omit section `4.1.3 Runtime Types` entirely when runtime types are not needed. Do not keep the heading with prose-only placeholders such as `Not applicable`."
+      "expected_format": "```typescript\ninterface {RuntimeTypeA} {\n  {RuntimeFieldA}: {RuntimeFieldTypeA}\n}\n\ninterface {RuntimeTypeB} {\n  {RuntimeFieldB}: {RuntimeFieldTypeB}\n}\n```"
     },
     {
       "section_id": "4.1.4",
@@ -160,7 +155,7 @@
       "section_id": "4.1.5",
       "title": "Module-Specific Rules",
       "checkitems": [
-        "add this subsection only when the module has important transformation, validation, mapping, or request-construction rules",
+        "add this subsection only when the module has important transformation, validation, mapping, or prompt-construction rules",
         "express stable rules that downstream modules depend on",
         "prefer bullets over long prose"
       ],

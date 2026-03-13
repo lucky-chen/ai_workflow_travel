@@ -8,7 +8,7 @@
     },
     {
       "check_item": "section_contract_alignment",
-      "description": "Each major section should be described by an explicit SectionContract-style comment including section_id, title, expected_format, and hints.",
+      "description": "Each major section should align with its section contract requirements for structure, code-block usage, and expected formatting without copying template comments into the output.",
       "severity": "high"
     },
     {
@@ -28,15 +28,16 @@
 
 <!--
 {
-  "section_contract": {
-    "section_id": "1.1",
-    "title": "Purpose",
-    "checkitems": [
-      "define the purpose of the current module design document",
-      "make the module boundary explicit"
-    ],
-    "severity": "medium",
-    "expected_format": "`{Purpose}`"
+    "section_contract": {
+      "section_id": "1.1",
+      "title": "Purpose",
+	      "checkitems": [
+	        "define the purpose of the current module design document",
+	        "make the module boundary explicit",
+	        "keep the purpose concise and directly understandable without unnecessary background detail"
+	      ],
+	      "severity": "medium",
+	      "expected_format": "{PurposeSentenceOrShortParagraph}"
   }
 }
 -->
@@ -62,16 +63,18 @@
 
 <!--
 {
-  "section_contract": {
-    "section_id": "1.3",
-    "title": "Core Functions",
-    "checkitems": [
-      "summarize the module role",
-      "list the core functions only",
-      "explicitly state what is out of scope for this module"
-    ],
-    "severity": "medium",
-    "expected_format": "`{ModulePath}` is the `{ModuleRole}` module.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{ModuleName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
+    "section_contract": {
+      "section_id": "1.3",
+      "title": "Core Functions",
+	      "checkitems": [
+	        "summarize the module role",
+	        "list the core functions only",
+	        "explicitly state what is out of scope for this module",
+	        "the opening role statement should use the current design item identity rather than a broader architecture-layer label when they differ",
+	        "when the design item represents the design of several concrete modules, prefer naming those concrete modules or the design item itself instead of collapsing back to a broad layer label"
+	      ],
+      "severity": "medium",
+      "expected_format": "`{ModulePath}` is the `{ModuleRole}` module.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{ModuleName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
   }
 }
 -->
@@ -185,34 +188,37 @@
   "section_contract": {
     "section_id": "4.1.1",
     "title": "Public API",
-    "checkitems": [
-      "define only the public API that upstream modules need to call",
-      "keep the API structure stable and minimal",
-      "express the public API in a TypeScript code block",
-      "the public API may use interface, type, class signature, or other stable TypeScript boundary forms"
-    ],
-    "severity": "medium",
-    "expected_format": "```typescript\ninterface I{ModuleName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {ModuleName}Api = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
-  }
-}
--->
+	    "checkitems": [
+	      "define only the public API that upstream modules need to call",
+	      "keep the API structure stable and minimal",
+	      "express the public API in a TypeScript code block",
+	      "the public API may use interface, type, class signature, or other stable TypeScript boundary forms",
+	      "name the public API after the actual exposed boundary or contract surface when appropriate, rather than forcing the design item name into the API symbol"
+	    ],
+	    "severity": "medium",
+	    "expected_format": "```typescript\ninterface {PublicApiName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {PublicApiName} = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
+	  }
+	}
+	-->
 
 #### 4.1.2 Input Types
 
 <!--
 {
-  "section_contract": {
-    "section_id": "4.1.2",
-    "title": "Input Types",
-    "checkitems": [
-      "define only input structures that belong to this module",
-      "do not repeat upstream shared types unless this module owns them",
-      "when the module contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
-      "input format must be defined explicitly in code blocks",
-      "do not use natural-language prose to describe input structure"
-    ],
-    "severity": "medium",
-    "expected_format": "```typescript\ninterface {PrimaryInputType} {\n  {InputFieldA}: {InputFieldTypeA}\n  {InputFieldB}?: {InputFieldTypeB}\n}\n\ninterface ContractSpec {\n  document_contracts: DocumentContract[]\n  section_contracts: SectionContract[]\n}\n```\n\nNo prose outside code blocks."
+    "section_contract": {
+      "section_id": "4.1.2",
+      "title": "Input Types",
+      "checkitems": [
+	        "define only input structures that belong to this module",
+	        "do not repeat upstream shared types unless this module owns them",
+	        "when the module contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
+	        "input format must be defined explicitly in code blocks",
+	        "do not use natural-language prose to describe input structure",
+	        "TypeScript type definitions must remain the primary content; short code comments are optional but must not replace the type definitions",
+	        "do not add explanatory prose before or after the code block in this subsection"
+	      ],
+      "severity": "medium",
+      "expected_format": "```typescript\ninterface {PrimaryInputType} {\n  {InputFieldA}: {InputFieldTypeA}\n  {InputFieldB}?: {InputFieldTypeB}\n}\n\ninterface ContractSpec {\n  document_contracts: DocumentContract[]\n  section_contracts: SectionContract[]\n}\n```\n\nNo prose outside code blocks."
   }
 }
 -->
@@ -240,17 +246,19 @@
 
 <!--
 {
-  "section_contract": {
-    "section_id": "4.1.4",
-    "title": "Output Types",
-    "checkitems": [
-      "define the stable output structure produced by this module",
-      "make downstream-consumed fields explicit",
-      "output format must be defined explicitly in code blocks",
-      "do not use natural-language prose to describe output structure"
-    ],
-    "severity": "medium",
-    "expected_format": "```typescript\ninterface {PrimaryOutputType} {\n  {OutputFieldA}: {OutputFieldTypeA}\n  {OutputFieldB}?: {OutputFieldTypeB}\n}\n```\n\nNo prose outside code blocks."
+    "section_contract": {
+      "section_id": "4.1.4",
+      "title": "Output Types",
+      "checkitems": [
+	        "define the stable output structure produced by this module",
+	        "make downstream-consumed fields explicit",
+	        "output format must be defined explicitly in code blocks",
+	        "do not use natural-language prose to describe output structure",
+	        "TypeScript type definitions must remain the primary content; short code comments are optional but must not replace the type definitions",
+	        "do not add explanatory prose before or after the code block in this subsection"
+	      ],
+      "severity": "medium",
+      "expected_format": "```typescript\ninterface {PrimaryOutputType} {\n  {OutputFieldA}: {OutputFieldTypeA}\n  {OutputFieldB}?: {OutputFieldTypeB}\n}\n```\n\nNo prose outside code blocks."
   }
 }
 -->
