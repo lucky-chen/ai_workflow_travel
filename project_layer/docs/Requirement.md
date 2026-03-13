@@ -8,12 +8,12 @@
     },
     {
       "check_item": "requirement_scope_consistency",
-      "description": "The document should stay at product requirement level and remain consistent across user scenarios, workflow, scope, constraints, and success criteria.",
+      "description": "The document should stay at product requirement level and remain consistent across user scenarios, journey, scope, constraints, and success criteria.",
       "severity": "high"
     },
     {
       "check_item": "workflow_and_goal_alignment",
-      "description": "Product goals, core problems, workflow, outputs, scope, and success criteria should remain logically aligned.",
+      "description": "Product goals, core problems, journey, outputs, scope, and success criteria should remain logically aligned.",
       "severity": "high"
     }
   ]
@@ -204,7 +204,7 @@ An AI-RD-PLATFORM that turns requirements into artifacts, supporting users to co
 -->
 
 - problem: Users often need to bridge multiple stages, such as clarification, design, coding, review, test, and update, which is costly and inefficient.
-- ability: The AI-RD-PLATFORM provides an end-to-end generation flow that turns requirements into key project artifacts in a more continuous workflow.
+- ability: The AI-RD-PLATFORM provides independently runnable stage capabilities and can also combine them through runtime composition modes when users want continuous execution.
 
 ## 4.3 Requirement changes are frequent and costly
 
@@ -266,267 +266,218 @@ An AI-RD-PLATFORM that turns requirements into artifacts, supporting users to co
 - problem: Even after final artifacts are generated, users still need a basic way to judge whether the results are acceptable.
 - ability: The AI-RD-PLATFORM provides basic validation feedback so users can quickly assess whether outputs are ready for review or further iteration.
 
-# 5. User Workflow
+# 5. Core Functional Points
 
 <!--
 {
   "section_contract": {
     "section_id": "5",
-    "title": "User Workflow",
+    "title": "Core Functional Points",
     "checkitems": [
-      "describe the end-to-end user workflow and important control points",
-      "make main flow, resume support, and failure handling explicit",
-      "keep the workflow at product behavior level"
+      "list the core product-facing capabilities before journey design",
+      "separate basic execution units from runtime composition modes",
+      "make each functional point precise about its role in the product"
     ],
     "severity": "high"
   }
 }
 -->
 
-## 5.1 Standard Flow
+## 5.1 Basic Execution Units
 
 <!--
 {
   "section_contract": {
     "section_id": "5.1",
-    "title": "Standard Flow",
+    "title": "Basic Execution Units",
     "checkitems": [
-      "describe the standard end-to-end workflow in ordered stages",
-      "use one subsection per important workflow stage"
+      "list the minimum independently runnable execution capabilities",
+      "make each execution unit precise about input, output, and downstream effect",
+      "keep runtime composition modes out of this section"
     ],
-    "severity": "medium"
+    "severity": "high",
+    "expected_format": "- `{ExecutionUnit1}`\n- `{ExecutionUnit2}`\n- `{ExecutionUnit3}`"
   }
 }
 -->
 
-### 5.1.1 Start
+- [requirement_update]: update the requirement document from input and requirement context
+- [requirement_contract]: check the requirement document against requirement rules
+- [architecture_update]: update the architecture document from input and the requirement document
+- [architecture_contract]: check the architecture document against architecture rules
+- [child_design_update]: update a target child design document from input, the requirement document, and the architecture document
+- [child_design_contract]: check a target child design document against child design rules
+- [overall_design_contract]: check the consistency of the requirement document, architecture document, and child design documents together
+- [planning_update]: update the implementation plan document from input, the requirement document, the architecture document, and child design documents
+- [planning_contract]: check the implementation plan document against planning rules
+- [implementation_update]: generate or update code from the implementation plan document, the requirement document, the architecture document, child design documents, and current workspace files
+- [implementation_contract]: validate the generated code or project output
 
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.1",
-    "title": "Start",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-PM creates or updates a requirement document and launches a task in the AI-RD-PLATFORM.
-
-### 5.1.2 Requirement Interpretation
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.2",
-    "title": "Requirement Interpretation",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-The AI-RD-PLATFORM analyzes the requirement and prepares intended changes.
-
-### 5.1.3. Requirement Review
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.3",
-    "title": "Requirement Review",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-PM reviews the intended changes and decides whether to continue, revise the requirement, or stop the task.
-
-### 5.1.4. Design Generate/Update
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.4",
-    "title": "Design Generate/Update",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-After PM confirmation, the AI-RD-PLATFORM generates next-stage design outputs.
-
-### 5.1.5 Design Review/Update
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.5",
-    "title": "Design Review/Update",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-The engineer reviews the design changes and updates them if needed.
-The AI-RD-PLATFORM applies changes after engineer confirmation.
-
-### 5.1.6. Implementation Generation/Update
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.6",
-    "title": "Implementation Generation/Update",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-The AI-RD-PLATFORM generates or updates code artifacts based on upstream design outputs.
-
-### 5.1.7. Change Review
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.7",
-    "title": "Change Review",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-The engineer reviews the generated changes and decides whether to apply or reject them.
-
-### 5.1.8. Validation
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.8",
-    "title": "Validation",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-The AI-RD-PLATFORM runs validation or test steps and presents the result summary.
-
-### 5.1.9. Acceptance
-
-<!--
-{
-  "section_contract": {
-    "section_id": "5.1.9",
-    "title": "Acceptance",
-    "checkitems": [
-      "describe one workflow stage clearly",
-      "focus on what the user or system does at this stage"
-    ],
-    "severity": "medium",
-    "expected_format": "`{StageDescription}`"
-  }
-}
--->
-
-The PM and engineer accept the result.
-
-## 5.2 Resume Support Entry Points
+## 5.2 Runtime Composition Modes
 
 <!--
 {
   "section_contract": {
     "section_id": "5.2",
-    "title": "Resume Support Entry Points",
+    "title": "Runtime Composition Modes",
     "checkitems": [
-      "list the supported resume entry points",
-      "state when each entry point should be used"
+      "list the supported runtime composition modes",
+      "state how execution units are composed in each mode",
+      "keep business capabilities out of this section"
     ],
-    "severity": "medium",
-    "expected_format": "Users can resume from selected intermediate stages when there is already enough confirmed context.\n\nSupported resume entry points:\n- `{EntryPointA}`\n  `{EntryPointADescription}`\n- `{EntryPointB}`\n  `{EntryPointBDescription}`\n- `{EntryPointC}`\n  `{EntryPointCDescription}`"
+    "severity": "high",
+    "expected_format": "- `{Mode1}`\n- `{Mode2}`"
   }
 }
 -->
 
-Users can resume from selected intermediate stages when there is already enough confirmed context.
+- [single_unit_run]: run one basic execution unit independently when its required inputs are available
+- [stage_run]: run one stage as a fixed execution order of multiple basic execution units for one target artifact or one target goal
 
-Supported resume entry points:
-- Design Generation or Update
-  Used when requirement interpretation has already been confirmed and the user wants to continue from design generation.
-- Implementation Generation or Update
-  Used when design outputs are already confirmed and the user wants to continue from implementation.
-- Validation
-  Used when code changes are already generated and the user wants to rerun validation or test steps.
-
-
-## 5.3 Failure Handling
+## 5.3 Quality Control
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3",
-    "title": "Failure Handling",
+    "title": "Quality Control",
     "checkitems": [
-      "describe what happens when a workflow stage fails",
-      "make retry and rollback policy explicit"
+      "list the control and visibility capabilities that apply across execution units and stages",
+      "separate gate control from business artifact processing",
+      "make process visibility explicit"
     ],
+    "severity": "high",
+    "expected_format": "- `{Capability1}`\n- `{Capability2}`"
+  }
+}
+-->
+
+- [gate]: make allow, reject, or hold decisions for downstream continuation or change application
+- [trace]: record and expose execution status, important changes, and decision points during execution
+
+# 6. User Scenarios
+
+<!--
+{
+  "section_contract": {
+    "section_id": "6",
+    "title": "User Scenarios",
+    "checkitems": [
+      "describe the end-to-end user scenario and important control points",
+      "make main flow, resume support, and failure handling explicit",
+      "keep the scenario at product behavior level"
+    ],
+    "severity": "high"
+  }
+}
+-->
+
+## 6.1 Standard Scenario
+
+<!--
+{
+    "section_contract": {
+      "section_id": "6.1",
+      "title": "Standard Scenario",
+      "checkitems": [
+        "describe the main scenario in ordered steps",
+        "make the main user control points explicit",
+        "keep the content at product behavior level",
+        "for each `6.1.x` scenario, describe one clear user scenario",
+        "for each `6.1.x` scenario, focus on what the user does and what the system presents",
+        "for each `6.1.x` scenario, use functional point names that strictly come from `# 5. Core Functional Points`"
+      ],
+      "severity": "high",
+    "expected_format": "`{ScenarioSummary}`\n\n### 6.1.1 `{ScenarioStep1}`\n- `{ScenarioDetail1}`\n- `{ScenarioDetail2}`\n\n### 6.1.2 `{ScenarioStep2}`\n- `{ScenarioDetail1}`\n- `{ScenarioDetail2}`\n\n### 6.1.3 `{ScenarioStep3}`\n- `{ScenarioDetail1}`\n- `{ScenarioDetail2}`"
+  }
+}
+-->
+
+This standard scenario describes the main path from requirement update to implementation validation. In this scenario, each downstream artifact is produced from upstream artifacts, checked before downstream use, and reviewed at important gate points.
+
+### 6.1.1 Requirement Scenario
+
+- The user asks the system to update the requirement document.
+- The system records progress, changes, and step transitions through `[trace]` during the whole requirement scenario.
+- After the requirement document is updated, the user reviews it through `[gate]`.
+- If the review passes, the system checks the requirement document through `[requirement_contract]`.
+- If the check succeeds, the user continues to the next process.
+- If the check fails, the system returns the check errors, and the user continues from the current or previous process with those errors.
+
+### 6.1.2 Architecture Scenario
+
+- The user asks the system to update the architecture document from the current input and requirement document.
+- The system records progress, changes, and step transitions through `[trace]` during the whole architecture scenario.
+- After the architecture document is updated, the user reviews it through `[gate]`.
+- If the review passes, the system checks the architecture document through `[architecture_contract]`.
+- If the check succeeds, the user continues to the next process.
+- If the check fails, the system returns the check errors, and the user continues from the current or previous process with those errors.
+
+### 6.1.3 Child Design Scenario
+
+- The user asks the system to update one target child design document from the current input, requirement document, and architecture document.
+- The system records progress, changes, and step transitions through `[trace]` during the whole child design scenario.
+- After the child design document is updated, the user reviews it through `[gate]`.
+- If the review passes, the system checks the child design document through `[child_design_contract]`.
+- If the check succeeds, the user continues to the next process.
+- If the check fails, the system returns the check errors, and the user continues from the current or previous process with those errors.
+
+### 6.1.4 Overall Design Check Scenario
+
+- The user asks the system to check the consistency of the requirement document, architecture document, and child design documents together through `[overall_design_contract]`.
+- The system records progress, changes, and step transitions through `[trace]` during the whole overall design check scenario.
+- The system presents the overall design check result to the user.
+- The user reviews the result through `[gate]`.
+- If the review passes, the user continues to the planning scenario.
+- If the review does not pass, the user returns to the related upstream update step with the reported issues.
+
+### 6.1.5 Planning Scenario
+
+- The user asks the system to update the implementation plan document from the current input and upstream design documents.
+- The system records progress, changes, and step transitions through `[trace]` during the whole planning scenario.
+- After the implementation plan document is updated, the user reviews it through `[gate]`.
+- If the review passes, the system checks the implementation plan document through `[planning_contract]`.
+- If the check succeeds, the user continues to the implementation scenario.
+- If the check fails, the system returns the check errors, and the user continues from the current or previous process with those errors.
+
+### 6.1.6 Implementation Scenario
+
+- The user asks the system to update code from the implementation plan document, upstream design documents, and current workspace files.
+- The system records progress, changes, and step transitions through `[trace]` during the whole implementation scenario.
+- After the code is updated, the user reviews the code changes through `[gate]`.
+- If the review passes, the system validates the result through `[implementation_contract]`.
+- If validation succeeds, the user accepts the result and finishes the scenario.
+- If validation fails, the system returns the validation result, and the user continues from the current or previous process with that result.
+
+## 6.2 Scenario Failure Handling
+
+<!--
+{
+    "section_contract": {
+      "section_id": "6.2",
+      "title": "Scenario Failure Handling",
+      "checkitems": [
+        "describe what happens in the user scenario when execution cannot continue",
+        "keep the description at user scenario level and avoid internal runtime detail",
+        "use functional point names that strictly come from `# 5. Core Functional Points`"
+      ],
     "severity": "medium",
     "expected_format": "- `{FailureRule1}`\n- `{FailureRule2}`\n- `{FailureRule3}`\n- `{FailureRule4}`"
   }
 }
 -->
 
-- If a workflow stage fails, the platform stops at the current stage.
-- The platform does not automatically roll back to an earlier stage.
-- Users should fix the issue at the current stage.
-- After the issue is fixed, the workflow should retry from that stage.
+- If `[requirement_update]`, `[architecture_update]`, `[child_design_update]`, `[planning_update]`, or `[implementation_update]` cannot continue, the system should clearly show which functional point failed and what information the user needs to fix.
+- If `[requirement_contract]`, `[architecture_contract]`, `[child_design_contract]`, `[overall_design_contract]`, `[planning_contract]`, or `[implementation_contract]` fails, the related result must not continue downstream.
+- If `[gate]` rejects an updated artifact, a check result, or code changes, the system should return the related result and let the user decide how to continue the scenario.
+- The user should continue from the failed functional point or an earlier related scenario, instead of restarting the whole scenario by default.
 
-# 6. Inputs and Outputs
+# 7. Inputs and Outputs
 
 <!--
 {
   "section_contract": {
-    "section_id": "6",
+    "section_id": "7",
     "title": "Inputs and Outputs",
     "checkitems": [
       "define required inputs, prerequisites, and outputs",
@@ -537,31 +488,107 @@ Supported resume entry points:
 }
 -->
 
-## 6.1 Inputs
+## 7.1 Execution Unit Inputs And Outputs
 
 <!--
 {
   "section_contract": {
-    "section_id": "6.1",
-    "title": "Inputs",
+    "section_id": "7.1",
+    "title": "Execution Unit Inputs And Outputs",
     "checkitems": [
-      "list the required user or system inputs"
+      "list the main inputs and outputs for each basic execution unit",
+      "organize the content by basic execution unit"
     ],
     "severity": "medium",
-    "expected_format": "- `{Input1}`\n- `{Input2}`"
+    "expected_format": "### 7.1.1 `{ExecutionUnit1}`\n- inputs: `{Input1}`\n- outputs: `{Output1}`\n\n### 7.1.2 `{ExecutionUnit2}`\n- inputs: `{Input2}`\n- outputs: `{Output2}`"
   }
 }
 -->
 
-- requirement document
-- project directory
+### 7.1.1 `[requirement_update]`
 
-## 6.2 Prerequisites
+- inputs: 
+  - user_comment
+  - requirement.md(option)
+  - requirement_template.md
+  - requirement_contract.json
+- outputs: 
+  - requirement.md
+
+### 7.1.2 `[requirement_contract]`
+
+- inputs: 
+  - requirement.md.md
+  - requirement_contract.json
+- outputs: 
+  - requirement_contract_result.json
+
+### 7.1.3 `[architecture_update]`
+
+- inputs: 
+  - user_comment
+  - requirement.md
+  - architecture_template.md
+  - architecture_contract.json
+- outputs:
+  - architecture.md
+
+### 7.1.4 `[architecture_contract]`
+
+- inputs: architecture document
+- outputs: architecture contract result
+
+### 7.1.5 `[child_design_update]`
+
+- inputs: user input, requirement document, architecture document
+- outputs: updated child design document
+
+### 7.1.6 `[child_design_contract]`
+
+- inputs: child design document
+- outputs: child design contract result
+
+### 7.1.7 `[overall_design_contract]`
+
+- inputs: requirement document, architecture document, child design documents
+- outputs: overall design contract result
+
+### 7.1.8 `[planning_update]`
+
+- inputs: user input, requirement document, architecture document, child design documents
+- outputs: updated implementation plan document
+
+### 7.1.9 `[planning_contract]`
+
+- inputs: implementation plan document
+- outputs: planning contract result
+
+### 7.1.10 `[implementation_update]`
+
+- inputs: implementation plan document, requirement document, architecture document, child design documents, current workspace files
+- outputs: updated code files, pending change summaries
+
+### 7.1.11 `[implementation_contract]`
+
+- inputs: generated code or project output
+- outputs: implementation contract result or validation result
+
+### 7.1.12 `[gate]`
+
+- inputs: updated artifact, contract result, generated change, or validation result
+- outputs: gate decision for downstream continuation or change application
+
+### 7.1.13 `[trace]`
+
+- inputs: execution status, important changes, and decision points during execution
+- outputs: trace records and trace summaries
+
+## 7.2 Prerequisites
 
 <!--
 {
   "section_contract": {
-    "section_id": "6.2",
+    "section_id": "7.2",
     "title": "Prerequisites",
     "checkitems": [
       "list prerequisites that must already be true before use"
@@ -574,35 +601,12 @@ Supported resume entry points:
 
 - the target project is stored in a git repository
 
-## 6.3 Outputs
+# 8 Scope and Non-Goals
 
 <!--
 {
   "section_contract": {
-    "section_id": "6.3",
-    "title": "Outputs",
-    "checkitems": [
-      "list the main artifacts or information produced by the product"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{Output1}`\n- `{Output2}`\n- `{Output3}`"
-  }
-}
--->
-
-- updated requirement document
-- updated design artifacts
-- updated code artifacts
-- runnable program output for supported scenarios
-- validation or test results
-- workflow stage information and pending change summaries
-
-# 7 Scope and Non-Goals
-
-<!--
-{
-  "section_contract": {
-    "section_id": "7",
+    "section_id": "8",
     "title": "Scope and Non-Goals",
     "checkitems": [
       "define scope by version or milestone",
@@ -613,12 +617,12 @@ Supported resume entry points:
 }
 -->
 
-## 7.1 V1: MVP
+## 8.1 V1: MVP
 
 <!--
 {
   "section_contract": {
-    "section_id": "7.1",
+    "section_id": "8.1",
     "title": "V1: MVP",
     "checkitems": [
       "list V1 goals and non-goals",
@@ -632,7 +636,7 @@ Supported resume entry points:
 
 - Goals
     - support the standard end-to-end flow from requirement input to runnable demo output
-- support workflow resume from intermediate stages through CLI task execution
+- support resume from intermediate processes through CLI task execution
 - show important stage information and pending changes in CLI
 - support the validated demo scenario: Travel Planning Agent
 - Non-Goals
@@ -640,12 +644,12 @@ Supported resume entry points:
     - No support for multiple project types
     - No requirement for fully reviewable intermediate artifacts at every step
 
-## 7.2 V2: Available
+## 8.2 V2: Available
 
 <!--
 {
   "section_contract": {
-    "section_id": "7.2",
+    "section_id": "8.2",
     "title": "V2: Available",
     "checkitems": [
       "list V2 goals and non-goals",
@@ -658,19 +662,19 @@ Supported resume entry points:
 -->
 
 - Goals
-    - provide a simple UI for viewing workflow stages and basic progress information
-    - support workflow resume from selected intermediate stages through UI
+    - provide a simple UI for viewing journey processes and basic progress information
+    - support resume from selected intermediate processes through UI
     - improve output quality and controllability for the Travel Planning Agent scenario
 - Non-Goals
     - no other types of project
-    - no complete artifact review workflow in UI
+    - no complete artifact review journey in UI
 
-## 7.3 V3: General
+## 8.3 V3: General
 
 <!--
 {
   "section_contract": {
-    "section_id": "7.3",
+    "section_id": "8.3",
     "title": "V3: General",
     "checkitems": [
       "list V3 goals and non-goals",
@@ -683,7 +687,7 @@ Supported resume entry points:
 -->
 
 - Goals
-    - provide a complete UI for progress tracking, artifact review, and workflow decision-making
+    - provide a complete UI for progress tracking, artifact review, and journey decision-making
     - support review of intermediate artifacts and pending changes directly in UI
     - support 3 project types beyond the initial demo scenario
     - improve consistency across requirement updates, design updates, code updates, and validation
@@ -691,12 +695,12 @@ Supported resume entry points:
     - no guarantee for all project types or all engineering environments
     - no support for highly complex projects in this version
 
-# 8. Success Criteria
+# 9. Success Criteria
 
 <!--
 {
   "section_contract": {
-    "section_id": "8",
+    "section_id": "9",
     "title": "Success Criteria",
     "checkitems": [
       "define observable success criteria by version",
@@ -707,12 +711,12 @@ Supported resume entry points:
 }
 -->
 
-## 8.1 V1
+## 9.1 V1
 
 <!--
 {
   "section_contract": {
-    "section_id": "8.1",
+    "section_id": "9.1",
     "title": "V1",
     "checkitems": [
       "list concrete success criteria for V1"
@@ -724,17 +728,17 @@ Supported resume entry points:
 -->
 
 - users can start from a requirement document and complete the standard flow through CLI
-- users can start the workflow from selected intermediate stages through CLI
+- users can start from selected intermediate processes through CLI
 - the platform can generate a runnable Travel Planning Agent demo from supported requirement input
 - the platform shows stage progress and pending changes before important modifications are applied
 
 
-## 8.2 V2
+## 9.2 V2
 
 <!--
 {
   "section_contract": {
-    "section_id": "8.2",
+    "section_id": "9.2",
     "title": "V2",
     "checkitems": [
       "list concrete success criteria for V2"
@@ -745,17 +749,17 @@ Supported resume entry points:
 }
 -->
 
-- users can see workflow stages and task progress in UI
+- users can see journey processes and task progress in UI
 - users can view basic output summaries and validation summaries in UI
 - users can start or resume selected tasks through UI
 - users still rely on CLI or manual review for deeper artifact inspection and final decisions
 
-## 8.3 V3
+## 9.3 V3
 
 <!--
 {
   "section_contract": {
-    "section_id": "8.3",
+    "section_id": "9.3",
     "title": "V3",
     "checkitems": [
       "list concrete success criteria for V3"
@@ -768,16 +772,16 @@ Supported resume entry points:
 
 - users can review key artifacts and pending changes directly in UI
 - users can make accept, reject, or revise decisions in UI at important checkpoints
-- users can complete the core review workflow in UI without depending on CLI for key review actions
+- users can complete the core review journey in UI without depending on CLI for key review actions
 - the platform maintains acceptable consistency across requirement, design, code, and validation outputs
-- the platform supports at least three defined project types with the same core workflow
+- the platform supports at least three defined project types with the same core journey
 
-# 9. Risks
+# 10. Risks
 
 <!--
 {
   "section_contract": {
-    "section_id": "9",
+    "section_id": "10",
     "title": "Risks",
     "checkitems": [
       "list the main risks that may reduce product value or delivery quality",
@@ -794,12 +798,12 @@ Supported resume entry points:
 - complex projects may reduce stability
 
 
-# 10. Constraints
+# 11. Constraints
 
 <!--
 {
   "section_contract": {
-    "section_id": "10",
+    "section_id": "11",
     "title": "Constraints",
     "checkitems": [
       "list the key constraints that shape product behavior or scope",
@@ -810,12 +814,12 @@ Supported resume entry points:
 }
 -->
 
-## 10.1 Requirement document is the primary input
+## 11.1 Requirement document is the primary input
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.1",
+    "section_id": "11.1",
     "title": "Requirement document is the primary input",
     "checkitems": [
       "state one explicit product constraint",
@@ -829,12 +833,12 @@ Supported resume entry points:
 
 The system must use the requirement document as the main input.
 
-## 10.2 Important changes must be confirmed by users
+## 11.2 Important changes must be confirmed by users
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.2",
+    "section_id": "11.2",
     "title": "Important changes must be confirmed by users",
     "checkitems": [
       "state one explicit product constraint",
@@ -848,12 +852,12 @@ The system must use the requirement document as the main input.
 
 Important changes must be reviewable and confirmable by users before they are applied.
 
-## 10.3 Project scope constraint
+## 11.3 Project scope constraint
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.3",
+    "section_id": "11.3",
     "title": "Project scope constraint",
     "checkitems": [
       "state one explicit product constraint",
@@ -867,12 +871,12 @@ Important changes must be reviewable and confirmable by users before they are ap
 
 The product must be designed primarily for small to medium-sized software projects, not for all project types or engineering environments.
 
-## 10.4 Output reviewability constraint
+## 11.4 Output reviewability constraint
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.4",
+    "section_id": "11.4",
     "title": "Output reviewability constraint",
     "checkitems": [
       "state one explicit product constraint",
@@ -886,12 +890,12 @@ The product must be designed primarily for small to medium-sized software projec
 
 Generated outputs must be understandable, reviewable, and traceable.
 
-## 10.5 Validation constraint
+## 11.5 Validation constraint
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.5",
+    "section_id": "11.5",
     "title": "Validation constraint",
     "checkitems": [
       "state one explicit product constraint",
@@ -905,12 +909,12 @@ Generated outputs must be understandable, reviewable, and traceable.
 
 The AI-RD-PLATFORM should provide basic validation feedback for generated outputs, but generated outputs do not replace human judgment.
 
-## 10.6 Reviewability and controllability
+## 11.6 Reviewability and controllability
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.6",
+    "section_id": "11.6",
     "title": "Reviewability and controllability",
     "checkitems": [
       "state one explicit product constraint",
@@ -924,12 +928,12 @@ The AI-RD-PLATFORM should provide basic validation feedback for generated output
 
 The product must expose pending changes before important modifications are applied.
 
-## 10.7 not fully autonomous
+## 11.7 not fully autonomous
 
 <!--
 {
   "section_contract": {
-    "section_id": "10.7",
+    "section_id": "11.7",
     "title": "not fully autonomous",
     "checkitems": [
       "state one explicit product constraint",
