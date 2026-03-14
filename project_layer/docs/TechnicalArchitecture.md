@@ -13,8 +13,28 @@
     },
     {
       "check_item": "cross_section_alignment",
-      "description": "Architecture style, dependency rules, runtime flow, design document breakdown, and open issues should remain logically consistent across sections.",
+      "description": "Architecture style, dependency rules, runtime interactions, design document breakdown, and open issues should remain logically consistent across sections.",
       "severity": "high"
+    },
+    {
+      "check_item": "architecture_level_boundary",
+      "description": "The document must stay at architecture level. Detailed API fields, prompt wording, storage schema, and module-internal retry or algorithm logic should be moved to follow-up design documents.",
+      "severity": "high"
+    },
+    {
+      "check_item": "interaction_structure_clarity",
+      "description": "Primary Interaction Path should describe the reusable backbone. Interaction Model may expand by scenario or stage, but each scenario must stay focused on module collaboration, control handoff, and ownership boundaries.",
+      "severity": "medium"
+    },
+    {
+      "check_item": "scope_stage_clarity",
+      "description": "If future-stage capabilities are mentioned, they must be explicitly labeled so readers can distinguish target architecture from current delivery scope.",
+      "severity": "medium"
+    },
+    {
+      "check_item": "design_doc_derivation",
+      "description": "Core Modules should list only architecture-relevant modules, and follow-up design documents should be derived from the architecture rather than copied from an existing folder tree.",
+      "severity": "medium"
     }
   ]
 }
@@ -46,7 +66,6 @@ Define the overall technical architecture of the AI-RD platform.
 - Senior engineers: review architecture direction and boundaries.
 - Junior engineers: understand system and module structure for later design and implementation.
 
-
 ## 2. Scope
 
 <!--
@@ -57,7 +76,7 @@ Define the overall technical architecture of the AI-RD platform.
     "checkitems": [
       "define what this document covers",
       "define what this document does not cover",
-      "clarify the boundary between overall architecture and module design"
+      "clarify the boundary between overall architecture and follow-up design documents"
     ],
     "severity": "medium"
   }
@@ -73,18 +92,18 @@ Define the overall technical architecture of the AI-RD platform.
     "title": "In Scope",
     "checkitems": [
       "list only architecture-level concerns",
-      "focus on workflow, major modules, boundaries, and key constraints"
+      "focus on runtime modes, major modules, boundaries, and key constraints"
     ],
     "severity": "medium",
-    "expected_format": "- Overall workflow from requirement input to design generation, implementation generation, review, validation, and acceptance.\n- Major modules and their responsibilities at architecture level.\n- Collaboration boundaries and dependency direction between major parts of the system.\n- Key architecture constraints related to reviewability, controllability, validation, and evolution."
+      "expected_format": "- Overall runtime modes from requirement input to design generation, work execution, review, validation, and acceptance.\n- Major modules and their responsibilities at architecture level.\n- Collaboration boundaries and dependency direction between major parts of the system.\n- Key architecture constraints related to reviewability, controllability, validation, and evolution."
   }
 }
 -->
 
-- Overall workflow from requirement input to design generation, implementation generation, review, validation, and acceptance.
-- Major modules and their responsibilities at architecture level.
-- Collaboration boundaries and dependency direction between major parts of the system.
-- Key architecture constraints related to reviewability, controllability, validation, and evolution.
+- Overall architecture support for the Basic Execution Units defined in the requirement document.
+- Runtime modes for running one execution unit independently or combining multiple execution units.
+- Quality control boundaries for `gate`, `trace`, and `contract`.
+- Major architecture partitions, dependency direction, and shared runtime constraints.
 
 ### 2.2 Out of Scope
 
@@ -111,7 +130,7 @@ Define the overall technical architecture of the AI-RD platform.
 
 Cross-module interaction contracts are covered at a lightweight shared-boundary level in a separate design document, not in full module-level detail here.
 
-Independent SDK runtimes such as `SDK/AgentRuntime` define their own internal collaboration contracts and expose only stable SDK APIs to external callers.
+Independent SDK runtimes define their own internal collaboration contracts and expose only stable SDK APIs to external callers.
 
 ---
 
@@ -132,24 +151,24 @@ Independent SDK runtimes such as `SDK/AgentRuntime` define their own internal co
 }
 -->
 
-### 3.1 end-to-end workflow support
+### 3.1 independently runnable execution units
 
 <!--
 {
   "section_contract": {
     "section_id": "3.1",
-    "title": "end-to-end workflow support",
+    "title": "independently runnable execution units",
     "checkitems": [
       "state the driver clearly",
-      "explain why full workflow support shapes architecture"
+      "explain why independently runnable units shape architecture"
     ],
     "severity": "medium",
-    "expected_format": "The architecture must support the full flow from requirement input to design generation, implementation generation, review, validation, and acceptance."
+    "expected_format": "The architecture must support independently runnable execution units so users or external callers can launch one capability without running the whole process."
   }
 }
 -->
 
-The architecture must support the full flow from requirement input to design generation, implementation generation, review, validation, and acceptance.
+The architecture must support independently runnable execution units so users or external callers can launch one capability without running the whole process.
 
 ### 3.2 requirement interpretation as stable upstream input
 
@@ -168,33 +187,52 @@ The architecture must support the full flow from requirement input to design gen
 }
 -->
 
-Requirement documents written in natural language must be checked and stabilized before they are used as downstream input. So the architecture needs requirement interpretation and contract-based checks to make requirement outputs become stable input for the next stage.
+Requirement documents written in natural language must be checked and stabilized before they are used as downstream input. So the architecture needs requirement interpretation and contract-based checks to make requirement outputs become stable input for downstream execution units.
 
-### 3.3 design doc interpretation as stable upstream input
+### 3.3 design outputs as stable upstream input
 
 <!--
 {
   "section_contract": {
     "section_id": "3.3",
-    "title": "design doc interpretation as stable upstream input",
+    "title": "design outputs as stable upstream input",
     "checkitems": [
       "explain why design outputs need stabilization before downstream use",
       "connect the driver to contract checks and gate decisions"
     ],
     "severity": "medium",
-    "expected_format": "Design outputs generated in upstream stages must be checked and stabilized before they are used as downstream input. So the architecture needs contract-based checks and gate decisions to make architecture design outputs and module design outputs become stable input for the next stage."
+      "expected_format": "Design outputs generated in upstream execution units must be checked and stabilized before they are used as downstream input. So the architecture needs contract-based checks and gate decisions to make architecture design outputs and item design outputs become stable input for the next unit."
   }
 }
 -->
 
-Design outputs generated in upstream stages must be checked and stabilized before they are used as downstream input. So the architecture needs contract-based checks and gate decisions to make architecture design outputs and module design outputs become stable input for the next stage.
+Requirement, architecture, item design, and work plan outputs generated in upstream execution units must be checked and stabilized before they are used as downstream input. So the architecture needs contract-based checks and gate decisions to make these outputs become stable input for the next unit.
 
-### 3.4 human-in-the-loop control
+### 3.4 external composition support
 
 <!--
 {
   "section_contract": {
     "section_id": "3.4",
+    "title": "external composition support",
+    "checkitems": [
+      "state why callers need composition flexibility",
+      "connect the driver to composition boundaries"
+    ],
+    "severity": "medium",
+    "expected_format": "Callers may need to combine multiple execution units in different orders, so the architecture needs stable composition boundaries and required-input checks."
+  }
+}
+-->
+
+Callers may need to combine multiple execution units in different orders, so the architecture needs stable runtime coordination boundaries and required-input checks.
+
+### 3.5 human-in-the-loop control
+
+<!--
+{
+  "section_contract": {
+    "section_id": "3.5",
     "title": "human-in-the-loop control",
     "checkitems": [
       "state why human review remains necessary",
@@ -208,62 +246,43 @@ Design outputs generated in upstream stages must be checked and stabilized befor
 
 Important changes must remain human-reviewable and require users to confirm. So the architecture needs explicit review and apply points.
 
-### 3.5 Validation visibility
-
-<!--
-{
-  "section_contract": {
-    "section_id": "3.5",
-    "title": "Validation visibility",
-    "checkitems": [
-      "state why validation feedback must be visible",
-      "explain why validation is a first-class workflow concern"
-    ],
-    "severity": "medium",
-    "expected_format": "The system must provide validation or test feedback for generated outputs, so validation needs to be a first-class part of the workflow."
-  }
-}
--->
-
-The system must provide validation or test feedback for generated outputs, so validation needs to be a first-class part of the workflow
-
-### 3.6 evolution from CLI to UI
+### 3.6 validation visibility
 
 <!--
 {
   "section_contract": {
     "section_id": "3.6",
-    "title": "evolution from CLI to UI",
+    "title": "validation visibility",
     "checkitems": [
-      "state the current interface scope and future evolution path",
-      "preserve separation between workflow logic and interface logic"
+      "state why validation feedback must be visible",
+      "explain why validation is a first-class runtime concern"
     ],
     "severity": "medium",
-    "expected_format": "The platform is CLI-only in the current scope. Future interface evolution should not break the separation between workflow logic and interface-specific logic."
+    "expected_format": "The system must provide validation or test feedback for generated outputs, so validation needs to be a first-class part of the runtime control path."
   }
 }
 -->
 
-The platform is CLI-only in the current scope. Future interface evolution should not break the separation between workflow logic and interface-specific logic.
+The system must provide validation or test feedback for generated outputs, so validation needs to be a first-class architecture concern.
 
-### 3.7 execution transparency and stage traceability
+### 3.7 execution transparency and traceability
 
 <!--
 {
   "section_contract": {
     "section_id": "3.7",
-    "title": "execution transparency and stage traceability",
+    "title": "execution transparency and traceability",
     "checkitems": [
       "state why users need runtime transparency",
-      "connect the driver to stage status and trace visibility"
+      "connect the driver to runtime status and trace visibility"
     ],
     "severity": "medium",
-    "expected_format": "Users need to understand what the platform is doing at each stage, so the architecture should make execution process, stage status, and important changes visible and traceable."
+    "expected_format": "Users need to understand what the platform is doing during each runtime step, so the architecture should make execution process, runtime status, and important changes visible and traceable."
   }
 }
 -->
 
-Users need to understand what the platform is doing at each stage, so the architecture should make execution process, stage status, and important changes visible and traceable.
+Users need to understand what the platform is doing during each execution unit or runtime-managed process, so the architecture should make execution process, status, and important changes visible and traceable.
 
 ### 3.8 incremental update on requirement changes
 
@@ -282,26 +301,26 @@ Users need to understand what the platform is doing at each stage, so the archit
 }
 -->
 
-Requirement changes are frequent, so the architecture should support comparing changes between different versions and generating downstream updates.
+Requirement changes are frequent, so the architecture should support comparing changes between different versions and generating downstream updates instead of recreating all artifacts by default.
 
-### 3.9 Stage-level launch flexibility
+### 3.9 composition-mode launch flexibility
 
 <!--
 {
   "section_contract": {
     "section_id": "3.9",
-    "title": "Stage-level launch flexibility",
+    "title": "composition-mode launch flexibility",
     "checkitems": [
-      "state why users may need to start from an intermediate stage",
+      "state why users may need to start from an intermediate execution point",
       "connect the driver to required-input availability"
     ],
     "severity": "medium",
-    "expected_format": "The architecture should support launching from a selected stage when the required inputs are available, so users can start from an intermediate stage without rerunning the whole workflow."
+    "expected_format": "The architecture should support launching from a selected execution point when the required inputs are available, so users can start from an intermediate point without rerunning the whole runtime-managed path."
   }
 }
 -->
 
-The architecture should support launching from a selected stage when the required inputs are available, so users can start from an intermediate stage without rerunning the whole workflow.
+The architecture should support launching from a selected execution unit or runtime-managed process when the required inputs are available, so users can start from an intermediate point without rerunning everything upstream.
 
 # 4. Architecture Design
 
@@ -321,7 +340,6 @@ The architecture should support launching from a selected stage when the require
 }
 -->
 
-
 ### 4.1 Architecture Style
 
 <!--
@@ -339,7 +357,7 @@ The architecture should support launching from a selected stage when the require
 }
 -->
 
-The system adopts a layered modular architecture
+The system adopts a layered modular architecture centered on independently runnable execution units, explicit quality control, and optional runtime coordination.
 
 ### 4.2 Layers or Partitions
 
@@ -359,13 +377,12 @@ The system adopts a layered modular architecture
 }
 -->
 
-- Interface: system entry and information display, for example CLI and UI.
-- Workflow: control process, state/context, stage entry, and retry
-- Execution: stage execution capabilities, for example requirement interpretation, design generation, implementation generation, and validation.
-- SDK: shared technical capabilities, for example shared llm execution.
-- Contract: check whether stage inputs and outputs meet required structure and rules, and return issues and check results.
-- QualityGate: manage review, reject, and apply decisions for pending changes, and decide whether results are allowed to pass to the next stage based on returned check results.
-- Data: store shared data such as intermediate outputs from Execution and process records from QualityGate.
+- Interface: system entry and information display, for example current-scope CLI and future-stage UI.
+- Runtime: overall runtime control for command input/output, capability invocation dispatch, and coordination across direct runs and runtime-managed runs.
+- Capability: one architecture layer responsible for execution capabilities and contract checking. This layer contains the `Execution` and `Contract` modules.
+- Test: testing support for unit testing, black-box testing, integration testing, functional testing, and cross-partition validation across `Interface`, `Runtime`, `Capability`, `SDK`, and `Data`.
+- SDK: shared technical capabilities, including external `AgentRuntime` and internal `QualityControl`.
+- Data: shared persistence for artifacts, change history, trace records, and related metadata.
 
 ### 4.3 Allowed Dependencies
 
@@ -385,22 +402,20 @@ The system adopts a layered modular architecture
 }
 -->
 
-ALLOW:
-- Interface -> Workflow
-- Workflow -> Execution
-- Workflow -> Contract
-- Workflow -> QualityGate
-- Execution -> SDK
-- Contract -> SDK
-- QualityGate -> Data
-- Execution -> Data
+Rules:
 
-Cross-module collaboration rule:
+- Upper-layer partitions may depend on lower-layer partitions.
+- Same-layer partitions may depend on each other.
+- Lower-layer partitions must not depend on upper-layer partitions.
+- `Test/*` is a cross-partition testing partition and may depend on `Interface/*`, `Runtime/*`, `Capability/*`, `SDK/*`, and `Data/*`.
+- Product partitions must not depend on `Test/*`.
 
-- `Workflow/Pipeline` owns the shared collaboration interfaces used across module boundaries.
-- `Execution/*`, `QualityGate/*`, and `Data/*` modules implement these workflow-owned interfaces when they expose capabilities to other modules.
-- Modules must not directly depend on another module's implementation file for cross-module collaboration.
-- Concrete implementation binding is completed only in the application composition root.
+Order:
+
+1. Interface
+2. Runtime
+3. Capability
+4. SDK and Data
 
 ### 4.4 High-level Diagram
 
@@ -422,29 +437,41 @@ Cross-module collaboration rule:
 ```text
 +------------------+
 |    Interface     |
-|       CLI        |
+|   CLI / Future   |
+|       UI         |
 +------------------+
-          |
-          v
-+------------------+
-| Workflow         |
-| process/state/   |
-| context/stage    |
-+------------------+
-    /    |    \
-   v     v     v
-+----------+  +-------------------------+  +-------------+
-| Execution|  |        Contract         |  | QualityGate |
-| interpret|  |   structure rules       |  | review/apply|
-| generate |  +-------------------------+  | decision    |
-| validate |                             +-------------+
-+----------+                                   |
-     |                                         v
-     +-----------------------------------> +----------+
-                                          |   Data   |
-                                          | shared   |
-                                          | storage  |
-                                          +----------+
+      |
+      v
++---------------+
+|   Runtime     |
+| command / run |
++---------------+
+      |
+      v
++------------------------------+
+|          Capability          |
+| +---------+ +---------+      |
+| |Execution| |Contract |      |
+| |basic    | |checks   |      |
+| |units    | |rules    |      |
+| +---------+ +---------+      |
++------------------------------+
+      |          \           \
+      v           v           v
++----------+    +----------------+
+|   Data   |    |      SDK       |
+|artifacts |    | AgentRuntime + |
+|records   |    | QualityControl |
++----------+    +----------------+
+
+            +------------------+
+            |       Test       |
+            | cross-partition  |
+            |    validation    |
+            +------------------+
+             /    /   |   \    \
+            v    v    v    v    v
+     Interface Runtime Capability SDK Data
 ```
 
 ### 4.5 Runtime Topology
@@ -452,56 +479,88 @@ Cross-module collaboration rule:
 <!--
 {
   "section_contract": {
-    "section_id": "4.5",
-    "title": "Runtime Topology",
-    "checkitems": [
-      "describe the backend runtime and deployment view in a lightweight way",
-      "clarify which major parts run together, which parts may be separated, and how shared storage is used",
-      "keep the content at runtime topology level rather than deployment runbook detail"
+      "section_id": "4.5",
+      "title": "Runtime Topology",
+      "checkitems": [
+      "describe the runtime view in a lightweight way",
+      "clarify which major parts run together, which parts may be separated, and how shared resources are used",
+      "keep the content at topology level rather than operational detail"
     ],
     "severity": "medium",
-    "expected_format": "- `{RuntimeNodeA}`: `{ResponsibilityA}`\n- `{RuntimeNodeB}`: `{ResponsibilityB}`\n- `{SharedInfrastructure}`: `{ResponsibilityC}`"
+    "expected_format": "- `{RuntimePartA}`: `{RoleA}`\n- `{RuntimePartB}`: `{RoleB}`\n- `{SharedPart}`: `{RoleC}`"
   }
 }
 -->
 
-- Interface/CLI: runtime entry for workflow requests in the current scope.
-- Workflow/Pipeline, Contract/*, QualityGate/*: run in the core backend service in V1.
-- Execution/*: run in the core backend service in V1; they can be split into workers later.
-- SDK/*, including shared `SDK/LlmExecutor`: run in the core backend service in V1.
-- Data/HistoryStore and Data/ArtifactStore: shared storage, implemented by local, backend-managed, or cloud storage.
-- Application composition root: binds workflow-owned collaboration interfaces to concrete module implementations before the runtime starts serving requests.
+- Local runtime: hosts `Interface`, `Runtime`, and `Capability` in the current scope.
+- Test runtime: hosts `Test` for unit testing, black-box testing, integration testing, functional testing, and cross-partition validation.
+- SDK runtime: provides the external `AgentRuntime` capability and the SDK-contained `QualityControl` module.
+- Runtime and Capability use the internal `LlmExecutor` adapter to access `AgentRuntime` when model support is required.
+- Shared resources: `Data/ArtifactStore` and `Data/RecordStore` provide persistent resources for artifacts, records, and trace data.
+- Composition root: binds stable interfaces to concrete implementations before runtime execution starts.
+- Future separation path: heavy execution units, test execution, or shared runtime capabilities can be separated later without changing the current partition boundaries.
+
+### 4.6 Technology Choices
+
+<!--
+{
+  "section_contract": {
+    "section_id": "4.6",
+    "title": "Technology Choices",
+    "checkitems": [
+      "state the implementation technology choices for each major layer, partition, or module",
+      "keep the description at technology-stack selection level rather than implementation detail",
+      "make the mapping between architecture parts and technology choices explicit"
+    ],
+    "severity": "medium",
+    "expected_format": "- `{LayerOrModuleA}`: `{TechStackA}` for `{WhyOrResponsibilityA}`\n- `{LayerOrModuleB}`: `{TechStackB}` for `{WhyOrResponsibilityB}`\n- `{LayerOrModuleC}`: `{TechStackC}` for `{WhyOrResponsibilityC}`"
+  }
+}
+-->
+
+- `Interface`: `Python` for the current CLI entry and interactive control flow.
+- `Runtime`: `TypeScript` on `NodeJS` for overall runtime control, command input/output handling, capability dispatch, and coordination.
+- `Capability`: `TypeScript` on `NodeJS` for execution units, contract modules, and the internal `LlmExecutor` adapter.
+- `Test`: `TypeScript` on `NodeJS` plus test-runner support for unit testing, black-box testing, integration testing, functional testing, and cross-partition validation.
+- `SDK`: external `AgentRuntime` plus SDK-contained `QualityControl` with `Gate` and `Trace`.
+- `Data`: `LocalFile` in the current scope for artifact persistence and record storage.
+
+Selection principles:
+
+- Prefer proven and maintainable technologies for V1 and V3 minimum scope.
+- Keep architecture boundaries stable when replacing implementation libraries or providers.
+- Record system-level technology choices here first, and let follow-up design documents inherit them.
 
 ---
 
-## 5. System Flow
+## 5. System Interactions
 
 <!--
 {
   "section_contract": {
     "section_id": "5",
-    "title": "System Flow",
+    "title": "System Interactions",
     "checkitems": [
-      "describe only the runtime interactions needed to understand the system flow",
-      "focus on module collaboration, main flow, and control points rather than module internals",
-      "make the main execution path explicit"
+      "describe only the runtime interactions needed to understand the system behavior",
+      "focus on module collaboration, primary interaction paths, and control points rather than module internals",
+      "make the primary interaction path explicit"
     ],
     "severity": "medium"
   }
 }
 -->
 
-### 5.1 Main Flow
+### 5.1 Primary Interaction Path
 
 <!--
 {
   "section_contract": {
     "section_id": "5.1",
-    "title": "Main Flow",
+    "title": "Primary Interaction Path",
     "checkitems": [
-      "make the main execution or request path explicit",
-      "show the reusable control shape across stages",
-      "identify review, approval, validation, stage entry, retry, or control points where relevant"
+      "make the main execution, request, or event path explicit",
+      "show the reusable control shape across the main interaction path",
+      "identify gateways, retries, asynchronous handoffs, approvals, or other control points where relevant"
     ],
     "severity": "medium",
     "expected_format": "```text\n[Main flow diagram here]\n```\n\n1. `{Step1}`\n2. `{Step2}`\n3. `{Step3}`\n\n`{FlowSummary}`"
@@ -510,38 +569,37 @@ Cross-module collaboration rule:
 -->
 
 ```text
-Interface/CLI
-      |
-      v
-Workflow/Pipeline
-            |
-            v
-   [ StagePipeline for one stage ]
-            |
-            +--> load source / upstream artifacts
-            +--> Execution/* generates staged artifact
-            +--> Contract/* checks staged artifact
-            +--> QualityGate/* reviews stage result
-            +--> Data/* stores artifact and history
-            |
-            v
- next stage / stop / retry / wait review
+Mode A: Direct execution unit run
+Interface -> Runtime
+              |
+              +-> dispatch selected execution unit
+              +-> read required artifacts by runtime convention
+              +-> run related Contract when required
+              +-> submit result to gate
+              +-> write artifacts and trace by runtime convention
+              +-> stop
+
+Mode B: Runtime-managed run
+Interface -> Runtime
+              |
+              +-> select next execution unit
+              +-> read required artifacts by runtime convention
+              +-> run execution unit
+              +-> run related Contract when required
+              +-> submit result to gate
+              +-> write artifacts and trace by runtime convention
+              +-> continue / stop / retry / wait review
 ```
 
-1. Interface/CLI starts a workflow task and sends the request to Workflow/Pipeline.
-2. Workflow/Pipeline runs one `StagePipeline` for the current stage.
-3. Inside the stage pipeline, the system loads source input or confirmed upstream artifacts, then calls the corresponding `Execution/*` module to generate or update the stage artifact.
-4. For non-validation stages, the generated result is checked by the corresponding `Contract/*` module and then submitted to `QualityGate/*` for review and decision; for validation stage, contract check is skipped and the validation result is submitted to `QualityGate/*` for final confirmation.
-5. During the stage flow, artifact results and workflow history are stored through the Data layer.
-6. After the stage finishes, Workflow/Pipeline decides whether to continue to the next stage, stop, retry, or wait for user action.
-7. When the CLI launches a stage in single-step mode, Workflow/Pipeline must stop after the current stage and must not trigger downstream continuation.
-7. The same main flow pattern is reused across requirement interpretation, design generation, implementation generation, and validation stages, with a validation-stage exception on contract only.
+1. Interface starts either one direct execution-unit run or one runtime-managed run.
+2. For a direct unit run, `Runtime/*` dispatches the selected `Execution/*` module, reads required artifacts by runtime convention, invokes the related `Contract/*` module when that unit requires a contract result before downstream use or review, and writes outputs by runtime convention.
+3. `QualityControl/Gate` receives generated artifacts, contract results, generated changes, or validation results and returns allow, reject, or hold decisions.
+4. `QualityControl/Trace` records execution status, important changes, and decision points during the run.
+5. `Data/*` stores accepted artifacts, contract outputs, trace records, and execution records.
+6. For a runtime-managed run, `Runtime/*` decides whether to continue to the next execution unit, stop, retry, or wait for user action based on runtime-readable artifacts, runtime writing rules, and gate results.
+7. The standard runtime-managed path follows requirement design, architecture design, item design, overall design contract, work plan, work execute, and work execute contract, but this is one supported runtime mode rather than the only runtime shape.
 
-Each stage follows the same control shape: load source or upstream artifacts, generate or update the stage artifact, check the result, review the result, and store the accepted output.
-
-Cross-module collaboration in this flow uses workflow-owned interfaces. Concrete service implementations are bound in the application composition root and are not referenced directly across module boundaries.
-
-Exception for validation stage in V1: `Contract/ValidationContract` does not require `Contract/*` check, but it requires `QualityGate/*` review to confirm final validation success/failure information; confirmed success is treated as stage pass, and confirmed failure ends the workflow.
+The reusable control shape is: select one execution unit, resolve required inputs, run it, expose changes and results, apply quality control, persist outputs, and then decide whether to continue.
 
 ### 5.2 Core Modules
 
@@ -552,31 +610,126 @@ Exception for validation stage in V1: `Contract/ValidationContract` does not req
     "title": "Core Modules",
     "checkitems": [
       "list only the modules needed to understand the architecture",
-      "keep responsibilities high level"
+      "group modules in a way that stays aligned with the architecture partitions when useful",
+      "keep each module description at architecture level and focus on responsibility, boundary, and collaboration role",
+      "allow lightweight notes on key inputs, outputs, or ownership boundaries only when they help explain the architecture",
+      "module names must use English identifiers only",
+      "module names must start with an uppercase letter",
+      "module names must not contain spaces"
     ],
     "severity": "medium",
-    "expected_format": "- `{ModuleA}`: `{ResponsibilityA}`\n- `{ModuleB}`: `{ResponsibilityB}`\n- `{ModuleC}`: `{ResponsibilityC}`"
+    "expected_format": "This section may be organized by architecture layer or partition when that improves readability.\n\n- **`LayerOrPartitionA`**\n  - `ModuleA`\n    - responsibility: `{ResponsibilityA}`\n    - inputs: `{InputBoundaryA}`\n    - outputs: `{OutputBoundaryA}`\n    - ownership boundary: `{OwnershipBoundaryA}`\n  - `ModuleB`\n    - responsibility: `{ResponsibilityB}`\n    - inputs: `{InputBoundaryB}`\n    - outputs: `{OutputBoundaryB}`\n\n- **`LayerOrPartitionB`**\n  - `ModuleC`\n    - responsibility: `{ResponsibilityC}`\n\nKeep the notes lightweight and architecture-oriented. Not every module needs every field, but the structure should stay consistent within the section. Do not split this section into an additional mandatory module-capabilities subsection."
   }
 }
 -->
 
-- Interface/CLI: trigger workflow-related tasks through CLI.
-- Workflow/Pipeline: control workflow execution, stage state, stage entry, and retry.
-- Execution/RequirementGenerator: turn raw requirement documents into structured and stable upstream input.
-- SDK/LlmExecutor: provide shared agent-based llm execution capability through prompt-in and model-result-out abstraction for modules that need llm execution.
-- Contract/RequirementContract: check whether requirement-stage inputs and outputs meet required structure and rules, and report issues.
-- Execution/ArchitectureDesignGenerator: generate architecture design documents from upstream stable input.
-- Contract/ArchitectureDesignContract: check whether architecture-design-stage inputs and outputs meet required structure and rules, and report issues.
-- Execution/ModuleDesignGenerator: generate module design documents from upstream stable architecture design input.
-- Contract/ModuleDesignContract: check whether module-design-stage inputs and outputs meet required structure and rules, and report issues.
-- Execution/ImplementationGenerator: generate code and test artifacts from upstream module design outputs.
-- Contract/ImplementationContract: check whether implementation-stage inputs and outputs meet required structure and rules, and report issues.
-- Contract/ValidationContract: check validation-stage output and produce contract-check results for final confirmation.
-- QualityGate/Trace: provide visible review status, pending changes, and important progress information.
-- QualityGate/ChangeGate: manage review, reject, and apply decisions based on contracts and required checks.
-- Data/HistoryStore: store workflow history and operation records.
-- Data/ArtifactStore: store raw files and generated artifacts, such as documents and resources.
+This section is organized by architecture partition.
 
+- **`Interface`**
+  - `CliEntry`
+    - responsibility: trigger direct execution-unit runs and runtime-managed runs in the current scope.
+    - inputs: user commands and runtime context.
+    - outputs: execution requests, review prompts, and visible run status.
+    - ownership boundary: owns user-facing entry flow only and does not own execution logic.
+
+- **`Runtime`**
+  - `Orchestrator`
+    - responsibility: handle command input/output, choose one runtime mode, dispatch capability calls, verify required inputs, and coordinate continuation across execution units.
+    - inputs: direct-run or runtime-managed-run requests plus available upstream artifacts.
+    - outputs: ordered execution-unit invocations and continuation decisions.
+    - ownership boundary: owns overall capability runtime control and does not own execution-unit internals.
+
+- **`Capability`**
+  - `RequirementDesignGenerate`
+    - responsibility: provide `[requirement_design_generate]`.
+    - inputs: user input and requirement context.
+    - outputs: requirement document artifacts.
+  - `RequirementDesignUpdate`
+    - responsibility: provide `[requirement_design_update]`.
+    - inputs: user input and requirement context.
+    - outputs: updated requirement document artifacts.
+  - `ArchitectureDesignGenerate`
+    - responsibility: provide `[architecture_design_generate]`.
+    - inputs: user input and requirement document.
+    - outputs: architecture document artifacts.
+  - `ArchitectureDesignUpdate`
+    - responsibility: provide `[architecture_design_update]`.
+    - inputs: user input and requirement document.
+    - outputs: updated architecture document artifacts.
+  - `ItemDesignGenerate`
+    - responsibility: provide `[item_design_generate]`.
+    - inputs: user input, requirement document, and architecture document.
+    - outputs: item design document artifacts.
+  - `ItemDesignUpdate`
+    - responsibility: provide `[item_design_update]`.
+    - inputs: user input, requirement document, and architecture document.
+    - outputs: updated item design document artifacts.
+  - `WorkPlanGenerate`
+    - responsibility: provide `[work_plan_generate]`.
+    - inputs: upstream design artifacts and user input.
+    - outputs: work plan artifacts.
+  - `WorkPlanUpdate`
+    - responsibility: provide `[work_plan_update]`.
+    - inputs: upstream design artifacts and user input.
+    - outputs: updated work plan artifacts.
+  - `WorkExecute`
+    - responsibility: provide `[work_execute]`.
+    - inputs: upstream design artifacts, work plan, and current workspace files.
+    - outputs: code and workspace changes.
+  - `RequirementDesignContract`
+    - responsibility: provide `[requirement_design_contract]`.
+    - inputs: requirement document artifacts and requirement rules.
+    - outputs: requirement contract results.
+  - `ArchitectureDesignContract`
+    - responsibility: provide `[architecture_design_contract]`.
+    - inputs: architecture document artifacts and architecture rules.
+    - outputs: architecture contract results.
+  - `ItemDesignContract`
+    - responsibility: provide `[item_design_contract]`.
+    - inputs: item design document artifacts and item design rules.
+    - outputs: item design contract results.
+  - `OverallDesignContract`
+    - responsibility: provide `[overall_design_contract]`.
+    - inputs: requirement, architecture, and item design artifacts together.
+    - outputs: cross-document consistency contract results.
+  - `WorkPlanContract`
+    - responsibility: provide `[work_plan_contract]`.
+    - inputs: work plan artifacts and planning rules.
+    - outputs: work plan contract results.
+  - `WorkExecuteContract`
+    - responsibility: provide `[work_execute_contract]`.
+    - inputs: work directory and configured validation command set.
+    - outputs: validation contract results.
+  - `LlmExecutor`
+    - responsibility: act as the internal adapter between capability modules and `AgentRuntime`.
+    - inputs: normalized model execution requests from execution or contract modules.
+    - outputs: adapter-normalized runtime requests and returned model results.
+
+- **`SDK`**
+  - `AgentRuntime`
+    - responsibility: provide external SDK runtime capability for model and agent execution.
+    - inputs: adapter-normalized runtime requests.
+    - outputs: runtime execution results for project modules.
+  - `QualityControl`
+    - responsibility: provide review decision and execution visibility capability through `Gate` and `Trace`.
+    - inputs: generated artifacts, contract results, generated changes, validation results, execution status events, and decision events.
+    - outputs: review decisions, trace records, and visible runtime summaries.
+
+- **`Test`**
+  - `TestRunner`
+    - responsibility: run unit testing, black-box testing, integration testing, functional testing, and cross-partition validation across `Interface`, `Runtime`, `Capability`, `SDK`, and `Data`.
+    - inputs: test targets, runtime-accessible artifacts, and test configuration.
+    - outputs: test results, failure diagnostics, and integrated validation feedback.
+
+- **`Data`**
+  - `ArtifactStore`
+    - responsibility: store generated documents, work plans, code changes, and other artifacts.
+    - inputs: visible artifacts and contract result artifacts.
+    - outputs: persistent artifact lookup for later runs.
+  - `RecordStore`
+    - responsibility: store execution records, gate decisions, and trace records.
+    - inputs: trace events and gate decisions.
+    - outputs: persistent execution records and audit information.
 
 ### 5.3 Interaction Model
 
@@ -587,125 +740,268 @@ Exception for validation stage in V1: `Contract/ValidationContract` does not req
     "title": "Interaction Model",
     "checkitems": [
       "explain how modules collaborate at a high level",
-      "group interactions by major flow step or control point",
-      "keep this section at workflow-level interaction rather than module-internal detail"
+      "group interactions by major interaction step, user scenario, or control point",
+      "make it clear which interactions belong to the current mainline and which are future-stage extensions when relevant",
+      "keep this section at cross-module interaction level rather than module-internal detail"
     ],
     "severity": "medium",
-    "expected_format": "This section describes workflow-level module interaction. The concrete public APIs for these cross-module calls are defined in `{CrossModuleDocPath}`."
+    "expected_format": "This section describes high-level cross-module interaction. The concrete public APIs or interface contracts for these calls are defined in `{CrossModuleDocPath}`.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section in two main steps:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`\n\nWithin each `5.3.x.x` interaction case, continue to deeper levels only when needed for readability. The deepest useful level should typically be one of these structures:\n\n```plantuml\n@startuml\nactor User\nparticipant ModuleA\nparticipant ModuleB\nUser -> ModuleA: `{Action}`\nModuleA -> ModuleB: `{Delegation}`\nModuleB -> ModuleA: `{Result}`\n@enduml\n```\n\n```text\n{METHOD} {PATH} => request { `{RequestShape}` } => response { `{ResponseShape}` }\n```\n\nUse `plantuml` for cross-module interaction views and `text` for lightweight public API or shared interface shapes. These views should capture only the shared boundary and collaboration path that matter at architecture level.\n\nFor each scenario, prefer this information order:\n- user scenario or trigger\n- current stage versus future-stage position\n- interaction goal\n- interaction cases under `5.3.x.x`\n- lightweight shared interaction shape when needed\n\nDo not include detailed request fields, storage schema, or module-internal algorithms here."
   }
 }
 -->
 
-This section describes workflow-level module interaction. The concrete public APIs for these cross-module calls are defined in `System Interaction Design` (`design_docs/SystemInteractionDesign.md`).
+This section describes high-level cross-module interaction at architecture level.
 
-#### 5.3.1 Start Task
+#### 5.3.1 DirectExecutionUnitRun
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3.1",
-    "title": "Start Task",
+    "title": "DirectExecutionUnitRun",
     "checkitems": [
-      "describe how the workflow task is started",
-      "write each interaction as `Source -> Target: purpose`"
+      "describe how modules collaborate for one focused interaction case",
+      "make user scenario, stage position, and interaction goal explicit"
     ],
     "severity": "medium",
-    "expected_format": "- `{SourceA}` -> `{TargetA}`: `{PurposeA}`"
+    "expected_format": "- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`"
   }
 }
 -->
 
-- Interface/CLI -> Workflow/Pipeline: start workflow task
+- user scenario: the caller wants one Basic Execution Unit without running a larger runtime-managed process.
+- stage position: current scope.
+- goal: run one selected execution unit with the minimum required control path.
 
-#### 5.3.2 Generate Or Update Stage Artifact
+##### 5.3.1.1 RequestAndDispatch
+
+- summary: the interface selects direct-run mode and dispatches the request to the target execution unit.
+- modules involved: `CliEntry`, `Orchestrator`, `RequirementDesignGenerate` or another selected execution unit, `QualityControl/Trace`.
+- control focus: runtime-owned dispatch and visible run start.
+
+```plantuml
+@startuml
+actor User
+participant CliEntry
+participant Orchestrator
+participant RequirementDesignGenerate
+participant "QualityControl/Trace" as Trace
+User -> CliEntry: Start direct execution-unit run
+CliEntry -> Trace: Record run start
+CliEntry -> Orchestrator: Submit direct-run request
+Orchestrator -> RequirementDesignGenerate: Dispatch selected unit
+RequirementDesignGenerate --> Orchestrator: Return generated result
+Orchestrator --> CliEntry: Return run result
+CliEntry -> Trace: Record unit completion
+@enduml
+```
+
+##### 5.3.1.2 ReviewAndStore
+
+- summary: the runtime sends the result to quality control and persistence before stopping.
+- modules involved: `QualityControl/Gate`, `ArtifactStore`, `RecordStore`, `QualityControl/Trace`.
+- control focus: review decision and visible completion boundary.
+
+```plantuml
+@startuml
+participant RequirementDesignGenerate
+participant "QualityControl/Gate" as Gate
+participant ArtifactStore
+participant RecordStore
+participant "QualityControl/Trace" as Trace
+RequirementDesignGenerate -> Gate: Submit generated result
+Gate -> ArtifactStore: Store accepted result
+Gate -> RecordStore: Store gate decision
+Gate -> Trace: Record review outcome
+@enduml
+```
+
+#### 5.3.2 RuntimeManagedRun
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3.2",
-    "title": "Generate Or Update Stage Artifact",
+    "title": "RuntimeManagedRun",
     "checkitems": [
-      "describe generation and update related interactions",
-      "include shared llm execution interactions when relevant"
+      "describe how modules collaborate for one focused interaction case",
+      "make user scenario, stage position, and interaction goal explicit"
     ],
     "severity": "medium",
-    "expected_format": "- `{SourceA}` -> `{TargetA}`: `{PurposeA}`\n- `{SourceB}` -> `{TargetB}`: `{PurposeB}`"
+    "expected_format": "- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`"
   }
 }
 -->
 
-- Execution/RequirementGenerator -> SDK/LlmExecutor: execute requirement interpretation request through shared llm execution capability
-- Execution/ArchitectureDesignGenerator -> SDK/LlmExecutor: execute architecture-design generation request through shared llm execution capability
-- Execution/ModuleDesignGenerator -> SDK/LlmExecutor: execute module-design generation request through shared llm execution capability
-- Execution/ImplementationGenerator -> SDK/LlmExecutor: execute implementation generation request through shared llm execution capability
-- Contract/* -> SDK/LlmExecutor: execute llm-based contract-support request when a contract module needs shared llm capability
-- Workflow/Pipeline -> Execution/RequirementGenerator: interpret raw requirement input
-- Workflow/Pipeline -> Execution/ArchitectureDesignGenerator: generate architecture design output
-- Workflow/Pipeline -> Execution/ModuleDesignGenerator: generate module design output
-- Workflow/Pipeline -> Execution/ImplementationGenerator: generate intermediate resources, for example code, test cases, and config
-- Workflow/Pipeline -> Contract/ValidationContract: check validation-stage output
+- user scenario: the caller wants the standard path from upstream design artifacts to work execution validation.
+- stage position: current scope.
+- goal: coordinate multiple execution units with required-input checks, review points, and downstream continuation control.
 
-#### 5.3.3 Check Stage Result
+##### 5.3.2.1 ComposeAndRunUnits
+
+- summary: the runtime module selects the next execution unit, provides required inputs, and advances through the standard path, including repeated item design execution for multiple target items.
+- modules involved: `Orchestrator`, `RequirementDesignGenerate`, `ArchitectureDesignGenerate`, `ItemDesignGenerate`, `WorkPlanGenerate`, `WorkExecute`.
+- control focus: runtime ownership, repeated item-level execution, and downstream continuation.
+
+```plantuml
+@startuml
+participant CliEntry
+participant Orchestrator
+participant RequirementDesignGenerate
+participant ArchitectureDesignGenerate
+participant ItemDesignGenerate
+participant WorkPlanGenerate
+participant WorkExecute
+CliEntry -> Orchestrator: Start runtime-managed run
+Orchestrator -> RequirementDesignGenerate: Run requirement design generate
+Orchestrator -> ArchitectureDesignGenerate: Run architecture design generate
+loop for each target item
+  Orchestrator -> ItemDesignGenerate: Run item design generate
+end
+Orchestrator -> WorkPlanGenerate: Run work plan generate
+Orchestrator -> WorkExecute: Run work execute
+@enduml
+```
+
+##### 5.3.2.2 SharedModelSupport
+
+- summary: execution or contract modules call the internal adapter, which forwards project requests to the external SDK runtime when model support is required.
+- modules involved: `RequirementDesignGenerate`, `ArchitectureDesignGenerate`, `ItemDesignContract`, `LlmExecutor`, `AgentRuntime`.
+- control focus: adapter boundary, synchronous request/response waiting, and external SDK reuse.
+
+```plantuml
+@startuml
+participant RequirementDesignGenerate
+participant ItemDesignContract
+participant LlmExecutor
+participant AgentRuntime
+RequirementDesignGenerate -> LlmExecutor: Execute model-supported generation request
+LlmExecutor -> AgentRuntime: Forward normalized runtime request
+AgentRuntime --> LlmExecutor: Return runtime result
+LlmExecutor --> RequirementDesignGenerate: Return model result
+
+ItemDesignContract -> LlmExecutor: Execute model-supported contract request
+LlmExecutor -> AgentRuntime: Forward normalized runtime request
+AgentRuntime --> LlmExecutor: Return runtime result
+LlmExecutor --> ItemDesignContract: Return model result
+@enduml
+```
+
+#### 5.3.3 ContractAndGateControl
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3.3",
-    "title": "Check Stage Result",
+    "title": "ContractAndGateControl",
     "checkitems": [
-      "describe how stage results are checked",
-      "connect workflow to contract modules explicitly"
+      "describe how modules collaborate for one focused interaction case",
+      "make user scenario, stage position, and interaction goal explicit"
     ],
     "severity": "medium",
-    "expected_format": "- `{SourceA}` -> `{TargetA}`: `{PurposeA}`"
+    "expected_format": "- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`"
   }
 }
 -->
 
-- Workflow/Pipeline -> Contract/RequirementContract: check requirement-stage input/output, report issues, and return the result for next-step decision
-- Workflow/Pipeline -> Contract/ArchitectureDesignContract: check architecture-design-stage input/output, report issues, and return the result for the next-step decision
-- Workflow/Pipeline -> Contract/ModuleDesignContract: check module-design-stage input/output, report issues, and return the result for the next-step decision
-- Workflow/Pipeline -> Contract/ImplementationContract: check implementation-stage input/output, report issues, and return the result for the next-step decision
+- user scenario: one generated artifact or validation result needs a downstream continuation decision.
+- stage position: current scope.
+- goal: keep contract checking and review decisions separate from execution-unit logic.
 
-#### 5.3.4 Review And Decision
+##### 5.3.3.1 ContractCheck
+
+- summary: the runtime module routes artifacts to the relevant contract module before downstream use.
+- modules involved: `Orchestrator`, `RequirementDesignContract`, `ArchitectureDesignContract`, `ItemDesignContract`, `OverallDesignContract`, `WorkPlanContract`, `WorkExecuteContract`.
+- control focus: contract ownership and downstream eligibility.
+
+```plantuml
+@startuml
+participant Orchestrator
+participant ArchitectureDesignContract
+participant OverallDesignContract
+participant WorkExecuteContract
+Orchestrator -> ArchitectureDesignContract: Check architecture result
+ArchitectureDesignContract --> Orchestrator: Return contract result
+Orchestrator -> OverallDesignContract: Check cross-document consistency
+OverallDesignContract --> Orchestrator: Return contract result
+Orchestrator -> WorkExecuteContract: Check work execution result
+WorkExecuteContract --> Orchestrator: Return contract result
+@enduml
+```
+
+##### 5.3.3.2 GateDecision
+
+- summary: quality control only returns the change review decision. How the reviewed artifact is used after that decision is determined by the caller.
+- modules involved: `QualityControl/Gate`, `Orchestrator`, `QualityControl/Trace`.
+- control focus: review handoff and decision return boundary.
+
+```plantuml
+@startuml
+participant Orchestrator
+participant "QualityControl/Gate" as Gate
+participant "QualityControl/Trace" as Trace
+Orchestrator -> Gate: Request continuation decision
+Gate -> Trace: Record decision point
+Gate --> Orchestrator: Return allow/reject/hold
+@enduml
+```
+
+#### 5.3.4 TraceAndPersistence
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3.4",
-    "title": "Review And Decision",
+    "title": "TraceAndPersistence",
     "checkitems": [
-      "describe review, reject, and apply interactions",
-      "connect review decisions to stage progression semantics when relevant"
+      "describe how modules collaborate for one focused interaction case",
+      "make user scenario, stage position, and interaction goal explicit"
     ],
     "severity": "medium",
-    "expected_format": "- `{SourceA}` -> `{TargetA}`: `{PurposeA}`"
+    "expected_format": "- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`"
   }
 }
 -->
 
-- Workflow/Pipeline -> QualityGate/ChangeGate: for contract-enabled stages, submit stage results together with contract check results; for validation stage, submit validation success/failure result information directly for final review decision
+- user scenario: the caller needs visible execution status and durable artifacts during direct or runtime-managed runs.
+- stage position: current scope.
+- goal: persist visible outputs and execution records without making execution units own storage policy.
 
-#### 5.3.5 Store Artifact And History
+##### 5.3.4.1 TraceRecording
 
-<!--
-{
-  "section_contract": {
-    "section_id": "5.3.5",
-    "title": "Store Artifact And History",
-    "checkitems": [
-      "describe artifact and history persistence interactions",
-      "keep the focus on architecture-level storage collaboration"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{SourceA}` -> `{TargetA}`: `{PurposeA}`\n- `{SourceB}` -> `{TargetB}`: `{PurposeB}`"
-  }
-}
--->
+- summary: the runtime records execution status, important changes, and decision points throughout the run.
+- modules involved: `QualityControl/Trace`, `RecordStore`, `Orchestrator`, `CliEntry`.
+- control focus: visibility ownership and durable history.
 
-- Workflow/Pipeline -> QualityGate/Trace: notify important process information
-- QualityGate/Trace -> Data/HistoryStore: save important process information
-- Execution/* -> Data/ArtifactStore: save generated artifacts
+```plantuml
+@startuml
+participant CliEntry
+participant Orchestrator
+participant "QualityControl/Trace" as Trace
+participant RecordStore
+CliEntry -> Trace: Record run start
+Orchestrator -> Trace: Record unit transition
+Trace -> RecordStore: Persist trace record
+@enduml
+```
+
+##### 5.3.4.2 ArtifactPersistence
+
+- summary: generated artifacts and visible contract outputs are stored for later review, resume, or downstream use.
+- modules involved: `ArtifactStore`, `RequirementDesignGenerate`, `WorkExecute`, `WorkPlanContract`.
+- control focus: artifact durability and downstream lookup boundary.
+
+```plantuml
+@startuml
+participant RequirementDesignGenerate
+participant WorkExecute
+participant WorkPlanContract
+participant ArtifactStore
+RequirementDesignGenerate -> ArtifactStore: Store requirement artifact
+WorkExecute -> ArtifactStore: Store workspace change artifact
+WorkPlanContract -> ArtifactStore: Store visible contract result
+@enduml
+```
 
 ### 5.4 Key Considerations
 
@@ -724,18 +1020,11 @@ This section describes workflow-level module interaction. The concrete public AP
 }
 -->
 
-- Supported stage-level launch points:
-  - Design generation or update
-  - Implementation generation or update
-  - Validation
-- Checkpoint:
-  - Review interpreted requirement outputs
-  - Review design outputs
-  - Review implementation outputs
-- Failure handling:
-  - Stop at the current failed stage
-  - Do not roll back automatically
-  - Restart from the same stage after the issue is fixed
+- Any Basic Execution Unit can be launched directly when its required inputs are available.
+- The standard runtime-managed path from requirement design to work execute contract is current-scope behavior, not the only allowed runtime mode.
+- Downstream execution units must not start until required upstream artifacts are available and relevant contract checks have passed.
+- Important generated artifacts, contract results, code changes, and validation results must remain reviewable through `gate`.
+- Failures stop the current execution unit or contract path, do not trigger automatic rollback, and must support resume from the failed or an earlier related unit.
 
 ---
 
@@ -775,9 +1064,9 @@ This section describes workflow-level module interaction. The concrete public AP
 - Why it matters:
   - The platform should remain available when part of the system fails.
 - Architectural support:
-  - Servers should support deployment on multiple machines to reduce single-point failure risk.
-  - Services should be separated so part of the platform can still work when another part fails.
-  - The platform should expose error information when system failure happens.
+  - Execution units can be invoked independently, so one failed runtime-managed run does not prevent all other unit runs.
+  - Quality control and data recording should keep failure information visible to support safe retry or resume.
+  - Runtime partitions can be separated later to reduce single-point failure risk.
 
 ### 6.2 High Scalability
 
@@ -797,10 +1086,10 @@ This section describes workflow-level module interaction. The concrete public AP
 -->
 
 - Why it matters:
-  - The platform should support more tasks, scenarios, and user-defined rules in the future.
+  - The platform should support more execution units, more runtime modes, and more user-defined rules in the future.
 - Architectural support:
-  - Workflow should support more task types in future stages.
-  - Contract should support user-defined customization.
+  - New Basic Execution Units can be added without redefining all existing runtime modes.
+  - Contract and quality-control boundaries remain separate so rule growth does not force execution modules to absorb review logic.
 
 ### 6.3 High Performance
 
@@ -820,42 +1109,10 @@ This section describes workflow-level module interaction. The concrete public AP
 -->
 
 - Why it matters:
-  - The platform should reduce waiting time for generation and validation tasks.
+  - The platform should reduce waiting time for generation, update, contract, and validation tasks.
 - Architectural support:
-  - Parallelization should be supported when possible, especially for design and implementation related execution units.
-
-### 6.4 Technology Stack (Implementation Baseline)
-
-This section defines system-level technology choices. Module documents should inherit this baseline and only add module-specific choices when necessary.
-
-- Runtime and language:
-  - Primary language: `TypeScript`
-  - Runtime: `NodeJS`
-- CLI and interaction:
-  - CLI framework: `Python`
-- LLM and agent execution:
-  - Model provider SDK / gateway: `Gpt/DeepSeek/CladeCode`
-- Data and persistence:
-  - Artifact storage backend: `LocalFile`
-  - History storage backend: `LocalFile`
-- Validation and test:
-  - Test framework / command strategy: `Python Shell`
-- Build and dependency management:
-  - Build toolchain: `Python Shell`
-  - Package/dependency manager: `NPM`
-- Deployment baseline:
-  - Runtime topology baseline: 
-    - Single-machine, single-process runtime for CLI
-    - Remote cloud-hosted LLM provider for all model inference calls
-  - Environment strategy (local/cloud): `Local`
-
-Selection principles:
-
-- Prefer proven and maintainable technologies for V1.
-- Keep module boundaries stable when replacing implementation libraries.
-- Global stack decisions should be recorded here first, then referenced by module design documents.
-
----
+  - Direct execution-unit runs avoid unnecessary upstream reruns.
+  - Parallelization should be supported when independent item design or contract checks can run without violating input dependencies.
 
 ## 7. Design Documents
 
@@ -886,21 +1143,23 @@ Selection principles:
       "keep the categories aligned with architecture boundaries"
     ],
     "severity": "medium",
-    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and common stage pipeline defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`"
+      "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`"
   }
 }
 -->
 
-Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and common stage pipeline defined in this architecture.
+Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.
 
 Design categories:
 
-- Process design
-  - focus on flow, state, stage transitions, control logic, error handling, and internal code structure
-- Data design
-  - focus on data model, field definitions, storage layout, public storage API, consistency rules, and persistence behavior
-- Rule design
+- Runtime design
+  - focus on runtime modes, command input/output, capability dispatch, continuation rules, error handling, and resume behavior
+- Execution unit design
+  - focus on one Basic Execution Unit or a closely related execution-unit pair such as generate and update
+- Rule and contract design
   - focus on validation target, rule definitions, check logic, issue model, and result structure
+- Data and visibility design
+  - focus on artifact storage, record storage, trace visibility, and gate decision recording
 - Interface contract design
   - focus on shared APIs, request/response boundaries, and interaction rules between modules
 
@@ -908,130 +1167,34 @@ Design categories:
 
 <!--
 {
-  "section_contract": {
-    "section_id": "7.2",
-    "title": "Design Document Breakdown",
-    "checkitems": [
-      "break down follow-up design documents by major flow step or architecture area",
-      "list each document with its intended scope"
-    ],
-    "severity": "medium"
-  }
+    "section_contract": {
+      "section_id": "7.2",
+      "title": "Design Document Breakdown",
+      "checkitems": [
+        "output this section as a document directory list",
+        "list follow-up design documents that map directly to the modules identified in the architecture document",
+        "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
+        "state each document path together with its intended scope",
+        "use markdown link format as [document_name](document_path)",
+        "document_name must not contain spaces"
+      ],
+      "severity": "high",
+      "expected_format": "- [document_name_a](./design_docs/document_name_a.md): covers `{ModuleOrInteractionA}`.\n- [document_name_b](./design_docs/document_name_b.md): covers `{ModuleOrInteractionB}`.\n- [document_name_c](./design_docs/document_name_c.md): covers `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format [document_name](document_path)\n- document_name must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nThe breakdown should prefer stable architecture-aligned slices, for example:\n- one document per major module or subsystem when that module has meaningful internal design work\n- one document for a repeated cross-module interaction pattern when multiple modules rely on the same collaboration shape\n- one document for shared contracts when multiple modules depend on the same canonical structure"
+    }
 }
 -->
 
-Before reading the detailed breakdown, apply this three-layer structure:
-
-- Layer 1 - Architecture document (`TechnicalArchitecture.md`): define system-level boundaries, dependency rules, and global workflow constraints.
-- Layer 2 - System interaction document (`design_docs/SystemInteractionDesign.md`): define cross-module collaboration, interaction boundaries, and stage-level orchestration view.
-- Layer 3 - Module design documents (`design_docs/*/*.md`): define module-local interfaces, runtime flow, and implementation-oriented details.
-
-#### 7.2.1 Start Task
-
-<!--
-{
-  "section_contract": {
-    "section_id": "7.2.1",
-    "title": "Start Task",
-    "checkitems": [
-      "list design documents needed for task start and workflow launch",
-      "keep each item scoped to document responsibility"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{DesignDocA}`: `{ScopeA}`\n- `{DesignDocB}`: `{ScopeB}`"
-  }
-}
--->
-
-- System Interaction Design: shared public APIs and request/response boundaries for cross-module calls.
-- Interface/CLI Design: CLI-based task trigger and CLI interaction flow.
-- Workflow/Pipeline Design: task start, stage selection, stage entry, and workflow control.
-
-#### 7.2.2 Generate Or Update Stage Artifact
-
-<!--
-{
-  "section_contract": {
-    "section_id": "7.2.2",
-    "title": "Generate Or Update Stage Artifact",
-    "checkitems": [
-      "list design documents needed for stage artifact generation or update",
-      "cover relevant execution and data modules"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{DesignDocA}`: `{ScopeA}`\n- `{DesignDocB}`: `{ScopeB}`"
-  }
-}
--->
-
-- Execution/RequirementGenerator Design: requirement interpretation logic and requirement-stage execution flow.
-- Execution/ArchitectureDesignGenerator Design: architecture design generation logic and architecture-stage execution flow.
-- Execution/ModuleDesignGenerator Design: module design generation logic and module-design-stage execution flow.
-- Execution/ImplementationGenerator Design: implementation generation logic for code and test artifacts.
-- Contract/ValidationContract Design: validation execution flow and validation result generation.
-- Data/ArtifactStore Design: staged artifact storage and generated artifact persistence.
-
-#### 7.2.3 Check Stage Result
-
-<!--
-{
-  "section_contract": {
-    "section_id": "7.2.3",
-    "title": "Check Stage Result",
-    "checkitems": [
-      "list design documents needed for stage-result validation",
-      "cover relevant contract modules"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{DesignDocA}`: `{ScopeA}`\n- `{DesignDocB}`: `{ScopeB}`"
-  }
-}
--->
-
-- Contract/RequirementContract Design: requirement-stage input/output structure rules and validation contracts.
-- Contract/ArchitectureDesignContract Design: architecture design input/output structure rules and validation contracts.
-- Contract/ModuleDesignContract Design: module design input/output structure rules and validation contracts.
-- Contract/ImplementationContract Design: implementation-stage input/output structure rules and validation contracts.
-
-#### 7.2.4 Review And Decision
-
-<!--
-{
-  "section_contract": {
-    "section_id": "7.2.4",
-    "title": "Review And Decision",
-    "checkitems": [
-      "list design documents needed for review and decision handling",
-      "focus on quality-gate scope"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{DesignDocA}`: `{ScopeA}`"
-  }
-}
--->
-
-- QualityGate/ChangeGate Design: review, reject, and apply decision handling for pending changes.
-
-#### 7.2.5 Store Artifact And History
-
-<!--
-{
-  "section_contract": {
-    "section_id": "7.2.5",
-    "title": "Store Artifact And History",
-    "checkitems": [
-      "list design documents needed for artifact storage and history recording",
-      "cover both accepted artifacts and process records"
-    ],
-    "severity": "medium",
-    "expected_format": "- `{DesignDocA}`: `{ScopeA}`\n- `{DesignDocB}`: `{ScopeB}`"
-  }
-}
--->
-
-- QualityGate/Trace Design: review status tracking, pending review visibility, and important progress information.
-- Data/ArtifactStore Design: accepted artifact storage and downstream artifact lookup.
-- Data/HistoryStore Design: workflow history, operation records, and process trace storage.
+- [cli_entry_design](./design_docs/cli_entry_design.md): covers current CLI entry behavior, request normalization, and user-facing control handoff.
+- [orchestrator_design](./design_docs/orchestrator_design.md): covers runtime modes, command input/output, capability dispatch, continuation rules, and resume behavior.
+- [agentruntime_design](./design_docs/agentruntime_design.md): covers the external `AgentRuntime` boundary, runtime request/response mapping, and collaboration expectations with the internal adapter.
+- [requirement_design](./design_docs/requirement_design.md): covers the requirement design basic units, including `[requirement_design_generate]`, `[requirement_design_update]`, and `[requirement_design_contract]`.
+- [architecture_design](./design_docs/architecture_design.md): covers the architecture design basic units, including `[architecture_design_generate]`, `[architecture_design_update]`, and `[architecture_design_contract]`.
+- [item_design](./design_docs/item_design.md): covers the item design basic units, including `[item_design_generate]`, `[item_design_update]`, `[item_design_contract]`, and `[overall_design_contract]`.
+- [work_design](./design_docs/work_design.md): covers the work plan basic units, including `[work_plan_generate]`, `[work_plan_update]`, and `[work_plan_contract]`.
+- [work_execute](./design_docs/work_execute.md): covers the work execution basic units, including `[work_execute]` and `[work_execute_contract]`.
+- [quality_control_design](./design_docs/quality_control_design.md): covers the `QualityControl` module, including `Gate`, `Trace`, review decision handling, and execution visibility boundaries.
+- [test_design](./design_docs/test_design.md): covers the `Test` partition, including unit testing, black-box testing, integration testing, functional testing, and cross-partition validation.
+- [data_store_design](./design_docs/data_store_design.md): covers `ArtifactStore` and `RecordStore`, including artifact persistence, downstream lookup, trace records, gate decisions, and execution records.
 
 ---
 
@@ -1053,4 +1216,6 @@ Before reading the detailed breakdown, apply this three-layer structure:
 }
 -->
 
----
+- The requirement document defines `external_composition` as a product capability, but the exact boundary between external caller composition and the current `Runtime`-managed execution path still needs a dedicated interaction definition.
+- The current architecture uses requirement-facing basic unit names and code-oriented partition names together. The long-term mapping between requirement basic units, runtime modules, and design documents still needs an explicit naming rule.
+- The supported runtime modes for V3 Codex plugin adaptation still need a dedicated limit definition so the product does not over-commit beyond the current minimum goal.

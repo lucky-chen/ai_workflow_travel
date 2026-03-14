@@ -70,7 +70,7 @@
     "checkitems": [
       "define what this document covers",
       "define what this document does not cover",
-      "clarify the boundary between overall architecture and module design"
+      "clarify the boundary between overall architecture and follow-up design documents"
     ],
     "severity": "medium"
   }
@@ -228,12 +228,12 @@
     "section_id": "4.5",
     "title": "Runtime Topology",
     "checkitems": [
-      "describe the backend runtime and deployment view in a lightweight way",
-      "clarify which major parts run together, which parts may be separated, and how shared infrastructure is used",
-      "keep the content at runtime topology level rather than deployment runbook detail"
+      "describe the runtime view in a lightweight way",
+      "clarify which major parts run together, which parts may be separated, and how shared resources are used",
+      "keep the content at topology level rather than operational detail"
     ],
     "severity": "medium",
-    "expected_format": "- `{RuntimeNodeA}`: `{ResponsibilityA}`\n- `{RuntimeNodeB}`: `{ResponsibilityB}`\n- `{SharedInfrastructure}`: `{ResponsibilityC}`"
+    "expected_format": "- `{RuntimePartA}`: `{RoleA}`\n- `{RuntimePartB}`: `{RoleB}`\n- `{SharedPart}`: `{RoleC}`"
   }
 }
 -->
@@ -451,7 +451,7 @@
       "keep the categories aligned with architecture boundaries"
     ],
     "severity": "medium",
-    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`\n\nTypical categories may include module design documents, cross-module interaction documents, shared contract documents, and runtime or data-boundary documents."
+    "expected_format": "Different design documents have different focus. All of them must still follow the module boundaries, dependency rules, and shared architectural constraints defined in this architecture.\n\n- `{CategoryA}`\n- `{CategoryB}`\n- `{CategoryC}`\n\nTypical categories may include execution-unit design documents, cross-module interaction documents, shared contract documents, and runtime or data-boundary documents."
   }
 }
 -->
@@ -468,11 +468,11 @@
         "list follow-up design documents that map directly to the modules identified in the architecture document",
         "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
         "state each document path together with its intended scope",
-        "use markdown link format as `[document_name](document_path)`",
+        "use markdown link format as [document_name](document_path)",
         "document_name must not contain spaces"
       ],
       "severity": "high",
-      "expected_format": "- [`document_name_a`](./design_docs/document_name_a.md): covers `{ModuleOrInteractionA}`.\n- [`document_name_b`](./design_docs/document_name_b.md): covers `{ModuleOrInteractionB}`.\n- [`document_name_c`](./design_docs/document_name_c.md): covers `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format `[document_name](document_path)`\n- `document_name` must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nThe breakdown should prefer stable architecture-aligned slices, for example:\n- one document per major module or subsystem when that module has meaningful internal design work\n- one document for a repeated cross-module interaction pattern when multiple modules rely on the same collaboration shape\n- one document for shared contracts when multiple modules depend on the same canonical structure"
+      "expected_format": "- [document_name_a](./design_docs/document_name_a.md): covers `{ModuleOrInteractionA}`.\n- [document_name_b](./design_docs/document_name_b.md): covers `{ModuleOrInteractionB}`.\n- [document_name_c](./design_docs/document_name_c.md): covers `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format [document_name](document_path)\n- document_name must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nThe breakdown should prefer stable architecture-aligned slices, for example:\n- one document per major module or subsystem when that module has meaningful internal design work\n- one document for a repeated cross-module interaction pattern when multiple modules rely on the same collaboration shape\n- one document for shared contracts when multiple modules depend on the same canonical structure"
     }
 }
 -->
