@@ -1171,30 +1171,78 @@ Design categories:
       "section_id": "7.2",
       "title": "Design Document Breakdown",
       "checkitems": [
-        "output this section as a document directory list",
+        "output this section as a design-document directory view",
         "list follow-up design documents that map directly to the modules identified in the architecture document",
         "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
-        "state each document path together with its intended scope",
+        "state each document path together with its type, intended scope, and included items",
         "use markdown link format as [document_name](document_path)",
         "document_name must not contain spaces"
       ],
       "severity": "high",
-      "expected_format": "- [document_name_a](./design_docs/document_name_a.md): covers `{ModuleOrInteractionA}`.\n- [document_name_b](./design_docs/document_name_b.md): covers `{ModuleOrInteractionB}`.\n- [document_name_c](./design_docs/document_name_c.md): covers `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format [document_name](document_path)\n- document_name must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nThe breakdown should prefer stable architecture-aligned slices, for example:\n- one document per major module or subsystem when that module has meaningful internal design work\n- one document for a repeated cross-module interaction pattern when multiple modules rely on the same collaboration shape\n- one document for shared contracts when multiple modules depend on the same canonical structure"
+      "expected_format": "- [document_name_a](./breakdown_docs/document_name_a.md)\n  - type: `{DocumentTypeA}`\n  - scope: `{DocumentFunctionA}`\n  - include: `{IncludedItemA}`, `{IncludedItemB}`\n\n- [document_name_b](./breakdown_docs/document_name_b.md)\n  - type: `{DocumentTypeB}`\n  - scope: `{DocumentFunctionB}`\n  - include: `{IncludedItemC}`, `{IncludedItemD}`\n\n- [document_name_c](./breakdown_docs/document_name_c.md)\n  - type: `{DocumentTypeC}`\n  - scope: `{DocumentFunctionC}`\n  - include: `{IncludedItemE}`, `{IncludedItemF}`\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format [document_name](document_path)\n- document_name must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nAllowed document types:\n- `functional_group_design`\n- `test_design`\n- `reference_design`\n- `protocol_design`"
     }
 }
 -->
 
-- [cli_entry_design](./design_docs/cli_entry_design.md): covers current CLI entry behavior, request normalization, and user-facing control handoff.
-- [orchestrator_design](./design_docs/orchestrator_design.md): covers runtime modes, command input/output, capability dispatch, continuation rules, and resume behavior.
-- [agentruntime_design](./design_docs/agentruntime_design.md): covers the external `AgentRuntime` boundary, runtime request/response mapping, and collaboration expectations with the internal adapter.
-- [requirement_design](./design_docs/requirement_design.md): covers the requirement design basic units, including `[requirement_design_generate]`, `[requirement_design_update]`, and `[requirement_design_contract]`.
-- [architecture_design](./design_docs/architecture_design.md): covers the architecture design basic units, including `[architecture_design_generate]`, `[architecture_design_update]`, and `[architecture_design_contract]`.
-- [item_design](./design_docs/item_design.md): covers the item design basic units, including `[item_design_generate]`, `[item_design_update]`, `[item_design_contract]`, and `[overall_design_contract]`.
-- [work_design](./design_docs/work_design.md): covers the work plan basic units, including `[work_plan_generate]`, `[work_plan_update]`, and `[work_plan_contract]`.
-- [work_execute](./design_docs/work_execute.md): covers the work execution basic units, including `[work_execute]` and `[work_execute_contract]`.
-- [quality_control_design](./design_docs/quality_control_design.md): covers the `QualityControl` module, including `Gate`, `Trace`, review decision handling, and execution visibility boundaries.
-- [test_design](./design_docs/test_design.md): covers the `Test` partition, including unit testing, black-box testing, integration testing, functional testing, and cross-partition validation.
-- [data_store_design](./design_docs/data_store_design.md): covers `ArtifactStore` and `RecordStore`, including artifact persistence, downstream lookup, trace records, gate decisions, and execution records.
+- [cli_entry_design](./breakdown_docs/cli_entry_design.md)
+  - type: `functional_group_design`
+  - scope: define current CLI entry behavior, request normalization, and user-facing control handoff
+  - include: `CliEntry`
+
+- [orchestrator_design](./breakdown_docs/orchestrator_design.md)
+  - type: `functional_group_design`
+  - scope: define runtime modes, command input/output handling, capability dispatch, continuation rules, and resume behavior
+  - include: `Orchestrator`
+
+- [llm_capability_design](./breakdown_docs/llm_capability_design.md)
+  - type: `functional_group_design`
+  - scope: define the internal LLM adapter boundary and the external runtime capability reference boundary
+  - include: `LlmExecutor`, `AgentRuntime`
+
+- [requirement_design](./breakdown_docs/requirement_design.md)
+  - type: `functional_group_design`
+  - scope: define requirement artifact generation, requirement update behavior, and requirement contract checking
+  - include: `RequirementDesignGenerate`, `RequirementDesignUpdate`, `RequirementDesignContract`
+
+- [architecture_design](./breakdown_docs/architecture_design.md)
+  - type: `functional_group_design`
+  - scope: define architecture artifact generation, architecture update behavior, and architecture contract checking
+  - include: `ArchitectureDesignGenerate`, `ArchitectureDesignUpdate`, `ArchitectureDesignContract`
+
+- [item_design](./breakdown_docs/item_design.md)
+  - type: `functional_group_design`
+  - scope: define item-level design generation, item update behavior, and item contract checking
+  - include: `ItemDesignGenerate`, `ItemDesignUpdate`, `ItemDesignContract`
+
+- [overall_design_contract_design](./breakdown_docs/overall_design_contract_design.md)
+  - type: `functional_group_design`
+  - scope: define cross-document consistency checking across requirement, architecture, and item design outputs
+  - include: `OverallDesignContract`
+
+- [work_design](./breakdown_docs/work_design.md)
+  - type: `functional_group_design`
+  - scope: define work-plan generation, work-plan update behavior, and work-plan contract checking
+  - include: `WorkPlanGenerate`, `WorkPlanUpdate`, `WorkPlanContract`
+
+- [work_execute](./breakdown_docs/work_execute.md)
+  - type: `functional_group_design`
+  - scope: define work execution behavior and work execution validation checking
+  - include: `WorkExecute`, `WorkExecuteContract`
+
+- [quality_control_design](./breakdown_docs/quality_control_design.md)
+  - type: `functional_group_design`
+  - scope: define review decision handling and execution visibility boundaries inside the quality-control subsystem
+  - include: `QualityControl`, `Gate`, `Trace`
+
+- [test_design](./breakdown_docs/test_design.md)
+  - type: `test_design`
+  - scope: define test coverage boundaries, test layers, and cross-partition validation guidance
+  - include: `TestRunner`
+
+- [data_store_design](./breakdown_docs/data_store_design.md)
+  - type: `functional_group_design`
+  - scope: define artifact persistence, record storage, downstream lookup, and runtime auditability boundaries
+  - include: `ArtifactStore`, `RecordStore`
 
 ---
 

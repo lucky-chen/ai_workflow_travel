@@ -20,7 +20,27 @@
 }
 -->
 
-# {ModuleName} Design
+# {DesignItemName} Design
+
+## 0. Document Type
+
+<!--
+{
+  "section_contract": {
+    "section_id": "0",
+    "title": "Type",
+    "checkitems": [
+      "state what kind of design document this is",
+      "make the document scope and intended downstream usage explicit",
+      "choose exactly one document type",
+      "describe included items when relevant",
+      "do not list alternative types in the output"
+    ],
+    "severity": "high",
+    "expected_format": "- type: `{DocumentType}`\n- scope: `{ScopeSummary}`\n- includes: `{IncludedItemA}`, `{IncludedItemB}`\n- downstream usage: `{UsageSummary}`\n\nAllowed `DocumentType` values during authoring:\n- `functional_group_design`: one design document for a group of closely related basic units or modules, such as generate, update, and contract for one capability area.\n- `test_design`: one design document for test scope, test layers, coverage boundaries, and guidance for follow-up test cases.\n- `reference_design`: one design document used when the capability already exists elsewhere and this document mainly records the adoption boundary and reference link.\n- `protocol_design`: one design document focused on stable interaction API, request/response contracts, and collaboration protocol only.\n\nIn the actual document output, keep only the selected single `type` value and do not copy the allowed-values guide."
+  }
+}
+-->
 
 ## 1. Goal
 
@@ -32,8 +52,8 @@
       "section_id": "1.1",
       "title": "Purpose",
 	      "checkitems": [
-	        "define the purpose of the current module design document",
-	        "make the module boundary explicit",
+	        "define the purpose of the current design document",
+	        "make the design-item boundary explicit",
 	        "keep the purpose concise and directly understandable without unnecessary background detail"
 	      ],
 	      "severity": "medium",
@@ -42,19 +62,19 @@
 }
 -->
 
-### 1.2 Involved Modules
+### 1.2 Involved Items
 
 <!--
 {
   "section_contract": {
     "section_id": "1.2",
-    "title": "Involved Modules",
+    "title": "Involved Items",
     "checkitems": [
-      "list the directly involved module",
-      "list the collaborating modules only when they are necessary for understanding the design"
+      "list the directly covered design items",
+      "list collaborating modules, partitions, or external items only when they are necessary for understanding the design"
     ],
     "severity": "medium",
-    "expected_format": "This module design directly involves:\n\n- `{ModulePath}`\n\nThis module design collaborates with:\n\n- `{CollaboratorA}`\n- `{CollaboratorB}`"
+    "expected_format": "This design document directly covers:\n\n- `{DesignItemA}`\n- `{DesignItemB}`\n\nThis design document collaborates with:\n\n- `{CollaboratorA}`\n- `{CollaboratorB}`"
   }
 }
 -->
@@ -67,14 +87,14 @@
       "section_id": "1.3",
       "title": "Core Functions",
 	      "checkitems": [
-	        "summarize the module role",
+	        "summarize the design-item role",
 	        "list the core functions only",
-	        "explicitly state what is out of scope for this module",
+	        "explicitly state what is out of scope for this design document",
 	        "the opening role statement should use the current design item identity rather than a broader architecture-layer label when they differ",
-	        "when the design item represents the design of several concrete modules, prefer naming those concrete modules or the design item itself instead of collapsing back to a broad layer label"
+	        "when the design item represents several concrete modules, basic units, or one partition-level subsystem, prefer naming those concrete items or the design item itself instead of collapsing back to a broader layer label"
 	      ],
       "severity": "medium",
-      "expected_format": "`{ModulePath}` is the `{ModuleRole}` module.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{ModuleName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
+      "expected_format": "`{DesignItemName}` is the design item for `{DesignScope}`.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{DesignItemName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
   }
 }
 -->
@@ -103,8 +123,8 @@
     "section_id": "2.1",
     "title": "Class Diagram",
     "checkitems": [
-      "show the important classes, interfaces, and dependencies",
-      "keep the diagram focused on core module structure"
+      "show the important classes, interfaces, and dependencies when they materially explain the design item",
+      "keep the diagram focused on core structure"
     ],
     "severity": "medium",
     "expected_format": "```plantuml\n' UML class diagram here\n```"
@@ -139,7 +159,7 @@
     "title": "Core Runtime Flow",
     "checkitems": [
       "this section must be expressed using UML sequence diagram language",
-      "the diagram should focus on core runtime interactions between the module and its collaborators"
+      "the diagram should focus on core runtime interactions between the design item and its collaborators"
     ],
     "severity": "medium"
   }
@@ -154,7 +174,7 @@
     "section_id": "3.1",
     "title": "Main Sequence Diagram",
     "checkitems": [
-      "show the main runtime interaction between the initiating actor, the module, and its collaborators",
+      "show the main runtime interaction between the initiating actor, the design item, and its collaborators",
       "keep the flow focused on the primary success path"
     ],
     "severity": "medium",
@@ -165,15 +185,15 @@
 
 ## 4. Detailed Design
 
-### 4.1 Core APIs And Fields
+### 4.1 Core APIs And Types
 
 <!--
 {
   "section_contract": {
     "section_id": "4.1",
-    "title": "Core APIs And Fields",
+    "title": "Core APIs And Types",
     "checkitems": [
-      "define only stable interfaces and types needed to understand the module",
+      "define only stable interfaces and types needed to understand the design item",
       "prefer concise and implementation-oriented type definitions"
     ],
     "severity": "medium"
@@ -189,7 +209,7 @@
     "section_id": "4.1.1",
     "title": "Public API",
 	    "checkitems": [
-	      "define only the public API that upstream modules need to call",
+	      "define only the public API that upstream callers or collaborators need to call",
 	      "keep the API structure stable and minimal",
 	      "express the public API in a TypeScript code block",
 	      "the public API may use interface, type, class signature, or other stable TypeScript boundary forms",
@@ -209,9 +229,9 @@
       "section_id": "4.1.2",
       "title": "Input Types",
       "checkitems": [
-	        "define only input structures that belong to this module",
-	        "do not repeat upstream shared types unless this module owns them",
-	        "when the module contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
+	        "define only input structures that belong to this design item",
+	        "do not repeat upstream shared types unless this design item owns them",
+	        "when the design item contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
 	        "input format must be defined explicitly in code blocks",
 	        "do not use natural-language prose to describe input structure",
 	        "TypeScript type definitions must remain the primary content; short code comments are optional but must not replace the type definitions",
@@ -231,10 +251,10 @@
     "section_id": "4.1.3",
     "title": "Runtime Types",
     "checkitems": [
-      "define internal runtime structures only when they are necessary for understanding the design",
+      "define internal runtime structures only when they are necessary for understanding the design item",
       "when present, express runtime types in a TypeScript code block",
       "runtime types may use interface, type, class, or other concise TypeScript structures",
-      "this subsection may be omitted when the module does not own meaningful runtime types"
+      "this subsection may be omitted when the design item does not own meaningful runtime types"
     ],
     "severity": "medium",
     "expected_format": "```typescript\ninterface {RuntimeTypeA} {\n  {RuntimeFieldA}: {RuntimeFieldTypeA}\n}\n\ntype {RuntimeTypeB} = {\n  {RuntimeFieldB}: {RuntimeFieldTypeB}\n}\n```\n\nThis subsection may be omitted when runtime types are not needed."
@@ -250,7 +270,7 @@
       "section_id": "4.1.4",
       "title": "Output Types",
       "checkitems": [
-	        "define the stable output structure produced by this module",
+	        "define the stable output structure produced by this design item",
 	        "make downstream-consumed fields explicit",
 	        "output format must be defined explicitly in code blocks",
 	        "do not use natural-language prose to describe output structure",
@@ -263,16 +283,16 @@
 }
 -->
 
-#### 4.1.5 Module-Specific Rules
+#### 4.1.5 Design-Item-Specific Rules
 
 <!--
 {
   "section_contract": {
     "section_id": "4.1.5",
-    "title": "Module-Specific Rules",
+    "title": "Design-Item-Specific Rules",
     "checkitems": [
-      "add this subsection only when the module has important transformation, validation, mapping, or request-construction rules",
-      "express stable rules that downstream modules depend on",
+      "add this subsection only when the design item has important transformation, validation, mapping, or request-construction rules",
+      "express stable rules that downstream collaborators depend on",
       "prefer bullets over long prose"
     ],
     "severity": "medium",
@@ -289,7 +309,7 @@
     "section_id": "4.2",
     "title": "Constraints",
     "checkitems": [
-      "record the key module constraints and non-goals",
+      "record the key design-item constraints and non-goals",
       "include runtime semantics here when needed",
       "avoid implementation trivia"
     ],

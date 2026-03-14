@@ -464,15 +464,15 @@
       "section_id": "7.2",
       "title": "Design Document Breakdown",
       "checkitems": [
-        "output this section as a document directory list",
+        "output this section as a design-document directory view",
         "list follow-up design documents that map directly to the modules identified in the architecture document",
         "include dedicated design documents for key cross-module interactions when the architecture document identifies them",
-        "state each document path together with its intended scope",
+        "state each document path together with its type, intended scope, and included items",
         "use markdown link format as [document_name](document_path)",
         "document_name must not contain spaces"
       ],
       "severity": "high",
-      "expected_format": "- [document_name_a](./design_docs/document_name_a.md): covers `{ModuleOrInteractionA}`.\n- [document_name_b](./design_docs/document_name_b.md): covers `{ModuleOrInteractionB}`.\n- [document_name_c](./design_docs/document_name_c.md): covers `{ModuleOrInteractionC}`.\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format [document_name](document_path)\n- document_name must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nThe breakdown should prefer stable architecture-aligned slices, for example:\n- one document per major module or subsystem when that module has meaningful internal design work\n- one document for a repeated cross-module interaction pattern when multiple modules rely on the same collaboration shape\n- one document for shared contracts when multiple modules depend on the same canonical structure"
+      "expected_format": "- [document_name_a](./breakdown_docs/document_name_a.md)\n  - type: `{DocumentTypeA}`\n  - scope: `{DocumentFunctionA}`\n  - include: `{IncludedItemA}`, `{IncludedItemB}`\n\n- [document_name_b](./breakdown_docs/document_name_b.md)\n  - type: `{DocumentTypeB}`\n  - scope: `{DocumentFunctionB}`\n  - include: `{IncludedItemC}`, `{IncludedItemD}`\n\n- [document_name_c](./breakdown_docs/document_name_c.md)\n  - type: `{DocumentTypeC}`\n  - scope: `{DocumentFunctionC}`\n  - include: `{IncludedItemE}`, `{IncludedItemF}`\n\nThe document directory should correspond to the modules and key interactions explicitly listed in the architecture document.\n\nDocument naming rules:\n- use markdown link format [document_name](document_path)\n- document_name must not contain spaces\n- prefer stable lowercase snake_case or other repository-standard identifiers\n- keep document names aligned with module or interaction identifiers when practical\n\nAllowed document types:\n- `functional_group_design`\n- `test_design`\n- `reference_design`\n- `protocol_design`"
     }
 }
 -->
