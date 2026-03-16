@@ -18,7 +18,7 @@ status: in_progress
 current_focus:
   stage_id: stage_2_document_unit_baseline
   batch_id: batch_2_1_requirement_design_units
-  task_id: task_2_1_2
+  task_id: task_2_1_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -77,7 +77,7 @@ stages:
               - project_layer/projects/sdlc/tests/requirement
           - task_id: task_2_1_2
             summary: update requirement contract checks to the current Requirement.md structure and terminology
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/contract/requirement-contract.ts
               - project_layer/projects/sdlc/tests/requirement

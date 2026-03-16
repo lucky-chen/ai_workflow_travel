@@ -97,24 +97,58 @@ export class RequirementContract extends DocumentStageContract {
   }
 
   private collectStructureIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
-    for (const section of contractSpec.section_contracts.filter((entry) => !entry.section_id.includes("."))) {
-      const headingCandidates = [`# ${section.section_id}. ${section.title}`, `# ${section.section_id} ${section.title}`];
-      if (!headingCandidates.some((heading) => content.includes(heading))) {
+    const structureContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "document_structure_complete",
+    );
+    const requiredHeadings = [
+      "# 1. Background",
+      "# 2. User Scenarios",
+      "# 3. Product Goals",
+      "# 4. Core Problems and Product Abilities",
+      "# 5. Core Functional Points",
+      "# 6. User Scenarios",
+      "# 7. Inputs and Outputs",
+      "# 8 Scope and Non-Goals",
+    ];
+    const requiredSubsections = [
+      "## 2.1",
+      "## 2.2",
+      "## 2.3",
+      "## 4.1",
+      "## 4.2",
+      "## 4.3",
+      "## 4.4",
+      "## 4.5",
+      "## 5.1",
+      "## 5.2",
+      "## 5.3",
+      "## 6.1",
+      "## 6.2",
+      "## 7.1",
+      "## 7.2",
+      "## 7.3",
+      "## 7.4",
+      "## 8.1",
+      "## 8.2",
+      "## 8.3",
+    ];
+
+    for (const heading of requiredHeadings) {
+      if (!content.includes(heading)) {
         issues.push({
-          checkItem: "document_structure_complete",
-          message: `Missing required heading for section ${section.section_id}: ${section.title}`,
-          severity: "high",
+          checkItem: structureContract?.check_item ?? "document_structure_complete",
+          message: `Missing required section: ${heading}`,
+          severity: structureContract?.severity ?? "high",
         });
       }
     }
 
-    for (const section of contractSpec.section_contracts.filter((entry) => entry.section_id.includes("."))) {
-      const headingPrefix = this.buildSubsectionHeading(section.section_id, section.title);
-      if (headingPrefix && !content.includes(headingPrefix)) {
+    for (const heading of requiredSubsections) {
+      if (!content.includes(heading)) {
         issues.push({
-          checkItem: "document_structure_complete",
-          message: `Missing required subsection: ${headingPrefix}`,
-          severity: "medium",
+          checkItem: structureContract?.check_item ?? "document_structure_complete",
+          message: `Missing required subsection: ${heading}`,
+          severity: structureContract?.severity ?? "high",
         });
       }
     }
@@ -152,7 +186,7 @@ export class RequirementContract extends DocumentStageContract {
 
   private collectAlignmentIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
     const alignmentContract = contractSpec.document_contracts.find(
-      (entry) => entry.check_item === "workflow_and_goal_alignment",
+      (entry) => entry.check_item === "workflow_and_goal_alignment" || entry.check_item === "journey_and_goal_alignment",
     );
     if (!this.sectionHasListItems(content, "# 3. Product Goals")) {
       issues.push({
@@ -170,31 +204,49 @@ export class RequirementContract extends DocumentStageContract {
       });
     }
 
-    if (!this.sectionHasHeadingPrefix(content, "# 5. User Workflow", "### 5.1.")) {
+    if (!this.sectionContainsAll(
+      content,
+      "# 5. Core Functional Points",
+      ["[requirement_design_generate]", "[work_execute_contract]", "[gate]", "[trace]"],
+    )) {
       issues.push({
         checkItem: alignmentContract?.check_item ?? "workflow_and_goal_alignment",
-        message: "User Workflow section should describe ordered workflow stages.",
+        message: "Core Functional Points section should define the canonical functional point names.",
         severity: alignmentContract?.severity ?? "high",
       });
     }
 
-    if (!this.sectionHasListItems(content, "# 8. Success Criteria")) {
+    if (!this.sectionContainsAll(
+      content,
+      "## 6.1 Standard Scenario",
+      ["[requirement_design_generate]", "[architecture_design_generate]", "[item_design_generate]", "[work_plan_generate]", "[work_execute]"],
+    )) {
       issues.push({
         checkItem: alignmentContract?.check_item ?? "workflow_and_goal_alignment",
-        message: "Success Criteria section should include measurable success items.",
+        message: "Standard Scenario section should cover the main functional-point flow.",
         severity: alignmentContract?.severity ?? "high",
       });
     }
-  }
 
-  private buildSubsectionHeading(sectionId: string, title: string): string | null {
-    if (title.startsWith("{")) {
-      return null;
+    if (!this.sectionContainsAll(
+      content,
+      "# 7. Inputs and Outputs",
+      ["[requirement_design_generate]", "[work_execute_contract]"],
+    )) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "workflow_and_goal_alignment",
+        message: "Inputs and Outputs section should map the declared functional points to concrete inputs and outputs.",
+        severity: alignmentContract?.severity ?? "high",
+      });
     }
 
-    const depth = sectionId.split(".").length;
-    const headingPrefix = "#".repeat(Math.min(depth, 3));
-    return `${headingPrefix} ${sectionId} ${title}`.replace("  ", " ").trim();
+    if (!this.sectionContainsAll(content, "# 8 Scope and Non-Goals", ["## 8.1", "## 8.2", "## 8.3"])) {
+      issues.push({
+        checkItem: alignmentContract?.check_item ?? "workflow_and_goal_alignment",
+        message: "Scope and Non-Goals section should define V1, V2, and V3 milestones.",
+        severity: alignmentContract?.severity ?? "high",
+      });
+    }
   }
 
   private sectionHasListItems(content: string, heading: string): boolean {
