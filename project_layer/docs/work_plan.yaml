@@ -5,7 +5,7 @@ sources:
   requirement_doc: project_layer/docs/Requirement.md
   architecture_doc: project_layer/docs/TechnicalArchitecture.md
   breakdown_docs_dir: project_layer/docs/breakdown_docs
-  legacy_execution_plan: project_layer/docs/CodeGenerationExecutionPlan.md
+  active_work_plan: project_layer/docs/work_plan.yaml
   code_root: project_layer/projects
 principles:
   - keep document terminology, runtime terminology, artifact naming, and CLI entry semantics consistent
@@ -14,25 +14,25 @@ principles:
   - do not mix unrelated refactors into the same batch
   - only mark work complete after code and tests are updated and verified
 execution_scope: first executable batch set only
-status: draft
+status: in_progress
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
     goal: replace the legacy stage model with the current basic execution unit model at planning level and runtime boundary level
-    status: in_progress
+    status: completed
     batches:
       - batch_id: batch_1_1_plan_and_term_alignment
         name: execution plan and term alignment
         goal: establish one canonical vocabulary and one canonical execution model
-        status: in_progress
+        status: completed
         tasks:
           - task_id: task_1_1_1
-            summary: rewrite the execution plan baseline around requirement_design architecture_design item_design overall_design_contract work_plan and work_execute
+            summary: establish work_plan.yaml as the active execution baseline and remove dependency on the legacy markdown execution plan
+            status: completed
             involved_files:
-              - project_layer/docs/CodeGenerationExecutionPlan.md
               - project_layer/docs/work_plan.yaml
             expected_output:
-              - execution plan no longer uses requirement_interpretation module_design implementation_plan or implementation_execution as the primary product model
+              - work_plan.yaml is the only active execution baseline for current implementation work
           - task_id: task_1_1_2
             summary: define the canonical mapping between current document functional points and runtime stage identifiers
             status: completed
