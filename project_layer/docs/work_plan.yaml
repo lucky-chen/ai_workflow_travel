@@ -15,6 +15,10 @@ principles:
   - only mark work complete after code and tests are updated and verified
 execution_scope: first executable batch set only
 status: in_progress
+current_focus:
+  stage_id: stage_2_document_unit_baseline
+  batch_id: batch_2_1_requirement_design_units
+  task_id: task_2_1_2
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -73,11 +77,13 @@ stages:
               - project_layer/projects/sdlc/tests/requirement
           - task_id: task_2_1_2
             summary: update requirement contract checks to the current Requirement.md structure and terminology
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/contract/requirement-contract.ts
               - project_layer/projects/sdlc/tests/requirement
           - task_id: task_2_1_3
             summary: add requirement_design_update baseline with current external-update boundary semantics
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/execution
               - project_layer/projects/sdlc/src/workflow/stage-runners
@@ -89,6 +95,7 @@ stages:
         tasks:
           - task_id: task_2_3_1
             summary: replace module_design business terminology with item_design in runtime contracts generators runners and tests
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/execution/module-design-generator.ts
               - project_layer/projects/sdlc/src/contract/module-design-contract.ts
@@ -97,6 +104,7 @@ stages:
               - project_layer/projects/sdlc/tests/module-design
           - task_id: task_2_3_2
             summary: align architecture breakdown parsing and fan-out flow to item design targets instead of module naming assumptions
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/shared/design-document-breakdown.ts
               - project_layer/projects/sdlc/src/workflow/pipeline/module-design-fanout.ts
@@ -104,6 +112,7 @@ stages:
               - project_layer/projects/sdlc/tests/workflow
           - task_id: task_2_3_3
             summary: add item_design_update baseline with one target item per run
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/execution
               - project_layer/projects/sdlc/src/workflow/stage-runners
@@ -115,6 +124,7 @@ stages:
         tasks:
           - task_id: task_2_4_1
             summary: replace implementation_plan business terminology with work_plan in generator contract runner CLI and tests
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
               - project_layer/projects/sdlc/src/contract/implementation-plan-contract.ts
@@ -123,6 +133,7 @@ stages:
               - project_layer/projects/sdlc/tests/implementation-plan
           - task_id: task_2_4_2
             summary: switch the accepted plan artifact from markdown execution plan to work_plan.yaml while preserving stage batch task structure
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
               - project_layer/projects/sdlc/src/contract/implementation-plan-contract.ts
@@ -130,6 +141,7 @@ stages:
               - project_layer/projects/sdlc/tests
           - task_id: task_2_4_3
             summary: add work_plan_update baseline with current external-update boundary semantics
+            status: pending
             involved_files:
               - project_layer/projects/sdlc/src/execution
               - project_layer/projects/sdlc/src/workflow/stage-runners
@@ -147,4 +159,6 @@ deferred_after_first_batch_set:
   - black-box end-to-end validation under the final naming model
 open_questions:
   - confirm whether item_design is a direct business rename of module_design or whether item selection must support non-module targets in v1
-  - confirm whether a temporary compatibility layer for legacy stage identifiers is required during the first batch set
+resolved_decisions:
+  - work_plan.yaml is the only active execution baseline for the current implementation work
+  - a temporary compatibility layer for legacy stage identifiers is active during the first batch set
