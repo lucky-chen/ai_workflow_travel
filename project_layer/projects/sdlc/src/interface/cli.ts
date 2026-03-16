@@ -16,6 +16,7 @@ import {
 
 export interface ParsedCommand {
   command: string;
+  args: string[];
   options: Record<string, string | string[]>;
 }
 
@@ -63,10 +64,12 @@ export class DefaultCLICommandParser implements CLICommandParser {
     }
 
     const options: Record<string, string | string[]> = {};
+    const args: string[] = [];
     for (let index = 0; index < rest.length; index += 1) {
       const token = rest[index];
       if (!token.startsWith("--")) {
-        throw new Error(`Unexpected CLI token: ${token}`);
+        args.push(token);
+        continue;
       }
 
       const key = token.slice(2);
@@ -93,6 +96,7 @@ export class DefaultCLICommandParser implements CLICommandParser {
 
     return {
       command,
+      args,
       options,
     };
   }
@@ -100,6 +104,10 @@ export class DefaultCLICommandParser implements CLICommandParser {
 
 export class DefaultCLIRequestMapper implements CLIRequestMapper {
   async map(command: ParsedCommand): Promise<LaunchTaskRequest> {
+    if (command.command === "run") {
+      return this.mapRunCommand(command);
+    }
+
     if (command.command !== "generate") {
       throw new Error(`Unsupported CLI command: ${command.command}`);
     }
@@ -131,6 +139,97 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
       ...(runId ? { runId } : {}),
       ...(singleStep ? { stopAfterCurrentStage: true } : {}),
       ...(resolvedTargetName ? { targetModule: resolvedTargetName } : {}),
+      params: requestParams,
+    };
+  }
+
+  private async mapRunCommand(command: ParsedCommand): Promise<LaunchTaskRequest> {
+    const [runMode, runTarget, fromTarget] = command.args;
+    const workspace = this.readSingleOption(command.options, "workdir")
+      ?? this.readSingleOption(command.options, "workspace");
+    const targetModule = this.readSingleOption(command.options, "target-module");
+    const targetItem = this.readSingleOption(command.options, "target-item");
+    const runId = this.readSingleOption(command.options, "runid")
+      ?? this.readSingleOption(command.options, "run-id");
+    const singleStep = this.readBooleanFlag(command.options, "single-step");
+
+    if (!workspace) {
+      throw new Error("Missing required option: --workdir");
+    }
+
+    if (runMode === "unit") {
+      if (!runTarget) {
+        throw new Error("Missing required execution unit for run unit.");
+      }
+
+      return this.buildMappedRequest({
+        executionUnit: runTarget,
+        workspaceRoot: workspace,
+        runId,
+        singleStep,
+        targetName: targetItem ?? targetModule,
+        runtimeMode: "direct",
+      });
+    }
+
+    if (runMode === "compose") {
+      if (runTarget === "standard") {
+        return this.buildMappedRequest({
+          executionUnit: "requirement_design_generate",
+          workspaceRoot: workspace,
+          runId,
+          singleStep,
+          runtimeMode: "compose",
+          composeMode: "standard",
+        });
+      }
+
+      if (runTarget === "from") {
+        if (!fromTarget) {
+          throw new Error("Missing required execution unit for run compose from.");
+        }
+
+        return this.buildMappedRequest({
+          executionUnit: fromTarget,
+          workspaceRoot: workspace,
+          runId,
+          singleStep,
+          targetName: targetItem ?? targetModule,
+          runtimeMode: "compose",
+          composeMode: "from",
+        });
+      }
+    }
+
+    throw new Error(`Unsupported run mode: ${command.args.join(" ") || "(empty)"}`);
+  }
+
+  private async buildMappedRequest(input: {
+    executionUnit: string;
+    workspaceRoot: string;
+    runId?: string;
+    singleStep: boolean;
+    targetName?: string;
+    runtimeMode: "direct" | "compose";
+    composeMode?: "standard" | "from";
+  }): Promise<LaunchTaskRequest> {
+    const request = await this.buildWorkspaceLaunchRequest(
+      input.executionUnit,
+      input.workspaceRoot,
+      input.targetName,
+    );
+    const requestParams = {
+      ...(request.params ?? {}),
+      executionUnit: input.executionUnit,
+      runtimeMode: input.runtimeMode,
+      ...(input.composeMode ? { composeMode: input.composeMode } : {}),
+    };
+
+    return {
+      ...request,
+      ...(input.runId ? { runId: input.runId } : {}),
+      ...(input.singleStep ? { stopAfterCurrentStage: true } : {}),
+      ...(input.targetName ? { targetModule: input.targetName } : {}),
       params: requestParams,
     };
   }
@@ -264,16 +363,15 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
       startStageId: "implementation_execution",
       workspaceRoot,
       inputArtifacts: {
-        implementation_workplan: "sdlc/docs/work_plan.yaml",
         work_plan: "sdlc/docs/work_plan.yaml",
-        parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
+        parsed_work_plan: JSON.stringify(parsedWorkplan),
         current_step: JSON.stringify({
           stepId: firstStep.stepId,
           batchId: firstBatch.batchId,
         }),
-        requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
-        architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
-        module_design_documents: JSON.stringify(
+        requirement_design: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
+        architecture_design: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
+        item_design_documents: JSON.stringify(
           await this.readWorkspaceDirectoryPaths(workspaceRoot, "sdlc/docs/module_design"),
         ),
       },
@@ -452,11 +550,14 @@ export class CLIService implements ICLI {
     }
 
     const request = await this.requestMapper.map(parsed);
+    const requestTarget = parsed.command === "run"
+      ? parsed.args.join(" ")
+      : request.startStageId;
     this.traceViewer.renderTrace({
       caller: "CLIService.run",
       stageId: request.startStageId,
       eventType: TRACE_EVENT_TYPES.taskLaunchRequested,
-      summary: `Launching command "${parsed.command}" for stage "${request.startStageId}".`,
+      summary: `Launching command "${parsed.command}" for target "${requestTarget}".`,
     });
     const taskId = await this.pipelineClient.launchTask(request);
     this.traceViewer.renderStatus(`Task launched: ${taskId}`);
@@ -465,7 +566,7 @@ export class CLIService implements ICLI {
   }
 
   private async runInit(parsed: ParsedCommand): Promise<number> {
-    const workspace = readSingleRequiredOption(parsed.options, "workspace");
+    const workspace = readSingleRequiredOption(parsed.options, "workdir", "workspace");
     const resourcesDirectory = await this.workspaceInitializer.initialize(workspace);
     this.traceViewer.renderStatus(`Workspace initialized: ${workspace}`);
     this.traceViewer.renderResult(`Copied SDLC resources to ${resourcesDirectory}`);
@@ -473,15 +574,19 @@ export class CLIService implements ICLI {
   }
 }
 
-function readSingleRequiredOption(options: ParsedCommand["options"], key: string): string {
-  const value = options[key];
-  if (typeof value === "undefined") {
-    throw new Error(`Missing required option: --${key}`);
+function readSingleRequiredOption(options: ParsedCommand["options"], ...keys: string[]): string {
+  for (const key of keys) {
+    const value = options[key];
+    if (typeof value === "undefined") {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      throw new Error(`Option "--${key}" must be provided at most once.`);
+    }
+
+    return value;
   }
 
-  if (Array.isArray(value)) {
-    throw new Error(`Option "--${key}" must be provided at most once.`);
-  }
-
-  return value;
+  throw new Error(`Missing required option: --${keys[0]}`);
 }

@@ -21,7 +21,7 @@ status: in_progress
 current_focus:
   stage_id: stage_4_runtime_composition_modes
   batch_id: batch_4_1_cli_entry_and_request_factory
-  task_id: task_4_1_1
+  task_id: task_4_1_2
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -248,7 +248,7 @@ stages:
         tasks:
           - task_id: task_4_1_1
             summary: replace stage-oriented CLI generate entry semantics with run unit and run compose command semantics defined in cli_entry_design.md
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/interface/cli.ts
               - project_layer/projects/sdlc/src/bin

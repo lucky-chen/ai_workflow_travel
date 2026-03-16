@@ -30,6 +30,8 @@ export async function runCliTests(): Promise<void> {
     await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRoot);
     await testRequestMapperSupportsOverallDesignContractStage(workspaceRoot);
+    await testRequestMapperSupportsComposeStandard(workspaceRoot);
+    await testRequestMapperSupportsComposeFrom(workspaceRoot);
     await testModuleDesignRequiresTargetModule(workspaceRoot);
     await testItemDesignRequiresTargetItem(workspaceRoot);
     await testImplementationExecutionRequiresWorkplan(workspaceRoot);
@@ -44,12 +46,12 @@ export async function runCliTests(): Promise<void> {
 async function testCommandParser(workspaceRoot: string): Promise<void> {
   const parser = new DefaultCLICommandParser();
   assert.deepEqual(
-    parser.parse(["generate", "--stage", "architecture_design", "--workspace", workspaceRoot, "--single-step"]),
+    parser.parse(["run", "unit", "architecture_design", "--workdir", workspaceRoot, "--single-step"]),
     {
-      command: "generate",
+      command: "run",
+      args: ["unit", "architecture_design"],
       options: {
-        stage: "architecture_design",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
         "single-step": "true",
       },
     },
@@ -60,10 +62,10 @@ async function testRequestMapper(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "work_plan_generate"],
       options: {
-        stage: "implementation_plan",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
         "single-step": "true",
       },
     }),
@@ -72,7 +74,8 @@ async function testRequestMapper(workspaceRoot: string): Promise<void> {
       stopAfterCurrentStage: true,
       workspaceRoot,
       params: {
-        executionUnit: "implementation_plan",
+        executionUnit: "work_plan_generate",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -112,10 +115,10 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
 
   const cli = new CLIService(parser, mapper, pipeline, traceViewer);
   const exitCode = await cli.run([
-    "generate",
-    "--stage",
+    "run",
+    "unit",
     "architecture_design",
-    "--workspace",
+    "--workdir",
     workspaceRoot,
     "--single-step",
   ]);
@@ -127,15 +130,16 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
     workspaceRoot,
     params: {
       executionUnit: "architecture_design",
+      runtimeMode: "direct",
     },
     inputArtifacts: {
       requirement_document: "# Requirement\n",
     },
   });
   assert.deepEqual(rendered, [
-    'trace:task_launch_requested:Launching command "generate" for stage "architecture_design".',
+    'trace:task_launch_requested:Launching command "run" for target "unit architecture_design".',
     "status:Task launched: task-cli-1",
-    "result:Completed command: generate",
+    "result:Completed command: run",
   ]);
 }
 
@@ -154,8 +158,8 @@ async function testCliRunMissingWorkspace(): Promise<void> {
   };
   const cli = new CLIService(parser, mapper, pipeline, traceViewer);
   await assert.rejects(
-    async () => cli.run(["generate", "--stage", "architecture_design"]),
-    /Missing required option: --workspace/,
+    async () => cli.run(["run", "unit", "architecture_design"]),
+    /Missing required option: --workdir/,
   );
 }
 
@@ -182,7 +186,7 @@ async function testCliInitCopiesResources(workspaceRoot: string): Promise<void> 
   };
 
   const cli = new CLIService(parser, mapper, pipeline, traceViewer, initializer);
-  const exitCode = await cli.run(["init", "--workspace", workspaceRoot]);
+  const exitCode = await cli.run(["init", "--workdir", workspaceRoot]);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(rendered, [
@@ -206,12 +210,13 @@ async function testRequestMapperRequiresStage(): Promise<void> {
   await assert.rejects(
     async () =>
       mapper.map({
-        command: "generate",
+        command: "run",
+        args: ["unit"],
         options: {
-          workspace: "/tmp/project",
+          workdir: "/tmp/project",
         },
       }),
-    /Missing required option: --stage/,
+    /Missing required execution unit for run unit\./,
   );
 }
 
@@ -219,10 +224,10 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(w
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "architecture_design_update"],
       options: {
-        stage: "architecture_design_update",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
       },
     }),
     {
@@ -230,6 +235,7 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(w
       workspaceRoot,
       params: {
         executionUnit: "architecture_design_update",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -243,10 +249,10 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignContractStage
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "architecture_design_contract"],
       options: {
-        stage: "architecture_design_contract",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
       },
     }),
     {
@@ -254,6 +260,7 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignContractStage
       workspaceRoot,
       params: {
         executionUnit: "architecture_design_contract",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -267,10 +274,10 @@ async function testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot: 
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "item_design_generate"],
       options: {
-        stage: "item_design_generate",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
         "target-item": "user_service",
       },
     }),
@@ -280,6 +287,7 @@ async function testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot: 
       workspaceRoot,
       params: {
         executionUnit: "item_design_generate",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         architecture_document: "# Architecture\n",
@@ -296,10 +304,10 @@ async function testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspace
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "item_design_update"],
       options: {
-        stage: "item_design_update",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
         "target-item": "user_service",
       },
     }),
@@ -309,6 +317,7 @@ async function testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspace
       workspaceRoot,
       params: {
         executionUnit: "item_design_update",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         architecture_document: "# Architecture\n",
@@ -325,10 +334,10 @@ async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: st
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "work_plan_generate"],
       options: {
-        stage: "work_plan_generate",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
       },
     }),
     {
@@ -336,6 +345,7 @@ async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: st
       workspaceRoot,
       params: {
         executionUnit: "work_plan_generate",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -353,10 +363,10 @@ async function testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRo
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "work_plan_update"],
       options: {
-        stage: "work_plan_update",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
       },
     }),
     {
@@ -364,6 +374,7 @@ async function testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRo
       workspaceRoot,
       params: {
         executionUnit: "work_plan_update",
+        runtimeMode: "direct",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -381,10 +392,10 @@ async function testRequestMapperSupportsOverallDesignContractStage(workspaceRoot
   const mapper = new DefaultCLIRequestMapper();
   assert.deepEqual(
     await mapper.map({
-      command: "generate",
+      command: "run",
+      args: ["unit", "overall_design_contract"],
       options: {
-        stage: "overall_design_contract",
-        workspace: workspaceRoot,
+        workdir: workspaceRoot,
       },
     }),
     {
@@ -392,6 +403,62 @@ async function testRequestMapperSupportsOverallDesignContractStage(workspaceRoot
       workspaceRoot,
       params: {
         executionUnit: "overall_design_contract",
+        runtimeMode: "direct",
+      },
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+        module_design_documents: JSON.stringify([
+          "# Module Alpha\n",
+          "# Module Beta\n",
+        ]),
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsComposeStandard(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "run",
+      args: ["compose", "standard"],
+      options: {
+        workdir: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "requirement_interpretation",
+      workspaceRoot,
+      params: {
+        executionUnit: "requirement_design_generate",
+        runtimeMode: "compose",
+        composeMode: "standard",
+      },
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsComposeFrom(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "run",
+      args: ["compose", "from", "work_plan_generate"],
+      options: {
+        workdir: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "implementation_plan",
+      workspaceRoot,
+      params: {
+        executionUnit: "work_plan_generate",
+        runtimeMode: "compose",
+        composeMode: "from",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
@@ -410,10 +477,10 @@ async function testModuleDesignRequiresTargetModule(workspaceRoot: string): Prom
   await assert.rejects(
     async () =>
       mapper.map({
-        command: "generate",
+        command: "run",
+        args: ["unit", "module_design"],
         options: {
-          stage: "module_design",
-          workspace: workspaceRoot,
+          workdir: workspaceRoot,
         },
       }),
     /Missing required option: --target-module for stage "module_design"./,
@@ -425,10 +492,10 @@ async function testItemDesignRequiresTargetItem(workspaceRoot: string): Promise<
   await assert.rejects(
     async () =>
       mapper.map({
-        command: "generate",
+        command: "run",
+        args: ["unit", "item_design_generate"],
         options: {
-          stage: "item_design_generate",
-          workspace: workspaceRoot,
+          workdir: workspaceRoot,
         },
       }),
     /Missing required option: --target-item for stage "item_design_generate"./,
@@ -440,10 +507,10 @@ async function testImplementationExecutionRequiresWorkplan(workspaceRoot: string
   await assert.rejects(
     async () =>
       mapper.map({
-        command: "generate",
+        command: "run",
+        args: ["unit", "implementation_execution"],
         options: {
-          stage: "implementation_execution",
-          workspace: workspaceRoot,
+          workdir: workspaceRoot,
         },
       }),
     /Missing required workspace file: sdlc\/docs\/work_plan\.yaml/,
