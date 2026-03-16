@@ -4,7 +4,7 @@ import path from "node:path";
 
 import type { IContractChecker, IStageGenerator, StageOutput, StageRunContext } from "../../shared/contracts/pipeline.js";
 import type { ImplementationStageArtifacts } from "../../shared/contracts/pipeline.js";
-import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import { getArtifactValue, TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import { ChangeApplier } from "../../execution/implementation-generator/change-applier.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
@@ -98,17 +98,14 @@ export class ImplementationStageRunner extends BaseStageRunner {
   }
 
   private validateExecutionContext(context: StageRunContext): void {
-    const implementationWorkplan = (
-      context.inputArtifacts.implementation_workplan
-      ?? context.inputArtifacts.work_plan
-    )?.trim();
+    const implementationWorkplan = getArtifactValue(context.inputArtifacts, "work_plan")?.trim();
     if (!implementationWorkplan) {
-      throw new Error('Missing required input artifact "implementation_workplan" or "work_plan".');
+      throw new Error('Missing required input artifact "work_plan".');
     }
 
-    const parsedImplementationWorkplan = context.inputArtifacts.parsed_implementation_workplan?.trim();
+    const parsedImplementationWorkplan = getArtifactValue(context.inputArtifacts, "parsed_work_plan")?.trim();
     if (!parsedImplementationWorkplan) {
-      throw new Error('Missing required input artifact "parsed_implementation_workplan".');
+      throw new Error('Missing required input artifact "parsed_work_plan".');
     }
 
     const currentStep = context.inputArtifacts.current_step?.trim();
@@ -116,28 +113,25 @@ export class ImplementationStageRunner extends BaseStageRunner {
       throw new Error('Missing required input artifact "current_step".');
     }
 
-    const requirementDocument = context.inputArtifacts.requirement_document?.trim();
+    const requirementDocument = getArtifactValue(context.inputArtifacts, "requirement_design")?.trim();
     if (!requirementDocument) {
-      throw new Error('Missing required input artifact "requirement_document".');
+      throw new Error('Missing required input artifact "requirement_design".');
     }
 
-    const architectureDocument = context.inputArtifacts.architecture_document?.trim();
+    const architectureDocument = getArtifactValue(context.inputArtifacts, "architecture_design")?.trim();
     if (!architectureDocument) {
-      throw new Error('Missing required input artifact "architecture_document".');
+      throw new Error('Missing required input artifact "architecture_design".');
     }
 
-    const moduleDesignDocuments = context.inputArtifacts.module_design_documents?.trim();
+    const moduleDesignDocuments = getArtifactValue(context.inputArtifacts, "item_design_documents")?.trim();
     if (!moduleDesignDocuments) {
-      throw new Error('Missing required input artifact "module_design_documents".');
+      throw new Error('Missing required input artifact "item_design_documents".');
     }
   }
 
   private async prepareExecutionContext(context: StageRunContext): Promise<StageRunContext> {
-    const implementationWorkplanRef = (
-      context.inputArtifacts.implementation_workplan
-      ?? context.inputArtifacts.work_plan
-    ).trim();
-    const parsedWorkplan = this.parseStructuredWorkplan(context.inputArtifacts.parsed_implementation_workplan);
+    const implementationWorkplanRef = getArtifactValue(context.inputArtifacts, "work_plan")!.trim();
+    const parsedWorkplan = this.parseStructuredWorkplan(getArtifactValue(context.inputArtifacts, "parsed_work_plan"));
     const currentExecutionPointer = this.parseCurrentExecutionPointer(context.inputArtifacts.current_step);
     const currentBatch = this.resolveCurrentBatch(parsedWorkplan, currentExecutionPointer);
     const moduleDesignDocuments = await this.loadModuleDesignDocuments(context);
@@ -151,8 +145,8 @@ export class ImplementationStageRunner extends BaseStageRunner {
           workplan: parsedWorkplan,
           currentBatch,
           upstreamContext: {
-            requirementDocument: context.inputArtifacts.requirement_document,
-            architectureDocument: context.inputArtifacts.architecture_document,
+            requirementDocument: getArtifactValue(context.inputArtifacts, "requirement_design"),
+            architectureDocument: getArtifactValue(context.inputArtifacts, "architecture_design"),
             moduleDesignDocuments,
           },
         }),
@@ -235,14 +229,14 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
   private parseStructuredWorkplan(rawStructuredWorkplan: string | undefined): ImplementationWorkPlan {
     if (!rawStructuredWorkplan) {
-      throw new Error('Missing required input artifact "parsed_implementation_workplan".');
+      throw new Error('Missing required input artifact "parsed_work_plan".');
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(rawStructuredWorkplan);
     } catch {
-      throw new Error('Input artifact "parsed_implementation_workplan" must be valid JSON.');
+      throw new Error('Input artifact "parsed_work_plan" must be valid JSON.');
     }
 
     if (
@@ -251,7 +245,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
       || !Array.isArray((parsed as { steps?: unknown }).steps)
       || (parsed as { steps: unknown[] }).steps.length === 0
     ) {
-      throw new Error('Input artifact "parsed_implementation_workplan" must contain a non-empty workplan structure.');
+      throw new Error('Input artifact "parsed_work_plan" must contain a non-empty workplan structure.');
     }
 
     return parsed as ImplementationWorkPlan;
@@ -334,22 +328,22 @@ export class ImplementationStageRunner extends BaseStageRunner {
   private async loadModuleDesignDocuments(
     context: StageRunContext,
   ): Promise<Array<{ moduleName: string; content: string }>> {
-    const rawModuleDesignDocuments = context.inputArtifacts.module_design_documents;
+    const rawModuleDesignDocuments = getArtifactValue(context.inputArtifacts, "item_design_documents");
     if (!rawModuleDesignDocuments) {
-      throw new Error('Missing required input artifact "module_design_documents".');
+      throw new Error('Missing required input artifact "item_design_documents".');
     }
 
     let moduleDesignRefs: unknown;
     try {
       moduleDesignRefs = JSON.parse(rawModuleDesignDocuments);
     } catch {
-      throw new Error('Input artifact "module_design_documents" must be valid JSON.');
+      throw new Error('Input artifact "item_design_documents" must be valid JSON.');
     }
 
     if (!Array.isArray(moduleDesignRefs)
       || moduleDesignRefs.length === 0
       || moduleDesignRefs.some((entry) => typeof entry !== "string" || entry.length === 0)) {
-      throw new Error('Input artifact "module_design_documents" must contain a non-empty string array.');
+      throw new Error('Input artifact "item_design_documents" must contain a non-empty string array.');
     }
 
     return Promise.all(

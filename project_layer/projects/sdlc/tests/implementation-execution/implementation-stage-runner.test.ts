@@ -226,10 +226,10 @@ async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
   await assert.rejects(
     runner.run(
       createRunContext("task-4", workspaceRoot, {
-        implementation_workplan: undefined,
+        work_plan: undefined,
       }),
     ),
-    /Missing required input artifact "implementation_workplan" or "work_plan"\./,
+    /Missing required input artifact "work_plan"\./,
   );
 
   await assert.rejects(
@@ -266,7 +266,7 @@ async function testImplementationStageRunnerReturnsNextCurrentStep(
 
   const output = await runner.run(
     createRunContext("task-1", workspaceRoot, {
-      parsed_implementation_workplan: JSON.stringify(createMultiStepWorkplan()),
+      parsed_work_plan: JSON.stringify(createMultiStepWorkplan()),
       current_step: JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
     }),
   );
@@ -290,7 +290,7 @@ async function testImplementationStageRunnerMarksExecutionCompletedAtLastBatch(
 
   const output = await runner.run(
     createRunContext("task-1", workspaceRoot, {
-      parsed_implementation_workplan: JSON.stringify(createMultiStepWorkplan()),
+      parsed_work_plan: JSON.stringify(createMultiStepWorkplan()),
       current_step: JSON.stringify({ stepId: "step-2", batchId: "batch-2" }),
     }),
   );
@@ -360,22 +360,22 @@ function createGenerator(artifactStore: ArtifactStoreService): ImplementationGen
 function createRunContext(
   taskId: string,
   workspaceRoot: string,
-  overrides?: Partial<Record<"implementation_workplan" | "current_step" | "parsed_implementation_workplan", string | undefined>>,
+  overrides?: Partial<Record<"work_plan" | "current_step" | "parsed_work_plan", string | undefined>>,
 ): StageRunContext {
   const inputArtifacts: Record<string, string> = {
-    module_design_documents: JSON.stringify(["sdlc/docs/module_design/Workflow.md"]),
-    requirement_document: "# requirement",
-    architecture_document: "# architecture",
-    implementation_workplan: resolveImplementationPlanArtifactPath(workspaceRoot),
-    parsed_implementation_workplan: JSON.stringify(createParsedWorkplan()),
+    item_design_documents: JSON.stringify(["sdlc/docs/module_design/Workflow.md"]),
+    requirement_design: "# requirement",
+    architecture_design: "# architecture",
+    work_plan: resolveImplementationPlanArtifactPath(workspaceRoot),
+    parsed_work_plan: JSON.stringify(createParsedWorkplan()),
     current_step: JSON.stringify({ stepId: "step-1", batchId: "batch-1" }),
   };
 
-  if (overrides && "implementation_workplan" in overrides) {
-    if (typeof overrides.implementation_workplan === "string") {
-      inputArtifacts.implementation_workplan = overrides.implementation_workplan;
+  if (overrides && "work_plan" in overrides) {
+    if (typeof overrides.work_plan === "string") {
+      inputArtifacts.work_plan = overrides.work_plan;
     } else {
-      delete inputArtifacts.implementation_workplan;
+      delete inputArtifacts.work_plan;
     }
   }
 
@@ -387,11 +387,11 @@ function createRunContext(
     }
   }
 
-  if (overrides && "parsed_implementation_workplan" in overrides) {
-    if (typeof overrides.parsed_implementation_workplan === "string") {
-      inputArtifacts.parsed_implementation_workplan = overrides.parsed_implementation_workplan;
+  if (overrides && "parsed_work_plan" in overrides) {
+    if (typeof overrides.parsed_work_plan === "string") {
+      inputArtifacts.parsed_work_plan = overrides.parsed_work_plan;
     } else {
-      delete inputArtifacts.parsed_implementation_workplan;
+      delete inputArtifacts.parsed_work_plan;
     }
   }
 

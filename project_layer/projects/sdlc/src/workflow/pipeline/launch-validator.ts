@@ -1,4 +1,5 @@
 import type { LaunchTaskRequest } from "../../shared/contracts/pipeline.js";
+import { hasArtifactValue } from "../../shared/contracts/pipeline.js";
 import { StageRegistry } from "./stage-registry.js";
 
 export class LaunchValidator {
@@ -9,7 +10,7 @@ export class LaunchValidator {
 
     const definition = registry.get(request.startStageId);
     for (const requiredArtifact of definition.launchRequirements) {
-      if (!(requiredArtifact in request.inputArtifacts)) {
+      if (!hasArtifactValue(request.inputArtifacts, requiredArtifact)) {
         throw new Error(
           `Missing required input artifact "${requiredArtifact}" for stage "${request.startStageId}".`,
         );

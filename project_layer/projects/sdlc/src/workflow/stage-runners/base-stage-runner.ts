@@ -13,7 +13,12 @@ import type {
   StageRunContext,
   StageRunnerSharedDependencies,
 } from "../../shared/contracts/pipeline.js";
-import { TRACE_EVENT_TYPES, resolveStageIdAlias, toCanonicalStageId } from "../../shared/contracts/pipeline.js";
+import {
+  TRACE_EVENT_TYPES,
+  getArtifactValue,
+  resolveStageIdAlias,
+  toCanonicalStageId,
+} from "../../shared/contracts/pipeline.js";
 import {
   resolveArchitectureArtifactPath,
   resolveImplementationPlanArtifactPath,
@@ -199,7 +204,7 @@ export abstract class BaseStageRunner implements IStageRunner {
       resolveRequirementArtifactPath(context.workspaceRoot),
       resolveArchitectureArtifactPath(context.workspaceRoot),
     ];
-    const rawModuleDesignDocuments = context.inputArtifacts.module_design_documents;
+    const rawModuleDesignDocuments = getArtifactValue(context.inputArtifacts, "item_design_documents");
 
     if (!rawModuleDesignDocuments?.trim()) {
       return outputPaths;

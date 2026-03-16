@@ -19,9 +19,9 @@ principles:
 execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up
 status: in_progress
 current_focus:
-  stage_id: stage_3_cross_design_and_execution_contracts
-  batch_id: batch_3_2_work_execute_units
-  task_id: task_3_2_3
+  stage_id: stage_4_runtime_composition_modes
+  batch_id: batch_4_1_cli_entry_and_request_factory
+  task_id: task_4_1_1
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -185,7 +185,7 @@ stages:
   - stage_id: stage_3_cross_design_and_execution_contracts
     name: cross design and execution contracts
     goal: add cross-document contract control and separate work execution from work execution contract
-    status: in_progress
+    status: completed
     batches:
       - batch_id: batch_3_1_overall_design_contract
         name: overall design contract
@@ -209,7 +209,7 @@ stages:
       - batch_id: batch_3_2_work_execute_units
         name: work execute units
         goal: split work execution and work execution contract into separate execution units with stable result artifacts
-        status: in_progress
+        status: completed
         tasks:
           - task_id: task_3_2_1
             summary: align implementation execution runtime semantics with work_execute and keep accepted work plan and design artifacts as required inputs
@@ -227,7 +227,7 @@ stages:
               - project_layer/projects/sdlc/tests
           - task_id: task_3_2_3
             summary: align work_execute input and output artifact names with work_execute design-doc constraints instead of legacy implementation terminology
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/shared/contracts
               - project_layer/projects/sdlc/src/workflow/stage-runners
@@ -239,12 +239,12 @@ stages:
   - stage_id: stage_4_runtime_composition_modes
     name: runtime composition modes
     goal: align runtime entry and orchestration with the documented run-unit and compose-run modes
-    status: pending
+    status: in_progress
     batches:
       - batch_id: batch_4_1_cli_entry_and_request_factory
         name: cli entry and request factory
         goal: align CLI entry semantics with the design-doc runtime entry model
-        status: pending
+        status: in_progress
         tasks:
           - task_id: task_4_1_1
             summary: replace stage-oriented CLI generate entry semantics with run unit and run compose command semantics defined in cli_entry_design.md

@@ -184,12 +184,12 @@ export function createDefaultStageRegistry(services: ApplicationServices, option
   registry.register({
     stageId: "implementation_execution",
     launchRequirements: [
-      "implementation_workplan",
-      "parsed_implementation_workplan",
+      "work_plan",
+      "parsed_work_plan",
       "current_step",
-      "requirement_document",
-      "architecture_document",
-      "module_design_documents",
+      "requirement_design",
+      "architecture_design",
+      "item_design_documents",
     ],
     runner: new ImplementationStageRunner({
       generator: new ImplementationGenerator({
