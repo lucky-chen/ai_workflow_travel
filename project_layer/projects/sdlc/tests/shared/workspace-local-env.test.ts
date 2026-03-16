@@ -5,11 +5,10 @@ import path from "node:path";
 import {
   getDefaultWorkspaceLocalEnvContent,
   loadWorkspaceLocalEnvConfig,
-  loadWorkspaceRuntimeOptions,
   resolveConfiguredResourcesRoot,
   resolveWorkspaceLocalEnvPath,
-} from "../../src/app/workspace-local-env.js";
-import { resolveResourcePath } from "../../src/shared/resource-resolver.js";
+} from "../../src/Runtime/workspace-local-env.js";
+import { resolveResourcePath } from "../../src/Runtime/resource-resolver.js";
 
 export async function runWorkspaceLocalEnvTests(): Promise<void> {
   const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "workspace-local-env-"));
@@ -18,7 +17,7 @@ export async function runWorkspaceLocalEnvTests(): Promise<void> {
     await testDefaultContentShape();
     await testMissingLocalEnvFallsBackToDefaultMode(workspaceRoot);
     await testPlaceholderLocalEnvDoesNotEnableRealMode(workspaceRoot);
-    await testValidLocalEnvEnablesRealMode(workspaceRoot);
+    await testValidLocalEnvLoadsLlmConfig(workspaceRoot);
     await testConfiguredResourcesRootIsParsed(workspaceRoot);
     await testResolveResourcePathPrefersConfiguredResourcesRoot(workspaceRoot);
     await testInvalidJsonThrowsClearError(workspaceRoot);
@@ -40,19 +39,19 @@ async function testDefaultContentShape(): Promise<void> {
 }
 
 async function testMissingLocalEnvFallsBackToDefaultMode(workspaceRoot: string): Promise<void> {
-  const options = await loadWorkspaceRuntimeOptions(workspaceRoot);
-  assert.deepEqual(options, {});
+  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  assert.deepEqual(config, {});
 }
 
 async function testPlaceholderLocalEnvDoesNotEnableRealMode(workspaceRoot: string): Promise<void> {
   const localEnvPath = await ensureWorkspaceLocalEnvPath(workspaceRoot);
   await writeFile(localEnvPath, getDefaultWorkspaceLocalEnvContent(), "utf8");
 
-  const options = await loadWorkspaceRuntimeOptions(workspaceRoot);
-  assert.deepEqual(options, {});
+  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  assert.equal(config.llm?.api_key, "your-api-key");
 }
 
-async function testValidLocalEnvEnablesRealMode(workspaceRoot: string): Promise<void> {
+async function testValidLocalEnvLoadsLlmConfig(workspaceRoot: string): Promise<void> {
   const localEnvPath = await ensureWorkspaceLocalEnvPath(workspaceRoot);
   await writeFile(
     localEnvPath,
@@ -72,18 +71,13 @@ async function testValidLocalEnvEnablesRealMode(workspaceRoot: string): Promise<
     "utf8",
   );
 
-  const options = await loadWorkspaceRuntimeOptions(workspaceRoot);
-  assert.deepEqual(options, {
-    llmExecutor: {
-      mode: "real",
-      realProvider: {
-        provider: "openai",
-        apiKey: "test-api-key",
-        baseUrl: "https://api.openai.com/v1",
-        model: "gpt-4.1-mini",
-        timeoutMs: 15000,
-      },
-    },
+  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  assert.deepEqual(config.llm, {
+    provider: "openai",
+    api_key: "test-api-key",
+    base_url: "https://api.openai.com/v1",
+    model: "gpt-4.1-mini",
+    timeout_ms: 15000,
   });
 }
 
@@ -137,7 +131,7 @@ async function testInvalidJsonThrowsClearError(workspaceRoot: string): Promise<v
   await writeFile(localEnvPath, "{invalid json", "utf8");
 
   await assert.rejects(
-    async () => loadWorkspaceRuntimeOptions(workspaceRoot),
+    async () => loadWorkspaceLocalEnvConfig(workspaceRoot),
     /Invalid workspace local env JSON:/,
   );
 }

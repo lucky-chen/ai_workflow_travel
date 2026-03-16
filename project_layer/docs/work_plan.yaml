@@ -16,8 +16,12 @@ principles:
   - do not mix unrelated refactors into the same batch
   - only mark work complete after code and tests are updated and verified
   - preserve stable logical artifact names defined by the design docs even when runtime compatibility layers remain active
-execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up
+execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up with runtime schema naming work-execute residual cleanup post-alignment simplification and shared-directory removal
 status: completed
+current_focus:
+  stage_id: stage_9_shared_directory_removal
+  batch_id: batch_9_3_shared_directory_cleanup
+  task_id: task_9_3_1
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -278,6 +282,287 @@ stages:
     validation:
       - CLI exposes documented run unit and run compose modes
       - runtime orchestration distinguishes independent unit runs from compose-run continuation
+  - stage_id: stage_5_layered_directory_restructure
+    name: layered directory restructure
+    goal: reorganize the codebase into Interface Runtime Capability SDK Data and Test partitions while keeping runtime behavior stable
+    status: completed
+    batches:
+      - batch_id: batch_5_1_interface_and_runtime_entry
+        name: interface and runtime entry
+        goal: establish Interface and single-layer Runtime top-level directories and move current entry modules into their architecture-aligned locations
+        status: completed
+        tasks:
+          - task_id: task_5_1_1
+            summary: move cli entry executable composition root and workspace runtime config files into Interface and single-layer Runtime directories and repair imports exports and affected tests
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Interface/CliEntry/cli.ts
+              - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
+              - project_layer/projects/sdlc/src/Runtime/composition-root.ts
+              - project_layer/projects/sdlc/src/Runtime/workspace-local-env.ts
+              - project_layer/projects/sdlc/src/index.ts
+              - project_layer/projects/sdlc/src/shared/resource-resolver.ts
+              - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+              - project_layer/projects/sdlc/src/quality-gate/change-gate.ts
+              - project_layer/projects/sdlc/tests/cli.test.ts
+              - project_layer/projects/sdlc/tests/app/composition-root.test.ts
+              - project_layer/projects/sdlc/tests/shared/workspace-local-env.test.ts
+          - task_id: task_5_1_2
+            summary: move runtime orchestration files from workflow pipeline into Runtime Orchestrator and align imports without changing orchestration behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/Orchestrator
+              - project_layer/projects/sdlc/tests/workflow
+      - batch_id: batch_5_2_capability_partition_by_stage
+        name: capability partition by stage
+        goal: reorganize capability code by RequirementDesign ArchitectureDesign ItemDesign OverallDesignContract WorkPlan and WorkExecute instead of execution contract splits
+        status: completed
+        tasks:
+          - task_id: task_5_2_1
+            summary: migrate requirement and architecture capability files into stage-based directories and repair imports tests and public exports
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/execution
+              - project_layer/projects/sdlc/src/contract
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests/requirement
+              - project_layer/projects/sdlc/tests/architecture
+          - task_id: task_5_2_2
+            summary: migrate item design and work plan capability files into stage-based directories and repair imports tests and public exports
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/execution
+              - project_layer/projects/sdlc/src/contract
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests/module-design
+              - project_layer/projects/sdlc/tests/implementation-plan
+          - task_id: task_5_2_3
+            summary: migrate work execute and overall design contract capability files into stage-based directories and repair imports tests and public exports
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/execution
+              - project_layer/projects/sdlc/src/contract
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests/implementation-execution
+              - project_layer/projects/sdlc/tests/overall-design-contract
+              - project_layer/projects/sdlc/tests/validation
+      - batch_id: batch_5_3_sdk_data_and_protocol_cleanup
+        name: sdk data and protocol cleanup
+        goal: place quality control and persistence code under SDK and Data and reduce shared into stable protocol boundaries
+        status: completed
+        tasks:
+          - task_id: task_5_3_1
+            summary: move quality control and llm executor modules under SDK partitions, repair imports tests and exports, and remove the emptied legacy sdk and quality-gate directories
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/SDK
+              - project_layer/projects/sdlc/tests/shared
+          - task_id: task_5_3_2
+            summary: move artifact and history persistence modules under Data, move stable contract and type entry points under Protocols, fold Runtime into a single layer, and remove the emptied legacy directories
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Data
+              - project_layer/projects/sdlc/src/Protocols
+              - project_layer/projects/sdlc/src/Runtime
+              - project_layer/projects/sdlc/tests/shared
+    validation:
+      - source directories follow Interface Runtime Capability SDK Data partitions at top level
+      - Capability directories are grouped by stage concept rather than by execution contract split
+      - npm test passes after each migration task
+  - stage_id: stage_6_compose_run_interface_only
+    name: compose run interface only
+    goal: remove the legacy stage runtime path and leave only compose-run interfaces and placeholder entry behavior until compose-run design is completed
+    status: completed
+    batches:
+      - batch_id: batch_6_1_stage_runtime_removal
+        name: stage runtime removal
+        goal: remove effective stage orchestration entry points and preserve only compose-run interface skeletons
+        status: completed
+        tasks:
+          - task_id: task_6_1_1
+            summary: replace runtime pipeline and registry composition with a compose-run service placeholder and remove stage runtime entry exposure from composition-root and public exports
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/composition-root.ts
+              - project_layer/projects/sdlc/src/Runtime/compose-run-service.ts
+              - project_layer/projects/sdlc/src/Protocols/compose-run.ts
+              - project_layer/projects/sdlc/src/index.ts
+          - task_id: task_6_1_2
+            summary: remove legacy stage-oriented cli and test entry behavior, keep run compose only, and delete stage runtime tests and runtime files
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Interface/CliEntry/cli.ts
+              - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
+              - project_layer/projects/sdlc/src/Runtime/Orchestrator
+              - project_layer/projects/sdlc/src/Capability
+              - project_layer/projects/sdlc/tests
+          - task_id: task_6_1_3
+            summary: replace non-runtime stage and pipeline protocol remnants with execution-unit protocol naming and clean leftover shared filenames comments and tests
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Protocols
+              - project_layer/projects/sdlc/src/Capability
+              - project_layer/projects/sdlc/src/Data
+              - project_layer/projects/sdlc/src/SDK
+              - project_layer/projects/sdlc/tests/shared
+    validation:
+      - createApplicationRuntime exposes composeRunService and no longer exposes pipeline or registry
+      - CLI rejects legacy generate and run unit commands
+      - npm test passes with compose-run placeholder behavior
+      - execution-unit protocols and shared helper names no longer use pipeline or document-stage as the primary concept labels
+  - stage_id: stage_7_runtime_schema_and_work_execute_cleanup
+    name: runtime schema and work execute cleanup
+    goal: remove remaining ambiguous runtime boundary naming, eliminate implementation-prefixed work-execute file names, and refactor duplicated execution-unit helper logic
+    status: completed
+    batches:
+      - batch_id: batch_7_1_runtime_schema_rename
+        name: runtime schema rename
+        goal: rename the internal runtime boundary directory from Contracts to Schema so it no longer collides with business contract terminology
+        status: completed
+        tasks:
+          - task_id: task_7_1_1
+            summary: rename Runtime/Contracts to Runtime/Schema and repair imports tests and public exports without changing runtime behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/Schema
+              - project_layer/projects/sdlc/src/index.ts
+              - project_layer/projects/sdlc/src
+              - project_layer/projects/sdlc/tests
+      - batch_id: batch_7_2_work_execute_naming_cleanup
+        name: work execute naming cleanup
+        goal: replace remaining implementation-prefixed file names and type names in WorkExecute and work-plan schema code
+        status: completed
+        tasks:
+          - task_id: task_7_2_1
+            summary: rename implementation-contract and implementation-generator paths under WorkExecute to work-execute names and repair imports exports and tests
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/WorkExecute
+              - project_layer/projects/sdlc/src/index.ts
+              - project_layer/projects/sdlc/tests
+          - task_id: task_7_2_2
+            summary: rename ImplementationExecutionArtifacts and ImplementationWorkPlan schema types to work-execute and work-plan names and remove implementation-prefixed active exports
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/Schema
+              - project_layer/projects/sdlc/src/Capability/WorkExecute
+              - project_layer/projects/sdlc/src/Capability/WorkPlan
+      - batch_id: batch_7_3_duplicate_code_refactor
+        name: duplicate code refactor
+        goal: reduce repeated execution-unit helper logic after the naming cleanup without changing behavior
+        status: completed
+        tasks:
+          - task_id: task_7_3_1
+            summary: extract shared execution-unit context access from document generators so requirement architecture item and work-plan generators no longer duplicate currentContext handling and requested-unit resolution
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/Shared/document-unit-generator.ts
+              - project_layer/projects/sdlc/src/Capability/RequirementDesign
+              - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+              - project_layer/projects/sdlc/src/Capability/ItemDesign
+              - project_layer/projects/sdlc/src/Capability/WorkPlan
+          - task_id: task_7_3_2
+            summary: inspect remaining loader and prompt-builder duplication in WorkExecute and extract only one low-risk shared helper if repeated logic is still active after batch 7_2
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/WorkExecute
+              - project_layer/projects/sdlc/tests
+    validation:
+      - Runtime/Schema is the only runtime boundary directory name
+      - no active export path uses implementation-prefixed work-execute files or schema types as the primary name
+      - document generators share the same execution-unit context helper path instead of duplicating local currentContext state
+      - npm test passes after each batch
+  - stage_id: stage_8_post_alignment_simplification
+    name: post alignment simplification
+    goal: remove transitional wrapper design and noisy default naming where the current codebase has only one active implementation path
+    status: completed
+    batches:
+      - batch_id: batch_8_1_runtime_entry_simplification
+        name: runtime entry simplification
+        goal: simplify the Application entry so it no longer carries unused config override layers or dead default assembly placeholders
+        status: completed
+        tasks:
+          - task_id: task_8_1_1
+            summary: remove unused Application override layers and keep Application creation as one direct runtime entry path
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/application.ts
+              - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
+              - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+              - project_layer/projects/sdlc/tests/app/application.test.ts
+      - batch_id: batch_8_2_cli_naming_simplification
+        name: cli naming simplification
+        goal: remove default-prefixed CLI class names when only one active parser and one active mapper exist
+        status: completed
+        tasks:
+          - task_id: task_8_2_1
+            summary: rename DefaultCLICommandParser and DefaultCLIRequestMapper to direct CliEntry names and repair call sites and tests
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Interface/CliEntry
+              - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
+              - project_layer/projects/sdlc/tests/cli.test.ts
+      - batch_id: batch_8_3_work_execute_contract_naming
+        name: work execute contract naming
+        goal: remove default-prefixed helper names in WorkExecute contract flow when only one shell-based preparer implementation exists
+        status: completed
+        tasks:
+          - task_id: task_8_3_1
+            summary: rename DefaultExecutionEnvironmentPreparer to a direct shell-oriented preparer name and keep WorkExecuteContract assembly explicit
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/WorkExecute/work-execute-contract.ts
+    validation:
+      - Application creation no longer exposes unused override or dead assembly layers
+      - CLI parser and mapper names match the single active implementation path
+      - WorkExecute contract helper names no longer imply multiple active implementations where only one exists
+      - npm test passes after each batch
+  - stage_id: stage_9_shared_directory_removal
+    name: shared directory removal
+    goal: remove the leftover shared top-level directory by relocating its remaining helpers into Runtime and Capability/Shared based on actual responsibility
+    status: completed
+    batches:
+      - batch_id: batch_9_1_runtime_resource_resolution
+        name: runtime resource resolution
+        goal: move resource path resolution into Runtime because it belongs to workspace and runtime resource lookup behavior
+        status: completed
+        tasks:
+          - task_id: task_9_1_1
+            summary: move resource-resolver from shared into Runtime and repair imports and tests
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/resource-resolver.ts
+              - project_layer/projects/sdlc/src/Interface/CliEntry
+              - project_layer/projects/sdlc/src/Capability/Shared
+              - project_layer/projects/sdlc/tests/shared
+      - batch_id: batch_9_2_capability_breakdown_helpers
+        name: capability breakdown helpers
+        goal: move design-document breakdown parsing into Capability/Shared because it serves capability-layer design artifact handling
+        status: completed
+        tasks:
+          - task_id: task_9_2_1
+            summary: move design-document-breakdown from shared into Capability/Shared and repair imports
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/Shared/design-document-breakdown.ts
+              - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+      - batch_id: batch_9_3_shared_directory_cleanup
+        name: shared directory cleanup
+        goal: delete the emptied shared directory and verify there are no shared-path import remnants
+        status: completed
+        tasks:
+          - task_id: task_9_3_1
+            summary: remove the empty shared directory and verify no source or test imports still depend on src/shared
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/shared
+              - project_layer/projects/sdlc/src
+              - project_layer/projects/sdlc/tests
+    validation:
+      - resource resolution helpers live under Runtime
+      - design document breakdown helpers live under Capability/Shared
+      - src/shared no longer exists
+      - npm test passes after each batch
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model
@@ -290,3 +575,6 @@ resolved_decisions:
   - work_plan.yaml should use a real yaml structure and should not carry markdown content in a yaml path
   - a temporary compatibility layer for legacy stage identifiers is active during the first batch set
   - requirement_design, item_design, and work_plan generate and update baselines are already implemented and verified
+  - the legacy stage runtime path has been removed from active runtime entrypoints and only compose-run interface placeholders remain until compose-run design is completed
+  - non-runtime protocol and shared helper naming has been narrowed from pipeline and document-stage terminology to execution-unit terminology where those paths remain active
+  - Runtime/Schema is the chosen name for internal runtime boundary types because it is more precise than Protocols, Contracts, or Boundary in this project
