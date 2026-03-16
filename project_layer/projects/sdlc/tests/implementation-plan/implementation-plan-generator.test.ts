@@ -21,6 +21,7 @@ export async function runImplementationPlanGeneratorTests(): Promise<void> {
 
   try {
     await testImplementationPlanGeneratorBuildsPromptAndShapesOutput(workspaceRoot);
+    await testImplementationPlanGeneratorSupportsUpdateExecutionUnit(workspaceRoot);
     await testImplementationPlanGeneratorRequiresRequirementDocument(workspaceRoot);
     await testImplementationPlanGeneratorRequiresArchitectureDocument(workspaceRoot);
     await testImplementationPlanGeneratorRequiresModuleDesignDocuments(workspaceRoot);
@@ -88,6 +89,38 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("cite the provided shared collaboration standard document path exactly"),
     true,
   );
+}
+
+async function testImplementationPlanGeneratorSupportsUpdateExecutionUnit(workspaceRoot: string): Promise<void> {
+  const llmExecutor = new MockLlmExecutor("# Work Plan\n\nUpdated plan content.\n");
+  const generator = new ImplementationPlanGenerator({ llmExecutor });
+
+  const output = await generator.run({
+    taskId: "task-1-update",
+    stageId: "implementation_plan",
+    attempt: 1,
+    workspaceRoot,
+    params: {
+      executionUnit: "work_plan_update",
+    },
+    inputArtifacts: {
+      requirement_document: resolveRequirementArtifactPath("/tmp/workspace"),
+      architecture_document: resolveArchitectureArtifactPath("/tmp/workspace"),
+      module_design_documents: JSON.stringify([
+        resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
+      ]),
+    },
+  });
+
+  assert.equal(output.summary, "Work plan updated.");
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
+    target: string;
+    moduleDesignDocuments: string[];
+  };
+  assert.equal(payload.target, "work_plan_update");
+  assert.deepEqual(payload.moduleDesignDocuments, [
+    resolveModuleDesignArtifactPath("/tmp/workspace", "Workflow"),
+  ]);
 }
 
 async function testImplementationPlanGeneratorRequiresRequirementDocument(workspaceRoot: string): Promise<void> {

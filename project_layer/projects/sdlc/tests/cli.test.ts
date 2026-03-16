@@ -26,6 +26,7 @@ export async function runCliTests(): Promise<void> {
     await testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
+    await testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRoot);
     await testModuleDesignRequiresTargetModule(workspaceRoot);
     await testItemDesignRequiresTargetItem(workspaceRoot);
     await testImplementationExecutionRequiresWorkplan(workspaceRoot);
@@ -284,6 +285,34 @@ async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: st
       workspaceRoot,
       params: {
         executionUnit: "work_plan_generate",
+      },
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+        module_design_documents: JSON.stringify([
+          "# Module Alpha\n",
+          "# Module Beta\n",
+        ]),
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "work_plan_update",
+        workspace: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "implementation_plan",
+      workspaceRoot,
+      params: {
+        executionUnit: "work_plan_update",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",

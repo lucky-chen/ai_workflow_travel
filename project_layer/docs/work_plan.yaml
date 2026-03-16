@@ -14,11 +14,8 @@ principles:
   - do not mix unrelated refactors into the same batch
   - only mark work complete after code and tests are updated and verified
 execution_scope: first executable batch set only
-status: in_progress
-current_focus:
-  stage_id: stage_2_document_unit_baseline
-  batch_id: batch_2_4_work_plan_units
-  task_id: task_2_4_3
+status: completed
+current_focus: null
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -61,7 +58,7 @@ stages:
   - stage_id: stage_2_document_unit_baseline
     name: document unit baseline
     goal: make requirement architecture item and work-plan units exist as real generator contract and runner flows
-    status: in_progress
+    status: completed
     batches:
       - batch_id: batch_2_1_requirement_design_units
         name: requirement design units
@@ -120,7 +117,7 @@ stages:
       - batch_id: batch_2_4_work_plan_units
         name: work plan units
         goal: migrate implementation_plan semantics to work_plan semantics and move the artifact to work_plan.yaml
-        status: in_progress
+        status: completed
         tasks:
           - task_id: task_2_4_1
             summary: replace implementation_plan business terminology with work_plan in generator contract runner CLI and tests
@@ -141,7 +138,7 @@ stages:
               - project_layer/projects/sdlc/tests
           - task_id: task_2_4_3
             summary: add work_plan_update baseline with current external-update boundary semantics
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution
               - project_layer/projects/sdlc/src/workflow/stage-runners
