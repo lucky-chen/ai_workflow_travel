@@ -21,7 +21,7 @@ status: in_progress
 current_focus:
   stage_id: stage_2_document_unit_baseline
   batch_id: batch_2_2_architecture_design_units
-  task_id: task_2_2_2
+  task_id: task_2_2_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -106,7 +106,7 @@ stages:
               - project_layer/projects/sdlc/tests/architecture
           - task_id: task_2_2_2
             summary: add architecture_design_contract baseline and stop treating contract checks as only an internal side effect of architecture generation
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/contract
               - project_layer/projects/sdlc/src/workflow/stage-runners

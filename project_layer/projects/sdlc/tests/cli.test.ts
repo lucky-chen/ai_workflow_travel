@@ -24,6 +24,7 @@ export async function runCliTests(): Promise<void> {
     await testCliInitCopiesResources(workspaceRoot);
     await testRequestMapperRequiresStage();
     await testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(workspaceRoot);
+    await testRequestMapperSupportsCanonicalArchitectureDesignContractStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
@@ -228,6 +229,30 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(w
       workspaceRoot,
       params: {
         executionUnit: "architecture_design_update",
+      },
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsCanonicalArchitectureDesignContractStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "architecture_design_contract",
+        workspace: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "architecture_design",
+      workspaceRoot,
+      params: {
+        executionUnit: "architecture_design_contract",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",

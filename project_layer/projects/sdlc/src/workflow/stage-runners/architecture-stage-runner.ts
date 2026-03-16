@@ -36,7 +36,14 @@ export class ArchitectureStageRunner extends BaseStageRunner {
 
   async run(
     context: StageRunContext,
-  ): Promise<StageOutput<ArchitectureDesignArtifacts & { architecture_document: string }>> {
+  ): Promise<StageOutput<
+      (ArchitectureDesignArtifacts & { architecture_document: string })
+      | { architecture_document: string; contract_result: string }
+    >> {
+    if (context.params?.executionUnit === "architecture_design_contract") {
+      return this.runContractUnit(context);
+    }
+
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ArchitectureDesignArtifacts>;
@@ -99,5 +106,40 @@ export class ArchitectureStageRunner extends BaseStageRunner {
       `Accepted architecture artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
+  }
+
+  private async runContractUnit(
+    context: StageRunContext,
+  ): Promise<StageOutput<{
+      architecture_document: string;
+      contract_result: string;
+    }>> {
+    await this.recordStageStart(context);
+
+    const architectureDocument = context.inputArtifacts.architecture_document?.trim();
+    if (!architectureDocument) {
+      throw new Error('Missing required input artifact "architecture_document".');
+    }
+
+    const contractResult = await this.contractChecker.check(context, {
+      stageId: "architecture_design",
+      success: true,
+      summary: "Architecture design contract check requested.",
+      artifacts: {
+        artifactKey: "architecture_document",
+        content: architectureDocument,
+      },
+    });
+    await this.recordSharedContractResult(context, contractResult);
+
+    return {
+      stageId: "architecture_design",
+      success: contractResult.passed,
+      summary: contractResult.summary,
+      artifacts: {
+        architecture_document: architectureDocument,
+        contract_result: JSON.stringify(contractResult),
+      },
+    };
   }
 }

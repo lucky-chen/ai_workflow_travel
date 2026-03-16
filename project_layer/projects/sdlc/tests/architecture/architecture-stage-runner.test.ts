@@ -16,11 +16,46 @@ export async function runArchitectureStageRunnerTests(): Promise<void> {
 
   try {
     await testArchitectureStageRunnerPersistsAcceptedDocument(workspaceRoot);
+    await testArchitectureStageRunnerSupportsContractOnlyUnit(workspaceRoot);
     await testArchitectureStageRunnerRejectStopsPersistence(workspaceRoot);
     await testArchitectureStageRunnerContractFailure(workspaceRoot);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }
+}
+
+async function testArchitectureStageRunnerSupportsContractOnlyUnit(workspaceRoot: string): Promise<void> {
+  const traceRecorder = new InMemoryTraceRecorder();
+  const runner = new ArchitectureStageRunner({
+    llmExecutor: new ArchitectureStageRunnerLlmExecutor(createArchitectureDocument()),
+    traceRecorder,
+    changeGate: new InMemoryChangeGate(),
+  });
+
+  const output = await runner.run({
+    taskId: "task-contract",
+    stageId: "architecture_design",
+    attempt: 1,
+    workspaceRoot,
+    params: {
+      executionUnit: "architecture_design_contract",
+    },
+    inputArtifacts: {
+      architecture_document: createArchitectureDocument(),
+    },
+  });
+
+  assert.equal(output.success, true);
+  assert.equal(output.summary, "Architecture design document passed contract checks.");
+  if (!("contract_result" in output.artifacts)) {
+    throw new Error("Expected contract-only architecture output.");
+  }
+  assert.equal(typeof output.artifacts.contract_result, "string");
+  assert.equal(JSON.parse(output.artifacts.contract_result).passed, true);
+  assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
+    "stage_started",
+    "contract_checked",
+  ]);
 }
 
 async function testArchitectureStageRunnerPersistsAcceptedDocument(workspaceRoot: string): Promise<void> {
