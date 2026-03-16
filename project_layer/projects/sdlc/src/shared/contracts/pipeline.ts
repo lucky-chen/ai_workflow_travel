@@ -51,8 +51,21 @@ export const STAGE_ID_ALIASES = {
   work_execute_contract: "validation",
 } as const satisfies Record<string, StageId>;
 
+export const CANONICAL_STAGE_IDS = {
+  requirement_interpretation: "requirement_design_generate",
+  architecture_design: "architecture_design_generate",
+  module_design: "item_design_generate",
+  implementation_plan: "work_plan_generate",
+  implementation_execution: "work_execute",
+  validation: "work_execute_contract",
+} as const satisfies Record<string, StageId>;
+
 export function resolveStageIdAlias(stageId: StageId): StageId {
   return STAGE_ID_ALIASES[stageId as keyof typeof STAGE_ID_ALIASES] ?? stageId;
+}
+
+export function toCanonicalStageId(stageId: StageId): StageId {
+  return CANONICAL_STAGE_IDS[stageId as keyof typeof CANONICAL_STAGE_IDS] ?? stageId;
 }
 
 export interface StageRunContext {

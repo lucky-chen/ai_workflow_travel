@@ -44,7 +44,7 @@ stages:
               - one stable naming model or one explicit compatibility mapping layer
           - task_id: task_1_1_3
             summary: inventory and remove legacy hard-coded terminology from pipeline CLI tests and runtime metadata
-            status: in_progress
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src
               - project_layer/projects/sdlc/tests

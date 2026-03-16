@@ -10,7 +10,7 @@ import type {
   TaskRecord,
   TaskStatus,
 } from "../../shared/contracts/pipeline.js";
-import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES, toCanonicalStageId } from "../../shared/contracts/pipeline.js";
 import type { ArtifactMap, TaskId, StageId } from "../../shared/types/common.js";
 import { LaunchValidator } from "./launch-validator.js";
 import { StageRegistry } from "./stage-registry.js";
@@ -82,9 +82,9 @@ export class PipelineService implements IPipeline {
       });
       await this.traceRecorder?.recordTrace({
         caller: "PipelineService.launchTask",
-        stageId: startStageId,
+        stageId: toCanonicalStageId(startStageId),
         eventType: TRACE_EVENT_TYPES.taskStarted,
-        summary: `Task "${taskId}" started at stage "${startStageId}".`,
+        summary: `Task "${taskId}" started at stage "${toCanonicalStageId(startStageId)}".`,
       });
 
       let currentStageId: StageId | undefined = startStageId;
@@ -113,7 +113,7 @@ export class PipelineService implements IPipeline {
           });
           await this.traceRecorder?.recordTrace({
             caller: "PipelineService.launchTask",
-            stageId: currentStageId,
+            stageId: toCanonicalStageId(currentStageId),
             eventType: TRACE_EVENT_TYPES.stageFailed,
             summary: error instanceof Error
               ? error.message
@@ -134,7 +134,7 @@ export class PipelineService implements IPipeline {
           });
           await this.traceRecorder?.recordTrace({
             caller: "PipelineService.launchTask",
-            stageId: currentStageId,
+            stageId: toCanonicalStageId(currentStageId),
             eventType: TRACE_EVENT_TYPES.stageFailed,
             summary: `Stage "${currentStageId}" failed.`,
           });
@@ -174,7 +174,7 @@ export class PipelineService implements IPipeline {
 
       await this.traceRecorder?.recordTrace({
         caller: "PipelineService.launchTask",
-        stageId: this.getTaskRecord(taskId)?.currentStageId ?? startStageId,
+        stageId: toCanonicalStageId(this.getTaskRecord(taskId)?.currentStageId ?? startStageId),
         eventType: TRACE_EVENT_TYPES.taskFinished,
         summary: `Task "${taskId}" finished.`,
       });
@@ -285,7 +285,7 @@ export class PipelineService implements IPipeline {
         });
         await this.traceRecorder?.recordTrace({
           caller: "PipelineService.runStageContinuation",
-          stageId,
+          stageId: toCanonicalStageId(stageId),
           eventType: TRACE_EVENT_TYPES.stageFailed,
           summary,
         });

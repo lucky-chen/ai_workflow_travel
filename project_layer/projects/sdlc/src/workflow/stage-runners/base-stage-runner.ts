@@ -13,7 +13,7 @@ import type {
   StageRunContext,
   StageRunnerSharedDependencies,
 } from "../../shared/contracts/pipeline.js";
-import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES, resolveStageIdAlias, toCanonicalStageId } from "../../shared/contracts/pipeline.js";
 import {
   resolveArchitectureArtifactPath,
   resolveImplementationPlanArtifactPath,
@@ -41,11 +41,12 @@ export abstract class BaseStageRunner implements IStageRunner {
   abstract run(context: StageRunContext): Promise<StageOutput>;
 
   protected async recordStageStart(context: StageRunContext): Promise<void> {
+    const canonicalStageId = toCanonicalStageId(resolveStageIdAlias(context.stageId));
     await this.traceRecorder?.recordTrace({
       caller: `${this.constructor.name}.recordStageStart`,
-      stageId: context.stageId,
+      stageId: canonicalStageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
-      summary: `Stage "${context.stageId}" started.`,
+      summary: `Stage "${canonicalStageId}" started.`,
       payload: {
         inputPaths: this.resolveStageInputPaths(context),
       },
@@ -164,7 +165,7 @@ export abstract class BaseStageRunner implements IStageRunner {
   }
 
   private resolveStageInputPaths(context: StageRunContext): string[] {
-    switch (context.stageId) {
+    switch (resolveStageIdAlias(context.stageId)) {
       case "requirement_interpretation":
         return [resolveRequirementArtifactPath(context.workspaceRoot)];
       case "architecture_design":

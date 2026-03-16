@@ -7,6 +7,7 @@ import { createRegistry } from "./pipeline-test-helpers.js";
 export async function runPipelineStageEntryTests(workspaceRoot: string): Promise<void> {
   await testStageEntryRetrySemantics(workspaceRoot);
   await testStageEntryFromSpecifiedStage(workspaceRoot);
+  await testPipelineAcceptsCanonicalAliasStageIds(workspaceRoot);
 }
 
 async function testStageEntryRetrySemantics(workspaceRoot: string): Promise<void> {
@@ -138,4 +139,43 @@ async function testStageEntryFromSpecifiedStage(workspaceRoot: string): Promise<
   assert.equal(invocationContexts.length, 3);
   assert.equal(invocationContexts[2]?.stageId, "stage-b");
   assert.equal(invocationContexts[2]?.attempt, 2);
+}
+
+async function testPipelineAcceptsCanonicalAliasStageIds(workspaceRoot: string): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  const aliasStage: IStageRunner = {
+    async run(context: StageRunContext): Promise<StageOutput> {
+      invocationContexts.push(context);
+      return {
+        stageId: context.stageId,
+        status: "completed",
+        success: true,
+        summary: "Alias stage completed.",
+        artifacts: {},
+      };
+    },
+  };
+
+  const pipeline = new PipelineService({
+    registry: createRegistry({
+      stageId: "module_design",
+      launchRequirements: ["architecture_document", "module_descriptors"],
+      runner: aliasStage,
+      nextStageId: null,
+    }),
+  });
+
+  const taskId = await pipeline.launchTask({
+    startStageId: "item_design_generate",
+    workspaceRoot,
+    inputArtifacts: {
+      architecture_document: "architecture.md",
+      module_descriptors: JSON.stringify({ name: "Workflow", responsibilities: [] }),
+    },
+  });
+
+  assert.equal(taskId.length > 0, true);
+  assert.equal(invocationContexts.length, 1);
+  assert.equal(invocationContexts[0]?.stageId, "module_design");
+  assert.equal(pipeline.getTaskStatus(taskId), "completed");
 }
