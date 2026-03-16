@@ -57,15 +57,16 @@ stages:
   - stage_id: stage_2_document_unit_baseline
     name: document unit baseline
     goal: make requirement architecture item and work-plan units exist as real generator contract and runner flows
-    status: pending
+    status: in_progress
     batches:
       - batch_id: batch_2_1_requirement_design_units
         name: requirement design units
         goal: make requirement generate update and contract align with the current requirement document model
-        status: pending
+        status: in_progress
         tasks:
           - task_id: task_2_1_1
             summary: replace passthrough requirement generation with real requirement document generation
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution/requirement-generator.ts
               - project_layer/projects/sdlc/src/workflow/stage-runners/requirement-stage-runner.ts

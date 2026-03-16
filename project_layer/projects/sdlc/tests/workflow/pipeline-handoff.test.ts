@@ -201,6 +201,8 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
     assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
       "task_started",
       "stage_started",
+      "generation_started",
+      "generation_finished",
       "contract_checked",
       "gate_reviewed",
       "artifact_persisted",

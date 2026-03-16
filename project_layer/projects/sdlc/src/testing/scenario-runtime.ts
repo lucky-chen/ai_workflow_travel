@@ -12,6 +12,7 @@ export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
       mode: "mock",
       mockExecute: createScenarioMockExecute({
         serviceName,
+        requirementDocument: createScenarioRequirementDocument(serviceName),
         architectureDocument: createScenarioArchitectureDocument(serviceName),
         moduleDesignDocument: createScenarioModuleDesignDocument(serviceName),
         implementationPlanDocument: createScenarioImplementationPlanDocument(serviceName),
@@ -27,6 +28,7 @@ export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
 
 interface ScriptedLlmExecutorDependencies {
   serviceName: string;
+  requirementDocument: string;
   architectureDocument: string;
   moduleDesignDocument: string;
   implementationPlanDocument: string;
@@ -57,6 +59,8 @@ function createScenarioMockExecute(
     }
 
     switch (request.metadata?.stage) {
+      case "requirement_interpretation":
+        return buildTextResult(request, dependencies.requirementDocument);
       case "architecture_design":
         return buildTextResult(request, dependencies.architectureDocument);
       case "module_design":
@@ -127,6 +131,27 @@ function buildFailedContractResult(
 
 class NoopGitCommitter implements IImplementationGitCommitter {
   async commit(): Promise<void> {}
+}
+
+function createScenarioRequirementDocument(serviceName: string): string {
+  return [
+    "# 1. Background",
+    `- ${serviceName} needs a stable requirement document before downstream design starts.`,
+    "- The generated document must stay product-facing and reviewable.",
+    "",
+    "# 2. User Scenarios",
+    "## 2.1 Technical Founders",
+    "Need a quick way to turn a rough request into a requirement baseline.",
+    "",
+    "# 3. Product Goals",
+    `Deliver a reviewable requirement baseline for ${serviceName}.`,
+    "- Reduce ambiguity before architecture design.",
+    "",
+    "# 4. Core Problems and Product Abilities",
+    "## 4.1 Requirements are not directly actionable",
+    "- problem: raw requests are ambiguous and unstable for downstream work.",
+    "- ability: generate a structured requirement document that downstream stages can consume.",
+  ].join("\n");
 }
 
 function createScenarioArchitectureDocument(serviceName: string): string {

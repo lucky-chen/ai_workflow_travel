@@ -25,12 +25,12 @@ export async function runRequirementStageRunnerTests(): Promise<void> {
 async function testRequirementStageRunnerPersistsAcceptedDocument(workspaceRoot: string): Promise<void> {
   const traceRecorder = new InMemoryTraceRecorder();
   const changeGate = new InMemoryChangeGate();
+  const content = createRequirementDocument();
   const runner = new RequirementStageRunner({
     traceRecorder,
     changeGate,
-    llmExecutor: new ApproveRequirementContractLlmExecutor(),
+    llmExecutor: new RequirementStageRunnerLlmExecutor(content),
   });
-  const content = createRequirementDocument();
 
   const output = await runner.run({
     taskId: "task-1",
@@ -57,17 +57,22 @@ async function testRequirementStageRunnerPersistsAcceptedDocument(workspaceRoot:
     ),
     content,
   );
-  assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, [
+  const stageStartedEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "stage_started")?.event;
+  const gateReviewedEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "gate_reviewed")?.event;
+  const artifactPersistedEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "artifact_persisted")?.event;
+  assert.deepEqual(stageStartedEvent?.payload?.inputPaths, [
     resolveRequirementArtifactPath(workspaceRoot),
   ]);
-  assert.deepEqual(traceRecorder.getEvents()[2]?.event.payload?.outputPaths, [
+  assert.deepEqual(gateReviewedEvent?.payload?.outputPaths, [
     resolveRequirementArtifactPath(workspaceRoot),
   ]);
-  assert.deepEqual(traceRecorder.getEvents()[3]?.event.payload?.outputPaths, [
+  assert.deepEqual(artifactPersistedEvent?.payload?.outputPaths, [
     resolveRequirementArtifactPath(workspaceRoot),
   ]);
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
+    "generation_started",
+    "generation_finished",
     "contract_checked",
     "gate_reviewed",
     "artifact_persisted",
@@ -83,7 +88,7 @@ async function testRequirementStageRunnerRejectStopsPersistence(workspaceRoot: s
         summary: "Rejected in review.",
       },
     }),
-    llmExecutor: new ApproveRequirementContractLlmExecutor(),
+    llmExecutor: new RequirementStageRunnerLlmExecutor(createRequirementDocument()),
   });
 
   await assert.rejects(
@@ -189,8 +194,18 @@ function createRequirementDocument(): string {
   ].join("\n");
 }
 
-class ApproveRequirementContractLlmExecutor implements ILlmExecutor {
-  async execute(_request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+class RequirementStageRunnerLlmExecutor implements ILlmExecutor {
+  constructor(private readonly generatedContent: string) {}
+
+  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+    if (request.responseFormat === "text") {
+      return {
+        content: this.generatedContent,
+        responseFormat: "text",
+        metadata: request.metadata,
+      };
+    }
+
     return {
       content: JSON.stringify({
         passed: true,

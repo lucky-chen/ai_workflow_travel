@@ -13,18 +13,22 @@ export interface RequirementStageRunnerDependencies extends BaseStageRunnerDepen
 }
 
 export class RequirementStageRunner extends BaseStageRunner {
-  private readonly generator = new RequirementGenerator();
+  private readonly generator: RequirementGenerator;
   private readonly contractChecker: RequirementContract;
 
   constructor(dependencies: RequirementStageRunnerDependencies) {
     super(dependencies);
+    this.generator = new RequirementGenerator({
+      llmExecutor: dependencies.llmExecutor,
+      traceRecorder: dependencies.traceRecorder,
+    });
     this.contractChecker = new RequirementContract(dependencies.llmExecutor);
   }
 
   async run(context: StageRunContext): Promise<StageOutput<RequirementArtifacts & { requirement_document: string }>> {
     await this.recordStageStart(context);
 
-    const output = await this.generator.run(context);
+    const output = await this.generator.run(context) as StageOutput<RequirementArtifacts>;
     await this.persistGeneratedStageArtifact(context, output, "Requirement.generated.md");
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
