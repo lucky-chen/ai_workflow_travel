@@ -43,7 +43,7 @@ async function testArchitectureContractPassesForStructuredDocument(workspaceRoot
       success: true,
       summary: "Architecture document generated.",
       artifacts: {
-        artifactKey: "architecture_document",
+        artifactKey: "architecture_design",
         content: architectureDocument,
       },
     },
@@ -71,7 +71,7 @@ async function testArchitectureContractFailsForMissingSections(workspaceRoot: st
       success: true,
       summary: "Architecture document generated.",
       artifacts: {
-        artifactKey: "architecture_document",
+        artifactKey: "architecture_design",
         content: "# 1. Purpose",
       },
     },
@@ -110,7 +110,7 @@ async function testArchitectureContractFailsForPlaceholderAndBoundaryIssues(work
       success: true,
       summary: "Architecture document generated.",
       artifacts: {
-        artifactKey: "architecture_document",
+        artifactKey: "architecture_design",
         content: brokenDocument,
       },
     },
@@ -153,7 +153,7 @@ async function testArchitectureContractRejectsInvalidLlmResult(workspaceRoot: st
         success: true,
         summary: "Architecture document generated.",
         artifacts: {
-          artifactKey: "architecture_document",
+          artifactKey: "architecture_design",
           content: architectureDocument,
         },
       },
@@ -178,7 +178,7 @@ async function testArchitectureContractAcceptsFencedJsonLlmResult(workspaceRoot:
       success: true,
       summary: "Architecture document generated.",
       artifacts: {
-        artifactKey: "architecture_document",
+        artifactKey: "architecture_design",
         content: architectureDocument,
       },
     },
@@ -249,7 +249,7 @@ async function testArchitectureContractBuildsPromptRequest(workspaceRoot: string
         stageId: string;
         success: boolean;
         summary: string;
-        artifacts: { artifactKey: "architecture_document"; content: string };
+        artifacts: { artifactKey: "architecture_design"; content: string };
       },
       contractSpec: unknown,
     ): Promise<{
@@ -270,7 +270,7 @@ async function testArchitectureContractBuildsPromptRequest(workspaceRoot: string
       success: true,
       summary: "Architecture document generated.",
       artifacts: {
-        artifactKey: "architecture_document",
+        artifactKey: "architecture_design",
         content: architectureDocument,
       },
     },

@@ -13,7 +13,10 @@ import {
   type ArchitectureDesignArtifacts,
 } from "../../execution/architecture-design-generator.js";
 import { BaseStageRunner, type BaseStageRunnerDependencies } from "./base-stage-runner.js";
-import { resolveArchitectureArtifactPath } from "./stage-artifact-paths.js";
+import {
+  resolveArchitectureArtifactPath,
+  resolveArchitectureContractResultArtifactPath,
+} from "./stage-artifact-paths.js";
 
 export interface ArchitectureStageRunnerDependencies extends BaseStageRunnerDependencies {
   llmExecutor: ILlmExecutor;
@@ -37,8 +40,8 @@ export class ArchitectureStageRunner extends BaseStageRunner {
   async run(
     context: StageRunContext,
   ): Promise<StageOutput<
-      (ArchitectureDesignArtifacts & { architecture_document: string })
-      | { architecture_document: string; contract_result: string }
+      (ArchitectureDesignArtifacts & { architecture_design: string; architecture_document: string })
+      | { architecture_document: string; architecture_design_contract_result: string; contract_result: string }
     >> {
     if (context.params?.executionUnit === "architecture_design_contract") {
       return this.runContractUnit(context);
@@ -67,6 +70,7 @@ export class ArchitectureStageRunner extends BaseStageRunner {
       ...output,
       artifacts: {
         ...output.artifacts,
+        architecture_design: artifactPath,
         architecture_document: artifactPath,
       },
     };
@@ -112,6 +116,7 @@ export class ArchitectureStageRunner extends BaseStageRunner {
     context: StageRunContext,
   ): Promise<StageOutput<{
       architecture_document: string;
+      architecture_design_contract_result: string;
       contract_result: string;
     }>> {
     await this.recordStageStart(context);
@@ -126,11 +131,18 @@ export class ArchitectureStageRunner extends BaseStageRunner {
       success: true,
       summary: "Architecture design contract check requested.",
       artifacts: {
-        artifactKey: "architecture_document",
+        artifactKey: "architecture_design",
         content: architectureDocument,
       },
     });
     await this.recordSharedContractResult(context, contractResult);
+    const contractResultPath = resolveArchitectureContractResultArtifactPath(context.workspaceRoot);
+    await this.writeWorkspaceFile(context, contractResultPath, JSON.stringify(contractResult, null, 2));
+    await super.recordSharedPersistenceResult(
+      context,
+      contractResultPath,
+      `Accepted architecture-design contract artifact persisted to ${contractResultPath}.`,
+    );
 
     return {
       stageId: "architecture_design",
@@ -138,6 +150,7 @@ export class ArchitectureStageRunner extends BaseStageRunner {
       summary: contractResult.summary,
       artifacts: {
         architecture_document: architectureDocument,
+        architecture_design_contract_result: contractResultPath,
         contract_result: JSON.stringify(contractResult),
       },
     };

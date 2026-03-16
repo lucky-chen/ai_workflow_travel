@@ -164,6 +164,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       workspaceRoot,
       inputArtifacts: {
         requirement_document: resolveRequirementArtifactPath(workspaceRoot),
+        architecture_design: resolveArchitectureArtifactPath(workspaceRoot),
         architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
         item_design_document: resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         item_design_documents: JSON.stringify([

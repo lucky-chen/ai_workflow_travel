@@ -9,7 +9,7 @@ import type { ContractExecutionResult, ContractSpec } from "./document-stage-con
 import { DocumentStageContract } from "./document-stage-contract.js";
 
 interface ArchitectureArtifacts {
-  artifactKey: "architecture_document";
+  artifactKey: "architecture_design" | "architecture_document";
   content: string;
 }
 

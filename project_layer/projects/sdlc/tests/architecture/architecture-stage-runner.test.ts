@@ -7,6 +7,7 @@ import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js"
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../src/sdk/llm-executor/llm-executor.js";
 import { ArchitectureStageRunner } from "../../src/workflow/stage-runners/architecture-stage-runner.js";
 import {
+  resolveArchitectureContractResultArtifactPath,
   resolveArchitectureArtifactPath,
   resolveStageGeneratedArtifactPath,
 } from "../../src/workflow/stage-runners/stage-artifact-paths.js";
@@ -50,11 +51,28 @@ async function testArchitectureStageRunnerSupportsContractOnlyUnit(workspaceRoot
   if (!("contract_result" in output.artifacts)) {
     throw new Error("Expected contract-only architecture output.");
   }
+  assert.equal(
+    output.artifacts.architecture_design_contract_result,
+    resolveArchitectureContractResultArtifactPath(workspaceRoot),
+  );
   assert.equal(typeof output.artifacts.contract_result, "string");
   assert.equal(JSON.parse(output.artifacts.contract_result).passed, true);
+  assert.equal(
+    await readFile(path.join(workspaceRoot, resolveArchitectureContractResultArtifactPath(workspaceRoot)), "utf8"),
+    JSON.stringify(
+      {
+        passed: true,
+        summary: "Architecture design document passed contract checks.",
+        issues: [],
+      },
+      null,
+      2,
+    ),
+  );
   assert.deepEqual(traceRecorder.getEvents().map((entry) => entry.event.eventType), [
     "stage_started",
     "contract_checked",
+    "artifact_persisted",
   ]);
 }
 
@@ -78,6 +96,10 @@ async function testArchitectureStageRunnerPersistsAcceptedDocument(workspaceRoot
     },
   });
 
+  if (!("architecture_design" in output.artifacts)) {
+    throw new Error("Expected generated architecture output.");
+  }
+  assert.equal(output.artifacts.architecture_design, resolveArchitectureArtifactPath(workspaceRoot));
   assert.equal(output.artifacts.architecture_document, resolveArchitectureArtifactPath(workspaceRoot));
   assert.equal(
     await readFile(path.join(workspaceRoot, resolveArchitectureArtifactPath(workspaceRoot)), "utf8"),
