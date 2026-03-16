@@ -93,9 +93,12 @@ export class ImplementationStageRunner extends BaseStageRunner {
   }
 
   private validateExecutionContext(context: StageRunContext): void {
-    const implementationWorkplan = context.inputArtifacts.implementation_workplan?.trim();
+    const implementationWorkplan = (
+      context.inputArtifacts.implementation_workplan
+      ?? context.inputArtifacts.work_plan
+    )?.trim();
     if (!implementationWorkplan) {
-      throw new Error('Missing required input artifact "implementation_workplan".');
+      throw new Error('Missing required input artifact "implementation_workplan" or "work_plan".');
     }
 
     const parsedImplementationWorkplan = context.inputArtifacts.parsed_implementation_workplan?.trim();
@@ -125,7 +128,10 @@ export class ImplementationStageRunner extends BaseStageRunner {
   }
 
   private async prepareExecutionContext(context: StageRunContext): Promise<StageRunContext> {
-    const implementationWorkplanRef = context.inputArtifacts.implementation_workplan.trim();
+    const implementationWorkplanRef = (
+      context.inputArtifacts.implementation_workplan
+      ?? context.inputArtifacts.work_plan
+    ).trim();
     const parsedWorkplan = this.parseStructuredWorkplan(context.inputArtifacts.parsed_implementation_workplan);
     const currentExecutionPointer = this.parseCurrentExecutionPointer(context.inputArtifacts.current_step);
     const currentBatch = this.resolveCurrentBatch(parsedWorkplan, currentExecutionPointer);

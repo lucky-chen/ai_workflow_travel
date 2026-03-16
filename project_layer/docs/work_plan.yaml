@@ -18,7 +18,7 @@ status: in_progress
 current_focus:
   stage_id: stage_2_document_unit_baseline
   batch_id: batch_2_4_work_plan_units
-  task_id: task_2_4_2
+  task_id: task_2_4_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -133,7 +133,7 @@ stages:
               - project_layer/projects/sdlc/tests/implementation-plan
           - task_id: task_2_4_2
             summary: switch the accepted plan artifact from markdown execution plan to work_plan.yaml while preserving stage batch task structure
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
               - project_layer/projects/sdlc/src/contract/implementation-plan-contract.ts

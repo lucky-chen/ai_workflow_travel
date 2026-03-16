@@ -76,7 +76,7 @@ async function testImplementationStageRunnerApply(
     passed: "true",
   });
   assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, [
-    "sdlc/docs/CodeGenerationExecutionPlan.md",
+    "sdlc/docs/work_plan.yaml",
     "sdlc/docs/Requirement.md",
     "sdlc/docs/TechnicalArchitecture.md",
     "sdlc/docs/module_design/Workflow.md",
@@ -228,7 +228,7 @@ async function testImplementationStageRunnerRequiresWorkplanAndCurrentStep(
         implementation_workplan: undefined,
       }),
     ),
-    /Missing required input artifact "implementation_workplan"\./,
+    /Missing required input artifact "implementation_workplan" or "work_plan"\./,
   );
 
   await assert.rejects(

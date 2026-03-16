@@ -9,7 +9,7 @@ function resolveRelativeWorkspacePath(workspaceRoot: string, ...segments: string
 }
 
 export function resolveImplementationPlanArtifactPath(workspaceRoot: string): string {
-  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "CodeGenerationExecutionPlan.md");
+  return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "work_plan.yaml");
 }
 
 export function resolveRequirementArtifactPath(workspaceRoot: string): string {

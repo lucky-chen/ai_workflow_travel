@@ -124,6 +124,10 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       implementationExecutionContext.inputArtifacts.implementation_workplan,
       resolveImplementationPlanArtifactPath(workspaceRoot),
     );
+    assert.equal(
+      implementationExecutionContext.inputArtifacts.work_plan,
+      resolveImplementationPlanArtifactPath(workspaceRoot),
+    );
     assert.equal(typeof implementationExecutionContext.inputArtifacts.parsed_implementation_workplan, "string");
     assert.equal(
       implementationExecutionContext.inputArtifacts.current_step,
@@ -161,11 +165,17 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       inputArtifacts: {
         requirement_document: resolveRequirementArtifactPath(workspaceRoot),
         architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
+        item_design_document: resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
+        item_design_documents: JSON.stringify([
+          resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
+          resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
+        ]),
         module_design_documents: JSON.stringify([
           resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
           resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         ]),
         implementation_workplan: resolveImplementationPlanArtifactPath(workspaceRoot),
+        work_plan: resolveImplementationPlanArtifactPath(workspaceRoot),
         parsed_implementation_workplan: JSON.stringify({
           steps: [
             {
