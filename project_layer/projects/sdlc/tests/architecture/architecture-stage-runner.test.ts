@@ -63,12 +63,16 @@ async function testArchitectureStageRunnerPersistsAcceptedDocument(workspaceRoot
     designDocumentBreakdown: [
       {
         name: "Workflow",
+        targetName: "Workflow",
+        targetType: "item_design",
         documentPath: "sdlc/docs/module_design/Workflow.md",
         description: "covers the design of the `Workflow` module.",
         responsibilities: ["covers the design of the `Workflow` module."],
       },
       {
         name: "Data",
+        targetName: "Data",
+        targetType: "item_design",
         documentPath: "sdlc/docs/module_design/Data.md",
         description: "covers the design of the `Data` module.",
         responsibilities: ["covers the design of the `Data` module."],

@@ -12,6 +12,7 @@ import { parseDesignDocumentBreakdown, type DesignDocumentDescriptor } from "../
 
 interface ModuleDescriptor {
   name: string;
+  targetName?: string;
   responsibilities: string[];
   documentPath?: string;
   description?: string;
@@ -228,7 +229,8 @@ function parseSerializedBreakdown(serializedBreakdown: string): ModuleDescriptor
           && candidate.responsibilities.every((item) => typeof item === "string");
       })
       .map((entry) => ({
-        name: entry.name,
+        name: entry.targetName ?? entry.name,
+        targetName: entry.targetName ?? entry.name,
         documentPath: entry.documentPath,
         description: entry.description,
         responsibilities: entry.responsibilities,

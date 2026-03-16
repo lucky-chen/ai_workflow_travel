@@ -54,12 +54,16 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
       design_document_breakdown: JSON.stringify([
         {
           name: "plan_service",
+          targetName: "plan_service",
+          targetType: "item_design",
           documentPath: "./module_design/plan_service.md",
           description: "覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。",
           responsibilities: ["覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。"],
         },
         {
           name: "trip_repository",
+          targetName: "trip_repository",
+          targetType: "item_design",
           documentPath: "./module_design/trip_repository.md",
           description: "覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。",
           responsibilities: ["覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。"],

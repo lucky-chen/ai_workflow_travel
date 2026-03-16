@@ -17,12 +17,16 @@ async function testParseDesignDocumentBreakdownUsesFileNameAsName(): Promise<voi
   assert.deepEqual(parseDesignDocumentBreakdown(content), [
     {
       name: "Workflow",
+      targetName: "Workflow",
+      targetType: "item_design",
       documentPath: "sdlc/docs/module_design/Workflow.md",
       description: "covers the design of the `Workflow` module.",
       responsibilities: ["covers the design of the `Workflow` module."],
     },
     {
       name: "trip_application_service",
+      targetName: "trip_application_service",
+      targetType: "item_design",
       documentPath: "./module_design/trip_application_service.md",
       description: "covers the design of the `TripApplicationService` module.",
       responsibilities: ["covers the design of the `TripApplicationService` module."],
@@ -40,12 +44,16 @@ async function testParseDesignDocumentBreakdownSupportsMarkdownLinks(): Promise<
   assert.deepEqual(parseDesignDocumentBreakdown(content), [
     {
       name: "plan_service",
+      targetName: "plan_service",
+      targetType: "item_design",
       documentPath: "./module_design/plan_service.md",
       description: "覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。",
       responsibilities: ["覆盖 `PlanService` 的设计，包括整体计划生成和整体更新。"],
     },
     {
       name: "trip_repository",
+      targetName: "trip_repository",
+      targetType: "item_design",
       documentPath: "./module_design/trip_repository.md",
       description: "覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。",
       responsibilities: ["覆盖 durable trip state、current plan persistence 和 TripRecord storage boundary 的设计。"],

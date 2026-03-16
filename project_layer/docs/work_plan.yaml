@@ -18,7 +18,7 @@ status: in_progress
 current_focus:
   stage_id: stage_2_document_unit_baseline
   batch_id: batch_2_3_item_design_units
-  task_id: task_2_3_2
+  task_id: task_2_3_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -104,7 +104,7 @@ stages:
               - project_layer/projects/sdlc/tests/module-design
           - task_id: task_2_3_2
             summary: align architecture breakdown parsing and fan-out flow to item design targets instead of module naming assumptions
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/shared/design-document-breakdown.ts
               - project_layer/projects/sdlc/src/workflow/pipeline/module-design-fanout.ts

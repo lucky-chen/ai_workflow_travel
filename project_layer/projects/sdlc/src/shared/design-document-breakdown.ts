@@ -2,6 +2,8 @@ import path from "node:path";
 
 export interface DesignDocumentDescriptor {
   name: string;
+  targetName: string;
+  targetType: "item_design";
   documentPath: string;
   description: string;
   responsibilities: string[];
@@ -37,14 +39,16 @@ function parseDesignDocumentLine(line: string): DesignDocumentDescriptor | null 
   }
 
   return {
-    name: inferDocumentName(documentPath),
+    name: inferTargetName(documentPath),
+    targetName: inferTargetName(documentPath),
+    targetType: "item_design",
     documentPath,
     description,
     responsibilities: [description],
   };
 }
 
-function inferDocumentName(documentPath: string): string {
+function inferTargetName(documentPath: string): string {
   return path.posix.basename(documentPath, path.posix.extname(documentPath));
 }
 
