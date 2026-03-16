@@ -17,8 +17,8 @@ execution_scope: first executable batch set only
 status: in_progress
 current_focus:
   stage_id: stage_2_document_unit_baseline
-  batch_id: batch_2_3_item_design_units
-  task_id: task_2_3_3
+  batch_id: batch_2_4_work_plan_units
+  task_id: task_2_4_1
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -91,7 +91,7 @@ stages:
       - batch_id: batch_2_3_item_design_units
         name: item design units
         goal: migrate module_design semantics to item_design semantics and keep one-target-per-run behavior
-        status: in_progress
+        status: completed
         tasks:
           - task_id: task_2_3_1
             summary: replace module_design business terminology with item_design in runtime contracts generators runners and tests
@@ -112,7 +112,7 @@ stages:
               - project_layer/projects/sdlc/tests/workflow
           - task_id: task_2_3_3
             summary: add item_design_update baseline with one target item per run
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution
               - project_layer/projects/sdlc/src/workflow/stage-runners
@@ -120,7 +120,7 @@ stages:
       - batch_id: batch_2_4_work_plan_units
         name: work plan units
         goal: migrate implementation_plan semantics to work_plan semantics and move the artifact to work_plan.yaml
-        status: pending
+        status: in_progress
         tasks:
           - task_id: task_2_4_1
             summary: replace implementation_plan business terminology with work_plan in generator contract runner CLI and tests

@@ -16,6 +16,7 @@ export async function runModuleDesignGeneratorTests(): Promise<void> {
 
   try {
     await testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoot);
+    await testModuleDesignGeneratorSupportsUpdateExecutionUnit(workspaceRoot);
     await testModuleDesignGeneratorRequiresArchitectureDocument(workspaceRoot);
     await testModuleDesignGeneratorRequiresModuleDescriptor(workspaceRoot);
     await testModuleDesignGeneratorRejectsInvalidModuleDescriptorJson(workspaceRoot);
@@ -124,6 +125,37 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
   assert.equal(payload.templateSkeleton.includes("# {DesignItemName} Design"), true);
   assert.equal(payload.templateSkeleton.includes("document_contracts"), false);
   assert.equal(payload.templateSkeleton.includes("section_contract"), false);
+}
+
+async function testModuleDesignGeneratorSupportsUpdateExecutionUnit(workspaceRoot: string): Promise<void> {
+  const llmExecutor = new MockLlmExecutor("# Workflow Design\n\nUpdated item design content.\n");
+  const generator = new ModuleDesignGenerator({ llmExecutor });
+
+  const output = await generator.run({
+    taskId: "task-1-update",
+    stageId: "module_design",
+    attempt: 1,
+    workspaceRoot,
+    params: {
+      executionUnit: "item_design_update",
+    },
+    inputArtifacts: {
+      architecture_document: "# Technical Architecture\n\nArchitecture content.\n",
+      module_descriptors: JSON.stringify({
+        name: "Workflow",
+        documentPath: "sdlc/docs/module_design/Workflow.md",
+        responsibilities: ["orchestrate stage execution"],
+      }),
+    },
+  });
+
+  assert.equal(output.summary, 'Item design document updated for "Workflow".');
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
+    target: string;
+    moduleDescriptor: { name: string };
+  };
+  assert.equal(payload.target, "item_design_update");
+  assert.equal(payload.moduleDescriptor.name, "Workflow");
 }
 
 async function testModuleDesignGeneratorRequiresArchitectureDocument(workspaceRoot: string): Promise<void> {

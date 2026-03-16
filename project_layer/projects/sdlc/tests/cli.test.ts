@@ -24,6 +24,7 @@ export async function runCliTests(): Promise<void> {
     await testCliInitCopiesResources(workspaceRoot);
     await testRequestMapperRequiresStage();
     await testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot);
+    await testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
     await testModuleDesignRequiresTargetModule(workspaceRoot);
     await testItemDesignRequiresTargetItem(workspaceRoot);
@@ -66,6 +67,9 @@ async function testRequestMapper(workspaceRoot: string): Promise<void> {
       startStageId: "implementation_plan",
       stopAfterCurrentStage: true,
       workspaceRoot,
+      params: {
+        executionUnit: "implementation_plan",
+      },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
         architecture_document: "# Architecture\n",
@@ -117,6 +121,9 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
     startStageId: "architecture_design",
     stopAfterCurrentStage: true,
     workspaceRoot,
+    params: {
+      executionUnit: "architecture_design",
+    },
     inputArtifacts: {
       requirement_document: "# Requirement\n",
     },
@@ -219,6 +226,38 @@ async function testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot: 
       startStageId: "module_design",
       targetModule: "user_service",
       workspaceRoot,
+      params: {
+        executionUnit: "item_design_generate",
+      },
+      inputArtifacts: {
+        architecture_document: "# Architecture\n",
+        module_descriptors: JSON.stringify({
+          name: "user_service",
+          responsibilities: [],
+        }),
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "item_design_update",
+        workspace: workspaceRoot,
+        "target-item": "user_service",
+      },
+    }),
+    {
+      startStageId: "module_design",
+      targetModule: "user_service",
+      workspaceRoot,
+      params: {
+        executionUnit: "item_design_update",
+      },
       inputArtifacts: {
         architecture_document: "# Architecture\n",
         module_descriptors: JSON.stringify({
@@ -243,6 +282,9 @@ async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: st
     {
       startStageId: "implementation_plan",
       workspaceRoot,
+      params: {
+        executionUnit: "work_plan_generate",
+      },
       inputArtifacts: {
         requirement_document: "# Requirement\n",
         architecture_document: "# Architecture\n",
@@ -296,7 +338,7 @@ async function testImplementationExecutionRequiresWorkplan(workspaceRoot: string
           workspace: workspaceRoot,
         },
       }),
-    /Missing required workspace file: sdlc\/docs\/CodeGenerationExecutionPlan\.md/,
+    /Missing required workspace file: sdlc\/docs\/work_plan\.yaml/,
   );
 }
 
