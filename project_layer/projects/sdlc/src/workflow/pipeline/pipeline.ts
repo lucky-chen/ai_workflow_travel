@@ -48,6 +48,7 @@ export class PipelineService implements IPipeline {
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
     const startStageId = this.registry.resolveStageId(request.startStageId);
     const triggerReason = request.triggerReason ?? "new_run";
+    const stopAfterResolvedStage = request.stopAfterCurrentStage || request.runtimeMode === "direct";
     const taskId = request.taskId ?? this.createTaskId();
     const runId = request.runId?.trim() || this.createRunId();
     const runTask = async (): Promise<TaskId> => {
@@ -141,7 +142,7 @@ export class PipelineService implements IPipeline {
           break;
         }
 
-        if (request.stopAfterCurrentStage) {
+        if (stopAfterResolvedStage) {
           currentInputArtifacts = this.mergeInputArtifacts(currentInputArtifacts, output);
           break;
         }

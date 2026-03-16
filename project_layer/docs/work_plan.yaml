@@ -21,7 +21,7 @@ status: in_progress
 current_focus:
   stage_id: stage_4_runtime_composition_modes
   batch_id: batch_4_2_runtime_orchestration_boundary
-  task_id: task_4_2_1
+  task_id: task_4_2_2
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -267,7 +267,7 @@ stages:
         tasks:
           - task_id: task_4_2_1
             summary: split independent unit run handling from compose-run continuation handling in runtime orchestration
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/workflow/pipeline
               - project_layer/projects/sdlc/src/app/composition-root.ts

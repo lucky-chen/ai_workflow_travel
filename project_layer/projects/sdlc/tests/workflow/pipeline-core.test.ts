@@ -12,6 +12,8 @@ export async function runPipelineCoreTests(workspaceRoot: string): Promise<void>
   await testMissingRequiredArtifact(workspaceRoot);
   await testDuplicateStageRegistration();
   await testStageContinuationAndMerge(workspaceRoot);
+  await testDirectRunStopsAfterCurrentStageByDefault(workspaceRoot);
+  await testComposeRunContinuesAcrossStages(workspaceRoot);
   await testSingleStepStopsAfterCurrentStage(workspaceRoot);
   await testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot);
   await testFailureStopsContinuation(workspaceRoot);
@@ -356,6 +358,119 @@ async function testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot
     stageAArtifact: "a.md",
     continuationArtifact: "continued.md",
   });
+}
+
+async function testDirectRunStopsAfterCurrentStageByDefault(workspaceRoot: string): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  const pipeline = new PipelineService({
+    registry: createRegistry(
+      {
+        stageId: "stage-a",
+        launchRequirements: ["sourceDoc"],
+        runner: {
+          async run(context: StageRunContext): Promise<StageOutput> {
+            invocationContexts.push(context);
+            return {
+              stageId: context.stageId,
+              status: "completed",
+              success: true,
+              summary: "Stage A completed.",
+              artifacts: {
+                generatedSpec: "generated-spec.md",
+              },
+            };
+          },
+        },
+        nextStageId: "stage-b",
+      },
+      {
+        stageId: "stage-b",
+        launchRequirements: ["generatedSpec"],
+        runner: {
+          async run(context: StageRunContext): Promise<StageOutput> {
+            invocationContexts.push(context);
+            return {
+              stageId: context.stageId,
+              status: "completed",
+              success: true,
+              summary: "Stage B completed.",
+              artifacts: {},
+            };
+          },
+        },
+        nextStageId: null,
+      },
+    ),
+  });
+
+  await pipeline.launchTask({
+    startStageId: "stage-a",
+    runtimeMode: "direct",
+    workspaceRoot,
+    inputArtifacts: {
+      sourceDoc: "source.md",
+    },
+  });
+
+  assert.equal(invocationContexts.length, 1);
+  assert.equal(invocationContexts[0]?.stageId, "stage-a");
+}
+
+async function testComposeRunContinuesAcrossStages(workspaceRoot: string): Promise<void> {
+  const invocationContexts: StageRunContext[] = [];
+  const pipeline = new PipelineService({
+    registry: createRegistry(
+      {
+        stageId: "stage-a",
+        launchRequirements: ["sourceDoc"],
+        runner: {
+          async run(context: StageRunContext): Promise<StageOutput> {
+            invocationContexts.push(context);
+            return {
+              stageId: context.stageId,
+              status: "completed",
+              success: true,
+              summary: "Stage A completed.",
+              artifacts: {
+                generatedSpec: "generated-spec.md",
+              },
+            };
+          },
+        },
+        nextStageId: "stage-b",
+      },
+      {
+        stageId: "stage-b",
+        launchRequirements: ["generatedSpec"],
+        runner: {
+          async run(context: StageRunContext): Promise<StageOutput> {
+            invocationContexts.push(context);
+            return {
+              stageId: context.stageId,
+              status: "completed",
+              success: true,
+              summary: "Stage B completed.",
+              artifacts: {},
+            };
+          },
+        },
+        nextStageId: null,
+      },
+    ),
+  });
+
+  await pipeline.launchTask({
+    startStageId: "stage-a",
+    runtimeMode: "compose",
+    composeMode: "from",
+    workspaceRoot,
+    inputArtifacts: {
+      sourceDoc: "source.md",
+    },
+  });
+
+  assert.equal(invocationContexts.length, 2);
+  assert.equal(invocationContexts[1]?.stageId, "stage-b");
 }
 
 async function testSingleStepStopsAfterCurrentStage(workspaceRoot: string): Promise<void> {
