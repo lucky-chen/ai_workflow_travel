@@ -4,12 +4,20 @@ import type { ArtifactMap, StageId, TaskId } from "../../shared/types/common.js"
 export class TaskRuntimeStore {
   private readonly tasks = new Map<TaskId, TaskRecord>();
 
-  createTask(taskId: TaskId, startStageId: StageId, workspaceRoot: string, inputArtifacts: ArtifactMap, runId?: string): void {
+  createTask(
+    taskId: TaskId,
+    startStageId: StageId,
+    workspaceRoot: string,
+    inputArtifacts: ArtifactMap,
+    runId?: string,
+    requestMetadata?: Pick<TaskRecord, "executionUnit" | "runtimeMode" | "composeMode">,
+  ): void {
     this.tasks.set(taskId, {
       taskId,
       ...(runId ? { runId } : {}),
       startStageId,
       currentStageId: startStageId,
+      ...(requestMetadata ?? {}),
       attempt: 1,
       status: "pending",
       workspaceRoot,

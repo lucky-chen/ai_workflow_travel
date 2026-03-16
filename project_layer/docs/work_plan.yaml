@@ -17,11 +17,7 @@ principles:
   - only mark work complete after code and tests are updated and verified
   - preserve stable logical artifact names defined by the design docs even when runtime compatibility layers remain active
 execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up
-status: in_progress
-current_focus:
-  stage_id: stage_4_runtime_composition_modes
-  batch_id: batch_4_2_runtime_orchestration_boundary
-  task_id: task_4_2_2
+status: completed
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -239,7 +235,7 @@ stages:
   - stage_id: stage_4_runtime_composition_modes
     name: runtime composition modes
     goal: align runtime entry and orchestration with the documented run-unit and compose-run modes
-    status: in_progress
+    status: completed
     batches:
       - batch_id: batch_4_1_cli_entry_and_request_factory
         name: cli entry and request factory
@@ -263,7 +259,7 @@ stages:
       - batch_id: batch_4_2_runtime_orchestration_boundary
         name: runtime orchestration boundary
         goal: align runtime orchestration with the documented Runtime and Orchestrator boundary and composition-mode launch flexibility
-        status: in_progress
+        status: completed
         tasks:
           - task_id: task_4_2_1
             summary: split independent unit run handling from compose-run continuation handling in runtime orchestration
@@ -274,7 +270,7 @@ stages:
               - project_layer/projects/sdlc/tests/workflow
           - task_id: task_4_2_2
             summary: align runtime metadata and task records with execution-unit and compose-run terminology instead of only stage terminology
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/shared/contracts/pipeline.ts
               - project_layer/projects/sdlc/src/workflow/pipeline

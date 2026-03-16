@@ -59,7 +59,18 @@ export class PipelineService implements IPipeline {
       }, this.registry);
 
       if (triggerReason === "new_run" || !this.getTaskRecord(taskId)) {
-        this.taskRuntimeStore.createTask(taskId, startStageId, request.workspaceRoot, request.inputArtifacts, runId);
+        this.taskRuntimeStore.createTask(
+          taskId,
+          startStageId,
+          request.workspaceRoot,
+          request.inputArtifacts,
+          runId,
+          {
+            executionUnit: request.executionUnit,
+            runtimeMode: request.runtimeMode,
+            composeMode: request.composeMode,
+          },
+        );
       } else {
         const existingTask = this.getTaskRecord(taskId);
         if (!existingTask) {
@@ -70,6 +81,9 @@ export class PipelineService implements IPipeline {
           runId,
           startStageId,
           currentStageId: startStageId,
+          executionUnit: request.executionUnit,
+          runtimeMode: request.runtimeMode,
+          composeMode: request.composeMode,
           attempt: existingTask.attempt + 1,
           status: "pending",
           workspaceRoot: request.workspaceRoot,
@@ -86,6 +100,11 @@ export class PipelineService implements IPipeline {
         stageId: toCanonicalStageId(startStageId),
         eventType: TRACE_EVENT_TYPES.taskStarted,
         summary: `Task "${taskId}" started at stage "${toCanonicalStageId(startStageId)}".`,
+        metadata: {
+          ...(request.executionUnit ? { executionUnit: request.executionUnit } : {}),
+          ...(request.runtimeMode ? { runtimeMode: request.runtimeMode } : {}),
+          ...(request.composeMode ? { composeMode: request.composeMode } : {}),
+        },
       });
 
       let currentStageId: StageId | undefined = startStageId;
@@ -178,6 +197,11 @@ export class PipelineService implements IPipeline {
         stageId: toCanonicalStageId(this.getTaskRecord(taskId)?.currentStageId ?? startStageId),
         eventType: TRACE_EVENT_TYPES.taskFinished,
         summary: `Task "${taskId}" finished.`,
+        metadata: {
+          ...(this.getTaskRecord(taskId)?.executionUnit ? { executionUnit: this.getTaskRecord(taskId)?.executionUnit ?? "" } : {}),
+          ...(this.getTaskRecord(taskId)?.runtimeMode ? { runtimeMode: this.getTaskRecord(taskId)?.runtimeMode ?? "" } : {}),
+          ...(this.getTaskRecord(taskId)?.composeMode ? { composeMode: this.getTaskRecord(taskId)?.composeMode ?? "" } : {}),
+        },
       });
 
       return taskId;

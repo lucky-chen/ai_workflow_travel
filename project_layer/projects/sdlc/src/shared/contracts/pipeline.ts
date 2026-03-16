@@ -132,6 +132,9 @@ export interface TaskRecord {
   runId?: string;
   startStageId: StageId;
   currentStageId: StageId;
+  executionUnit?: string;
+  runtimeMode?: "direct" | "compose";
+  composeMode?: "standard" | "from";
   attempt: number;
   status: TaskStatus;
   workspaceRoot: string;

@@ -362,7 +362,9 @@ async function testStageDefinitionContinuationOverridesDefaultFlow(workspaceRoot
 
 async function testDirectRunStopsAfterCurrentStageByDefault(workspaceRoot: string): Promise<void> {
   const invocationContexts: StageRunContext[] = [];
+  const traceRecorder = new InMemoryTraceRecorder();
   const pipeline = new PipelineService({
+    traceRecorder,
     registry: createRegistry(
       {
         stageId: "stage-a",
@@ -403,8 +405,9 @@ async function testDirectRunStopsAfterCurrentStageByDefault(workspaceRoot: strin
     ),
   });
 
-  await pipeline.launchTask({
+  const taskId = await pipeline.launchTask({
     startStageId: "stage-a",
+    executionUnit: "work_plan_generate",
     runtimeMode: "direct",
     workspaceRoot,
     inputArtifacts: {
@@ -414,11 +417,19 @@ async function testDirectRunStopsAfterCurrentStageByDefault(workspaceRoot: strin
 
   assert.equal(invocationContexts.length, 1);
   assert.equal(invocationContexts[0]?.stageId, "stage-a");
+  assert.deepEqual(traceRecorder.getEvents()[0]?.event.metadata, {
+    executionUnit: "work_plan_generate",
+    runtimeMode: "direct",
+  });
+  assert.equal(pipeline.getTaskRecord(taskId)?.executionUnit, "work_plan_generate");
+  assert.equal(pipeline.getTaskRecord(taskId)?.runtimeMode, "direct");
 }
 
 async function testComposeRunContinuesAcrossStages(workspaceRoot: string): Promise<void> {
   const invocationContexts: StageRunContext[] = [];
+  const traceRecorder = new InMemoryTraceRecorder();
   const pipeline = new PipelineService({
+    traceRecorder,
     registry: createRegistry(
       {
         stageId: "stage-a",
@@ -459,8 +470,9 @@ async function testComposeRunContinuesAcrossStages(workspaceRoot: string): Promi
     ),
   });
 
-  await pipeline.launchTask({
+  const taskId = await pipeline.launchTask({
     startStageId: "stage-a",
+    executionUnit: "work_plan_generate",
     runtimeMode: "compose",
     composeMode: "from",
     workspaceRoot,
@@ -471,6 +483,13 @@ async function testComposeRunContinuesAcrossStages(workspaceRoot: string): Promi
 
   assert.equal(invocationContexts.length, 2);
   assert.equal(invocationContexts[1]?.stageId, "stage-b");
+  assert.deepEqual(traceRecorder.getEvents()[0]?.event.metadata, {
+    executionUnit: "work_plan_generate",
+    runtimeMode: "compose",
+    composeMode: "from",
+  });
+  assert.deepEqual(pipeline.getTaskRecord(taskId)?.runtimeMode, "compose");
+  assert.deepEqual(pipeline.getTaskRecord(taskId)?.composeMode, "from");
 }
 
 async function testSingleStepStopsAfterCurrentStage(workspaceRoot: string): Promise<void> {
