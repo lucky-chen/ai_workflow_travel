@@ -283,30 +283,109 @@
 }
 -->
 
-#### 4.1.5 Design-Item-Specific Rules
+#### 4.1.5 Item-Specific Boundary Rules
 
 <!--
 {
-  "section_contract": {
-    "section_id": "4.1.5",
-    "title": "Design-Item-Specific Rules",
+    "section_contract": {
+      "section_id": "4.1.5",
+    "title": "Item-Specific Boundary Rules",
     "checkitems": [
-      "add this subsection only when the design item has important transformation, validation, mapping, or request-construction rules",
-      "express stable rules that downstream collaborators depend on",
+      "add this subsection only when the design item has important stable boundary rules that are not already fully expressed by the input types, runtime types, output types, or later runtime-processing sections",
+      "express stable item-specific rules that downstream collaborators depend on",
+      "avoid repeating detailed path, I/O, or processing content that is already explained elsewhere in the document",
       "prefer bullets over long prose"
     ],
     "severity": "medium",
-    "expected_format": "- `{Rule1}`\n- `{Rule2}`\n- `{Rule3}`"
+    "expected_format": "- `{BoundaryRuleAboutUnitSeparation}`\n- `{BoundaryRuleAboutUnifiedEntryOrOwnership}`\n- `{BoundaryRuleAboutStableLogicalNamesOrBoundaryOutputs}`"
   }
 }
 -->
 
-### 4.2 Constraints
+### 4.2 Internal Runtime Skeleton
 
 <!--
 {
   "section_contract": {
     "section_id": "4.2",
+    "title": "Internal Runtime Skeleton",
+    "checkitems": [
+      "describe the internal runtime skeleton of the design item",
+      "prefer structured code-block expression such as `plantuml` or other compact skeleton notation over natural-language prose",
+      "show the main internal stages, decision points, and handoff points that connect the public API to the internal runtime path",
+      "keep the skeleton at module-design level rather than implementation trivia"
+    ],
+    "severity": "medium",
+    "expected_format": "```plantuml\n@startuml\nstart\n:{RuntimeStepA};\nif ({DecisionA}?) then (yes)\n  :{RuntimeStepB};\nelse (no)\n  :{RuntimeStepC};\nendif\n:{RuntimeStepD};\nstop\n@enduml\n```"
+  }
+}
+-->
+
+### 4.3 Runtime Processing Details
+
+<!--
+{
+  "section_contract": {
+    "section_id": "4.3",
+    "title": "Runtime Processing Details",
+    "checkitems": [
+      "use this section to describe what each important basic unit, component, or exposed operation reads, how it processes inputs, and what it emits",
+      "prefer organizing this section by concrete runtime item, basic unit, or operation rather than by cross-cutting prose-only categories",
+      "keep the description at design level and make read/process/write boundaries explicit",
+      "use short labeled blocks such as input loading, processing, and output emission",
+      "do not repeat public API signatures or full type definitions here"
+    ],
+    "severity": "medium",
+    "expected_format": "#### 4.3.x `{RuntimeItemA}`\n\nInput loading:\n\n- `{InputSourceA}`\n- `{InputSourceB}`\n\nProcessing:\n\n- `{ProcessingStepA}`\n- `{ProcessingStepB}`\n\nOutput emission:\n\n- `{OutputA}`\n- `{OutputB}`\n\n#### 4.3.y `{RuntimeItemB}`\n\nInput loading:\n\n- `{InputSourceC}`\n\nProcessing:\n\n- `{ProcessingStepC}`\n\nOutput emission:\n\n- `{OutputC}`"
+  }
+}
+-->
+
+### 4.4 Error Handling Skeleton
+
+<!--
+{
+  "section_contract": {
+    "section_id": "4.4",
+    "title": "Error Handling Skeleton",
+    "checkitems": [
+      "describe the main failure paths and recovery-entry shapes of the design item",
+      "prefer structured code-block expression such as `plantuml` over natural-language prose",
+      "show only the important error branches, error-result shapes, or resume/retry entry points"
+    ],
+    "severity": "medium",
+    "expected_format": "```plantuml\n@startuml\nstart\nif ({ErrorConditionA}?) then (yes)\n  :{ErrorHandlingStepA};\n  stop\nendif\nif ({ErrorConditionB}?) then (yes)\n  :{ErrorHandlingStepB};\n  stop\nendif\n:{RetryOrResumeRule};\nstop\n@enduml\n```"
+  }
+}
+-->
+
+### 4.5 Extension Points
+
+<!--
+{
+  "section_contract": {
+    "section_id": "4.5",
+    "title": "Extension Points",
+    "checkitems": [
+      "add this subsection when the design item has meaningful stable extension points",
+      "this subsection is recommended rather than mandatory",
+      "for runtime-heavy, policy-heavy, or adapter-heavy design items, prefer keeping this subsection",
+      "omit this subsection when there is no real extension-point information gain",
+      "prefer structured bullet form over long prose",
+      "make it clear what can evolve without changing the main public boundary"
+    ],
+    "severity": "medium",
+    "expected_format": "When present:\n- Extension point: `{ExtensionPointA}`\n  - `{ExtensionRuleA1}`\n  - `{ExtensionRuleA2}`\n- Extension point: `{ExtensionPointB}`\n  - `{ExtensionRuleB1}`\n  - `{ExtensionRuleB2}`\n\nThis subsection may be omitted when the design item has no meaningful stable extension points."
+  }
+}
+-->
+
+### 4.6 Constraints
+
+<!--
+{
+  "section_contract": {
+    "section_id": "4.6",
     "title": "Constraints",
     "checkitems": [
       "record the key design-item constraints and non-goals",

@@ -4,7 +4,7 @@
 
 - type: `functional_group_design`
 - scope: define the internal LLM adapter boundary and the external runtime capability reference boundary
-- includes: `LlmExecutor`, `AgentRuntime`
+- include: `LlmExecutor`, `AgentRuntime`
 - downstream usage: guide follow-up design for adapter normalization, capability-to-runtime collaboration, and external runtime reference linkage
 
 ## 1. Goal
@@ -23,9 +23,7 @@ This design document directly covers:
 This design document collaborates with:
 
 - `RequirementDesignGenerate`
-- `ArchitectureDesignGenerate`
 - `ItemDesignContract`
-- `WorkExecuteContract`
 
 ### 1.3 Core Functions
 
@@ -51,11 +49,9 @@ interface LlmExecutorApi {
 }
 
 class LlmExecutor
-class RuntimeRequestMapper
 interface AgentRuntimeApi
 
 LlmExecutorApi <|.. LlmExecutor
-LlmExecutor --> RuntimeRequestMapper
 LlmExecutor --> AgentRuntimeApi
 @enduml
 ```
@@ -75,19 +71,7 @@ Responsibilities:
 - Call `AgentRuntime`.
 - Return normalized execution results to capability modules.
 
-#### 2.2.2 `RuntimeRequestMapper`
-
-Role:
-
-- Request and result normalization helper.
-
-Responsibilities:
-
-- Convert internal request fields to runtime-compatible fields.
-- Normalize runtime result shape for project callers.
-- Isolate external boundary mapping from capability modules.
-
-#### 2.2.3 `AgentRuntimeApi`
+#### 2.2.2 `AgentRuntimeApi`
 
 Role:
 
@@ -105,14 +89,20 @@ Responsibilities:
 
 ```plantuml
 @startuml
-participant Caller as "Capability/* caller"
+participant RequirementDesignGenerate
+participant ItemDesignContract
 participant LlmExecutor
 participant AgentRuntime
 
-Caller -> LlmExecutor: Execute model-supported request
+RequirementDesignGenerate -> LlmExecutor: Execute model-supported generation request
 LlmExecutor -> AgentRuntime: Forward normalized runtime request
 AgentRuntime --> LlmExecutor: Return runtime result
-LlmExecutor --> Caller: Return normalized model result
+LlmExecutor --> RequirementDesignGenerate: Return model result
+
+ItemDesignContract -> LlmExecutor: Execute model-supported contract request
+LlmExecutor -> AgentRuntime: Forward normalized runtime request
+AgentRuntime --> LlmExecutor: Return runtime result
+LlmExecutor --> ItemDesignContract: Return model result
 @enduml
 ```
 
@@ -133,7 +123,7 @@ interface LlmExecutorApi {
 ```typescript
 interface LlmExecutionRequest {
   operation: string
-  payload: unknown
+  payload: Record<string, unknown>
   metadata?: Record<string, string>
 }
 ```
@@ -141,16 +131,20 @@ interface LlmExecutionRequest {
 #### 4.1.3 Runtime Types
 
 ```typescript
+interface AgentRuntimeApi {
+  execute(request: AgentRuntimeRequest): Promise<AgentRuntimeResult>
+}
+
 interface AgentRuntimeRequest {
   operation: string
-  payload: unknown
+  payload: Record<string, unknown>
   metadata?: Record<string, string>
 }
 
 interface AgentRuntimeResult {
   status: "success" | "failed"
-  payload: unknown
-  diagnostics?: string[]
+  payload: Record<string, unknown>
+  diagnostics?: Array<Record<string, unknown>>
 }
 ```
 
@@ -159,19 +153,82 @@ interface AgentRuntimeResult {
 ```typescript
 interface LlmExecutionResult {
   status: "success" | "failed"
-  payload: unknown
-  diagnostics?: string[]
+  payload: Record<string, unknown>
+  diagnostics?: Array<Record<string, unknown>>
 }
 ```
 
-#### 4.1.5 Design-Item-Specific Rules
+#### 4.1.5 Item-Specific Boundary Rules
 
 - Capability modules must call `LlmExecutor`, not `AgentRuntime`, directly.
 - `LlmExecutor` must keep request and result normalization stable.
 - External runtime replacement should not force capability-module API changes.
 - The external runtime reference remains defined in [AgentRuntime](../design_docs/SDK/AgentRuntime.md).
 
-### 4.2 Constraints
+### 4.2 Internal Runtime Skeleton
+
+```plantuml
+@startuml
+start
+:receive normalized model-support request;
+:map request into runtime-compatible shape;
+:select stable external runtime boundary;
+:send runtime request to AgentRuntime;
+:receive runtime result;
+:normalize result for capability caller;
+:return stable execution result;
+stop
+@enduml
+```
+
+### 4.3 Runtime Processing Details
+
+#### 4.3.1 LlmExecutorRequestHandling
+
+Input loading:
+
+- read one normalized `LlmExecutionRequest`
+- read optional request metadata needed for runtime adaptation
+
+Processing:
+
+- map the request into one runtime-compatible request shape
+- send the mapped request to `AgentRuntime`
+- normalize the returned runtime result for capability callers
+
+Output emission:
+
+- emit one `LlmExecutionResult`
+- preserve a stable capability-facing boundary independent of external runtime shape
+
+### 4.4 Error Handling Skeleton
+
+```plantuml
+@startuml
+start
+if (request shape invalid?) then (yes)
+  :return failed LlmExecutionResult;
+  stop
+endif
+:forward request to AgentRuntime;
+if (external runtime fails?) then (yes)
+  :normalize provider failure;
+  :return failed LlmExecutionResult;
+  stop
+endif
+:normalize runtime result;
+:return stable LlmExecutionResult;
+stop
+@enduml
+```
+
+### 4.5 Extension Points
+
+- Extension point: `external runtime boundary`
+  - support future external runtime replacement
+  - support additional model-supported caller types without changing capability-module boundaries
+
+### 4.6 Constraints
 
 - `LlmExecutor` belongs to `Capability`.
 - `AgentRuntime` belongs to `SDK`.

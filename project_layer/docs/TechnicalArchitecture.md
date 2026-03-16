@@ -101,7 +101,7 @@ Define the overall technical architecture of the AI-RD platform.
 -->
 
 - Overall architecture support for the Basic Execution Units defined in the requirement document.
-- Runtime modes for running one execution unit independently or combining multiple execution units.
+- Runtime modes for running one execution unit independently or combining multiple execution units through compose-run.
 - Quality control boundaries for `gate`, `trace`, and `contract`.
 - Major architecture partitions, dependency direction, and shared runtime constraints.
 
@@ -282,7 +282,7 @@ The system must provide validation or test feedback for generated outputs, so va
 }
 -->
 
-Users need to understand what the platform is doing during each execution unit or runtime-managed process, so the architecture should make execution process, status, and important changes visible and traceable.
+Users need to understand what the platform is doing during each execution unit or compose-run process, so the architecture should make execution process, status, and important changes visible and traceable.
 
 ### 3.8 incremental update on requirement changes
 
@@ -315,12 +315,12 @@ Requirement changes are frequent, so the architecture should support comparing c
       "connect the driver to required-input availability"
     ],
     "severity": "medium",
-    "expected_format": "The architecture should support launching from a selected execution point when the required inputs are available, so users can start from an intermediate point without rerunning the whole runtime-managed path."
+    "expected_format": "The architecture should support launching from a selected execution point when the required inputs are available, so users can start from an intermediate point without rerunning the whole compose-run path."
   }
 }
 -->
 
-The architecture should support launching from a selected execution unit or runtime-managed process when the required inputs are available, so users can start from an intermediate point without rerunning everything upstream.
+The architecture should support launching from a selected execution unit or compose-run process when the required inputs are available, so users can start from an intermediate point without rerunning everything upstream.
 
 # 4. Architecture Design
 
@@ -378,9 +378,9 @@ The system adopts a layered modular architecture centered on independently runna
 -->
 
 - Interface: system entry and information display, for example current-scope CLI and future-stage UI.
-- Runtime: overall runtime control for command input/output, capability invocation dispatch, and coordination across direct runs and runtime-managed runs.
+- Runtime: overall runtime control for command input/output, runtime context, capability invocation dispatch, and coordination across direct runs and compose-runs.
 - Capability: one architecture layer responsible for execution capabilities and contract checking. This layer contains the `Execution` and `Contract` modules.
-- Test: testing support for unit testing, black-box testing, integration testing, functional testing, and cross-partition validation across `Interface`, `Runtime`, `Capability`, `SDK`, and `Data`.
+- Test: testing support for unit testing, black-box testing, and integration testing across `Interface`, `Runtime`, `Capability`, `SDK`, and `Data`.
 - SDK: shared technical capabilities, including external `AgentRuntime` and internal `QualityControl`.
 - Data: shared persistence for artifacts, change history, trace records, and related metadata.
 
@@ -493,7 +493,7 @@ Order:
 -->
 
 - Local runtime: hosts `Interface`, `Runtime`, and `Capability` in the current scope.
-- Test runtime: hosts `Test` for unit testing, black-box testing, integration testing, functional testing, and cross-partition validation.
+- Test runtime: hosts `Test` for unit testing, black-box testing, and integration testing.
 - SDK runtime: provides the external `AgentRuntime` capability and the SDK-contained `QualityControl` module.
 - Runtime and Capability use the internal `LlmExecutor` adapter to access `AgentRuntime` when model support is required.
 - Shared resources: `Data/ArtifactStore` and `Data/RecordStore` provide persistent resources for artifacts, records, and trace data.
@@ -519,9 +519,9 @@ Order:
 -->
 
 - `Interface`: `Python` for the current CLI entry and interactive control flow.
-- `Runtime`: `TypeScript` on `NodeJS` for overall runtime control, command input/output handling, capability dispatch, and coordination.
+- `Runtime`: `TypeScript` on `NodeJS` for overall runtime control, runtime context handling, command input/output handling, capability dispatch, and coordination.
 - `Capability`: `TypeScript` on `NodeJS` for execution units, contract modules, and the internal `LlmExecutor` adapter.
-- `Test`: `TypeScript` on `NodeJS` plus test-runner support for unit testing, black-box testing, integration testing, functional testing, and cross-partition validation.
+- `Test`: `TypeScript` on `NodeJS` plus test-runner support for unit testing, black-box testing, and integration testing.
 - `SDK`: external `AgentRuntime` plus SDK-contained `QualityControl` with `Gate` and `Trace`.
 - `Data`: `LocalFile` in the current scope for artifact persistence and record storage.
 
@@ -572,34 +572,41 @@ Selection principles:
 Mode A: Direct execution unit run
 Interface -> Runtime
               |
+              +-> Runtime forwards request to Orchestrator
               +-> dispatch selected execution unit
               +-> read required artifacts by runtime convention
+              +-> unit writes artifact output by runtime convention
               +-> run related Contract when required
-              +-> submit result to gate
-              +-> write artifacts and trace by runtime convention
+              +-> unit writes contract output by runtime convention
+              +-> submit contract or validation result to gate
+              +-> trace writes records by runtime convention
               +-> stop
 
-Mode B: Runtime-managed run
+Mode B: Compose-run
 Interface -> Runtime
               |
+              +-> Runtime forwards request to Orchestrator
               +-> select next execution unit
               +-> read required artifacts by runtime convention
               +-> run execution unit
+              +-> unit writes artifact output by runtime convention
               +-> run related Contract when required
-              +-> submit result to gate
-              +-> write artifacts and trace by runtime convention
-              +-> continue / stop / retry / wait review
+              +-> unit writes contract output by runtime convention
+              +-> submit contract or validation result to gate
+              +-> trace writes records by runtime convention
+              +-> continue / stop / retry
 ```
 
-1. Interface starts either one direct execution-unit run or one runtime-managed run.
-2. For a direct unit run, `Runtime/*` dispatches the selected `Execution/*` module, reads required artifacts by runtime convention, invokes the related `Contract/*` module when that unit requires a contract result before downstream use or review, and writes outputs by runtime convention.
-3. `QualityControl/Gate` receives generated artifacts, contract results, generated changes, or validation results and returns allow, reject, or hold decisions.
-4. `QualityControl/Trace` records execution status, important changes, and decision points during the run.
-5. `Data/*` stores accepted artifacts, contract outputs, trace records, and execution records.
-6. For a runtime-managed run, `Runtime/*` decides whether to continue to the next execution unit, stop, retry, or wait for user action based on runtime-readable artifacts, runtime writing rules, and gate results.
-7. The standard runtime-managed path follows requirement design, architecture design, item design, overall design contract, work plan, work execute, and work execute contract, but this is one supported runtime mode rather than the only runtime shape.
+1. Interface starts either one direct execution-unit run or one compose-run request.
+2. `Runtime/*` is the unified runtime entry. In the current version it forwards direct-run and compose-run requests to `Orchestrator`, which handles the actual dispatch and simple continuation control.
+3. For a direct unit run, `Orchestrator` dispatches the selected `Execution/*` module, reads required artifacts by runtime convention, invokes the related `Contract/*` module when that unit requires a contract result before downstream use or review, and relies on that unit to write its own artifact output to `ArtifactStore`.
+4. `QualityControl/Gate` receives contract results, validation results, or checked change sets after the related contract or validation step and returns allow or reject decisions.
+5. `QualityControl/Trace` records execution status, important changes, and decision points during the run, and `RecordStore` persists those records.
+6. `Data/*` provides `ArtifactStore` for unit-owned artifact persistence and `RecordStore` for trace, gate, and execution records.
+7. For a compose-run request, `Orchestrator` currently provides only lightweight dispatch and continuation handling. Richer multi-step orchestration remains reserved for future versions.
+8. The standard compose-run path from requirement design to work execute contract is the intended long-term shape of this runtime mode, but in the current version it is an entry and capability reservation rather than a fully implemented orchestration flow.
 
-The reusable control shape is: select one execution unit, resolve required inputs, run it, expose changes and results, apply quality control, persist outputs, and then decide whether to continue.
+The reusable control shape is: select one execution unit, resolve required inputs, run it, let the unit persist its own outputs, apply quality control, and then decide whether to continue.
 
 ### 5.2 Core Modules
 
@@ -627,17 +634,22 @@ This section is organized by architecture partition.
 
 - **`Interface`**
   - `CliEntry`
-    - responsibility: trigger direct execution-unit runs and runtime-managed runs in the current scope.
+    - responsibility: trigger direct execution-unit runs and compose-runs in the current scope.
     - inputs: user commands and runtime context.
     - outputs: execution requests, review prompts, and visible run status.
     - ownership boundary: owns user-facing entry flow only and does not own execution logic.
 
 - **`Runtime`**
+  - `Runtime`
+    - responsibility: serve as the unified runtime entry, hold runtime context, accept direct-run and compose-run requests, and expose one stable runtime boundary to the interface layer.
+    - inputs: user commands normalized by the interface layer plus runtime context.
+    - outputs: runtime requests forwarded to internal runtime control and stable runtime results returned to the interface layer.
+    - ownership boundary: owns the runtime boundary only and does not own execution-unit internals.
   - `Orchestrator`
-    - responsibility: handle command input/output, choose one runtime mode, dispatch capability calls, verify required inputs, and coordinate continuation across execution units.
-    - inputs: direct-run or runtime-managed-run requests plus available upstream artifacts.
+    - responsibility: provide the current lightweight runtime control capability for direct-run and compose-run dispatch, required-input checks, and simple continuation decisions.
+    - inputs: runtime requests plus available upstream artifacts.
     - outputs: ordered execution-unit invocations and continuation decisions.
-    - ownership boundary: owns overall capability runtime control and does not own execution-unit internals.
+    - ownership boundary: lives inside `Runtime` and does not own execution-unit internals.
 
 - **`Capability`**
   - `RequirementDesignGenerate`
@@ -647,7 +659,7 @@ This section is organized by architecture partition.
   - `RequirementDesignUpdate`
     - responsibility: provide `[requirement_design_update]`.
     - inputs: user input and requirement context.
-    - outputs: updated requirement document artifacts.
+    - outputs: requirement update prompt/action outputs for downstream external update.
   - `ArchitectureDesignGenerate`
     - responsibility: provide `[architecture_design_generate]`.
     - inputs: user input and requirement document.
@@ -655,7 +667,7 @@ This section is organized by architecture partition.
   - `ArchitectureDesignUpdate`
     - responsibility: provide `[architecture_design_update]`.
     - inputs: user input and requirement document.
-    - outputs: updated architecture document artifacts.
+    - outputs: architecture update prompt/action outputs for downstream external update.
   - `ItemDesignGenerate`
     - responsibility: provide `[item_design_generate]`.
     - inputs: user input, requirement document, and architecture document.
@@ -663,7 +675,7 @@ This section is organized by architecture partition.
   - `ItemDesignUpdate`
     - responsibility: provide `[item_design_update]`.
     - inputs: user input, requirement document, and architecture document.
-    - outputs: updated item design document artifacts.
+    - outputs: item-design update prompt/action outputs for downstream external update.
   - `WorkPlanGenerate`
     - responsibility: provide `[work_plan_generate]`.
     - inputs: upstream design artifacts and user input.
@@ -671,11 +683,11 @@ This section is organized by architecture partition.
   - `WorkPlanUpdate`
     - responsibility: provide `[work_plan_update]`.
     - inputs: upstream design artifacts and user input.
-    - outputs: updated work plan artifacts.
+    - outputs: work-plan update prompt/action outputs for downstream external update.
   - `WorkExecute`
     - responsibility: provide `[work_execute]`.
     - inputs: upstream design artifacts, work plan, and current workspace files.
-    - outputs: code and workspace changes.
+    - outputs: execution prompt/action outputs for downstream external execution.
   - `RequirementDesignContract`
     - responsibility: provide `[requirement_design_contract]`.
     - inputs: requirement document artifacts and requirement rules.
@@ -712,12 +724,12 @@ This section is organized by architecture partition.
     - outputs: runtime execution results for project modules.
   - `QualityControl`
     - responsibility: provide review decision and execution visibility capability through `Gate` and `Trace`.
-    - inputs: generated artifacts, contract results, generated changes, validation results, execution status events, and decision events.
+    - inputs: contract results, checked change sets, validation results, execution status events, and decision events.
     - outputs: review decisions, trace records, and visible runtime summaries.
 
 - **`Test`**
   - `TestRunner`
-    - responsibility: run unit testing, black-box testing, integration testing, functional testing, and cross-partition validation across `Interface`, `Runtime`, `Capability`, `SDK`, and `Data`.
+    - responsibility: run unit testing, black-box testing, and integration testing across `Interface`, `Runtime`, `Capability`, `SDK`, and `Data`.
     - inputs: test targets, runtime-accessible artifacts, and test configuration.
     - outputs: test results, failure diagnostics, and integrated validation feedback.
 
@@ -769,60 +781,66 @@ This section describes high-level cross-module interaction at architecture level
 }
 -->
 
-- user scenario: the caller wants one Basic Execution Unit without running a larger runtime-managed process.
+- user scenario: the caller wants one Basic Execution Unit without running a larger compose-run process.
 - stage position: current scope.
 - goal: run one selected execution unit with the minimum required control path.
 
 ##### 5.3.1.1 RequestAndDispatch
 
 - summary: the interface selects direct-run mode and dispatches the request to the target execution unit.
-- modules involved: `CliEntry`, `Orchestrator`, `RequirementDesignGenerate` or another selected execution unit, `QualityControl/Trace`.
-- control focus: runtime-owned dispatch and visible run start.
+- modules involved: `CliEntry`, `Runtime`, `Orchestrator`, `RequirementDesignGenerate` or another selected execution unit, `QualityControl/Trace`.
+- control focus: Runtime entry ownership, Orchestrator dispatch, and visible run start.
 
 ```plantuml
 @startuml
 actor User
 participant CliEntry
+participant Runtime
 participant Orchestrator
 participant RequirementDesignGenerate
 participant "QualityControl/Trace" as Trace
 User -> CliEntry: Start direct execution-unit run
 CliEntry -> Trace: Record run start
-CliEntry -> Orchestrator: Submit direct-run request
+CliEntry -> Runtime: Submit direct-run request
+Runtime -> Orchestrator: Forward direct-run request
 Orchestrator -> RequirementDesignGenerate: Dispatch selected unit
 RequirementDesignGenerate --> Orchestrator: Return generated result
-Orchestrator --> CliEntry: Return run result
+Orchestrator --> Runtime: Return run result
+Runtime --> CliEntry: Return run result
 CliEntry -> Trace: Record unit completion
 @enduml
 ```
 
-##### 5.3.1.2 ReviewAndStore
+##### 5.3.1.2 ContractGateAndStore
 
-- summary: the runtime sends the result to quality control and persistence before stopping.
-- modules involved: `QualityControl/Gate`, `ArtifactStore`, `RecordStore`, `QualityControl/Trace`.
-- control focus: review decision and visible completion boundary.
+- summary: the runtime checks the direct-run result through the related contract module first, then submits the contract result to quality control while the unit-side artifact and contract outputs remain unit-owned persistence results.
+- modules involved: `RequirementDesignContract`, `QualityControl/Gate`, `ArtifactStore`, `RecordStore`, `QualityControl/Trace`.
+- control focus: contract-first review boundary and visible completion boundary.
 
 ```plantuml
 @startuml
-participant RequirementDesignGenerate
+participant Orchestrator
+participant RequirementDesignContract
 participant "QualityControl/Gate" as Gate
 participant ArtifactStore
 participant RecordStore
 participant "QualityControl/Trace" as Trace
-RequirementDesignGenerate -> Gate: Submit generated result
-Gate -> ArtifactStore: Store accepted result
+Orchestrator -> RequirementDesignContract: Check generated result
+RequirementDesignContract --> Orchestrator: Return contract result
+RequirementDesignContract -> ArtifactStore: Store visible contract result
+Orchestrator -> Gate: Submit contract result
 Gate -> RecordStore: Store gate decision
 Gate -> Trace: Record review outcome
 @enduml
 ```
 
-#### 5.3.2 RuntimeManagedRun
+#### 5.3.2 ComposeRun
 
 <!--
 {
   "section_contract": {
     "section_id": "5.3.2",
-    "title": "RuntimeManagedRun",
+    "title": "ComposeRun",
     "checkitems": [
       "describe how modules collaborate for one focused interaction case",
       "make user scenario, stage position, and interaction goal explicit"
@@ -833,26 +851,28 @@ Gate -> Trace: Record review outcome
 }
 -->
 
-- user scenario: the caller wants the standard path from upstream design artifacts to work execution validation.
-- stage position: current scope.
-- goal: coordinate multiple execution units with required-input checks, review points, and downstream continuation control.
+- user scenario: the caller wants to enter the reserved compose-run capability from upstream design artifacts toward work execution validation.
+- stage position: future-oriented runtime capability with current entry reservation.
+- goal: define the intended compose-run collaboration shape without claiming full current-version orchestration support.
 
 ##### 5.3.2.1 ComposeAndRunUnits
 
-- summary: the runtime module selects the next execution unit, provides required inputs, and advances through the standard path, including repeated item design execution for multiple target items.
-- modules involved: `Orchestrator`, `RequirementDesignGenerate`, `ArchitectureDesignGenerate`, `ItemDesignGenerate`, `WorkPlanGenerate`, `WorkExecute`.
-- control focus: runtime ownership, repeated item-level execution, and downstream continuation.
+- summary: `Runtime` receives the compose-run request, and `Orchestrator` is the reserved dispatch capability for this mode. The diagram shows the intended future collaboration shape rather than a fully implemented current-version flow.
+- modules involved: `CliEntry`, `Runtime`, `Orchestrator`, `RequirementDesignGenerate`, `ArchitectureDesignGenerate`, `ItemDesignGenerate`, `WorkPlanGenerate`, `WorkExecute`.
+- control focus: runtime ownership, reserved compose-run entry, and future orchestration boundary.
 
 ```plantuml
 @startuml
 participant CliEntry
+participant Runtime
 participant Orchestrator
 participant RequirementDesignGenerate
 participant ArchitectureDesignGenerate
 participant ItemDesignGenerate
 participant WorkPlanGenerate
 participant WorkExecute
-CliEntry -> Orchestrator: Start runtime-managed run
+CliEntry -> Runtime: Start compose-run
+Runtime -> Orchestrator: Forward compose-run request
 Orchestrator -> RequirementDesignGenerate: Run requirement design generate
 Orchestrator -> ArchitectureDesignGenerate: Run architecture design generate
 loop for each target item
@@ -910,7 +930,7 @@ LlmExecutor --> ItemDesignContract: Return model result
 
 ##### 5.3.3.1 ContractCheck
 
-- summary: the runtime module routes artifacts to the relevant contract module before downstream use.
+- summary: `Runtime` hands the current result into `Orchestrator`, which routes artifacts to the relevant contract module before downstream use.
 - modules involved: `Orchestrator`, `RequirementDesignContract`, `ArchitectureDesignContract`, `ItemDesignContract`, `OverallDesignContract`, `WorkPlanContract`, `WorkExecuteContract`.
 - control focus: contract ownership and downstream eligibility.
 
@@ -942,7 +962,7 @@ participant "QualityControl/Gate" as Gate
 participant "QualityControl/Trace" as Trace
 Orchestrator -> Gate: Request continuation decision
 Gate -> Trace: Record decision point
-Gate --> Orchestrator: Return allow/reject/hold
+Gate --> Orchestrator: Return allow/reject
 @enduml
 ```
 
@@ -963,7 +983,7 @@ Gate --> Orchestrator: Return allow/reject/hold
 }
 -->
 
-- user scenario: the caller needs visible execution status and durable artifacts during direct or runtime-managed runs.
+- user scenario: the caller needs visible execution status and durable artifacts during direct runs or compose-runs.
 - stage position: current scope.
 - goal: persist visible outputs and execution records without making execution units own storage policy.
 
@@ -1021,7 +1041,7 @@ WorkPlanContract -> ArtifactStore: Store visible contract result
 -->
 
 - Any Basic Execution Unit can be launched directly when its required inputs are available.
-- The standard runtime-managed path from requirement design to work execute contract is current-scope behavior, not the only allowed runtime mode.
+- Compose-run is a supported runtime boundary and entry reservation in the current version, while richer multi-step orchestration remains future work.
 - Downstream execution units must not start until required upstream artifacts are available and relevant contract checks have passed.
 - Important generated artifacts, contract results, code changes, and validation results must remain reviewable through `gate`.
 - Failures stop the current execution unit or contract path, do not trigger automatic rollback, and must support resume from the failed or an earlier related unit.
@@ -1064,7 +1084,7 @@ WorkPlanContract -> ArtifactStore: Store visible contract result
 - Why it matters:
   - The platform should remain available when part of the system fails.
 - Architectural support:
-  - Execution units can be invoked independently, so one failed runtime-managed run does not prevent all other unit runs.
+  - Execution units can be invoked independently, so one failed compose-run does not prevent all other unit runs.
   - Quality control and data recording should keep failure information visible to support safe retry or resume.
   - Runtime partitions can be separated later to reduce single-point failure risk.
 
@@ -1189,10 +1209,10 @@ Design categories:
   - scope: define current CLI entry behavior, request normalization, and user-facing control handoff
   - include: `CliEntry`
 
-- [orchestrator_design](./breakdown_docs/orchestrator_design.md)
+- [runtime_design](./breakdown_docs/runtime_design.md)
   - type: `functional_group_design`
-  - scope: define runtime modes, command input/output handling, capability dispatch, continuation rules, and resume behavior
-  - include: `Orchestrator`
+  - scope: define the unified runtime entry, runtime context, capability dispatch, continuation rules, and resume behavior
+  - include: `Runtime`, `Orchestrator`
 
 - [llm_capability_design](./breakdown_docs/llm_capability_design.md)
   - type: `functional_group_design`
@@ -1236,7 +1256,7 @@ Design categories:
 
 - [test_design](./breakdown_docs/test_design.md)
   - type: `test_design`
-  - scope: define test coverage boundaries, test layers, and cross-partition validation guidance
+  - scope: define test coverage boundaries, test layers, and integration-test guidance
   - include: `TestRunner`
 
 - [data_store_design](./breakdown_docs/data_store_design.md)
@@ -1264,6 +1284,6 @@ Design categories:
 }
 -->
 
-- The requirement document defines `external_composition` as a product capability, but the exact boundary between external caller composition and the current `Runtime`-managed execution path still needs a dedicated interaction definition.
+- The requirement document defines `external_composition` as a product capability, but the exact boundary between external caller composition and the current compose-run path still needs a dedicated interaction definition.
 - The current architecture uses requirement-facing basic unit names and code-oriented partition names together. The long-term mapping between requirement basic units, runtime modules, and design documents still needs an explicit naming rule.
 - The supported runtime modes for V3 Codex plugin adaptation still need a dedicated limit definition so the product does not over-commit beyond the current minimum goal.
