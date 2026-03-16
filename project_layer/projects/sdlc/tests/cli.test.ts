@@ -23,7 +23,10 @@ export async function runCliTests(): Promise<void> {
     await testCliRunMissingWorkspace();
     await testCliInitCopiesResources(workspaceRoot);
     await testRequestMapperRequiresStage();
+    await testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot);
+    await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
     await testModuleDesignRequiresTargetModule(workspaceRoot);
+    await testItemDesignRequiresTargetItem(workspaceRoot);
     await testImplementationExecutionRequiresWorkplan(workspaceRoot);
     await testReviewInteractionApply();
     await testReviewInteractionReject();
@@ -201,6 +204,57 @@ async function testRequestMapperRequiresStage(): Promise<void> {
   );
 }
 
+async function testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "item_design_generate",
+        workspace: workspaceRoot,
+        "target-item": "user_service",
+      },
+    }),
+    {
+      startStageId: "module_design",
+      targetModule: "user_service",
+      workspaceRoot,
+      inputArtifacts: {
+        architecture_document: "# Architecture\n",
+        module_descriptors: JSON.stringify({
+          name: "user_service",
+          responsibilities: [],
+        }),
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "work_plan_generate",
+        workspace: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "implementation_plan",
+      workspaceRoot,
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+        module_design_documents: JSON.stringify([
+          "# Module Alpha\n",
+          "# Module Beta\n",
+        ]),
+      },
+    },
+  );
+}
+
 async function testModuleDesignRequiresTargetModule(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   await assert.rejects(
@@ -213,6 +267,21 @@ async function testModuleDesignRequiresTargetModule(workspaceRoot: string): Prom
         },
       }),
     /Missing required option: --target-module for stage "module_design"./,
+  );
+}
+
+async function testItemDesignRequiresTargetItem(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  await assert.rejects(
+    async () =>
+      mapper.map({
+        command: "generate",
+        options: {
+          stage: "item_design_generate",
+          workspace: workspaceRoot,
+        },
+      }),
+    /Missing required option: --target-item for stage "item_design_generate"./,
   );
 }
 

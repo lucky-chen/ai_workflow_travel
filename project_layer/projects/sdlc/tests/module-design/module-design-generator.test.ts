@@ -121,7 +121,7 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
     ),
     true,
   );
-  assert.equal(payload.templateSkeleton.includes("# {ModuleName} Design"), true);
+  assert.equal(payload.templateSkeleton.includes("# {DesignItemName} Design"), true);
   assert.equal(payload.templateSkeleton.includes("document_contracts"), false);
   assert.equal(payload.templateSkeleton.includes("section_contract"), false);
 }

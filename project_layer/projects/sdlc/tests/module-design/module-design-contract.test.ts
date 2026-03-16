@@ -383,7 +383,7 @@ function createModuleDesignDocument(): string {
     "",
     "## 4. Detailed Design",
     "",
-    "### 4.1 Core APIs And Fields",
+    "### 4.1 Core APIs And Types",
     "",
     "#### 4.1.1 Public API",
     "```ts",
@@ -422,7 +422,19 @@ function createModuleDesignDocument(): string {
     "- stage retry must reuse task identity",
     "- only accepted artifacts can flow to the next stage",
     "",
-    "## 4.2 Constraints",
+    "### 4.2 Internal Runtime Skeleton",
+    "```plantuml",
+    "@startuml",
+    "start",
+    ":read architecture document;",
+    ":read one module descriptor;",
+    ":generate one module design document;",
+    ":return module design output;",
+    "stop",
+    "@enduml",
+    "```",
+    "",
+    "### 4.6 Constraints",
     "- keep workflow sequencing explicit",
     "- keep stage boundaries reviewable",
     "- keep runtime context minimal",
@@ -576,7 +588,7 @@ class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {
         severity: consistencyContract?.severity ?? "medium",
       });
     }
-    if (!/^\s*-\s+/m.test(extractSection(content, "## 4.2 Constraints"))) {
+    if (!/^\s*-\s+/m.test(extractSection(content, "### 4.6 Constraints"))) {
       issues.push({
         checkItem: consistencyContract?.check_item ?? "format_consistency",
         message: "Constraints section should list explicit constraint bullets.",

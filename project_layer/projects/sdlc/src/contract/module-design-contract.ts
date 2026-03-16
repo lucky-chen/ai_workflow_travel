@@ -218,7 +218,7 @@ export class ModuleDesignContract extends DocumentStageContract {
       });
     }
 
-    const constraintsSection = this.extractSection(content, "## 4.2 Constraints");
+    const constraintsSection = this.extractSection(content, "### 4.6 Constraints");
     if (!/^\s*-\s+/m.test(constraintsSection)) {
       issues.push({
         checkItem: formatContract?.check_item ?? "format_consistency",

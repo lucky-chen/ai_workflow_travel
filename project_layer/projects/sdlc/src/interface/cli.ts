@@ -5,6 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import type { GateDecision, IPipeline, LaunchTaskRequest, TraceEvent } from "../shared/contracts/pipeline.js";
 import { TRACE_EVENT_TYPES } from "../shared/contracts/pipeline.js";
+import { resolveStageIdAlias } from "../shared/contracts/pipeline.js";
 import { ImplementationPlanContract } from "../contract/implementation-plan-contract.js";
 import { resolveBundledResourcesDirectory } from "../shared/resource-resolver.js";
 import type { ChangedFile } from "../shared/types/common.js";
@@ -106,6 +107,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     const stageOption = this.readSingleOption(command.options, "stage") ?? this.readSingleOption(command.options, "module");
     const workspace = this.readSingleOption(command.options, "workspace");
     const targetModule = this.readSingleOption(command.options, "target-module");
+    const targetItem = this.readSingleOption(command.options, "target-item");
     const runId = this.readSingleOption(command.options, "run-id");
     const singleStep = this.readBooleanFlag(command.options, "single-step");
 
@@ -117,13 +119,14 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
       throw new Error("Missing required option: --workspace");
     }
 
-    const request = await this.buildWorkspaceLaunchRequest(stageOption, workspace, targetModule);
+    const resolvedTargetName = targetItem ?? targetModule;
+    const request = await this.buildWorkspaceLaunchRequest(stageOption, workspace, resolvedTargetName);
 
     return {
       ...request,
       ...(runId ? { runId } : {}),
       ...(singleStep ? { stopAfterCurrentStage: true } : {}),
-      ...(targetModule ? { targetModule } : {}),
+      ...(resolvedTargetName ? { targetModule: resolvedTargetName } : {}),
     };
   }
 
@@ -159,12 +162,13 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
   private async buildWorkspaceLaunchRequest(
     stageId: string,
     workspaceRoot: string,
-    targetModule?: string,
+    targetName?: string,
   ): Promise<LaunchTaskRequest> {
-    switch (stageId) {
+    const resolvedStageId = resolveStageIdAlias(stageId);
+    switch (resolvedStageId) {
       case "requirement_interpretation":
         return {
-          startStageId: stageId,
+          startStageId: resolvedStageId,
           workspaceRoot,
           inputArtifacts: {
             requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
@@ -172,31 +176,35 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
         };
       case "architecture_design":
         return {
-          startStageId: stageId,
+          startStageId: resolvedStageId,
           workspaceRoot,
           inputArtifacts: {
             requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
           },
         };
       case "module_design":
-        if (!targetModule) {
-          throw new Error('Missing required option: --target-module for stage "module_design".');
+        if (!targetName) {
+          if (stageId === "item_design" || stageId.startsWith("item_design_")) {
+            throw new Error(`Missing required option: --target-item for stage "${stageId}".`);
+          }
+
+          throw new Error(`Missing required option: --target-module for stage "${stageId}".`);
         }
 
         return {
-          startStageId: stageId,
+          startStageId: resolvedStageId,
           workspaceRoot,
           inputArtifacts: {
             architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
             module_descriptors: JSON.stringify({
-              name: targetModule,
+              name: targetName,
               responsibilities: [],
             }),
           },
         };
       case "implementation_plan":
         return {
-          startStageId: stageId,
+          startStageId: resolvedStageId,
           workspaceRoot,
           inputArtifacts: {
             requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
@@ -208,7 +216,7 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
         };
       case "validation":
         return {
-          startStageId: stageId,
+          startStageId: resolvedStageId,
           workspaceRoot,
           inputArtifacts: {},
         };

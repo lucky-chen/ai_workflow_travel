@@ -1,4 +1,4 @@
-import type { StageDefinition } from "../../shared/contracts/pipeline.js";
+import { resolveStageIdAlias, type StageDefinition } from "../../shared/contracts/pipeline.js";
 import type { StageId } from "../../shared/types/common.js";
 
 export class StageRegistry {
@@ -13,7 +13,7 @@ export class StageRegistry {
   }
 
   get(stageId: StageId): StageDefinition {
-    const definition = this.definitions.get(stageId);
+    const definition = this.definitions.get(this.resolveStageId(stageId));
     if (!definition) {
       throw new Error(`No stage definition registered for stageId "${stageId}".`);
     }
@@ -22,12 +22,16 @@ export class StageRegistry {
   }
 
   has(stageId: StageId): boolean {
-    return this.definitions.has(stageId);
+    return this.definitions.has(this.resolveStageId(stageId));
+  }
+
+  resolveStageId(stageId: StageId): StageId {
+    return resolveStageIdAlias(stageId);
   }
 
   validate(): void {
     for (const definition of this.definitions.values()) {
-      if (definition.nextStageId && !this.definitions.has(definition.nextStageId)) {
+      if (definition.nextStageId && !this.definitions.has(this.resolveStageId(definition.nextStageId))) {
         throw new Error(
           `Stage definition "${definition.stageId}" references missing nextStageId "${definition.nextStageId}".`,
         );

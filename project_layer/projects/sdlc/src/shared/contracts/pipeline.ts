@@ -34,6 +34,27 @@ export const TRACE_EVENT_TYPES = {
 
 export type TraceEventType = (typeof TRACE_EVENT_TYPES)[keyof typeof TRACE_EVENT_TYPES];
 
+export const STAGE_ID_ALIASES = {
+  requirement_design: "requirement_interpretation",
+  requirement_design_generate: "requirement_interpretation",
+  requirement_design_update: "requirement_interpretation",
+  requirement_design_contract: "requirement_interpretation",
+  item_design: "module_design",
+  item_design_generate: "module_design",
+  item_design_update: "module_design",
+  item_design_contract: "module_design",
+  work_plan: "implementation_plan",
+  work_plan_generate: "implementation_plan",
+  work_plan_update: "implementation_plan",
+  work_plan_contract: "implementation_plan",
+  work_execute: "implementation_execution",
+  work_execute_contract: "validation",
+} as const satisfies Record<string, StageId>;
+
+export function resolveStageIdAlias(stageId: StageId): StageId {
+  return STAGE_ID_ALIASES[stageId as keyof typeof STAGE_ID_ALIASES] ?? stageId;
+}
+
 export interface StageRunContext {
   taskId: TaskId;
   runId?: string;

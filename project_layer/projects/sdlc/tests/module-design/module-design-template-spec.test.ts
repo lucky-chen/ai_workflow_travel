@@ -27,7 +27,7 @@ async function testParseModuleDesignTemplateSpecExtractsContractsAndSkeleton(): 
 
   assert.equal(spec.contractSpec.document_contracts.length > 0, true);
   assert.equal(spec.contractSpec.section_contracts.some((entry) => entry.section_id === "4.1.2"), true);
-  assert.equal(spec.outputSkeleton.includes("# {ModuleName} Design"), true);
+  assert.equal(spec.outputSkeleton.includes("# {DesignItemName} Design"), true);
   assert.equal(spec.outputSkeleton.includes("document_contracts"), false);
   assert.equal(spec.outputSkeleton.includes("\"section_contract\""), false);
   assert.equal(spec.outputSkeleton.includes("<!--"), false);

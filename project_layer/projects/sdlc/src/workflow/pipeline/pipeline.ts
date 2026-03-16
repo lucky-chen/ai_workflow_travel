@@ -46,15 +46,19 @@ export class PipelineService implements IPipeline {
   }
 
   async launchTask(request: LaunchTaskRequest): Promise<TaskId> {
+    const startStageId = this.registry.resolveStageId(request.startStageId);
     const triggerReason = request.triggerReason ?? "new_run";
     const taskId = request.taskId ?? this.createTaskId();
     const runId = request.runId?.trim() || this.createRunId();
     const runTask = async (): Promise<TaskId> => {
       this.registry.validate();
-      this.launchValidator.validate(request, this.registry);
+      this.launchValidator.validate({
+        ...request,
+        startStageId,
+      }, this.registry);
 
       if (triggerReason === "new_run" || !this.getTaskRecord(taskId)) {
-        this.taskRuntimeStore.createTask(taskId, request.startStageId, request.workspaceRoot, request.inputArtifacts, runId);
+        this.taskRuntimeStore.createTask(taskId, startStageId, request.workspaceRoot, request.inputArtifacts, runId);
       } else {
         const existingTask = this.getTaskRecord(taskId);
         if (!existingTask) {
@@ -63,8 +67,8 @@ export class PipelineService implements IPipeline {
 
         this.taskRuntimeStore.updateTask(taskId, {
           runId,
-          startStageId: request.startStageId,
-          currentStageId: request.startStageId,
+          startStageId,
+          currentStageId: startStageId,
           attempt: existingTask.attempt + 1,
           status: "pending",
           workspaceRoot: request.workspaceRoot,
@@ -78,12 +82,12 @@ export class PipelineService implements IPipeline {
       });
       await this.traceRecorder?.recordTrace({
         caller: "PipelineService.launchTask",
-        stageId: request.startStageId,
+        stageId: startStageId,
         eventType: TRACE_EVENT_TYPES.taskStarted,
-        summary: `Task "${taskId}" started at stage "${request.startStageId}".`,
+        summary: `Task "${taskId}" started at stage "${startStageId}".`,
       });
 
-      let currentStageId: StageId | undefined = request.startStageId;
+      let currentStageId: StageId | undefined = startStageId;
       let currentInputArtifacts: ArtifactMap = request.inputArtifacts;
 
       while (currentStageId) {
@@ -170,7 +174,7 @@ export class PipelineService implements IPipeline {
 
       await this.traceRecorder?.recordTrace({
         caller: "PipelineService.launchTask",
-        stageId: this.getTaskRecord(taskId)?.currentStageId ?? request.startStageId,
+        stageId: this.getTaskRecord(taskId)?.currentStageId ?? startStageId,
         eventType: TRACE_EVENT_TYPES.taskFinished,
         summary: `Task "${taskId}" finished.`,
       });
