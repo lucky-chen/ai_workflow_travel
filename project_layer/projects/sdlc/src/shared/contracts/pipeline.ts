@@ -35,6 +35,9 @@ export const TRACE_EVENT_TYPES = {
 export type TraceEventType = (typeof TRACE_EVENT_TYPES)[keyof typeof TRACE_EVENT_TYPES];
 
 export const STAGE_ID_ALIASES = {
+  architecture_design_generate: "architecture_design",
+  architecture_design_update: "architecture_design",
+  architecture_design_contract: "architecture_design",
   requirement_design: "requirement_interpretation",
   requirement_design_generate: "requirement_interpretation",
   requirement_design_update: "requirement_interpretation",

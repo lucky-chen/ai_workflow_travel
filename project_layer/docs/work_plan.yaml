@@ -1,6 +1,6 @@
 version: 1
 plan_name: project_layer_runtime_alignment_work_plan
-target: align project_layer runtime and implementation plan with current requirement and architecture documents
+target: align project_layer runtime concepts, execution units, and runtime composition boundaries with the current requirement and architecture documents
 sources:
   requirement_doc: project_layer/docs/Requirement.md
   architecture_doc: project_layer/docs/TechnicalArchitecture.md
@@ -9,13 +9,19 @@ sources:
   code_root: project_layer/projects
 principles:
   - keep document terminology, runtime terminology, artifact naming, and CLI entry semantics consistent
+  - keep Basic Execution Units, Runtime Composition Modes, and quality-control concepts separated at plan level
+  - remove legacy business concepts from primary runtime semantics as each execution-unit batch is implemented
   - prefer minimal necessary code change per batch
   - split model-alignment work from feature-addition work
   - do not mix unrelated refactors into the same batch
   - only mark work complete after code and tests are updated and verified
-execution_scope: first executable batch set only
-status: completed
-current_focus: null
+  - preserve stable logical artifact names defined by the design docs even when runtime compatibility layers remain active
+execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up
+status: in_progress
+current_focus:
+  stage_id: stage_2_document_unit_baseline
+  batch_id: batch_2_2_architecture_design_units
+  task_id: task_2_2_2
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -58,7 +64,7 @@ stages:
   - stage_id: stage_2_document_unit_baseline
     name: document unit baseline
     goal: make requirement architecture item and work-plan units exist as real generator contract and runner flows
-    status: completed
+    status: in_progress
     batches:
       - batch_id: batch_2_1_requirement_design_units
         name: requirement design units
@@ -85,6 +91,34 @@ stages:
               - project_layer/projects/sdlc/src/execution
               - project_layer/projects/sdlc/src/workflow/stage-runners
               - project_layer/projects/sdlc/tests
+      - batch_id: batch_2_2_architecture_design_units
+        name: architecture design units
+        goal: make architecture generate update and contract align with the current architecture document model and derived item targets
+        status: in_progress
+        tasks:
+          - task_id: task_2_2_1
+            summary: add architecture_design_update baseline, make architecture generation distinguish generate vs update semantics, and stop exposing generate-only architecture semantics as the only primary path
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/execution/architecture-design-generator.ts
+              - project_layer/projects/sdlc/src/workflow/stage-runners/architecture-stage-runner.ts
+              - project_layer/projects/sdlc/src/shared/contracts/pipeline.ts
+              - project_layer/projects/sdlc/tests/architecture
+          - task_id: task_2_2_2
+            summary: add architecture_design_contract baseline and stop treating contract checks as only an internal side effect of architecture generation
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/contract
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests/architecture
+          - task_id: task_2_2_3
+            summary: align architecture design output artifacts with stable logical names such as architecture_design_template and architecture_design_contract_result
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/execution
+              - project_layer/projects/sdlc/src/contract
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests/architecture
       - batch_id: batch_2_3_item_design_units
         name: item design units
         goal: migrate module_design semantics to item_design semantics and keep one-target-per-run behavior
@@ -129,7 +163,7 @@ stages:
               - project_layer/projects/sdlc/src/interface/cli.ts
               - project_layer/projects/sdlc/tests/implementation-plan
           - task_id: task_2_4_2
-            summary: switch the accepted plan artifact from markdown execution plan to work_plan.yaml while preserving stage batch task structure
+            summary: switch the accepted plan artifact from markdown execution plan to a real yaml work_plan.yaml while preserving stage batch task structure
             status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
@@ -137,7 +171,7 @@ stages:
               - project_layer/projects/sdlc/src/workflow/stage-runners/stage-artifact-paths.ts
               - project_layer/projects/sdlc/tests
           - task_id: task_2_4_3
-            summary: add work_plan_update baseline with current external-update boundary semantics
+            summary: add work_plan_update baseline with current external-update boundary semantics on the yaml work plan structure
             status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution
@@ -147,15 +181,116 @@ stages:
       - direct unit runs exist for requirement design architecture design item design and work plan
       - work_plan artifact is emitted as yaml and preserves stage batch task structure
       - tests cover generator contract and runner success and failure cases
+      - architecture design units distinguish generate update and contract semantics explicitly
+  - stage_id: stage_3_cross_design_and_execution_contracts
+    name: cross design and execution contracts
+    goal: add cross-document contract control and separate work execution from work execution contract
+    status: pending
+    batches:
+      - batch_id: batch_3_1_overall_design_contract
+        name: overall design contract
+        goal: validate requirement architecture item and work-plan outputs together through one cross-document contract boundary
+        status: pending
+        tasks:
+          - task_id: task_3_1_1
+            summary: implement overall_design_contract runtime unit and result artifact naming aligned with overall_design_contract_result
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/contract
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests
+          - task_id: task_3_1_2
+            summary: feed overall_design_contract with requirement architecture item and work_plan artifacts using stable logical artifact names
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/shared/contracts
+              - project_layer/projects/sdlc/src/workflow/pipeline
+              - project_layer/projects/sdlc/tests/workflow
+      - batch_id: batch_3_2_work_execute_units
+        name: work execute units
+        goal: split work execution and work execution contract into separate execution units with stable result artifacts
+        status: pending
+        tasks:
+          - task_id: task_3_2_1
+            summary: align implementation execution runtime semantics with work_execute and keep accepted work plan and design artifacts as required inputs
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/execution/implementation-generator
+              - project_layer/projects/sdlc/src/workflow/stage-runners/implementation-stage-runner.ts
+              - project_layer/projects/sdlc/tests/implementation-execution
+          - task_id: task_3_2_2
+            summary: separate work_execute_contract from work_execute and emit work_execute_contract_result.json with the stable logical artifact name work_execute_contract_result
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/workflow/stage-runners/validation-stage-runner.ts
+              - project_layer/projects/sdlc/src/shared/contracts
+              - project_layer/projects/sdlc/tests
+          - task_id: task_3_2_3
+            summary: align work_execute input and output artifact names with work_execute design-doc constraints instead of legacy implementation terminology
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/shared/contracts
+              - project_layer/projects/sdlc/src/workflow/stage-runners
+              - project_layer/projects/sdlc/tests
+    validation:
+      - overall_design_contract exists as an independently runnable execution unit
+      - work_execute and work_execute_contract are separate runtime units
+      - contract result artifact names match the design-doc logical names
+  - stage_id: stage_4_runtime_composition_modes
+    name: runtime composition modes
+    goal: align runtime entry and orchestration with the documented run-unit and compose-run modes
+    status: pending
+    batches:
+      - batch_id: batch_4_1_cli_entry_and_request_factory
+        name: cli entry and request factory
+        goal: align CLI entry semantics with the design-doc runtime entry model
+        status: pending
+        tasks:
+          - task_id: task_4_1_1
+            summary: replace stage-oriented CLI generate entry semantics with run unit and run compose command semantics defined in cli_entry_design.md
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/interface/cli.ts
+              - project_layer/projects/sdlc/src/bin
+              - project_layer/projects/sdlc/tests/cli.test.ts
+          - task_id: task_4_1_2
+            summary: align runtime request creation with unit-run and compose-run boundaries instead of legacy stage launch assumptions
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/interface
+              - project_layer/projects/sdlc/src/shared/contracts
+              - project_layer/projects/sdlc/tests
+      - batch_id: batch_4_2_runtime_orchestration_boundary
+        name: runtime orchestration boundary
+        goal: align runtime orchestration with the documented Runtime and Orchestrator boundary and composition-mode launch flexibility
+        status: pending
+        tasks:
+          - task_id: task_4_2_1
+            summary: split independent unit run handling from compose-run continuation handling in runtime orchestration
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/workflow/pipeline
+              - project_layer/projects/sdlc/src/app/composition-root.ts
+              - project_layer/projects/sdlc/tests/workflow
+          - task_id: task_4_2_2
+            summary: align runtime metadata and task records with execution-unit and compose-run terminology instead of only stage terminology
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/shared/contracts/pipeline.ts
+              - project_layer/projects/sdlc/src/workflow/pipeline
+              - project_layer/projects/sdlc/tests/workflow
+    validation:
+      - CLI exposes documented run unit and run compose modes
+      - runtime orchestration distinguishes independent unit runs from compose-run continuation
 deferred_after_first_batch_set:
-  - overall_design_contract implementation and runtime integration
-  - work_execute and work_execute_contract split alignment
-  - cli direct unit command redesign
-  - compose-run canonical sequencing redesign
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model
+  - deeper partition alignment for runtime, data store, llm capability, quality control, and test design breakdown docs
 open_questions:
   - confirm whether item_design is a direct business rename of module_design or whether item selection must support non-module targets in v1
+  - confirm whether architecture_design_contract should exist as a distinct runnable unit or stay as an internal contract runner behind architecture_design in v1
 resolved_decisions:
   - work_plan.yaml is the only active execution baseline for the current implementation work
+  - work_plan.yaml should use a real yaml structure and should not carry markdown content in a yaml path
   - a temporary compatibility layer for legacy stage identifiers is active during the first batch set
+  - requirement_design, item_design, and work_plan generate and update baselines are already implemented and verified

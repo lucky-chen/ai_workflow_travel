@@ -185,6 +185,11 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
           workspaceRoot,
           inputArtifacts: {
             requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
+            ...(stageId === "architecture_design_update" || stageId === "architecture_design_contract"
+              ? {
+                  architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
+                }
+              : {}),
           },
         };
       case "module_design":

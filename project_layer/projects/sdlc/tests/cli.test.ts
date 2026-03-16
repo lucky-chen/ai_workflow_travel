@@ -23,6 +23,7 @@ export async function runCliTests(): Promise<void> {
     await testCliRunMissingWorkspace();
     await testCliInitCopiesResources(workspaceRoot);
     await testRequestMapperRequiresStage();
+    await testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
@@ -209,6 +210,30 @@ async function testRequestMapperRequiresStage(): Promise<void> {
         },
       }),
     /Missing required option: --stage/,
+  );
+}
+
+async function testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "architecture_design_update",
+        workspace: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "architecture_design",
+      workspaceRoot,
+      params: {
+        executionUnit: "architecture_design_update",
+      },
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+      },
+    },
   );
 }
 

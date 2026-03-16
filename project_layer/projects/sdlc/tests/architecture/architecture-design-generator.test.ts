@@ -16,6 +16,7 @@ export async function runArchitectureDesignGeneratorTests(): Promise<void> {
 
   try {
     await testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoot);
+    await testArchitectureDesignGeneratorSupportsUpdateExecutionUnit(workspaceRoot);
     await testArchitectureDesignGeneratorPrefersWorkspaceTemplate(workspaceRoot);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -83,12 +84,41 @@ async function testArchitectureDesignGeneratorBuildsPromptAndShapesOutput(worksp
 
   const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
     target: string;
-    inputDocument: string;
+    requirementDocument: string;
+    currentArchitectureDocument: string;
     template: string;
   };
-  assert.equal(payload.target, "architecture_design");
-  assert.equal(payload.inputDocument.includes("Requirement content."), true);
+  assert.equal(payload.target, "architecture_design_generate");
+  assert.equal(payload.requirementDocument.includes("Requirement content."), true);
+  assert.equal(payload.currentArchitectureDocument, "");
   assert.equal(payload.template.includes("# Technical Architecture"), true);
+}
+
+async function testArchitectureDesignGeneratorSupportsUpdateExecutionUnit(workspaceRoot: string): Promise<void> {
+  const llmExecutor = new MockLlmExecutor("# Technical Architecture\n\nUpdated architecture content.\n");
+  const generator = new ArchitectureDesignGenerator({ llmExecutor });
+
+  const output = await generator.run({
+    taskId: "task-1-update",
+    stageId: "architecture_design",
+    attempt: 1,
+    workspaceRoot,
+    params: {
+      executionUnit: "architecture_design_update",
+    },
+    inputArtifacts: {
+      requirement_document: "# 1. Background\n\nRequirement content.\n",
+      architecture_document: "# Technical Architecture\n\nCurrent architecture content.\n",
+    },
+  });
+
+  assert.equal(output.summary, "Architecture design document updated.");
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
+    target: string;
+    currentArchitectureDocument: string;
+  };
+  assert.equal(payload.target, "architecture_design_update");
+  assert.equal(payload.currentArchitectureDocument.includes("Current architecture content."), true);
 }
 
 async function testArchitectureDesignGeneratorPrefersWorkspaceTemplate(workspaceRoot: string): Promise<void> {

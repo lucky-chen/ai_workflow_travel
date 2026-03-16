@@ -165,10 +165,17 @@ export abstract class BaseStageRunner implements IStageRunner {
   }
 
   private resolveStageInputPaths(context: StageRunContext): string[] {
+    const executionUnit = context.params?.executionUnit?.trim();
     switch (resolveStageIdAlias(context.stageId)) {
       case "requirement_interpretation":
         return [resolveRequirementArtifactPath(context.workspaceRoot)];
       case "architecture_design":
+        if (executionUnit === "architecture_design_update" || executionUnit === "architecture_design_contract") {
+          return [
+            resolveRequirementArtifactPath(context.workspaceRoot),
+            resolveArchitectureArtifactPath(context.workspaceRoot),
+          ];
+        }
         return [resolveRequirementArtifactPath(context.workspaceRoot)];
       case "module_design":
         return [resolveArchitectureArtifactPath(context.workspaceRoot)];

@@ -1,5 +1,4 @@
-import type { StageOutput } from "../shared/contracts/pipeline.js";
-import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
+import type { ITraceRecorder, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "./document-stage-generator.js";
@@ -16,25 +15,45 @@ export interface ArchitectureDesignGeneratorDependencies {
   traceRecorder?: ITraceRecorder;
 }
 
-export class ArchitectureDesignGenerator extends DocumentStageGenerator {
+interface ArchitectureDesignGeneratorInputPayload {
+  requirementDocument: string;
+  currentArchitectureDocument?: string;
+}
+
+export class ArchitectureDesignGenerator extends DocumentStageGenerator<ArchitectureDesignGeneratorInputPayload> {
+  private currentContext?: StageRunContext;
+
   constructor(dependencies: ArchitectureDesignGeneratorDependencies) {
     super(dependencies.llmExecutor, dependencies.traceRecorder);
   }
 
-  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<string> {
-    const inputDocument = inputArtifacts.requirement_document;
-    if (!inputDocument) {
+  async run(context: StageRunContext): Promise<StageOutput> {
+    this.currentContext = context;
+    try {
+      return await super.run(context);
+    } finally {
+      this.currentContext = undefined;
+    }
+  }
+
+  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<ArchitectureDesignGeneratorInputPayload> {
+    const requirementDocument = inputArtifacts.requirement_document;
+    if (!requirementDocument) {
       throw new Error('Missing required input artifact "requirement_document".');
     }
 
-    return inputDocument;
+    return {
+      requirementDocument,
+      currentArchitectureDocument: inputArtifacts.architecture_document,
+    };
   }
 
   protected getTemplateResourcePath(): string {
     return "template/TechnicalArchitectureTemplate.md";
   }
 
-  protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
+  protected buildPrompt(inputDocument: ArchitectureDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
+    const executionUnit = this.readExecutionUnit(this.currentContext);
     return {
       prompt: {
         systemPrompt: [
@@ -45,8 +64,9 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
           "Return plain markdown only.",
         ],
         userPrompt: {
-          target: "architecture_design",
-          inputDocument,
+          target: executionUnit,
+          requirementDocument: inputDocument.requirementDocument,
+          currentArchitectureDocument: inputDocument.currentArchitectureDocument ?? "",
           template,
         },
       },
@@ -59,10 +79,12 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
 
   protected async buildStageOutput(result: LlmExecutionResult): Promise<StageOutput<ArchitectureDesignArtifacts>> {
     const designDocumentBreakdown = parseDesignDocumentBreakdown(result.content);
+    const executionUnit = this.readExecutionUnit(this.currentContext);
+    const isUpdate = executionUnit === "architecture_design_update";
     return {
       stageId: "architecture_design",
       success: true,
-      summary: "Architecture design document generated.",
+      summary: isUpdate ? "Architecture design document updated." : "Architecture design document generated.",
       artifacts: {
         artifactKey: "architecture_document",
         content: result.content,
@@ -80,5 +102,14 @@ export class ArchitectureDesignGenerator extends DocumentStageGenerator {
     return {
       designDocumentBreakdown: JSON.parse(artifacts.design_document_breakdown) as unknown,
     };
+  }
+
+  private readExecutionUnit(context?: StageRunContext): string {
+    const executionUnit = context?.params?.executionUnit?.trim();
+    if (executionUnit) {
+      return executionUnit;
+    }
+
+    return "architecture_design_generate";
   }
 }
