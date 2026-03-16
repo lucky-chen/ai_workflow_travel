@@ -125,6 +125,7 @@ export async function runSequentialModuleDesignFanout(
 
   return {
     ...nextArtifacts,
+    item_design_documents: JSON.stringify(acceptedModuleDesignPaths),
     module_design_documents: JSON.stringify(acceptedModuleDesignPaths),
   };
 }
@@ -147,9 +148,10 @@ function readModuleDesignPath(output: StageOutput): string {
     throw new Error('Module-design stage output must include object artifacts.');
   }
 
-  const path = (output.artifacts as Record<string, unknown>).module_design_document;
+  const path = (output.artifacts as Record<string, unknown>).item_design_document
+    ?? (output.artifacts as Record<string, unknown>).module_design_document;
   if (typeof path !== "string" || path.trim().length === 0) {
-    throw new Error('Module-design stage output must include non-empty artifacts.module_design_document.');
+    throw new Error("Item-design stage output must include a non-empty persisted design-document artifact path.");
   }
 
   return path;

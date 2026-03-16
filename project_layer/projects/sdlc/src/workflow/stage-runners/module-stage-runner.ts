@@ -37,7 +37,7 @@ export class ModuleStageRunner extends BaseStageRunner {
 
   async run(
     context: StageRunContext,
-  ): Promise<StageOutput<ModuleDesignArtifacts & { module_design_document: string }>> {
+  ): Promise<StageOutput<ModuleDesignArtifacts & { module_design_document: string; item_design_document: string }>> {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ModuleDesignArtifacts>;
@@ -49,7 +49,7 @@ export class ModuleStageRunner extends BaseStageRunner {
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
-      throw new Error(`Module design contract failed: ${contractResult.summary}`);
+      throw new Error(`Item design contract failed: ${contractResult.summary}`);
     }
 
     const artifactPath = this.readTargetPath(context.workspaceRoot, context, output.artifacts);
@@ -65,6 +65,7 @@ export class ModuleStageRunner extends BaseStageRunner {
       ...output,
       artifacts: {
         ...output.artifacts,
+        item_design_document: artifactPath,
         module_design_document: artifactPath,
       },
     };
@@ -88,7 +89,7 @@ export class ModuleStageRunner extends BaseStageRunner {
     return {
       taskId: context.taskId,
       stageId: context.stageId,
-      summary: `Module design document for "${artifacts.moduleName}" ready for review.`,
+      summary: `Item design document for "${artifacts.moduleName}" ready for review.`,
       changedPaths: [artifactPath],
       changedFiles: [
         {
@@ -117,7 +118,7 @@ export class ModuleStageRunner extends BaseStageRunner {
     await super.recordSharedPersistenceResult(
       context,
       artifactPath,
-      `Accepted module-design artifact persisted to ${artifactPath}.`,
+      `Accepted item-design artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
   }

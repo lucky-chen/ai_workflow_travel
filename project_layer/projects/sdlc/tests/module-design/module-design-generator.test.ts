@@ -26,7 +26,7 @@ export async function runModuleDesignGeneratorTests(): Promise<void> {
 }
 
 async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoot: string): Promise<void> {
-  const llmExecutor = new MockLlmExecutor("# Workflow Design\n\nGenerated module design content.\n");
+  const llmExecutor = new MockLlmExecutor("# Workflow Design\n\nGenerated item design content.\n");
   const generator = new ModuleDesignGenerator({ llmExecutor });
 
   const output = await generator.run({
@@ -48,12 +48,12 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
   assert.deepEqual(output, {
     stageId: "module_design",
     success: true,
-    summary: 'Module design document generated for "Workflow".',
+    summary: 'Item design document generated for "Workflow".',
     artifacts: {
-      artifactKey: "module_design_document",
+      artifactKey: "item_design_document",
       moduleName: "Workflow",
       documentPath: "sdlc/docs/module_design/Workflow.md",
-      content: "# Workflow Design\n\nGenerated module design content.\n",
+      content: "# Workflow Design\n\nGenerated item design content.\n",
     },
   });
 
@@ -61,7 +61,7 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
   assert.equal(llmExecutor.lastRequest?.metadata?.stage, "module_design");
   assert.equal(llmExecutor.lastRequest?.metadata?.moduleName, "Workflow");
   assert.equal(
-    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("module design document"),
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("item design document"),
     true,
   );
   assert.equal(
@@ -76,7 +76,7 @@ async function testModuleDesignGeneratorBuildsPromptAndShapesOutput(workspaceRoo
     templateRules: { document_contracts: Array<{ check_item: string }>; section_contracts: Array<{ section_id: string; checkitems: string[] }> };
     templateSkeleton: string;
   };
-  assert.equal(payload.target, "module_design");
+  assert.equal(payload.target, "item_design_generate");
   assert.equal(payload.architectureDocument.includes("Architecture content."), true);
   assert.equal(payload.moduleDescriptor.name, "Workflow");
   assert.equal(payload.moduleDescriptor.documentPath, "sdlc/docs/module_design/Workflow.md");

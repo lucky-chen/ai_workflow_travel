@@ -31,11 +31,12 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
           stageId: "module_design",
           status: "completed",
           success: true,
-          summary: `Module design generated for ${descriptor.name}.`,
+          summary: `Item design generated for ${descriptor.name}.`,
           artifacts: {
-            artifactKey: "module_design_document",
+            artifactKey: "item_design_document",
             moduleName: descriptor.name,
             documentPath: descriptor.documentPath ?? resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
+            item_design_document: descriptor.documentPath ?? resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
             module_design_document: descriptor.documentPath ?? resolveModuleDesignArtifactPath(workspaceRoot, descriptor.name),
             content: `# ${descriptor.name} Design`,
           },
@@ -109,6 +110,10 @@ async function testContinueAfterArchitectureDesignRunsSequentialModuleFanout(): 
     ]);
     assert.equal(updatedModuleInputs.length, invocationOrder.length);
     assert.deepEqual(JSON.parse(result.nextInputArtifacts.module_design_documents), [
+      "sdlc/docs/module_design/Workflow.md",
+      "sdlc/docs/module_design/Data.md",
+    ]);
+    assert.deepEqual(JSON.parse(result.nextInputArtifacts.item_design_documents), [
       "sdlc/docs/module_design/Workflow.md",
       "sdlc/docs/module_design/Data.md",
     ]);

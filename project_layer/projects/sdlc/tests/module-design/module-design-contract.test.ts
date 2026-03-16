@@ -40,9 +40,9 @@ async function testModuleDesignContractPassesForStructuredDocument(workspaceRoot
     {
       stageId: "module_design",
       success: true,
-      summary: "Module design document generated.",
+      summary: "Item design document generated.",
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName: "Workflow",
         content: createModuleDesignDocument(),
       },
@@ -51,7 +51,7 @@ async function testModuleDesignContractPassesForStructuredDocument(workspaceRoot
 
   assert.deepEqual(result, {
     passed: true,
-    summary: "Module design document passed contract checks.",
+    summary: "Item design document passed contract checks.",
     issues: [],
   });
 }
@@ -69,9 +69,9 @@ async function testModuleDesignContractPassesWithoutRuntimeTypes(workspaceRoot: 
     {
       stageId: "module_design",
       success: true,
-      summary: "Module design document generated.",
+      summary: "Item design document generated.",
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName: "Workflow",
         content: createModuleDesignDocumentWithoutRuntimeTypes(),
       },
@@ -80,7 +80,7 @@ async function testModuleDesignContractPassesWithoutRuntimeTypes(workspaceRoot: 
 
   assert.deepEqual(result, {
     passed: true,
-    summary: "Module design document passed contract checks.",
+    summary: "Item design document passed contract checks.",
     issues: [],
   });
 }
@@ -98,9 +98,9 @@ async function testModuleDesignContractPassesWithTypeBasedPublicApi(workspaceRoo
     {
       stageId: "module_design",
       success: true,
-      summary: "Module design document generated.",
+      summary: "Item design document generated.",
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName: "Workflow",
         content: createModuleDesignDocumentWithTypeBasedPublicApi(),
       },
@@ -109,7 +109,7 @@ async function testModuleDesignContractPassesWithTypeBasedPublicApi(workspaceRoo
 
   assert.deepEqual(result, {
     passed: true,
-    summary: "Module design document passed contract checks.",
+    summary: "Item design document passed contract checks.",
     issues: [],
   });
 }
@@ -127,9 +127,9 @@ async function testModuleDesignContractFailsForMissingSections(workspaceRoot: st
     {
       stageId: "module_design",
       success: true,
-      summary: "Module design document generated.",
+      summary: "Item design document generated.",
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName: "Workflow",
         content: "# Workflow Design",
       },
@@ -137,7 +137,7 @@ async function testModuleDesignContractFailsForMissingSections(workspaceRoot: st
   );
 
   assert.equal(result.passed, false);
-  assert.equal(result.summary, "Module design document failed contract checks.");
+  assert.equal(result.summary, "Item design document failed contract checks.");
   assert.equal(
     result.issues.some((issue) => issue.message.includes("Class Diagram") || issue.message.includes("Core Runtime Flow")),
     true,
@@ -153,7 +153,7 @@ async function testModuleDesignContractFailsForFormatAndConsistencyIssues(worksp
       "Input is architectureDocument plus moduleDescriptor.",
     )
     .replace(
-      "```ts\ninterface ModuleDesignOutput {\n  artifactKey: \"module_design_document\"\n  moduleName: string\n  content: string\n}\n```",
+      "```ts\ninterface ModuleDesignOutput {\n  artifactKey: \"item_design_document\"\n  moduleName: string\n  content: string\n}\n```",
       "Output is moduleName and generated markdown.",
     )
     .replace(
@@ -172,9 +172,9 @@ async function testModuleDesignContractFailsForFormatAndConsistencyIssues(worksp
     {
       stageId: "module_design",
       success: true,
-      summary: "Module design document generated.",
+      summary: "Item design document generated.",
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName: "Workflow",
         content: brokenDocument,
       },
@@ -202,9 +202,9 @@ async function testModuleDesignContractRejectsInvalidLlmResult(workspaceRoot: st
       {
         stageId: "module_design",
         success: true,
-        summary: "Module design document generated.",
+        summary: "Item design document generated.",
         artifacts: {
-          artifactKey: "module_design_document",
+          artifactKey: "item_design_document",
           moduleName: "Workflow",
           content: createModuleDesignDocument(),
         },
@@ -252,7 +252,7 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
         stageId: string;
         success: boolean;
         summary: string;
-        artifacts: { artifactKey: "module_design_document"; moduleName: string; content: string };
+        artifacts: { artifactKey: "item_design_document"; moduleName: string; content: string };
       },
       contractSpec: unknown,
     ): Promise<{
@@ -271,9 +271,9 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
     {
       stageId: "module_design",
       success: true,
-      summary: "Module design document generated.",
+      summary: "Item design document generated.",
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName: "Workflow",
         content: createModuleDesignDocument(),
       },
@@ -292,7 +292,7 @@ async function testModuleDesignContractBuildsPromptRequest(workspaceRoot: string
   assert.equal(request.metadata?.stage, "module_design");
   assert.equal(request.metadata?.checkType, "contract");
   assert.equal(normalizeUserPromptContent({ system: request.prompt.systemPrompt }).includes("Return JSON"), true);
-  assert.equal(payload.target, "module_design_contract_check");
+  assert.equal(payload.target, "item_design_contract_check");
   assert.equal(payload.moduleName, "Workflow");
   assert.equal(payload.generatedResult.includes("# Workflow Design"), true);
   assert.deepEqual(
@@ -411,7 +411,7 @@ function createModuleDesignDocument(): string {
     "#### 4.1.4 Output Types",
     "```ts",
     "interface ModuleDesignOutput {",
-    "  artifactKey: \"module_design_document\"",
+    "  artifactKey: \"item_design_document\"",
     "  moduleName: string",
     "  content: string",
     "}",
@@ -428,8 +428,8 @@ function createModuleDesignDocument(): string {
     "start",
     ":read architecture document;",
     ":read one module descriptor;",
-    ":generate one module design document;",
-    ":return module design output;",
+    ":generate one item design document;",
+    ":return item design output;",
     "stop",
     "@enduml",
     "```",
@@ -575,7 +575,7 @@ class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {
     if (!extractSection(content, "### 1.2 Involved Modules").includes("This module design directly involves:")) {
       issues.push({
         checkItem: consistencyContract?.check_item ?? "format_consistency",
-        message: "Involved Modules section should explicitly list direct and collaborating modules.",
+        message: "Involved Modules section should explicitly list direct and collaborating items.",
         severity: consistencyContract?.severity ?? "medium",
       });
     }
@@ -600,8 +600,8 @@ class ModuleDesignContractMockLlmExecutor implements ILlmExecutor {
       content: JSON.stringify({
         passed: issues.length === 0,
         summary: issues.length === 0
-          ? "Module design document passed contract checks."
-          : "Module design document failed contract checks.",
+          ? "Item design document passed contract checks."
+          : "Item design document failed contract checks.",
         issues,
       }),
       responseFormat: "json",

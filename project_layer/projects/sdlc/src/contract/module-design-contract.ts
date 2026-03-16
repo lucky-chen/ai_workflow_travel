@@ -10,7 +10,7 @@ import type { ContractExecutionResult, ContractSpec } from "./document-stage-con
 import { DocumentStageContract } from "./document-stage-contract.js";
 
 interface ModuleDesignArtifacts {
-  artifactKey: "module_design_document";
+  artifactKey: "item_design_document";
   moduleName: string;
   content: string;
 }
@@ -39,10 +39,10 @@ export class ModuleDesignContract extends DocumentStageContract {
     return {
       prompt: {
         systemPrompt:
-          "You check whether a module design document satisfies the provided contract spec. " +
+          "You check whether an item design document satisfies the provided contract spec. " +
           "Return JSON with passed, summary, and issues only.",
         userPrompt: {
-          target: "module_design_contract_check",
+          target: "item_design_contract_check",
           moduleName: moduleDesignOutput.artifacts.moduleName,
           generatedResult,
           contractSpec,
@@ -89,7 +89,7 @@ export class ModuleDesignContract extends DocumentStageContract {
     if (content.length === 0) {
       issues.push({
         checkItem: "module_design_document_not_empty",
-        message: "Module design document content must not be empty.",
+        message: "Item design document content must not be empty.",
         severity: "high",
       });
     }
@@ -101,8 +101,8 @@ export class ModuleDesignContract extends DocumentStageContract {
     return {
       passed: issues.length === 0,
       summary: issues.length === 0
-        ? "Module design document passed contract checks."
-        : "Module design document failed contract checks.",
+        ? "Item design document passed contract checks."
+        : "Item design document failed contract checks.",
       issues,
     };
   }
@@ -203,7 +203,7 @@ export class ModuleDesignContract extends DocumentStageContract {
     if (!involvedModulesSection.includes("This module design directly involves:")) {
       issues.push({
         checkItem: formatContract?.check_item ?? "format_consistency",
-        message: "Involved Modules section should explicitly list direct and collaborating modules.",
+        message: "Involved Modules section should explicitly list direct and collaborating items.",
         severity: formatContract?.severity ?? "medium",
       });
     }

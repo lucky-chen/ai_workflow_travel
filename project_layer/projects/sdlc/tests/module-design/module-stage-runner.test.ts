@@ -48,6 +48,7 @@ async function testModuleStageRunnerPersistsAcceptedDocument(workspaceRoot: stri
     },
   });
 
+  assert.equal(output.artifacts.item_design_document, "docs/design/workflow-module.md");
   assert.equal(output.artifacts.module_design_document, "docs/design/workflow-module.md");
   assert.equal(
     await readFile(path.join(workspaceRoot, "docs/design/workflow-module.md"), "utf8"),
@@ -140,7 +141,7 @@ async function testModuleStageRunnerContractFailure(
         }),
       },
     }),
-    /Module design contract failed:/,
+    /Item design contract failed:/,
   );
   assert.equal(
     await readFile(
@@ -171,8 +172,8 @@ class ModuleStageRunnerLlmExecutor implements ILlmExecutor {
         content: JSON.stringify({
           passed,
           summary: passed
-            ? "Module design document passed contract checks."
-            : "Module design document failed contract checks.",
+            ? "Item design document passed contract checks."
+            : "Item design document failed contract checks.",
           issues: passed ? [] : [
             {
               checkItem: "section_contract_alignment",
@@ -253,7 +254,7 @@ function createModuleDesignDocument(): string {
     "### 4.1 Generate Module Design",
     "",
     "#### 4.1.1 Purpose",
-    "Generate the module design document for a single module descriptor.",
+    "Generate the item design document for a single module descriptor.",
     "",
     "#### 4.1.2 Input Types",
     "```ts",
@@ -271,7 +272,7 @@ function createModuleDesignDocument(): string {
     "#### 4.1.4 Output Types",
     "```ts",
     "interface ModuleDesignOutput {",
-    "  artifactKey: \"module_design_document\"",
+    "  artifactKey: \"item_design_document\"",
     "  moduleName: string",
     "  content: string",
     "}",

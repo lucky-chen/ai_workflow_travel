@@ -13,7 +13,7 @@ export interface ModuleDescriptor {
 }
 
 export interface ModuleDesignArtifacts {
-  artifactKey: "module_design_document";
+  artifactKey: "item_design_document";
   moduleName: string;
   documentPath: string;
   content: string;
@@ -30,8 +30,19 @@ interface ModuleDesignGeneratorInputPayload {
 }
 
 export class ModuleDesignGenerator extends DocumentStageGenerator<ModuleDesignGeneratorInputPayload> {
+  private currentContext?: StageRunContext;
+
   constructor(dependencies: ModuleDesignGeneratorDependencies) {
     super(dependencies.llmExecutor, dependencies.traceRecorder);
+  }
+
+  async run(context: StageRunContext): Promise<StageOutput> {
+    this.currentContext = context;
+    try {
+      return await super.run(context);
+    } finally {
+      this.currentContext = undefined;
+    }
   }
 
   protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<ModuleDesignGeneratorInputPayload> {
@@ -73,15 +84,16 @@ export class ModuleDesignGenerator extends DocumentStageGenerator<ModuleDesignGe
 
   protected buildPrompt(inputDocument: ModuleDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
     const templateSpec = JSON.parse(template) as Awaited<ReturnType<typeof loadModuleDesignTemplateSpec>>;
+    const executionUnit = this.readExecutionUnit(this.currentContext);
     return {
       prompt: {
         systemPrompt:
-          "You generate a module design document that follows the provided template structure. " +
+          "You generate an item design document that follows the provided template structure. " +
           "Treat template rules as authoring instructions only, not as output content. " +
           "Do not copy template comments, contract schema names, generator internals, or validation internals into the document unless the architecture explicitly defines them. " +
           "Return plain markdown only.",
         userPrompt: {
-          target: "module_design",
+          target: executionUnit,
           architectureDocument: inputDocument.architectureDocument,
           moduleDescriptor: inputDocument.moduleDescriptor,
           templateRules: templateSpec.contractSpec,
@@ -100,19 +112,32 @@ export class ModuleDesignGenerator extends DocumentStageGenerator<ModuleDesignGe
   protected async buildStageOutput(result: LlmExecutionResult): Promise<StageOutput<ModuleDesignArtifacts>> {
     const moduleName = result.metadata?.moduleName;
     if (!moduleName) {
-      throw new Error('Module design generation result must include metadata.moduleName.');
+      throw new Error('Item design generation result must include metadata.moduleName.');
     }
+    const executionUnit = this.readExecutionUnit(this.currentContext);
+    const isUpdate = executionUnit === "item_design_update";
     return {
       stageId: "module_design",
       success: true,
-      summary: `Module design document generated for "${moduleName}".`,
+      summary: isUpdate
+        ? `Item design document updated for "${moduleName}".`
+        : `Item design document generated for "${moduleName}".`,
       artifacts: {
-        artifactKey: "module_design_document",
+        artifactKey: "item_design_document",
         moduleName,
         documentPath: result.metadata?.documentPath ?? "",
         content: result.content,
       },
     };
+  }
+
+  private readExecutionUnit(context?: StageRunContext): string {
+    const executionUnit = context?.params?.executionUnit?.trim();
+    if (executionUnit) {
+      return executionUnit;
+    }
+
+    return "item_design_generate";
   }
 
   private isModuleDescriptor(value: unknown): value is ModuleDescriptor {
