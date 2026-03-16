@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import {
@@ -9,32 +10,21 @@ import {
   DefaultCLICommandParser,
   DefaultCLIRequestMapper,
   ResourceWorkspaceInitializer,
-} from "../src/interface/cli.js";
-import type { IPipeline, LaunchTaskRequest } from "../src/shared/contracts/pipeline.js";
+} from "../src/Interface/CliEntry/cli.js";
+import type { Application } from "../src/Runtime/application.js";
+import type { RuntimeInput } from "../src/Runtime/Schema/runtime.js";
 
 export async function runCliTests(): Promise<void> {
   const workspaceRoot = await createTempDir("cli-workspace-");
 
   try {
-    await seedWorkspace(workspaceRoot);
     await testCommandParser(workspaceRoot);
-    await testRequestMapper(workspaceRoot);
-    await testCliRunSuccess(workspaceRoot);
-    await testCliRunMissingWorkspace();
-    await testCliInitCopiesResources(workspaceRoot);
-    await testRequestMapperRequiresStage();
-    await testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(workspaceRoot);
-    await testRequestMapperSupportsCanonicalArchitectureDesignContractStage(workspaceRoot);
-    await testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot);
-    await testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot);
-    await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
-    await testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRoot);
-    await testRequestMapperSupportsOverallDesignContractStage(workspaceRoot);
     await testRequestMapperSupportsComposeStandard(workspaceRoot);
     await testRequestMapperSupportsComposeFrom(workspaceRoot);
-    await testModuleDesignRequiresTargetModule(workspaceRoot);
-    await testItemDesignRequiresTargetItem(workspaceRoot);
-    await testImplementationExecutionRequiresWorkplan(workspaceRoot);
+    await testRequestMapperRejectsRunUnit(workspaceRoot);
+    await testRequestMapperRejectsGenerate(workspaceRoot);
+    await testCliRunComposeSuccess(workspaceRoot);
+    await testCliInitCopiesResources(workspaceRoot);
     await testReviewInteractionApply();
     await testReviewInteractionReject();
     await testReviewInteractionComment();
@@ -46,390 +36,12 @@ export async function runCliTests(): Promise<void> {
 async function testCommandParser(workspaceRoot: string): Promise<void> {
   const parser = new DefaultCLICommandParser();
   assert.deepEqual(
-    parser.parse(["run", "unit", "architecture_design", "--workdir", workspaceRoot, "--single-step"]),
+    parser.parse(["run", "compose", "standard", "--workdir", workspaceRoot]),
     {
       command: "run",
-      args: ["unit", "architecture_design"],
+      args: ["compose", "standard"],
       options: {
         workdir: workspaceRoot,
-        "single-step": "true",
-      },
-    },
-  );
-}
-
-async function testRequestMapper(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "work_plan_generate"],
-      options: {
-        workdir: workspaceRoot,
-        "single-step": "true",
-      },
-    }),
-    {
-      startStageId: "implementation_plan",
-      executionUnit: "work_plan_generate",
-      runtimeMode: "direct",
-      stopAfterCurrentStage: true,
-      workspaceRoot,
-      params: {
-        executionUnit: "work_plan_generate",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-        module_design_documents: JSON.stringify([
-          "# Module Alpha\n",
-          "# Module Beta\n",
-        ]),
-      },
-    },
-  );
-}
-
-async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
-  const parser = new DefaultCLICommandParser();
-  const mapper = new DefaultCLIRequestMapper();
-  const rendered: string[] = [];
-  const traceViewer: ConsoleTraceViewer = {
-    renderStatus(message: string): void {
-      rendered.push(`status:${message}`);
-    },
-    renderTrace(event): void {
-      rendered.push(`trace:${event.eventType}:${event.summary}`);
-    },
-    renderResult(summary: string): void {
-      rendered.push(`result:${summary}`);
-    },
-  };
-
-  let capturedRequest: LaunchTaskRequest | undefined;
-  const pipeline: IPipeline = {
-    async launchTask(request: LaunchTaskRequest): Promise<string> {
-      capturedRequest = request;
-      return "task-cli-1";
-    },
-  };
-
-  const cli = new CLIService(parser, mapper, pipeline, traceViewer);
-  const exitCode = await cli.run([
-    "run",
-    "unit",
-    "architecture_design",
-    "--workdir",
-    workspaceRoot,
-    "--single-step",
-  ]);
-
-  assert.equal(exitCode, 0);
-  assert.deepEqual(capturedRequest, {
-    startStageId: "architecture_design",
-    executionUnit: "architecture_design",
-    runtimeMode: "direct",
-    stopAfterCurrentStage: true,
-    workspaceRoot,
-    params: {
-      executionUnit: "architecture_design",
-      runtimeMode: "direct",
-    },
-    inputArtifacts: {
-      requirement_document: "# Requirement\n",
-    },
-  });
-  assert.deepEqual(rendered, [
-    'trace:task_launch_requested:Launching command "run" for target "architecture_design".',
-    "status:Task launched: task-cli-1",
-    "result:Completed command: run",
-  ]);
-}
-
-async function testCliRunMissingWorkspace(): Promise<void> {
-  const parser = new DefaultCLICommandParser();
-  const mapper = new DefaultCLIRequestMapper();
-  const traceViewer: ConsoleTraceViewer = {
-    renderStatus(): void {},
-    renderTrace(): void {},
-    renderResult(): void {},
-  };
-  const pipeline: IPipeline = {
-    async launchTask(): Promise<string> {
-      return "task-cli-1";
-    },
-  };
-  const cli = new CLIService(parser, mapper, pipeline, traceViewer);
-  await assert.rejects(
-    async () => cli.run(["run", "unit", "architecture_design"]),
-    /Missing required option: --workdir/,
-  );
-}
-
-async function testCliInitCopiesResources(workspaceRoot: string): Promise<void> {
-  const parser = new DefaultCLICommandParser();
-  const mapper = new DefaultCLIRequestMapper();
-  const initializer = new ResourceWorkspaceInitializer();
-  const rendered: string[] = [];
-  const traceViewer: ConsoleTraceViewer = {
-    renderStatus(message: string): void {
-      rendered.push(`status:${message}`);
-    },
-    renderTrace(event): void {
-      rendered.push(`trace:${event.eventType}:${event.summary}`);
-    },
-    renderResult(summary: string): void {
-      rendered.push(`result:${summary}`);
-    },
-  };
-  const pipeline: IPipeline = {
-    async launchTask(): Promise<string> {
-      throw new Error("launchTask should not be called for init.");
-    },
-  };
-
-  const cli = new CLIService(parser, mapper, pipeline, traceViewer, initializer);
-  const exitCode = await cli.run(["init", "--workdir", workspaceRoot]);
-
-  assert.equal(exitCode, 0);
-  assert.deepEqual(rendered, [
-    `status:Workspace initialized: ${workspaceRoot}`,
-    `result:Copied SDLC resources to ${path.join(workspaceRoot, "sdlc", "resources")}`,
-  ]);
-
-  const copiedStandard = await readFile(
-    path.join(workspaceRoot, "sdlc", "resources", "COLLABORATION_STANDARD.md"),
-    "utf8",
-  );
-  assert.equal(copiedStandard.includes("# Collaboration Standard"), true);
-
-  const localEnv = await readFile(path.join(workspaceRoot, "sdlc", "local_env.json"), "utf8");
-  assert.equal(localEnv.includes('"provider": "openai"'), true);
-  assert.equal(localEnv.includes('"api_key": "your-api-key"'), true);
-}
-
-async function testRequestMapperRequiresStage(): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  await assert.rejects(
-    async () =>
-      mapper.map({
-        command: "run",
-        args: ["unit"],
-        options: {
-          workdir: "/tmp/project",
-        },
-      }),
-    /Missing required execution unit for run unit\./,
-  );
-}
-
-async function testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "architecture_design_update"],
-      options: {
-        workdir: workspaceRoot,
-      },
-    }),
-    {
-      startStageId: "architecture_design",
-      executionUnit: "architecture_design_update",
-      runtimeMode: "direct",
-      workspaceRoot,
-      params: {
-        executionUnit: "architecture_design_update",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-      },
-    },
-  );
-}
-
-async function testRequestMapperSupportsCanonicalArchitectureDesignContractStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "architecture_design_contract"],
-      options: {
-        workdir: workspaceRoot,
-      },
-    }),
-    {
-      startStageId: "architecture_design",
-      executionUnit: "architecture_design_contract",
-      runtimeMode: "direct",
-      workspaceRoot,
-      params: {
-        executionUnit: "architecture_design_contract",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-      },
-    },
-  );
-}
-
-async function testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "item_design_generate"],
-      options: {
-        workdir: workspaceRoot,
-        "target-item": "user_service",
-      },
-    }),
-    {
-      startStageId: "module_design",
-      executionUnit: "item_design_generate",
-      runtimeMode: "direct",
-      targetModule: "user_service",
-      workspaceRoot,
-      params: {
-        executionUnit: "item_design_generate",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        architecture_document: "# Architecture\n",
-        module_descriptors: JSON.stringify({
-          name: "user_service",
-          responsibilities: [],
-        }),
-      },
-    },
-  );
-}
-
-async function testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "item_design_update"],
-      options: {
-        workdir: workspaceRoot,
-        "target-item": "user_service",
-      },
-    }),
-    {
-      startStageId: "module_design",
-      executionUnit: "item_design_update",
-      runtimeMode: "direct",
-      targetModule: "user_service",
-      workspaceRoot,
-      params: {
-        executionUnit: "item_design_update",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        architecture_document: "# Architecture\n",
-        module_descriptors: JSON.stringify({
-          name: "user_service",
-          responsibilities: [],
-        }),
-      },
-    },
-  );
-}
-
-async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "work_plan_generate"],
-      options: {
-        workdir: workspaceRoot,
-      },
-    }),
-    {
-      startStageId: "implementation_plan",
-      executionUnit: "work_plan_generate",
-      runtimeMode: "direct",
-      workspaceRoot,
-      params: {
-        executionUnit: "work_plan_generate",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-        module_design_documents: JSON.stringify([
-          "# Module Alpha\n",
-          "# Module Beta\n",
-        ]),
-      },
-    },
-  );
-}
-
-async function testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "work_plan_update"],
-      options: {
-        workdir: workspaceRoot,
-      },
-    }),
-    {
-      startStageId: "implementation_plan",
-      executionUnit: "work_plan_update",
-      runtimeMode: "direct",
-      workspaceRoot,
-      params: {
-        executionUnit: "work_plan_update",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-        module_design_documents: JSON.stringify([
-          "# Module Alpha\n",
-          "# Module Beta\n",
-        ]),
-      },
-    },
-  );
-}
-
-async function testRequestMapperSupportsOverallDesignContractStage(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  assert.deepEqual(
-    await mapper.map({
-      command: "run",
-      args: ["unit", "overall_design_contract"],
-      options: {
-        workdir: workspaceRoot,
-      },
-    }),
-    {
-      startStageId: "overall_design_contract",
-      executionUnit: "overall_design_contract",
-      runtimeMode: "direct",
-      workspaceRoot,
-      params: {
-        executionUnit: "overall_design_contract",
-        runtimeMode: "direct",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-        module_design_documents: JSON.stringify([
-          "# Module Alpha\n",
-          "# Module Beta\n",
-        ]),
       },
     },
   );
@@ -446,19 +58,8 @@ async function testRequestMapperSupportsComposeStandard(workspaceRoot: string): 
       },
     }),
     {
-      startStageId: "requirement_interpretation",
-      executionUnit: "requirement_design_generate",
-      runtimeMode: "compose",
+      mode: "compose",
       composeMode: "standard",
-      workspaceRoot,
-      params: {
-        executionUnit: "requirement_design_generate",
-        runtimeMode: "compose",
-        composeMode: "standard",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-      },
     },
   );
 }
@@ -471,160 +72,200 @@ async function testRequestMapperSupportsComposeFrom(workspaceRoot: string): Prom
       args: ["compose", "from", "work_plan_generate"],
       options: {
         workdir: workspaceRoot,
+        "run-id": "run-1",
       },
     }),
     {
-      startStageId: "implementation_plan",
-      executionUnit: "work_plan_generate",
-      runtimeMode: "compose",
+      mode: "compose",
       composeMode: "from",
-      workspaceRoot,
-      params: {
-        executionUnit: "work_plan_generate",
-        runtimeMode: "compose",
-        composeMode: "from",
-      },
-      inputArtifacts: {
-        requirement_document: "# Requirement\n",
-        architecture_document: "# Architecture\n",
-        module_design_documents: JSON.stringify([
-          "# Module Alpha\n",
-          "# Module Beta\n",
-        ]),
-      },
+      entryUnit: "work_plan_generate",
     },
   );
 }
 
-async function testModuleDesignRequiresTargetModule(workspaceRoot: string): Promise<void> {
+async function testRequestMapperRejectsRunUnit(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   await assert.rejects(
-    async () =>
-      mapper.map({
-        command: "run",
-        args: ["unit", "module_design"],
-        options: {
-          workdir: workspaceRoot,
-        },
-      }),
-    /Missing required option: --target-module for stage "module_design"./,
+    async () => mapper.map({
+      command: "run",
+      args: ["unit", "requirement_design_generate"],
+      options: {
+        workdir: workspaceRoot,
+      },
+    }),
+    /run unit/,
   );
 }
 
-async function testItemDesignRequiresTargetItem(workspaceRoot: string): Promise<void> {
+async function testRequestMapperRejectsGenerate(workspaceRoot: string): Promise<void> {
   const mapper = new DefaultCLIRequestMapper();
   await assert.rejects(
-    async () =>
-      mapper.map({
-        command: "run",
-        args: ["unit", "item_design_generate"],
-        options: {
-          workdir: workspaceRoot,
-        },
-      }),
-    /Missing required option: --target-item for stage "item_design_generate"./,
+    async () => mapper.map({
+      command: "generate",
+      args: [],
+      options: {
+        workdir: workspaceRoot,
+      },
+    }),
+    /legacy "generate" command/,
   );
 }
 
-async function testImplementationExecutionRequiresWorkplan(workspaceRoot: string): Promise<void> {
+async function testCliRunComposeSuccess(workspaceRoot: string): Promise<void> {
+  const parser = new DefaultCLICommandParser();
   const mapper = new DefaultCLIRequestMapper();
-  await assert.rejects(
-    async () =>
-      mapper.map({
-        command: "run",
-        args: ["unit", "implementation_execution"],
-        options: {
-          workdir: workspaceRoot,
-        },
-      }),
-    /Missing required workspace file: sdlc\/docs\/work_plan\.yaml/,
+  const rendered: string[] = [];
+  const traceViewer: ConsoleTraceViewer = {
+    renderStatus(message: string): void {
+      rendered.push(`status:${message}`);
+    },
+    renderTrace(event): void {
+      rendered.push(`trace:${event.eventType}:${event.summary}`);
+    },
+    renderResult(summary: string): void {
+      rendered.push(`result:${summary}`);
+    },
+  };
+
+  let capturedInput: RuntimeInput | undefined;
+  const application: Application = {
+    async run(input: RuntimeInput) {
+      capturedInput = input;
+      return {
+        accepted: true,
+        summary: "Compose-run request accepted.",
+      };
+    },
+  };
+
+  const cli = new CLIService(parser, mapper, application, traceViewer);
+  const exitCode = await cli.run([
+    "run",
+    "compose",
+    "from",
+    "architecture_design_generate",
+    "--workdir",
+    workspaceRoot,
+    "--run-id",
+    "run-1",
+  ]);
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(capturedInput, {
+    request: {
+      mode: "compose",
+      composeMode: "from",
+      entryUnit: "architecture_design_generate",
+    },
+    context: {
+      workspaceRoot,
+      runId: "run-1",
+      workspaceLocalEnv: {},
+    },
+  });
+  assert.deepEqual(rendered, [
+    'trace:task_launch_requested:Launching command "run" for compose mode "from".',
+    "status:Compose-run request accepted.",
+    "result:Completed command: run",
+  ]);
+}
+
+async function testCliInitCopiesResources(workspaceRoot: string): Promise<void> {
+  const parser = new DefaultCLICommandParser();
+  const mapper = new DefaultCLIRequestMapper();
+  const initializer = new ResourceWorkspaceInitializer();
+  const rendered: string[] = [];
+  const traceViewer: ConsoleTraceViewer = {
+    renderStatus(message: string): void {
+      rendered.push(`status:${message}`);
+    },
+    renderTrace(): void {},
+    renderResult(summary: string): void {
+      rendered.push(`result:${summary}`);
+    },
+  };
+  const application: Application = {
+    async run(): Promise<{ accepted: boolean; summary: string }> {
+      throw new Error("run should not be called for init");
+    },
+  };
+
+  const cli = new CLIService(parser, mapper, application, traceViewer, initializer);
+  const exitCode = await cli.run(["init", "--workdir", workspaceRoot]);
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(rendered, [
+    `status:Workspace initialized: ${workspaceRoot}`,
+    `result:Copied SDLC resources to ${path.join(workspaceRoot, "sdlc", "resources")}`,
+  ]);
+
+  const copiedStandard = await readFile(
+    path.join(workspaceRoot, "sdlc", "resources", "COLLABORATION_STANDARD.md"),
+    "utf8",
   );
+  assert.equal(copiedStandard.includes("# Collaboration Standard"), true);
 }
 
 async function testReviewInteractionApply(): Promise<void> {
-  const reviewOutput: string[] = [];
-  const reviewInteraction = new ConsoleReviewInteraction({
-    async ask(): Promise<string> {
-      return "apply";
-    },
-    write(message: string): void {
-      reviewOutput.push(message);
-    },
-  });
-  const decision = await reviewInteraction.waitForReview({
+  const prompts = createPromptAdapter(["apply"]);
+  const interaction = new ConsoleReviewInteraction(prompts.adapter);
+  const decision = await interaction.waitForReview({
     reviewId: "review-1",
-    summary: "Review generated changes.",
-    changedPaths: ["src/a.ts"],
-    changedFiles: [
-      { path: "src/a.ts", operation: "update", content: "export const a = 1;\n" },
-    ],
+    summary: "Review changes",
+    changedPaths: ["src/index.ts"],
+    changedFiles: [{ path: "src/index.ts", operation: "create", content: "export {};\n" }],
   });
   assert.deepEqual(decision, {
     action: "apply",
     summary: "User approved the change set.",
   });
-  assert.equal(reviewOutput.some((line) => line.includes("Review review-1: Review generated changes.")), true);
-  assert.equal(reviewOutput.some((line) => line.includes("Changed paths: src/a.ts")), true);
 }
 
 async function testReviewInteractionReject(): Promise<void> {
-  const rejectInteraction = new ConsoleReviewInteraction({
-    async ask(): Promise<string> {
-      return "reject";
-    },
-    write(): void {},
-  });
-  const rejectDecision = await rejectInteraction.waitForReview({
+  const prompts = createPromptAdapter(["reject"]);
+  const interaction = new ConsoleReviewInteraction(prompts.adapter);
+  const decision = await interaction.waitForReview({
     reviewId: "review-2",
-    summary: "Reject generated changes.",
+    summary: "Review changes",
     changedPaths: [],
     changedFiles: [],
   });
-  assert.deepEqual(rejectDecision, {
+  assert.deepEqual(decision, {
     action: "reject",
     summary: "User rejected the change set.",
   });
 }
 
 async function testReviewInteractionComment(): Promise<void> {
-  const commentInteraction = new ConsoleReviewInteraction({
-    async ask(prompt: string): Promise<string> {
-      if (prompt.includes("Apply changes?")) {
-        return "comment";
-      }
-
-      return "Please regenerate the service layer.";
-    },
-    write(): void {},
-  });
-  const commentDecision = await commentInteraction.waitForReview({
+  const prompts = createPromptAdapter(["comment", "please fix"]);
+  const interaction = new ConsoleReviewInteraction(prompts.adapter);
+  const decision = await interaction.waitForReview({
     reviewId: "review-3",
-    summary: "Comment on generated changes.",
+    summary: "Review changes",
     changedPaths: [],
     changedFiles: [],
   });
-  assert.deepEqual(commentDecision, {
+  assert.deepEqual(decision, {
     action: "wait",
     summary: "User requested changes before apply.",
-    comment: "Please regenerate the service layer.",
+    comment: "please fix",
   });
 }
 
+function createPromptAdapter(answers: string[]): {
+  adapter: { ask(prompt: string): Promise<string>; write(message: string): void };
+} {
+  const queue = [...answers];
+  return {
+    adapter: {
+      async ask(): Promise<string> {
+        return queue.shift() ?? "apply";
+      },
+      write(): void {},
+    },
+  };
+}
+
 async function createTempDir(prefix: string): Promise<string> {
-  const tempRoot = path.resolve(process.cwd(), "dist", "tmp");
-  await mkdir(tempRoot, { recursive: true });
-  return mkdtemp(path.join(tempRoot, prefix));
-}
-
-async function seedWorkspace(workspaceRoot: string): Promise<void> {
-  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md", "# Requirement\n");
-  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md", "# Architecture\n");
-  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/module_design/alpha.md", "# Module Alpha\n");
-  await writeWorkspaceFile(workspaceRoot, "sdlc/docs/module_design/beta.md", "# Module Beta\n");
-}
-
-async function writeWorkspaceFile(workspaceRoot: string, relativePath: string, content: string): Promise<void> {
-  const absolutePath = path.join(workspaceRoot, relativePath);
-  await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, content, "utf8");
+  return mkdtemp(path.join(os.tmpdir(), prefix));
 }
