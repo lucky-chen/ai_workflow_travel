@@ -32,7 +32,7 @@ export async function runImplementationPlanGeneratorTests(): Promise<void> {
 }
 
 async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(workspaceRoot: string): Promise<void> {
-  const llmExecutor = new MockLlmExecutor("# Implementation Workplan\n\nGenerated plan content.\n");
+  const llmExecutor = new MockLlmExecutor("# Work Plan\n\nGenerated plan content.\n");
   const generator = new ImplementationPlanGenerator({ llmExecutor });
 
   const output = await generator.run({
@@ -53,17 +53,17 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
   assert.deepEqual(output, {
     stageId: "implementation_plan",
     success: true,
-    summary: "Implementation workplan generated.",
+    summary: "Work plan generated.",
     artifacts: {
-      artifactKey: "implementation_workplan",
-      content: "# Implementation Workplan\n\nGenerated plan content.\n",
+      artifactKey: "work_plan",
+      content: "# Work Plan\n\nGenerated plan content.\n",
     },
   });
 
   assert.equal(llmExecutor.lastRequest?.responseFormat, "text");
   assert.equal(llmExecutor.lastRequest?.metadata?.stage, "implementation_plan");
   assert.equal(
-    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("implementation workplan"),
+    normalizePromptContent(llmExecutor.lastRequest?.prompt.systemPrompt ?? "").includes("work plan"),
     true,
   );
 
@@ -75,7 +75,7 @@ async function testImplementationPlanGeneratorBuildsPromptAndShapesOutput(worksp
     sharedCollaborationStandardPath: string;
     template: string;
   };
-  assert.equal(payload.target, "implementation_plan");
+  assert.equal(payload.target, "work_plan_generate");
   assert.equal(payload.requirementDocument, resolveRequirementArtifactPath("/tmp/workspace"));
   assert.equal(payload.architectureDocument, resolveArchitectureArtifactPath("/tmp/workspace"));
   assert.deepEqual(payload.moduleDesignDocuments, [

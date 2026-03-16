@@ -10,7 +10,7 @@ import { DocumentStageContract } from "./document-stage-contract.js";
 import type { ImplementationWorkPlan, ImplementationWorkPlanBatch, ImplementationWorkPlanStatus, ImplementationWorkPlanStep } from "../shared/contracts/implementation-workplan.js";
 
 interface ImplementationPlanArtifacts {
-  artifactKey: "implementation_workplan";
+  artifactKey: "work_plan";
   content: string;
 }
 
@@ -71,7 +71,7 @@ export class ImplementationPlanContract extends DocumentStageContract {
     }
 
     if (steps.length === 0 || steps.some((step) => step.batches.length === 0)) {
-      throw new Error("Implementation workplan markdown could not be parsed into a valid structured workplan.");
+      throw new Error("Work plan markdown could not be parsed into a valid structured work plan.");
     }
 
     return { steps };
@@ -97,10 +97,10 @@ export class ImplementationPlanContract extends DocumentStageContract {
     return {
       prompt: {
         systemPrompt:
-          "You check whether an implementation workplan satisfies the provided contract spec. " +
+          "You check whether a work plan satisfies the provided contract spec. " +
           "Return JSON with passed, summary, and issues only.",
         userPrompt: {
-          target: "implementation_plan_contract_check",
+          target: "work_plan_contract_check",
           generatedResult,
           contractSpec,
           upstreamContext: {
@@ -149,7 +149,7 @@ export class ImplementationPlanContract extends DocumentStageContract {
     if (content.length === 0) {
       issues.push({
         checkItem: "implementation_workplan_not_empty",
-        message: "Implementation workplan content must not be empty.",
+        message: "Work plan content must not be empty.",
         severity: "high",
       });
     }
@@ -161,8 +161,8 @@ export class ImplementationPlanContract extends DocumentStageContract {
     return {
       passed: issues.length === 0,
       summary: issues.length === 0
-        ? "Implementation workplan passed contract checks."
-        : "Implementation workplan failed contract checks.",
+        ? "Work plan passed contract checks."
+        : "Work plan failed contract checks.",
       issues,
     };
   }

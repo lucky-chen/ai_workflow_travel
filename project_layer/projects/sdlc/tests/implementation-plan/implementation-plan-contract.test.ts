@@ -40,7 +40,7 @@ async function testImplementationPlanContractPassesForStructuredWorkplan(workspa
 
   assert.deepEqual(result, {
     passed: true,
-    summary: "Implementation workplan passed contract checks.",
+    summary: "Work plan passed contract checks.",
     issues: [],
   });
 }
@@ -67,7 +67,7 @@ async function testImplementationPlanContractFailsForMissingSections(workspaceRo
   );
 
   assert.equal(result.passed, false);
-  assert.equal(result.summary, "Implementation workplan failed contract checks.");
+  assert.equal(result.summary, "Work plan failed contract checks.");
   assert.equal(
     result.issues.some((issue) => issue.message.includes("Missing required section")),
     true,
@@ -187,7 +187,7 @@ async function testImplementationPlanContractBuildsPromptRequest(workspaceRoot: 
   assert.equal(request.metadata?.stage, "implementation_plan");
   assert.equal(request.metadata?.checkType, "contract");
   assert.equal(normalizeUserPromptContent({ system: request.prompt.systemPrompt }).includes("Return JSON"), true);
-  assert.equal(payload.target, "implementation_plan_contract_check");
+  assert.equal(payload.target, "work_plan_contract_check");
   assert.equal(payload.generatedResult.includes("# Code Generation Execution Plan"), true);
   assert.equal(payload.upstreamContext.requirement_document, resolveRequirementArtifactPath("/tmp/workspace"));
   assert.equal(payload.upstreamContext.architecture_document, resolveArchitectureArtifactPath("/tmp/workspace"));
@@ -218,9 +218,9 @@ function createOutput(content: string) {
   return {
     stageId: "implementation_plan",
     success: true,
-    summary: "Implementation workplan generated.",
+    summary: "Work plan generated.",
     artifacts: {
-      artifactKey: "implementation_workplan" as const,
+      artifactKey: "work_plan" as const,
       content,
     },
   };
@@ -293,8 +293,8 @@ class ImplementationPlanContractMockLlmExecutor implements ILlmExecutor {
       content: JSON.stringify({
         passed: issues.length === 0,
         summary: issues.length === 0
-          ? "Implementation workplan passed contract checks."
-          : "Implementation workplan failed contract checks.",
+          ? "Work plan passed contract checks."
+          : "Work plan failed contract checks.",
         issues,
       }),
       responseFormat: "json",

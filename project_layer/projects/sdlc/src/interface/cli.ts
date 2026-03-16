@@ -121,12 +121,17 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
 
     const resolvedTargetName = targetItem ?? targetModule;
     const request = await this.buildWorkspaceLaunchRequest(stageOption, workspace, resolvedTargetName);
+    const requestParams = {
+      ...(request.params ?? {}),
+      executionUnit: stageOption,
+    };
 
     return {
       ...request,
       ...(runId ? { runId } : {}),
       ...(singleStep ? { stopAfterCurrentStage: true } : {}),
       ...(resolvedTargetName ? { targetModule: resolvedTargetName } : {}),
+      params: requestParams,
     };
   }
 
@@ -228,21 +233,22 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
   }
 
   private async buildImplementationExecutionLaunchRequest(workspaceRoot: string): Promise<LaunchTaskRequest> {
-    const implementationWorkplan = await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/CodeGenerationExecutionPlan.md");
+    const workPlan = await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/work_plan.yaml");
     const implementationPlanContract = new ImplementationPlanContract();
-    const parsedWorkplan = implementationPlanContract.parseWorkPlan(implementationWorkplan);
+    const parsedWorkplan = implementationPlanContract.parseWorkPlan(workPlan);
     const firstStep = parsedWorkplan.steps[0];
     const firstBatch = firstStep?.batches[0];
 
     if (!firstStep || !firstBatch) {
-      throw new Error("Implementation workplan must contain at least one step and one batch.");
+      throw new Error("Work plan must contain at least one step and one batch.");
     }
 
     return {
       startStageId: "implementation_execution",
       workspaceRoot,
       inputArtifacts: {
-        implementation_workplan: "sdlc/docs/CodeGenerationExecutionPlan.md",
+        implementation_workplan: "sdlc/docs/work_plan.yaml",
+        work_plan: "sdlc/docs/work_plan.yaml",
         parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
         current_step: JSON.stringify({
           stepId: firstStep.stepId,

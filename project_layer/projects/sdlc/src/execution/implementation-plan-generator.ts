@@ -1,11 +1,10 @@
-import type { StageOutput } from "../shared/contracts/pipeline.js";
-import type { ITraceRecorder } from "../shared/contracts/pipeline.js";
+import type { ITraceRecorder, StageOutput, StageRunContext } from "../shared/contracts/pipeline.js";
 import type { ArtifactMap } from "../shared/types/common.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../sdk/llm-executor/llm-executor.js";
 import { DocumentStageGenerator } from "./document-stage-generator.js";
 
 export interface ImplementationPlanArtifacts {
-  artifactKey: "implementation_workplan";
+  artifactKey: "work_plan";
   content: string;
 }
 
@@ -22,8 +21,19 @@ interface ImplementationPlanGeneratorInputPayload {
 }
 
 export class ImplementationPlanGenerator extends DocumentStageGenerator<ImplementationPlanGeneratorInputPayload> {
+  private currentContext?: StageRunContext;
+
   constructor(dependencies: ImplementationPlanGeneratorDependencies) {
     super(dependencies.llmExecutor, dependencies.traceRecorder);
+  }
+
+  async run(context: StageRunContext): Promise<StageOutput> {
+    this.currentContext = context;
+    try {
+      return await super.run(context);
+    } finally {
+      this.currentContext = undefined;
+    }
   }
 
   protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<ImplementationPlanGeneratorInputPayload> {
@@ -68,14 +78,15 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator<Implemen
   }
 
   protected buildPrompt(inputDocument: ImplementationPlanGeneratorInputPayload, template: string): LlmExecutionRequest {
+    const executionUnit = this.readExecutionUnit(this.currentContext);
     return {
       prompt: {
         systemPrompt:
-          "You generate an implementation workplan that follows the provided execution-plan template structure. " +
+          "You generate a work plan that follows the provided execution-plan template structure. " +
           "In section 1.1 Collaboration Rule, cite the provided shared collaboration standard document path exactly and keep the fixed scope statement from the template. " +
           "Return plain markdown only.",
         userPrompt: {
-          target: "implementation_plan",
+          target: executionUnit,
           requirementDocument: inputDocument.requirementDocument,
           architectureDocument: inputDocument.architectureDocument,
           moduleDesignDocuments: inputDocument.moduleDesignDocuments,
@@ -91,14 +102,25 @@ export class ImplementationPlanGenerator extends DocumentStageGenerator<Implemen
   }
 
   protected async buildStageOutput(result: LlmExecutionResult): Promise<StageOutput<ImplementationPlanArtifacts>> {
+    const executionUnit = this.readExecutionUnit(this.currentContext);
+    const isUpdate = executionUnit === "work_plan_update";
     return {
       stageId: "implementation_plan",
       success: true,
-      summary: "Implementation workplan generated.",
+      summary: isUpdate ? "Work plan updated." : "Work plan generated.",
       artifacts: {
-        artifactKey: "implementation_workplan",
+        artifactKey: "work_plan",
         content: result.content,
       },
     };
+  }
+
+  private readExecutionUnit(context?: StageRunContext): string {
+    const executionUnit = context?.params?.executionUnit?.trim();
+    if (executionUnit) {
+      return executionUnit;
+    }
+
+    return "work_plan_generate";
   }
 }

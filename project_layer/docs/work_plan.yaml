@@ -18,7 +18,7 @@ status: in_progress
 current_focus:
   stage_id: stage_2_document_unit_baseline
   batch_id: batch_2_4_work_plan_units
-  task_id: task_2_4_1
+  task_id: task_2_4_2
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -124,7 +124,7 @@ stages:
         tasks:
           - task_id: task_2_4_1
             summary: replace implementation_plan business terminology with work_plan in generator contract runner CLI and tests
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
               - project_layer/projects/sdlc/src/contract/implementation-plan-contract.ts

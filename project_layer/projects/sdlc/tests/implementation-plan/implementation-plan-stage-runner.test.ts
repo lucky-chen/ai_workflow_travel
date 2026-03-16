@@ -46,6 +46,7 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(workspa
 
   const implementationPlanPath = resolveImplementationPlanArtifactPath(workspaceRoot);
   assert.equal(output.artifacts.implementation_workplan, implementationPlanPath);
+  assert.equal(output.artifacts.work_plan, implementationPlanPath);
   assert.equal(typeof output.artifacts.parsed_implementation_workplan, "string");
   const parsedWorkplan = JSON.parse(output.artifacts.parsed_implementation_workplan) as {
     steps: Array<{ stepId: string; batches: Array<{ batchId: string }> }>;
@@ -61,7 +62,7 @@ async function testImplementationPlanStageRunnerPersistsAcceptedDocument(workspa
     await readFile(
       path.join(
         workspaceRoot,
-        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "CodeGenerationExecutionPlan.generated.md"),
+        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "work_plan.generated.yaml"),
       ),
       "utf8",
     ),
@@ -105,7 +106,7 @@ async function testImplementationPlanStageRunnerRejectStopsPersistence(workspace
     await readFile(
       path.join(
         workspaceRoot,
-        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "CodeGenerationExecutionPlan.generated.md"),
+        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "work_plan.generated.yaml"),
       ),
       "utf8",
     ),
@@ -130,13 +131,13 @@ async function testImplementationPlanStageRunnerContractFailure(
       workspaceRoot,
       inputArtifacts: createInputArtifacts(),
     }),
-    /Implementation plan contract failed:/,
+    /Work plan contract failed:/,
   );
   assert.equal(
     await readFile(
       path.join(
         workspaceRoot,
-        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "CodeGenerationExecutionPlan.generated.md"),
+        resolveStageGeneratedArtifactPath(workspaceRoot, "implementation_plan", "work_plan.generated.yaml"),
       ),
       "utf8",
     ),
@@ -176,8 +177,8 @@ class ImplementationPlanStageRunnerLlmExecutor implements ILlmExecutor {
         content: JSON.stringify({
           passed,
           summary: passed
-            ? "Implementation workplan passed contract checks."
-            : "Implementation workplan failed contract checks.",
+            ? "Work plan passed contract checks."
+            : "Work plan failed contract checks.",
           issues: passed ? [] : [
             {
               checkItem: "execution_step_structure_consistency",

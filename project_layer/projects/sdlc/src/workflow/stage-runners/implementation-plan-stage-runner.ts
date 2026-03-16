@@ -38,17 +38,18 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     context: StageRunContext,
   ): Promise<StageOutput<ImplementationPlanArtifacts & {
       implementation_workplan: string;
+      work_plan: string;
       parsed_implementation_workplan: string;
       current_step: string;
     }>> {
     await this.recordStageStart(context);
 
     const output = await this.generator.run(context) as StageOutput<ImplementationPlanArtifacts>;
-    await this.persistGeneratedStageArtifact(context, output, "CodeGenerationExecutionPlan.generated.md");
+    await this.persistGeneratedStageArtifact(context, output, "work_plan.generated.yaml");
     const contractResult = await this.contractChecker.check(context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
-      throw new Error(`Implementation plan contract failed: ${contractResult.summary}`);
+      throw new Error(`Work plan contract failed: ${contractResult.summary}`);
     }
 
     const artifactPath = resolveImplementationPlanArtifactPath(context.workspaceRoot);
@@ -66,6 +67,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
       artifacts: {
         ...output.artifacts,
         implementation_workplan: artifactPath,
+        work_plan: artifactPath,
         parsed_implementation_workplan: JSON.stringify(parsedWorkplan),
         current_step: JSON.stringify(this.resolveInitialCurrentStep(parsedWorkplan)),
       },
@@ -99,7 +101,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     return {
       taskId: context.taskId,
       stageId: context.stageId,
-      summary: "Implementation workplan ready for review.",
+      summary: "Work plan ready for review.",
       changedPaths: [artifactPath],
       changedFiles: [
         {
@@ -119,7 +121,7 @@ export class ImplementationPlanStageRunner extends BaseStageRunner {
     await super.recordSharedPersistenceResult(
       context,
       artifactPath,
-      `Accepted implementation-plan artifact persisted to ${artifactPath}.`,
+      `Accepted work-plan artifact persisted to ${artifactPath}.`,
       gateDecision,
     );
   }
