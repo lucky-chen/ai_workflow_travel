@@ -143,6 +143,9 @@ export interface LaunchTaskRequest {
   startStageId: StageId;
   taskId?: TaskId;
   runId?: string;
+  executionUnit?: string;
+  runtimeMode?: "direct" | "compose";
+  composeMode?: "standard" | "from";
   triggerReason?: "new_run" | "stage_entry";
   stopAfterCurrentStage?: boolean;
   workspaceRoot: string;

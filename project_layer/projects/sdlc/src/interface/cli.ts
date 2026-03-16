@@ -227,6 +227,9 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
 
     return {
       ...request,
+      executionUnit: input.executionUnit,
+      runtimeMode: input.runtimeMode,
+      ...(input.composeMode ? { composeMode: input.composeMode } : {}),
       ...(input.runId ? { runId: input.runId } : {}),
       ...(input.singleStep ? { stopAfterCurrentStage: true } : {}),
       ...(input.targetName ? { targetModule: input.targetName } : {}),
@@ -550,9 +553,9 @@ export class CLIService implements ICLI {
     }
 
     const request = await this.requestMapper.map(parsed);
-    const requestTarget = parsed.command === "run"
-      ? parsed.args.join(" ")
-      : request.startStageId;
+    const requestTarget = request.runtimeMode === "compose"
+      ? `compose ${request.composeMode ?? "standard"}${request.executionUnit ? ` ${request.executionUnit}` : ""}`
+      : request.executionUnit ?? request.startStageId;
     this.traceViewer.renderTrace({
       caller: "CLIService.run",
       stageId: request.startStageId,

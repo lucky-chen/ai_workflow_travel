@@ -71,6 +71,8 @@ async function testRequestMapper(workspaceRoot: string): Promise<void> {
     }),
     {
       startStageId: "implementation_plan",
+      executionUnit: "work_plan_generate",
+      runtimeMode: "direct",
       stopAfterCurrentStage: true,
       workspaceRoot,
       params: {
@@ -126,6 +128,8 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
   assert.equal(exitCode, 0);
   assert.deepEqual(capturedRequest, {
     startStageId: "architecture_design",
+    executionUnit: "architecture_design",
+    runtimeMode: "direct",
     stopAfterCurrentStage: true,
     workspaceRoot,
     params: {
@@ -137,7 +141,7 @@ async function testCliRunSuccess(workspaceRoot: string): Promise<void> {
     },
   });
   assert.deepEqual(rendered, [
-    'trace:task_launch_requested:Launching command "run" for target "unit architecture_design".',
+    'trace:task_launch_requested:Launching command "run" for target "architecture_design".',
     "status:Task launched: task-cli-1",
     "result:Completed command: run",
   ]);
@@ -232,6 +236,8 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignUpdateStage(w
     }),
     {
       startStageId: "architecture_design",
+      executionUnit: "architecture_design_update",
+      runtimeMode: "direct",
       workspaceRoot,
       params: {
         executionUnit: "architecture_design_update",
@@ -257,6 +263,8 @@ async function testRequestMapperSupportsCanonicalArchitectureDesignContractStage
     }),
     {
       startStageId: "architecture_design",
+      executionUnit: "architecture_design_contract",
+      runtimeMode: "direct",
       workspaceRoot,
       params: {
         executionUnit: "architecture_design_contract",
@@ -283,6 +291,8 @@ async function testRequestMapperSupportsCanonicalItemDesignStage(workspaceRoot: 
     }),
     {
       startStageId: "module_design",
+      executionUnit: "item_design_generate",
+      runtimeMode: "direct",
       targetModule: "user_service",
       workspaceRoot,
       params: {
@@ -313,6 +323,8 @@ async function testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspace
     }),
     {
       startStageId: "module_design",
+      executionUnit: "item_design_update",
+      runtimeMode: "direct",
       targetModule: "user_service",
       workspaceRoot,
       params: {
@@ -342,6 +354,8 @@ async function testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot: st
     }),
     {
       startStageId: "implementation_plan",
+      executionUnit: "work_plan_generate",
+      runtimeMode: "direct",
       workspaceRoot,
       params: {
         executionUnit: "work_plan_generate",
@@ -371,6 +385,8 @@ async function testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRo
     }),
     {
       startStageId: "implementation_plan",
+      executionUnit: "work_plan_update",
+      runtimeMode: "direct",
       workspaceRoot,
       params: {
         executionUnit: "work_plan_update",
@@ -400,6 +416,8 @@ async function testRequestMapperSupportsOverallDesignContractStage(workspaceRoot
     }),
     {
       startStageId: "overall_design_contract",
+      executionUnit: "overall_design_contract",
+      runtimeMode: "direct",
       workspaceRoot,
       params: {
         executionUnit: "overall_design_contract",
@@ -429,6 +447,9 @@ async function testRequestMapperSupportsComposeStandard(workspaceRoot: string): 
     }),
     {
       startStageId: "requirement_interpretation",
+      executionUnit: "requirement_design_generate",
+      runtimeMode: "compose",
+      composeMode: "standard",
       workspaceRoot,
       params: {
         executionUnit: "requirement_design_generate",
@@ -454,6 +475,9 @@ async function testRequestMapperSupportsComposeFrom(workspaceRoot: string): Prom
     }),
     {
       startStageId: "implementation_plan",
+      executionUnit: "work_plan_generate",
+      runtimeMode: "compose",
+      composeMode: "from",
       workspaceRoot,
       params: {
         executionUnit: "work_plan_generate",

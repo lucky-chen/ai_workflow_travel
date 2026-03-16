@@ -20,8 +20,8 @@ execution_scope: concept-aligned execution-unit baseline and runtime-boundary fo
 status: in_progress
 current_focus:
   stage_id: stage_4_runtime_composition_modes
-  batch_id: batch_4_1_cli_entry_and_request_factory
-  task_id: task_4_1_2
+  batch_id: batch_4_2_runtime_orchestration_boundary
+  task_id: task_4_2_1
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -244,7 +244,7 @@ stages:
       - batch_id: batch_4_1_cli_entry_and_request_factory
         name: cli entry and request factory
         goal: align CLI entry semantics with the design-doc runtime entry model
-        status: in_progress
+        status: completed
         tasks:
           - task_id: task_4_1_1
             summary: replace stage-oriented CLI generate entry semantics with run unit and run compose command semantics defined in cli_entry_design.md
@@ -255,7 +255,7 @@ stages:
               - project_layer/projects/sdlc/tests/cli.test.ts
           - task_id: task_4_1_2
             summary: align runtime request creation with unit-run and compose-run boundaries instead of legacy stage launch assumptions
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/interface
               - project_layer/projects/sdlc/src/shared/contracts
@@ -263,7 +263,7 @@ stages:
       - batch_id: batch_4_2_runtime_orchestration_boundary
         name: runtime orchestration boundary
         goal: align runtime orchestration with the documented Runtime and Orchestrator boundary and composition-mode launch flexibility
-        status: pending
+        status: in_progress
         tasks:
           - task_id: task_4_2_1
             summary: split independent unit run handling from compose-run continuation handling in runtime orchestration
