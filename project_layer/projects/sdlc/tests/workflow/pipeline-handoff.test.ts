@@ -7,6 +7,7 @@ import { ImplementationPlanStageRunner } from "../../src/workflow/stage-runners/
 import { ModuleStageRunner } from "../../src/workflow/stage-runners/module-stage-runner.js";
 import { RequirementStageRunner } from "../../src/workflow/stage-runners/requirement-stage-runner.js";
 import { ValidationStageRunner } from "../../src/workflow/stage-runners/validation-stage-runner.js";
+import { OverallDesignContractRunner } from "../../src/workflow/stage-runners/overall-design-contract-runner.js";
 import { InMemoryChangeGate } from "../../src/quality-gate/change-gate.js";
 import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
 import {
@@ -66,7 +67,7 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
         llmExecutor: new ModulePipelineLlmExecutor(),
         traceRecorder,
       }),
-      nextStageId: "implementation_plan",
+      nextStageId: "overall_design_contract",
     };
 
     const pipeline = new PipelineService({
@@ -92,6 +93,14 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
           continuation: createModuleDesignFanoutContinuation(moduleStageDefinition),
         },
         moduleStageDefinition,
+        {
+          stageId: "overall_design_contract",
+          launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],
+          runner: new OverallDesignContractRunner({
+            traceRecorder,
+          }),
+          nextStageId: "implementation_plan",
+        },
         {
           stageId: "implementation_plan",
           launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],
@@ -166,6 +175,12 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
         requirement_document: resolveRequirementArtifactPath(workspaceRoot),
         architecture_design: resolveArchitectureArtifactPath(workspaceRoot),
         architecture_document: resolveArchitectureArtifactPath(workspaceRoot),
+        overall_design_contract_result: "artifacts/design/overall_design_contract_result.json",
+        contract_result: JSON.stringify({
+          passed: true,
+          summary: "Overall design contract passed.",
+          issues: [],
+        }),
         item_design_document: resolveModuleDesignArtifactPath(workspaceRoot, "Data"),
         item_design_documents: JSON.stringify([
           resolveModuleDesignArtifactPath(workspaceRoot, "Workflow"),
@@ -234,6 +249,8 @@ async function testRequirementStageHandoffIntoImplementationExecution(workspaceR
       "generation_finished",
       "contract_checked",
       "gate_reviewed",
+      "artifact_persisted",
+      "stage_started",
       "artifact_persisted",
       "stage_started",
       "generation_started",

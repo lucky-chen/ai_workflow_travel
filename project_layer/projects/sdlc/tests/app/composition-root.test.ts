@@ -18,9 +18,9 @@ async function testCreateApplicationRuntimeBuildsProductionPipeline(): Promise<v
 
   runtime.registry.validate();
   assert.equal(typeof architectureStage.continuation?.continue, "function");
-  assert.equal(moduleStage.nextStageId, "implementation_plan");
+  assert.equal(moduleStage.nextStageId, "overall_design_contract");
   assert.equal(overallDesignContractStage.stageId, "overall_design_contract");
-  assert.equal(overallDesignContractStage.nextStageId, null);
+  assert.equal(overallDesignContractStage.nextStageId, "implementation_plan");
   assert.equal(implementationStage.nextStageId, null);
   assert.equal(itemDesignStage, moduleStage);
   assert.equal(workPlanStage.stageId, "implementation_plan");

@@ -146,7 +146,7 @@ export function createDefaultStageRegistry(services: ApplicationServices, option
       changeGate: services.changeGate,
       llmExecutor: services.llmExecutor,
     }),
-    nextStageId: "implementation_plan",
+    nextStageId: "overall_design_contract",
   };
 
   registry.register(requirementStageDefinition);
@@ -169,7 +169,7 @@ export function createDefaultStageRegistry(services: ApplicationServices, option
       traceRecorder: services.traceRecorder,
       changeGate: services.changeGate,
     }),
-    nextStageId: null,
+    nextStageId: "implementation_plan",
   });
   registry.register({
     stageId: "implementation_plan",
