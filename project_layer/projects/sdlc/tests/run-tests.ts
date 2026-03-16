@@ -19,6 +19,7 @@ import { runModuleDesignFanoutTests } from "./module-design/module-design-fanout
 import { runModuleDesignGeneratorTests } from "./module-design/module-design-generator.test.js";
 import { runModuleDesignTemplateSpecTests } from "./module-design/module-design-template-spec.test.js";
 import { runModuleStageRunnerTests } from "./module-design/module-stage-runner.test.js";
+import { runOverallDesignContractRunnerTests } from "./overall-design-contract/overall-design-contract-runner.test.js";
 import { runPipelineCoreTests } from "./workflow/pipeline-core.test.js";
 import { runPipelineHandoffTests } from "./workflow/pipeline-handoff.test.js";
 import { runPipelineStageEntryTests } from "./workflow/pipeline-stage-entry.test.js";
@@ -55,6 +56,7 @@ async function main(): Promise<void> {
   await runModuleDesignGeneratorTests();
   await runModuleDesignTemplateSpecTests();
   await runModuleStageRunnerTests();
+  await runOverallDesignContractRunnerTests();
   await runPipelineCoreTests(pipelineWorkspaceRoot);
   await runPipelineStageEntryTests(pipelineWorkspaceRoot);
   await runPipelineHandoffTests(pipelineWorkspaceRoot);

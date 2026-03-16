@@ -224,6 +224,18 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
             ),
           },
         };
+      case "overall_design_contract":
+        return {
+          startStageId: resolvedStageId,
+          workspaceRoot,
+          inputArtifacts: {
+            requirement_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/Requirement.md"),
+            architecture_document: await this.readWorkspaceFile(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"),
+            module_design_documents: JSON.stringify(
+              await this.readWorkspaceDirectoryFiles(workspaceRoot, "sdlc/docs/module_design"),
+            ),
+          },
+        };
       case "validation":
         return {
           startStageId: resolvedStageId,

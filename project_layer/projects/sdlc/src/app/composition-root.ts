@@ -19,6 +19,7 @@ import { ImplementationPlanStageRunner } from "../workflow/stage-runners/impleme
 import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
 import { ImplementationStageRunner } from "../workflow/stage-runners/implementation-stage-runner.js";
 import { ModuleStageRunner } from "../workflow/stage-runners/module-stage-runner.js";
+import { OverallDesignContractRunner } from "../workflow/stage-runners/overall-design-contract-runner.js";
 import { RequirementStageRunner } from "../workflow/stage-runners/requirement-stage-runner.js";
 import { ValidationStageRunner } from "../workflow/stage-runners/validation-stage-runner.js";
 import { ShellRunner } from "../workflow/shell-runner.js";
@@ -161,6 +162,15 @@ export function createDefaultStageRegistry(services: ApplicationServices, option
     continuation: createModuleDesignFanoutContinuation(moduleStageDefinition),
   });
   registry.register(moduleStageDefinition);
+  registry.register({
+    stageId: "overall_design_contract",
+    launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],
+    runner: new OverallDesignContractRunner({
+      traceRecorder: services.traceRecorder,
+      changeGate: services.changeGate,
+    }),
+    nextStageId: null,
+  });
   registry.register({
     stageId: "implementation_plan",
     launchRequirements: ["requirement_document", "architecture_document", "module_design_documents"],

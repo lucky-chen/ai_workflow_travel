@@ -29,6 +29,7 @@ export async function runCliTests(): Promise<void> {
     await testRequestMapperSupportsCanonicalItemDesignUpdateStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanStage(workspaceRoot);
     await testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRoot);
+    await testRequestMapperSupportsOverallDesignContractStage(workspaceRoot);
     await testModuleDesignRequiresTargetModule(workspaceRoot);
     await testItemDesignRequiresTargetItem(workspaceRoot);
     await testImplementationExecutionRequiresWorkplan(workspaceRoot);
@@ -363,6 +364,34 @@ async function testRequestMapperSupportsCanonicalWorkPlanUpdateStage(workspaceRo
       workspaceRoot,
       params: {
         executionUnit: "work_plan_update",
+      },
+      inputArtifacts: {
+        requirement_document: "# Requirement\n",
+        architecture_document: "# Architecture\n",
+        module_design_documents: JSON.stringify([
+          "# Module Alpha\n",
+          "# Module Beta\n",
+        ]),
+      },
+    },
+  );
+}
+
+async function testRequestMapperSupportsOverallDesignContractStage(workspaceRoot: string): Promise<void> {
+  const mapper = new DefaultCLIRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
+      command: "generate",
+      options: {
+        stage: "overall_design_contract",
+        workspace: workspaceRoot,
+      },
+    }),
+    {
+      startStageId: "overall_design_contract",
+      workspaceRoot,
+      params: {
+        executionUnit: "overall_design_contract",
       },
       inputArtifacts: {
         requirement_document: "# Requirement\n",

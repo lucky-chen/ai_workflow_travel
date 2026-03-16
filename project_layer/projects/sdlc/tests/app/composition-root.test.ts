@@ -10,6 +10,7 @@ async function testCreateApplicationRuntimeBuildsProductionPipeline(): Promise<v
   const runtime = createApplicationRuntime();
   const architectureStage = runtime.registry.get("architecture_design");
   const moduleStage = runtime.registry.get("module_design");
+  const overallDesignContractStage = runtime.registry.get("overall_design_contract");
   const implementationStage = runtime.registry.get("implementation_execution");
   const itemDesignStage = runtime.registry.get("item_design_generate");
   const workPlanStage = runtime.registry.get("work_plan_generate");
@@ -18,6 +19,8 @@ async function testCreateApplicationRuntimeBuildsProductionPipeline(): Promise<v
   runtime.registry.validate();
   assert.equal(typeof architectureStage.continuation?.continue, "function");
   assert.equal(moduleStage.nextStageId, "implementation_plan");
+  assert.equal(overallDesignContractStage.stageId, "overall_design_contract");
+  assert.equal(overallDesignContractStage.nextStageId, null);
   assert.equal(implementationStage.nextStageId, null);
   assert.equal(itemDesignStage, moduleStage);
   assert.equal(workPlanStage.stageId, "implementation_plan");

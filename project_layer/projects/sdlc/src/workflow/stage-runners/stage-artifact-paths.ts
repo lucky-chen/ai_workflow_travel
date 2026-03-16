@@ -29,6 +29,15 @@ export function resolveArchitectureContractResultArtifactPath(workspaceRoot: str
   );
 }
 
+export function resolveOverallDesignContractResultArtifactPath(workspaceRoot: string): string {
+  return resolveRelativeWorkspacePath(
+    workspaceRoot,
+    "artifacts",
+    "design",
+    "overall_design_contract_result.json",
+  );
+}
+
 export function resolveModuleDesignDirectoryPath(workspaceRoot: string): string {
   return resolveRelativeWorkspacePath(workspaceRoot, "sdlc", "docs", "module_design");
 }
