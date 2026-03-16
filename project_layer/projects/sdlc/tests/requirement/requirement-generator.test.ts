@@ -16,6 +16,7 @@ export async function runRequirementGeneratorTests(): Promise<void> {
 
   try {
     await testRequirementGeneratorBuildsPromptAndShapesOutput(workspaceRoot);
+    await testRequirementGeneratorSupportsUpdateExecutionUnit(workspaceRoot);
     await testRequirementGeneratorRequiresRequirementDocument(workspaceRoot);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -61,6 +62,30 @@ async function testRequirementGeneratorBuildsPromptAndShapesOutput(workspaceRoot
   assert.equal(payload.target, "requirement_design_generate");
   assert.equal(payload.inputDocument, "rough requirement input");
   assert.equal(payload.template.includes("# 1. Background"), true);
+}
+
+async function testRequirementGeneratorSupportsUpdateExecutionUnit(workspaceRoot: string): Promise<void> {
+  const llmExecutor = new MockLlmExecutor("# 1. Background\n\nUpdated requirement content.\n");
+  const generator = new RequirementGenerator({ llmExecutor });
+
+  const output = await generator.run({
+    taskId: "task-1-update",
+    stageId: "requirement_interpretation",
+    attempt: 1,
+    workspaceRoot,
+    params: {
+      executionUnit: "requirement_design_update",
+    },
+    inputArtifacts: {
+      requirement_document: "existing requirement input",
+    },
+  });
+
+  assert.equal(output.summary, "Requirement document updated.");
+  const payload = JSON.parse(normalizeUserPromptContent(llmExecutor.lastRequest?.prompt.userPrompt ?? {})) as {
+    target: string;
+  };
+  assert.equal(payload.target, "requirement_design_update");
 }
 
 async function testRequirementGeneratorRequiresRequirementDocument(workspaceRoot: string): Promise<void> {

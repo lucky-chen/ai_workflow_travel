@@ -33,6 +33,7 @@ export class RequirementGenerator extends DocumentStageGenerator<string> {
   }
 
   protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
+    const executionUnit = this.readExecutionUnit(this.currentContext);
     return {
       prompt: {
         systemPrompt: [
@@ -42,7 +43,7 @@ export class RequirementGenerator extends DocumentStageGenerator<string> {
           "Return plain markdown only.",
         ],
         userPrompt: {
-          target: "requirement_design_generate",
+          target: executionUnit,
           inputDocument,
           template,
         },
@@ -55,14 +56,36 @@ export class RequirementGenerator extends DocumentStageGenerator<string> {
   }
 
   protected async buildStageOutput(result: LlmExecutionResult): Promise<StageOutput<RequirementArtifacts>> {
+    const executionUnit = this.readExecutionUnit(this.currentContext);
+    const isUpdate = executionUnit === "requirement_design_update";
     return {
       stageId: "requirement_interpretation",
       success: true,
-      summary: "Requirement document generated.",
+      summary: isUpdate ? "Requirement document updated." : "Requirement document generated.",
       artifacts: {
         artifactKey: "requirement_document",
         content: result.content,
       },
     };
+  }
+
+  private currentContext?: StageRunContext;
+
+  async run(context: StageRunContext): Promise<StageOutput> {
+    this.currentContext = context;
+    try {
+      return await super.run(context);
+    } finally {
+      this.currentContext = undefined;
+    }
+  }
+
+  private readExecutionUnit(context?: StageRunContext): string {
+    const executionUnit = context?.params?.executionUnit?.trim();
+    if (executionUnit) {
+      return executionUnit;
+    }
+
+    return "requirement_design_generate";
   }
 }
