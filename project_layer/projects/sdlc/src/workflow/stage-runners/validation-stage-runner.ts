@@ -7,12 +7,12 @@ import type {
   StageOutput,
   StageRunContext,
 } from "../../shared/contracts/pipeline.js";
-import { TRACE_EVENT_TYPES } from "../../shared/contracts/pipeline.js";
+import { TRACE_EVENT_TYPES, toCanonicalStageId } from "../../shared/contracts/pipeline.js";
 import type { ChangedFile } from "../../shared/types/common.js";
 import { ShellRunner, type ShellResult } from "../shell-runner.js";
 
 export interface ValidationStageArtifacts {
-  artifactKey: "validation_result";
+  artifactKey: "work_execute_contract_result";
   projectPath: string;
   command: string;
   exitCode: number;
@@ -29,7 +29,7 @@ export interface ValidationStageRunnerDependencies {
   shellRunner?: ShellRunner;
 }
 
-const VALIDATION_ARTIFACT_PATH = "reports/validation/ValidationResult.json";
+const VALIDATION_ARTIFACT_PATH = "artifacts/work/work_execute_contract_result.json";
 
 export class ValidationStageRunner implements IStageRunner {
   private readonly shellRunner: ShellRunner;
@@ -39,11 +39,13 @@ export class ValidationStageRunner implements IStageRunner {
   }
 
   async run(context: StageRunContext): Promise<ValidationStageOutput> {
+    const canonicalStageId = toCanonicalStageId(context.stageId);
+
     await this.dependencies.traceRecorder?.recordTrace({
       caller: "ValidationStageRunner.run",
-      stageId: context.stageId,
+      stageId: canonicalStageId,
       eventType: TRACE_EVENT_TYPES.stageStarted,
-      summary: `Stage "${context.stageId}" started.`,
+      summary: `Stage "${canonicalStageId}" started.`,
       payload: {
         inputPaths: [],
       },
@@ -56,7 +58,7 @@ export class ValidationStageRunner implements IStageRunner {
 
     await this.dependencies.traceRecorder?.recordTrace({
       caller: "ValidationStageRunner.run",
-      stageId: context.stageId,
+      stageId: canonicalStageId,
       eventType: TRACE_EVENT_TYPES.validationFinished,
       summary: output.summary,
       metadata: {
@@ -69,7 +71,7 @@ export class ValidationStageRunner implements IStageRunner {
       const decision = await this.dependencies.changeGate.review(this.buildReviewRequest(context, output));
       await this.dependencies.traceRecorder?.recordTrace({
         caller: "ValidationStageRunner.run",
-        stageId: context.stageId,
+        stageId: canonicalStageId,
         eventType: TRACE_EVENT_TYPES.gateReviewed,
         summary: decision.summary,
         payload: {
@@ -82,7 +84,7 @@ export class ValidationStageRunner implements IStageRunner {
       });
 
       if (decision.action !== "apply") {
-        throw new Error(`Validation review ended with action "${decision.action}".`);
+        throw new Error(`Work execute contract review ended with action "${decision.action}".`);
       }
     }
 
@@ -97,9 +99,9 @@ export class ValidationStageRunner implements IStageRunner {
 
       await this.dependencies.traceRecorder?.recordTrace({
         caller: "ValidationStageRunner.run",
-        stageId: context.stageId,
+        stageId: canonicalStageId,
         eventType: TRACE_EVENT_TYPES.artifactPersisted,
-        summary: `Validation result persisted to ${VALIDATION_ARTIFACT_PATH}.`,
+        summary: `Work execute contract result persisted to ${VALIDATION_ARTIFACT_PATH}.`,
         payload: {
           outputPaths: [VALIDATION_ARTIFACT_PATH],
         },
@@ -122,11 +124,11 @@ export class ValidationStageRunner implements IStageRunner {
 
   private buildOutput(projectPath: string, shellResult: ShellResult): ValidationStageOutput {
     return {
-      stageId: "validation",
+      stageId: "work_execute_contract",
       success: shellResult.passed,
       summary: shellResult.summary,
       artifacts: {
-        artifactKey: "validation_result",
+        artifactKey: "work_execute_contract_result",
         projectPath,
         command: shellResult.command,
         exitCode: shellResult.exit_code,
@@ -150,7 +152,7 @@ export class ValidationStageRunner implements IStageRunner {
 
     return {
       taskId: context.taskId,
-      stageId: context.stageId,
+      stageId: output.stageId,
       summary: output.summary,
       changedPaths: [VALIDATION_ARTIFACT_PATH],
       changedFiles,

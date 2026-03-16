@@ -100,8 +100,8 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
 
     await store.writeArtifact({
       taskId: "task-default",
-      stageId: "validation",
-      filePath: "reports/validation/ValidationResult.json",
+      stageId: "work_execute_contract",
+      filePath: "artifacts/work/work_execute_contract_result.json",
       content: "default workspace artifact",
       workspaceRoot,
     });
@@ -112,16 +112,16 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
       "sdlc",
       "artifact_store",
       "task-default",
-      "validation",
-      "reports/validation/ValidationResult.json",
+      "work_execute_contract",
+      "artifacts/work/work_execute_contract_result.json",
     );
 
     assert.equal(await readFile(persistedPath, "utf8"), "default workspace artifact");
     assert.equal(
       await store.getArtifact({
         taskId: "task-default",
-        stageId: "validation",
-        filePath: "reports/validation/ValidationResult.json",
+        stageId: "work_execute_contract",
+        filePath: "artifacts/work/work_execute_contract_result.json",
         workspaceRoot,
       }),
       "default workspace artifact",

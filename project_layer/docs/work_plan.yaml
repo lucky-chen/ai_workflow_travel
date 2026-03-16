@@ -21,7 +21,7 @@ status: in_progress
 current_focus:
   stage_id: stage_3_cross_design_and_execution_contracts
   batch_id: batch_3_2_work_execute_units
-  task_id: task_3_2_2
+  task_id: task_3_2_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -220,7 +220,7 @@ stages:
               - project_layer/projects/sdlc/tests/implementation-execution
           - task_id: task_3_2_2
             summary: separate work_execute_contract from work_execute and emit work_execute_contract_result.json with the stable logical artifact name work_execute_contract_result
-            status: pending
+            status: completed
             involved_files:
               - project_layer/projects/sdlc/src/workflow/stage-runners/validation-stage-runner.ts
               - project_layer/projects/sdlc/src/shared/contracts

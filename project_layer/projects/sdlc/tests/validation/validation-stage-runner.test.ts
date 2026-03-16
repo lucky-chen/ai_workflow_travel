@@ -37,11 +37,11 @@ async function testValidationStageRunnerPassesWithoutOptionalCollaborators(): Pr
   const output = await runner.run(createContext());
 
   assert.deepEqual(output, {
-    stageId: "validation",
+    stageId: "work_execute_contract",
     success: true,
     summary: 'Shell command passed: cd "/tmp/project" && npm test',
     artifacts: {
-      artifactKey: "validation_result",
+      artifactKey: "work_execute_contract_result",
       projectPath: "/tmp/validation-workspace",
       command: 'cd "/tmp/project" && npm test',
       exitCode: 0,
@@ -71,7 +71,7 @@ async function testValidationStageRunnerRejectsOnGateDecision(): Promise<void> {
     runner.run(
       createContext({ validationCommand: "custom validation" }),
     ),
-    /Validation review ended with action "reject"\./,
+    /Work execute contract review ended with action "reject"\./,
   );
 }
 
@@ -98,7 +98,7 @@ async function testValidationStageRunnerRecordsReviewCommentInTrace(): Promise<v
     runner.run(
       createContext({ validationCommand: "custom validation" }),
     ),
-    /Validation review ended with action "wait"\./,
+    /Work execute contract review ended with action "wait"\./,
   );
 
   const gateEvent = traceRecorder.getEvents().find((entry) => entry.event.eventType === "gate_reviewed");
@@ -133,8 +133,8 @@ async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(
   assert.equal(
     await artifactStore.getArtifact({
       taskId: "task-validation",
-      stageId: "validation",
-      filePath: "reports/validation/ValidationResult.json",
+      stageId: "work_execute_contract",
+      filePath: "artifacts/work/work_execute_contract_result.json",
       workspaceRoot: "/tmp/validation-workspace",
     }),
     JSON.stringify(output.artifacts, null, 2),
@@ -147,17 +147,17 @@ async function testValidationStageRunnerRecordsTraceAndPersistsArtifact(
   ]);
   assert.deepEqual(traceRecorder.getEvents()[0]?.event.payload?.inputPaths, []);
   assert.deepEqual(traceRecorder.getEvents()[2]?.event.payload?.outputPaths, [
-    "reports/validation/ValidationResult.json",
+    "artifacts/work/work_execute_contract_result.json",
   ]);
   assert.deepEqual(traceRecorder.getEvents()[3]?.event.payload?.outputPaths, [
-    "reports/validation/ValidationResult.json",
+    "artifacts/work/work_execute_contract_result.json",
   ]);
 }
 
 function createContext(params?: Record<string, string>) {
   return {
     taskId: "task-validation",
-    stageId: "validation",
+    stageId: "work_execute_contract",
     attempt: 1,
     workspaceRoot: "/tmp/validation-workspace",
     inputArtifacts: {},

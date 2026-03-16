@@ -20,7 +20,7 @@ async function testValidationUsesWorkspaceRoot(): Promise<void> {
 
   const output = await runner.run({
     taskId: "task-validation",
-    stageId: "validation",
+    stageId: "work_execute_contract",
     attempt: 1,
     workspaceRoot: "/tmp/validation-workspace",
     inputArtifacts: {},
@@ -42,7 +42,7 @@ async function testBuildValidationStageOutputShapesValidationResult(): Promise<v
 
   const output = await runner.run({
     taskId: "task-validation",
-    stageId: "validation",
+    stageId: "work_execute_contract",
     attempt: 1,
     workspaceRoot: "/tmp/validation-workspace",
     inputArtifacts: {},
@@ -52,11 +52,11 @@ async function testBuildValidationStageOutputShapesValidationResult(): Promise<v
   });
 
   assert.deepEqual(output, {
-    stageId: "validation",
+    stageId: "work_execute_contract",
     success: false,
     summary: "Validation failed: unit tests returned exit code 1.",
     artifacts: {
-      artifactKey: "validation_result",
+      artifactKey: "work_execute_contract_result",
       projectPath: "/tmp/validation-workspace",
       command: "npm test",
       exitCode: 1,
