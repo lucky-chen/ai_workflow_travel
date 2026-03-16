@@ -106,6 +106,7 @@ async function testImplementationStageRunnerApply(
     },
   ]);
   assert.equal(output.artifacts.current_step, undefined);
+  assert.equal(output.artifacts.work_execute_completed, "true");
   assert.equal(output.artifacts.implementation_execution_completed, "true");
   const updatedWorkplan = await readFile(
     path.join(workspaceRoot, resolveImplementationPlanArtifactPath(workspaceRoot)),
@@ -188,7 +189,7 @@ async function testImplementationStageRunnerContractFailure(
 
   await assert.rejects(
     failingRunner.run(createRunContext("task-3", workspaceRoot)),
-    /Implementation contract failed: Contract failed before apply\./,
+    /Work execute contract failed: Contract failed before apply\./,
   );
 
   assert.equal(failingGate.getLastRequest(), undefined);

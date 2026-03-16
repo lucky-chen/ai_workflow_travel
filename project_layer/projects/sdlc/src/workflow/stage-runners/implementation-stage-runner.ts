@@ -41,7 +41,11 @@ export class ImplementationStageRunner extends BaseStageRunner {
 
   async run(
     context: StageRunContext,
-  ): Promise<StageOutput<ImplementationStageArtifacts & { current_step?: string; implementation_execution_completed: string }>> {
+  ): Promise<StageOutput<ImplementationStageArtifacts & {
+      current_step?: string;
+      work_execute_completed: string;
+      implementation_execution_completed: string;
+    }>> {
     this.validateExecutionContext(context);
     await this.recordStageStart(context);
 
@@ -54,7 +58,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
     const contractResult = await this.runContractCheck(this.dependencies.contractChecker, context, output);
     await this.recordSharedContractResult(context, contractResult);
     if (!contractResult.passed) {
-      throw new Error(`Implementation contract failed: ${contractResult.summary}`);
+      throw new Error(`Work execute contract failed: ${contractResult.summary}`);
     }
 
     const gateDecision = await this.reviewChanges({
@@ -87,6 +91,7 @@ export class ImplementationStageRunner extends BaseStageRunner {
       artifacts: {
         ...output.artifacts,
         ...(nextCurrentStep ? { current_step: JSON.stringify(nextCurrentStep) } : {}),
+        work_execute_completed: String(nextCurrentStep === null),
         implementation_execution_completed: String(nextCurrentStep === null),
       },
     };

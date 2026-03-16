@@ -179,7 +179,7 @@ export function createDefaultStageRegistry(services: ApplicationServices, option
       changeGate: services.changeGate,
       llmExecutor: services.llmExecutor,
     }),
-    nextStageId: "implementation_execution",
+    nextStageId: "work_execute",
   });
   registry.register({
     stageId: "implementation_execution",
