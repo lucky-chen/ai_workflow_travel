@@ -64,7 +64,7 @@ export class WorkPlanGenerator extends DocumentUnitGenerator<WorkPlanGeneratorIn
   }
 
   protected getTemplateResourcePath(): string {
-    return "template/CodeGenerationExecutionPlanTemplate.md";
+    return "template/WorkPlanTemplate.yaml";
   }
 
   protected buildPrompt(inputDocument: WorkPlanGeneratorInputPayload, template: string): LlmExecutionRequest {
@@ -72,9 +72,10 @@ export class WorkPlanGenerator extends DocumentUnitGenerator<WorkPlanGeneratorIn
     return {
       prompt: {
         systemPrompt:
-          "You generate a work plan that follows the provided execution-plan template structure. " +
-          "In section 1.1 Collaboration Rule, cite the provided shared collaboration standard document path exactly and keep the fixed scope statement from the template. " +
-          "Return plain markdown only.",
+          "You generate a work plan that follows the provided yaml template structure. " +
+          "Keep the output as valid yaml using the same top-level keys and the same stage batch task hierarchy shape as the template. " +
+          "Cite the provided shared collaboration standard document path exactly when it is needed in the plan content. " +
+          "Return plain yaml only.",
         userPrompt: {
           target: executionUnit,
           requirementDocument: inputDocument.requirementDocument,

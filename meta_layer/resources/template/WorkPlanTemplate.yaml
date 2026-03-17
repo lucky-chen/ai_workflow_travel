@@ -1,0 +1,37 @@
+version: 1
+plan_name: template_work_plan
+target: describe the implementation target of this workspace
+sources:
+  requirement_doc: sdlc/docs/Requirement.md
+  architecture_doc: sdlc/docs/TechnicalArchitecture.md
+  breakdown_docs_dir: sdlc/docs/item_design
+  active_work_plan: sdlc/docs/work_plan.yaml
+  code_root: .
+principles:
+  - keep document terminology and code terminology consistent
+  - prefer minimal necessary changes per batch
+  - only mark work complete after code and tests are verified
+execution_scope: define the implementation scope for this workspace
+status: pending
+current_focus:
+  stage_id: stage_1_initial_delivery
+  batch_id: batch_1_1_initial_batch
+  task_id: task_1_1_1
+stages:
+  - stage_id: stage_1_initial_delivery
+    name: initial delivery
+    goal: describe the first deliverable stage for this workspace
+    status: pending
+    batches:
+      - batch_id: batch_1_1_initial_batch
+        name: initial batch
+        goal: describe the first delivery batch for this workspace
+        status: pending
+        tasks:
+          - task_id: task_1_1_1
+            summary: describe the first concrete implementation task
+            status: pending
+            involved_files:
+              - src
+    validation:
+      - define the validation outcome for this stage

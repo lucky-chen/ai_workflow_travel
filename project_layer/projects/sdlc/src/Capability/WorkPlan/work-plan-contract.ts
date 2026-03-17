@@ -8,7 +8,46 @@ import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
 import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../../Capability/Shared/document-unit-contract.js";
 import { DocumentUnitContract } from "../../Capability/Shared/document-unit-contract.js";
-import type { WorkPlan, WorkPlanBatch, WorkPlanStatus, WorkPlanStep } from "../../Runtime/Schema/work-plan.js";
+import { parse as parseYaml } from "yaml";
+
+interface ParsedWorkPlanDocument {
+  version: number;
+  plan_name: string;
+  target: string;
+  sources: Record<string, unknown>;
+  principles: string[];
+  execution_scope: string;
+  status: string;
+  current_focus: {
+    stage_id: string;
+    batch_id: string;
+    task_id: string;
+  };
+  stages: ParsedWorkPlanStage[];
+}
+
+interface ParsedWorkPlanStage {
+  stage_id: string;
+  name: string;
+  goal: string;
+  status: string;
+  batches: ParsedWorkPlanBatch[];
+  validation: string[];
+}
+
+interface ParsedWorkPlanBatch {
+  batch_id: string;
+  name: string;
+  goal: string;
+  status: string;
+  tasks: ParsedWorkPlanTask[];
+}
+
+interface ParsedWorkPlanTask {
+  task_id: string;
+  summary: string;
+  status: string;
+}
 
 interface WorkPlanArtifacts {
   artifactKey: "work_plan";
@@ -16,70 +55,35 @@ interface WorkPlanArtifacts {
 }
 
 export class WorkPlanContract extends DocumentUnitContract {
-  parseWorkPlan(content: string): WorkPlan {
-    const lines = content.split(/\r?\n/);
-    const steps: WorkPlanStep[] = [];
-    let currentStep: WorkPlanStep | undefined;
-    let currentBatch: WorkPlanBatch | undefined;
-
-    for (const line of lines) {
-      const stepHeadingMatch = line.match(/^### Step (\d+)\.\s+Deliver\s+(.+)$/);
-      if (stepHeadingMatch) {
-        currentStep = {
-          stepId: `step-${stepHeadingMatch[1]}`,
-          title: stepHeadingMatch[2].trim(),
-          status: "not_started",
-          architectureModulesInScope: [],
-          batches: [],
-        };
-        steps.push(currentStep);
-        currentBatch = undefined;
-        continue;
-      }
-
-      if (!currentStep) {
-        continue;
-      }
-
-      const stepStatusMatch = line.match(/^- \[( |x)\]\s*`?Step \d+ is (.+?)`?$/);
-      if (stepStatusMatch) {
-        currentStep.status = this.parseStatus(stepStatusMatch[1], stepStatusMatch[2]);
-        continue;
-      }
-
-      const moduleMatch = line.match(/^  - \[( |x)\]\s*`?(.+?)`?$/);
-      if (moduleMatch && !currentBatch) {
-        currentStep.architectureModulesInScope.push(moduleMatch[2].trim());
-        continue;
-      }
-
-      const batchMatch = line.match(/^- \[( |x)\]\s*Batch (\d+):\s*(.+)$/);
-      if (batchMatch) {
-        currentBatch = {
-          batchId: `batch-${batchMatch[2]}`,
-          title: batchMatch[3].trim(),
-          status: batchMatch[1] === "x" ? "completed" : "not_started",
-          tasks: [],
-        };
-        currentStep.batches.push(currentBatch);
-        continue;
-      }
-
-      const taskMatch = line.match(/^  - \[( |x)\]\s*(.+)$/);
-      if (taskMatch && currentBatch) {
-        currentBatch.tasks.push(taskMatch[2].trim());
-      }
-    }
-
-    if (steps.length === 0 || steps.some((step) => step.batches.length === 0)) {
-      throw new Error("Work plan markdown could not be parsed into a valid structured work plan.");
-    }
-
-    return { steps };
+  protected async loadSpecificContract(): Promise<ContractSpec> {
+    return {
+      document_contracts: [
+        {
+          check_item: "yaml_work_plan_structure_complete",
+          description: "Work plan should keep the expected yaml top-level keys and stage hierarchy.",
+          severity: "high",
+        },
+        {
+          check_item: "yaml_work_plan_focus_consistency",
+          description: "Work plan should define a current focus and per-stage validation entries.",
+          severity: "high",
+        },
+        {
+          check_item: "yaml_work_plan_task_structure",
+          description: "Work plan should keep stage batch task structure with ids summaries and statuses.",
+          severity: "high",
+        },
+      ],
+      section_contracts: [],
+      specific_contract: {
+        source: "template/WorkPlanTemplate.yaml",
+        executionUnit: "work_plan",
+      },
+    };
   }
 
   protected getContractResourcePath(): string {
-    return "contract/CodeGenerationExecutionPlanTemplate.contract.json";
+    return "template/WorkPlanTemplate.yaml";
   }
 
   protected getExecutionUnitId(): string {
@@ -100,7 +104,7 @@ export class WorkPlanContract extends DocumentUnitContract {
     return {
       prompt: {
         systemPrompt:
-          "You check whether a work plan satisfies the provided contract spec. " +
+          "You check whether a yaml work plan satisfies the provided contract spec. " +
           "Return JSON with passed, summary, and issues only.",
         userPrompt: {
           target: "work_plan_contract_check",
@@ -157,9 +161,12 @@ export class WorkPlanContract extends DocumentUnitContract {
       });
     }
 
-    this.collectStructureIssues(content, contractSpec, issues);
-    this.collectWorkflowOrderIssues(content, contractSpec, issues);
-    this.collectStepStructureIssues(content, contractSpec, issues);
+    const parsedPlan = this.parseWorkPlan(content, issues);
+    if (parsedPlan) {
+      this.collectTopLevelStructureIssues(parsedPlan, contractSpec, issues);
+      this.collectFocusAndValidationIssues(parsedPlan, contractSpec, issues);
+      this.collectStageBatchTaskIssues(parsedPlan, contractSpec, issues);
+    }
 
     return {
       passed: issues.length === 0,
@@ -189,77 +196,150 @@ export class WorkPlanContract extends DocumentUnitContract {
     return parsed;
   }
 
-  private collectStructureIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
-    const requiredHeadings = [
-      "## 1. Purpose",
-      "## 1.1 Collaboration Rule",
-      "## 2. Workflow Delivery Order",
-      "## 3. Execution Steps",
-    ];
+  private parseWorkPlan(content: string, issues: ContractIssue[]): ParsedWorkPlanDocument | null {
+    let parsed: unknown;
+    try {
+      parsed = parseYaml(content);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      issues.push({
+        checkItem: "yaml_work_plan_structure_complete",
+        message: `Work plan must be valid yaml. ${message}`,
+        severity: "high",
+      });
+      return null;
+    }
+
+    if (!parsed || typeof parsed !== "object") {
+      issues.push({
+        checkItem: "yaml_work_plan_structure_complete",
+        message: "Work plan yaml must parse to an object.",
+        severity: "high",
+      });
+      return null;
+    }
+
+    return parsed as ParsedWorkPlanDocument;
+  }
+
+  private collectTopLevelStructureIssues(
+    content: ParsedWorkPlanDocument,
+    contractSpec: ContractSpec,
+    issues: ContractIssue[],
+  ): void {
     const structureContract = contractSpec.document_contracts.find(
-      (entry) => entry.check_item === "document_structure_complete",
+      (entry) => entry.check_item === "yaml_work_plan_structure_complete",
     );
 
-    for (const heading of requiredHeadings) {
-      if (!content.includes(heading)) {
-        issues.push({
-          checkItem: structureContract?.check_item ?? "document_structure_complete",
-          message: `Missing required section: ${heading}`,
-          severity: structureContract?.severity ?? "high",
-        });
-      }
+    if (typeof content.version !== "number") {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: version");
+    }
+    if (typeof content.plan_name !== "string" || content.plan_name.length === 0) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: plan_name");
+    }
+    if (typeof content.target !== "string" || content.target.length === 0) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: target");
+    }
+    if (!content.sources || typeof content.sources !== "object" || Array.isArray(content.sources)) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: sources");
+    }
+    if (!Array.isArray(content.principles) || content.principles.some((entry) => typeof entry !== "string")) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: principles");
+    }
+    if (typeof content.execution_scope !== "string" || content.execution_scope.length === 0) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: execution_scope");
+    }
+    if (typeof content.status !== "string" || content.status.length === 0) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: status");
+    }
+    if (!content.current_focus || typeof content.current_focus !== "object") {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: current_focus");
+    }
+    if (!Array.isArray(content.stages)) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: stages");
     }
   }
 
-  private collectWorkflowOrderIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
-    const workflowContract = contractSpec.document_contracts.find(
-      (entry) => entry.check_item === "workflow_order_consistency",
+  private collectFocusAndValidationIssues(
+    content: ParsedWorkPlanDocument,
+    contractSpec: ContractSpec,
+    issues: ContractIssue[],
+  ): void {
+    const focusContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "yaml_work_plan_focus_consistency",
     );
 
-    if (!/^\s*1\.\s+/m.test(content) || !/^\s*2\.\s+/m.test(content)) {
-      issues.push({
-        checkItem: workflowContract?.check_item ?? "workflow_order_consistency",
-        message: "Workflow Delivery Order should contain an ordered numbered list.",
-        severity: workflowContract?.severity ?? "high",
-      });
+    if (!content.current_focus || typeof content.current_focus.stage_id !== "string" || content.current_focus.stage_id.length === 0) {
+      this.pushIssue(issues, focusContract, "current_focus should include stage_id");
+    }
+    if (!content.current_focus || typeof content.current_focus.batch_id !== "string" || content.current_focus.batch_id.length === 0) {
+      this.pushIssue(issues, focusContract, "current_focus should include batch_id");
+    }
+    if (!content.current_focus || typeof content.current_focus.task_id !== "string" || content.current_focus.task_id.length === 0) {
+      this.pushIssue(issues, focusContract, "current_focus should include task_id");
+    }
+
+    if (!Array.isArray(content.stages) || content.stages.some((stage) => !Array.isArray(stage?.validation) || stage.validation.length === 0)) {
+      this.pushIssue(issues, focusContract, "Each stage should include a validation section.");
     }
   }
 
-  private collectStepStructureIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
-    const executionContract = contractSpec.document_contracts.find(
-      (entry) => entry.check_item === "execution_step_structure_consistency",
+  private collectStageBatchTaskIssues(
+    content: ParsedWorkPlanDocument,
+    contractSpec: ContractSpec,
+    issues: ContractIssue[],
+  ): void {
+    const taskContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "yaml_work_plan_task_structure",
     );
 
-    if (!/### Step \d+\./.test(content)) {
-      issues.push({
-        checkItem: executionContract?.check_item ?? "execution_step_structure_consistency",
-        message: "Execution Steps should contain step-oriented subsections.",
-        severity: executionContract?.severity ?? "high",
-      });
+    if (!Array.isArray(content.stages) || content.stages.length === 0) {
+      this.pushIssue(issues, taskContract, "Work plan should define at least one stage entry under stages.");
+      return;
     }
 
-    if (!content.includes("Architecture modules in scope")) {
-      issues.push({
-        checkItem: executionContract?.check_item ?? "execution_step_structure_consistency",
-        message: "Each step should include an Architecture modules in scope section.",
-        severity: executionContract?.severity ?? "high",
-      });
+    if (content.stages.some((stage) => typeof stage.stage_id !== "string" || stage.stage_id.length === 0)) {
+      this.pushIssue(issues, taskContract, "Each stage should include stage_id.");
     }
 
-    if (!/Batch 1:/m.test(content)) {
-      issues.push({
-        checkItem: executionContract?.check_item ?? "execution_step_structure_consistency",
-        message: "Each step should include batch-oriented delivery items.",
-        severity: executionContract?.severity ?? "high",
-      });
+    if (content.stages.some((stage) => !Array.isArray(stage.batches) || stage.batches.length === 0)) {
+      this.pushIssue(issues, taskContract, "Work plan should define at least one batch entry under stages.");
+    }
+
+    const batches = content.stages.flatMap((stage) => Array.isArray(stage.batches) ? stage.batches : []);
+    if (batches.some((batch) => typeof batch.batch_id !== "string" || batch.batch_id.length === 0)) {
+      this.pushIssue(issues, taskContract, "Each batch should include batch_id.");
+    }
+
+    if (batches.some((batch) => !Array.isArray(batch.tasks) || batch.tasks.length === 0)) {
+      this.pushIssue(issues, taskContract, "Work plan should define at least one task entry under batches.");
+    }
+
+    const tasks = batches.flatMap((batch) => Array.isArray(batch.tasks) ? batch.tasks : []);
+    if (tasks.some((task) => typeof task.task_id !== "string" || task.task_id.length === 0)) {
+      this.pushIssue(issues, taskContract, "Each task should include task_id.");
+    }
+    if (tasks.some((task) => typeof task.summary !== "string" || task.summary.length === 0)) {
+      this.pushIssue(issues, taskContract, "Each task should include a summary field.");
+    }
+    if (tasks.some((task) => !this.isNormalizedStatus(task.status))) {
+      this.pushIssue(issues, taskContract, "Each task should include a normalized status field.");
     }
   }
 
-  private parseStatus(marker: string, label: string): WorkPlanStatus {
-    if (marker !== "x") {
-      return "not_started";
-    }
+  private isNormalizedStatus(value: unknown): value is "pending" | "in_progress" | "completed" {
+    return value === "pending" || value === "in_progress" || value === "completed";
+  }
 
-    return label.includes("partially completed") ? "in_progress" : "completed";
+  private pushIssue(
+    issues: ContractIssue[],
+    contract: ContractSpec["document_contracts"][number] | undefined,
+    message: string,
+  ): void {
+    issues.push({
+      checkItem: contract?.check_item ?? "yaml_work_plan_structure",
+      message,
+      severity: contract?.severity ?? "high",
+    });
   }
 }

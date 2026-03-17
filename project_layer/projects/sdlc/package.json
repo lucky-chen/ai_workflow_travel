@@ -14,7 +14,8 @@
     "test:llm:integration": "npm run build && node dist/tests/llm-executor.integration.js"
   },
   "dependencies": {
-    "ai-meta-agent-agent-runtime": "file:../agent_runtime"
+    "ai-meta-agent-agent-runtime": "file:../agent_runtime",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
