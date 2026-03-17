@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
-import { describeResourcePath, resolveResourcePath } from "../../Runtime/resource-resolver.js";
+import { getContractDir } from "../../Runtime/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 
 export interface ContractSpec {
@@ -52,7 +53,10 @@ export abstract class DocumentUnitContract implements IContractChecker {
   }
 
   protected async loadSpecificContract(context?: ExecutionContext): Promise<ContractSpec> {
-    const contractFilePath = await resolveResourcePath(this.getContractResourcePath(), context?.workspaceRoot);
+    const contractFilePath = path.join(
+      getContractDir(),
+      path.basename(this.getContractResourcePath()),
+    );
     const cached = DocumentUnitContract.contractCache.get(contractFilePath);
     const parsed = cached ?? JSON.parse(await readFile(contractFilePath, "utf8")) as ContractSpec;
     if (!cached) {
@@ -62,7 +66,7 @@ export abstract class DocumentUnitContract implements IContractChecker {
       document_contracts: parsed.document_contracts,
       section_contracts: parsed.section_contracts,
       specific_contract: {
-        source: await describeResourcePath(contractFilePath, context?.workspaceRoot),
+        source: this.getContractResourcePath(),
         executionUnit: this.getExecutionUnitId(),
       },
     };

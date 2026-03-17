@@ -1,5 +1,5 @@
 import { cp, mkdir, writeFile } from "node:fs/promises";
-import { resolveBundledResourcesDirectory } from "../../Runtime/resource-resolver.js";
+import { configureResourceResolver, getDistDir } from "../../Runtime/resource-resolver.js";
 import {
   getDefaultWorkspaceLocalEnvContent,
   resolveWorkspaceLocalEnvPath,
@@ -11,7 +11,10 @@ export class ResourceWorkspaceInitializer implements WorkspaceInitializer {
     const targetRoot = `${workspaceRoot}/sdlc`;
     const targetResourcesDirectory = `${targetRoot}/resources`;
     const targetLocalEnvPath = resolveWorkspaceLocalEnvPath(workspaceRoot);
-    const sourceResourcesDirectory = await resolveBundledResourcesDirectory();
+    configureResourceResolver({
+      workdir: workspaceRoot,
+    });
+    const sourceResourcesDirectory = getDistDir();
 
     await mkdir(targetRoot, { recursive: true });
     await cp(sourceResourcesDirectory, targetResourcesDirectory, { recursive: true });

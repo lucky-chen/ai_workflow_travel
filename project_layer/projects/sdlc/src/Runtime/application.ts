@@ -1,5 +1,6 @@
 import type { RuntimeInput, RuntimeResult } from "./Schema/runtime.js";
 import { RuntimeOrchestrator, type Orchestrator } from "./Orchestrator/index.js";
+import { configureResourceResolver, type ResourceResolverConfig } from "./resource-resolver.js";
 import { ArtifactStoreService } from "../Data/artifact-store.js";
 import { HistoryStoreService } from "../Data/history-store.js";
 import { InMemoryChangeGate } from "../SDK/QualityControl/Gate/change-gate.js";
@@ -13,6 +14,7 @@ import {
 export interface ApplicationConfig {
   artifactStorageRoot?: string;
   historyStorageRoot?: string;
+  resourceResolver?: Partial<ResourceResolverConfig>;
   llmExecutor?: LlmExecutorServiceDependencies;
   llmExecutorInstance?: ILlmExecutor;
   changeGate?: InMemoryChangeGate;
@@ -31,6 +33,7 @@ export class ApplicationService implements Application {
 }
 
 export function createApplication(config: ApplicationConfig = {}): Application {
+  configureResourceResolver(config.resourceResolver ?? {});
   const historyStore = new HistoryStoreService(config.historyStorageRoot);
   const traceRecorder = new TraceService(historyStore);
   const artifactStore = new ArtifactStoreService(config.artifactStorageRoot, traceRecorder);

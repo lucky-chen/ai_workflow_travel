@@ -1,11 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ApplicationConfig } from "../../Runtime/application.js";
+import type { ResourceDirectoryConfig } from "../../Runtime/resource-resolver.js";
 
 export interface WorkspaceLocalEnvConfig {
-  resources?: {
-    root_dir?: string;
-  };
+  resource?: ResourceDirectoryConfig;
   llm?: {
     provider?: "openai" | "deepseek";
     api_key?: string;
@@ -16,8 +15,11 @@ export interface WorkspaceLocalEnvConfig {
 }
 
 const DEFAULT_WORKSPACE_LOCAL_ENV: WorkspaceLocalEnvConfig = {
-  resources: {
-    root_dir: "../../meta_layer/resources",
+  resource: {
+    docDir: "../../meta_layer/resources",
+    distDir: "../../project_layer/projects/sdlc/dist/resources",
+    templateDir: "../../meta_layer/resources/template",
+    contractDir: "../../meta_layer/resources/contract",
   },
   llm: {
     provider: "openai",
@@ -70,11 +72,13 @@ export class WorkspaceLocalEnvService {
   async loadApplicationConfig(workspaceRoot?: string): Promise<ApplicationConfig> {
     const parsed = await this.loadConfig(workspaceRoot);
     const llm = parsed.llm;
+    const resourceResolver = this.buildResourceResolverConfig(parsed);
     if (!llm?.provider || !llm.api_key || !llm.model || llm.api_key === "your-api-key") {
-      return {};
+      return resourceResolver ? { resourceResolver } : {};
     }
 
     return {
+      ...(resourceResolver ? { resourceResolver } : {}),
       llmExecutor: {
         mode: "real",
         realProvider: {
@@ -88,16 +92,15 @@ export class WorkspaceLocalEnvService {
     };
   }
 
-  resolveConfiguredResourcesRoot(
-    workspaceRoot: string,
-    config: WorkspaceLocalEnvConfig,
-  ): string | null {
-    const configuredRoot = config.resources?.root_dir?.trim();
-    if (!configuredRoot) {
-      return null;
+  private buildResourceResolverConfig(config: WorkspaceLocalEnvConfig): ApplicationConfig["resourceResolver"] | undefined {
+    const resource = normalizeResourceDirectoryConfig(config.resource);
+    if (!resource) {
+      return undefined;
     }
 
-    return path.resolve(workspaceRoot, configuredRoot);
+    return {
+      resource,
+    };
   }
 }
 
@@ -119,9 +122,25 @@ export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promi
   return defaultWorkspaceLocalEnvService.loadApplicationConfig(workspaceRoot);
 }
 
-export function resolveConfiguredResourcesRoot(
-  workspaceRoot: string,
-  config: WorkspaceLocalEnvConfig,
-): string | null {
-  return defaultWorkspaceLocalEnvService.resolveConfiguredResourcesRoot(workspaceRoot, config);
+function normalizeResourceDirectoryConfig(config?: ResourceDirectoryConfig): ResourceDirectoryConfig | undefined {
+  if (!config) {
+    return undefined;
+  }
+
+  const normalized: ResourceDirectoryConfig = {};
+
+  if (typeof config.docDir === "string" && config.docDir.trim()) {
+    normalized.docDir = config.docDir.trim();
+  }
+  if (typeof config.distDir === "string" && config.distDir.trim()) {
+    normalized.distDir = config.distDir.trim();
+  }
+  if (typeof config.templateDir === "string" && config.templateDir.trim()) {
+    normalized.templateDir = config.templateDir.trim();
+  }
+  if (typeof config.contractDir === "string" && config.contractDir.trim()) {
+    normalized.contractDir = config.contractDir.trim();
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
