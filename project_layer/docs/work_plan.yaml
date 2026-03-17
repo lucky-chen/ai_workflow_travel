@@ -20,8 +20,8 @@ execution_scope: concept-aligned execution-unit baseline and runtime-boundary fo
 status: completed
 current_focus:
   stage_id: stage_10_capability_and_black_box_tests
-  batch_id: batch_10_2_hello_service_black_box
-  task_id: task_10_2_2
+  batch_id: batch_10_3_remaining_capabilities
+  task_id: task_10_3_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -602,6 +602,29 @@ stages:
             involved_files:
               - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
               - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+      - batch_id: batch_10_3_remaining_capabilities
+        name: remaining capabilities
+        goal: cover ItemDesign WorkPlan and WorkExecute behaviors directly at capability level
+        status: completed
+        tasks:
+          - task_id: task_10_3_1
+            summary: add ItemDesign capability tests for generator contract and runtime unit behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/tests/Capability/ItemDesign
+              - project_layer/projects/sdlc/tests/run-tests.ts
+          - task_id: task_10_3_2
+            summary: add WorkPlan capability tests for generator contract and runtime unit behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/tests/Capability/WorkPlan
+              - project_layer/projects/sdlc/tests/run-tests.ts
+          - task_id: task_10_3_3
+            summary: add WorkExecute capability tests for generator contract and runtime unit behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/tests/Capability/WorkExecute
+              - project_layer/projects/sdlc/tests/run-tests.ts
     validation:
       - capability tests run from tests/run-tests.ts
       - npm test passes
