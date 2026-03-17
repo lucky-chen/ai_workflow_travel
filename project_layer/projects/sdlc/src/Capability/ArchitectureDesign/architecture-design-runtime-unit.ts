@@ -22,24 +22,32 @@ export class ArchitectureDesignRuntimeUnit extends RuntimeUnitBase {
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     if (request.executionUnitId === "architecture_design_contract") {
-      const output = {
-        executionUnitId: "architecture_design",
-        success: true,
-        summary: "Loaded architecture design artifact for contract check.",
-        artifacts: {
-          artifactKey: "architecture_design",
-          content: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
-        },
-      };
-      const executionContext = this.buildExecutionContext(request, context, {});
-      const result = await new ArchitectureDesignContract().check(executionContext, output);
-      await this.writeArtifact(executionContext, ARCHITECTURE_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
-      return {
-        accepted: true,
-        summary: `${result.summary} Persisted to ${ARCHITECTURE_CONTRACT_RESULT_PATH}.`,
-      };
+      return this.runContract(request, context);
     }
 
+    return this.runGenerate(request, context);
+  }
+
+  private async runContract(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const output = {
+      executionUnitId: "architecture_design",
+      success: true,
+      summary: "Loaded architecture design artifact for contract check.",
+      artifacts: {
+        artifactKey: "architecture_design",
+        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
+      },
+    };
+    const executionContext = this.buildExecutionContext(request, context, {});
+    const result = await new ArchitectureDesignContract().check(executionContext, output);
+    await this.writeArtifact(executionContext, ARCHITECTURE_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
+    return {
+      accepted: true,
+      summary: `${result.summary} Persisted to ${ARCHITECTURE_CONTRACT_RESULT_PATH}.`,
+    };
+  }
+
+  private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     const inputArtifacts = {
       requirement_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, REQUIREMENT_DOCUMENT_PATH),
       ...(await this.readOptionalWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH, "architecture_design")),

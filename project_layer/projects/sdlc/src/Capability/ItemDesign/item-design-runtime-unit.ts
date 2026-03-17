@@ -24,26 +24,34 @@ export class ItemDesignRuntimeUnit extends RuntimeUnitBase {
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     if (request.executionUnitId === "item_design_contract") {
-      const itemDesignPath = await this.resolveItemDesignDocumentPath(context.workspaceRoot, request);
-      const output = {
-        executionUnitId: "item_design",
-        success: true,
-        summary: "Loaded item design artifact for contract check.",
-        artifacts: {
-          artifactKey: "item_design_document",
-          moduleName: path.basename(itemDesignPath, path.extname(itemDesignPath)),
-          content: await this.readRequiredWorkspaceFile(context.workspaceRoot, itemDesignPath),
-        },
-      };
-      const executionContext = this.buildExecutionContext(request, context, {});
-      const result = await new ItemDesignContract().check(executionContext, output);
-      await this.writeArtifact(executionContext, ITEM_DESIGN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
-      return {
-        accepted: true,
-        summary: `${result.summary} Persisted to ${ITEM_DESIGN_CONTRACT_RESULT_PATH}.`,
-      };
+      return this.runContract(request, context);
     }
 
+    return this.runGenerate(request, context);
+  }
+
+  private async runContract(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const itemDesignPath = await this.resolveItemDesignDocumentPath(context.workspaceRoot, request);
+    const output = {
+      executionUnitId: "item_design",
+      success: true,
+      summary: "Loaded item design artifact for contract check.",
+      artifacts: {
+        artifactKey: "item_design_document",
+        moduleName: path.basename(itemDesignPath, path.extname(itemDesignPath)),
+        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, itemDesignPath),
+      },
+    };
+    const executionContext = this.buildExecutionContext(request, context, {});
+    const result = await new ItemDesignContract().check(executionContext, output);
+    await this.writeArtifact(executionContext, ITEM_DESIGN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
+    return {
+      accepted: true,
+      summary: `${result.summary} Persisted to ${ITEM_DESIGN_CONTRACT_RESULT_PATH}.`,
+    };
+  }
+
+  private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     const descriptor = await this.loadItemDescriptor(context.workspaceRoot, request);
     const executionContext = this.buildExecutionContext(request, context, {
       architecture_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),

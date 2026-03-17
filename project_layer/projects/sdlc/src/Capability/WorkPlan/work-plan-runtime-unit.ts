@@ -26,24 +26,32 @@ export class WorkPlanRuntimeUnit extends RuntimeUnitBase {
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     if (request.executionUnitId === "work_plan_contract") {
-      const executionContext = this.buildExecutionContext(request, context, await this.loadWorkPlanInputArtifacts(context.workspaceRoot));
-      const output = {
-        executionUnitId: "work_plan",
-        success: true,
-        summary: "Loaded work plan artifact for contract check.",
-        artifacts: {
-          artifactKey: "work_plan",
-          content: await this.readRequiredWorkspaceFile(context.workspaceRoot, WORK_PLAN_PATH),
-        },
-      };
-      const result = await new WorkPlanContract().check(executionContext, output);
-      await this.writeArtifact(executionContext, WORK_PLAN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
-      return {
-        accepted: true,
-        summary: `${result.summary} Persisted to ${WORK_PLAN_CONTRACT_RESULT_PATH}.`,
-      };
+      return this.runContract(request, context);
     }
 
+    return this.runGenerate(request, context);
+  }
+
+  private async runContract(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const executionContext = this.buildExecutionContext(request, context, await this.loadWorkPlanInputArtifacts(context.workspaceRoot));
+    const output = {
+      executionUnitId: "work_plan",
+      success: true,
+      summary: "Loaded work plan artifact for contract check.",
+      artifacts: {
+        artifactKey: "work_plan",
+        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, WORK_PLAN_PATH),
+      },
+    };
+    const result = await new WorkPlanContract().check(executionContext, output);
+    await this.writeArtifact(executionContext, WORK_PLAN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
+    return {
+      accepted: true,
+      summary: `${result.summary} Persisted to ${WORK_PLAN_CONTRACT_RESULT_PATH}.`,
+    };
+  }
+
+  private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     const executionContext = this.buildExecutionContext(request, context, await this.loadWorkPlanInputArtifacts(context.workspaceRoot));
     const output = await new WorkPlanGenerator({
       llmExecutor: this.llmExecutor,
