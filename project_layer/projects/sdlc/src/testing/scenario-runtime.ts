@@ -40,7 +40,7 @@ function createScenarioMockExecute(
 ): NonNullable<LlmExecutorServiceDependencies["mockExecute"]> {
   return async (request) => {
     if (request.metadata?.checkType === "contract") {
-      const executionUnitId = request.metadata?.executionUnit ?? request.metadata?.stage;
+      const executionUnitId = request.metadata?.executionUnit;
       const shouldFail = typeof executionUnitId === "string"
         && dependencies.contractFailureStages.has(executionUnitId);
       return {
@@ -57,17 +57,21 @@ function createScenarioMockExecute(
       };
     }
 
-    switch (request.metadata?.executionUnit ?? request.metadata?.stage) {
+    switch (request.metadata?.executionUnit) {
       case "requirement_design_generate":
+      case "requirement_design_update":
       case "requirement_design":
         return buildTextResult(request, dependencies.requirementDocument);
       case "architecture_design_generate":
+      case "architecture_design_update":
       case "architecture_design":
         return buildTextResult(request, dependencies.architectureDocument);
       case "item_design_generate":
+      case "item_design_update":
       case "item_design":
         return buildTextResult(request, dependencies.itemDesignDocument);
       case "work_plan_generate":
+      case "work_plan_update":
       case "work_plan":
         return buildTextResult(request, dependencies.workPlanDocument);
       case "work_execute":

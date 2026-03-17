@@ -68,7 +68,10 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
   }
 
   protected async loadTemplate(context: ExecutionContext): Promise<string> {
-    const spec = await loadItemDesignTemplateSpec(context.workspaceRoot);
+    const spec = await loadItemDesignTemplateSpec(
+      context.workspaceRoot,
+      typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
+    );
     return JSON.stringify(spec);
   }
 
@@ -92,7 +95,7 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
       },
       responseFormat: "text",
       metadata: {
-        executionUnit: "item_design",
+        executionUnit,
         itemName: inputDocument.itemDescriptor.name,
         documentPath: inputDocument.itemDescriptor.documentPath ?? "",
       },

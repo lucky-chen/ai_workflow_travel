@@ -87,7 +87,7 @@ export class WorkPlanGenerator extends DocumentUnitGenerator<WorkPlanGeneratorIn
       },
       responseFormat: "text",
       metadata: {
-        executionUnit: "work_plan_generate",
+        executionUnit,
       },
     };
   }

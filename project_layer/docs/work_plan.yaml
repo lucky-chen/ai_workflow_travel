@@ -17,11 +17,11 @@ principles:
   - only mark work complete after code and tests are updated and verified
   - preserve stable logical artifact names defined by the design docs even when runtime compatibility layers remain active
 execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up with runtime schema naming work-execute residual cleanup post-alignment simplification and shared-directory removal
-status: completed
+status: in_progress
 current_focus:
-  stage_id: stage_10_capability_and_black_box_tests
-  batch_id: batch_10_3_remaining_capabilities
-  task_id: task_10_3_3
+  stage_id: stage_11_residual_alignment_follow_up
+  batch_id: batch_11_1_concept_not_aligned
+  task_id: task_11_1_3
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -629,6 +629,74 @@ stages:
       - capability tests run from tests/run-tests.ts
       - npm test passes
       - npm run test:functional passes through the hello-service script entry
+  - stage_id: stage_11_residual_alignment_follow_up
+    name: residual alignment follow-up
+    goal: record and reduce the remaining gaps between the current codebase and the latest requirement and architecture documents
+    status: in_progress
+    batches:
+      - batch_id: batch_11_1_concept_not_aligned
+        name: concept not aligned
+        goal: remove remaining naming and boundary mismatches where the active code still exposes legacy or partial concepts
+        status: in_progress
+        tasks:
+          - task_id: task_11_1_1
+            summary: remove legacy runtime metadata fallback and active legacy artifact alias compatibility from current runtime and test helper paths
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime/Unit/execution-unit.ts
+              - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+          - task_id: task_11_1_2
+            summary: align update-unit llm metadata and item-design template resource-root propagation with execution-unit semantics
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/RequirementDesign/requirement-generator.ts
+              - project_layer/projects/sdlc/src/Capability/ArchitectureDesign/architecture-design-generator.ts
+              - project_layer/projects/sdlc/src/Capability/ItemDesign/item-design-generator.ts
+              - project_layer/projects/sdlc/src/Capability/WorkPlan/work-plan-generator.ts
+              - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+          - task_id: task_11_1_3
+            summary: align remaining concept gaps where design docs define execution units or runtime boundaries that current active code still does not expose, starting with overall_design_contract and the final work-plan concept model
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src
+              - project_layer/docs/Requirement.md
+              - project_layer/docs/TechnicalArchitecture.md
+      - batch_id: batch_11_2_concept_aligned_impl_missing
+        name: concept aligned but implementation missing
+        goal: implement capabilities and runtime paths that already exist in the design docs and naming model but are still absent in active code
+        status: pending
+        tasks:
+          - task_id: task_11_2_1
+            summary: implement overall_design_contract as an independently runnable execution unit with result artifact coverage
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability
+              - project_layer/projects/sdlc/src/Runtime/Orchestrator
+              - project_layer/projects/sdlc/tests
+          - task_id: task_11_2_2
+            summary: decide and implement the current-version compose-run behavior beyond the placeholder boundary if the design docs no longer treat it as reserved-only behavior
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/Runtime
+              - project_layer/projects/sdlc/src/Interface
+              - project_layer/projects/sdlc/tests
+      - batch_id: batch_11_3_behavior_still_legacy
+        name: behavior still legacy
+        goal: remove behaviors that keep current execution units on older assumptions after the naming model has already been aligned
+        status: pending
+        tasks:
+          - task_id: task_11_3_1
+            summary: narrow work-plan generation and contract behavior if the final design no longer requires stage-heavy yaml semantics such as per-stage validation blocks
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src/Capability/WorkPlan
+              - project_layer/projects/sdlc/tests/Capability/WorkPlan
+          - task_id: task_11_3_2
+            summary: remove remaining legacy compatibility behavior and old-model fixture wording after active runtime and capability paths no longer consume them
+            status: pending
+            involved_files:
+              - project_layer/projects/sdlc/src
+              - project_layer/projects/sdlc/tests
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model

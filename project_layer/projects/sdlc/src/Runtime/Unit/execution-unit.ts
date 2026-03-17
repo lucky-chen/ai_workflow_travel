@@ -8,12 +8,12 @@ import type {
 } from "../Schema/runtime.js";
 
 export const ARTIFACT_KEY_ALIASES = {
-  architecture_design: ["architecture_document"],
-  item_design_documents: ["module_design_documents"],
-  parsed_work_plan: ["parsed_implementation_workplan"],
-  requirement_design: ["requirement_document"],
-  work_execute_completed: ["implementation_execution_completed"],
-  work_plan: ["implementation_workplan"],
+  architecture_design: [],
+  item_design_documents: [],
+  parsed_work_plan: [],
+  requirement_design: [],
+  work_execute_completed: [],
+  work_plan: [],
 } as const satisfies Record<string, readonly string[]>;
 
 export function getArtifactValue(

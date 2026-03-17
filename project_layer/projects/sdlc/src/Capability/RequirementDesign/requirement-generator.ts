@@ -56,7 +56,7 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
       },
       responseFormat: "text",
       metadata: {
-        executionUnit: "requirement_design_generate",
+        executionUnit,
       },
     };
   }

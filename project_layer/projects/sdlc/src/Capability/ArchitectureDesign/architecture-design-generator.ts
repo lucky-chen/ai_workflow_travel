@@ -62,7 +62,7 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
       },
       responseFormat: "text",
       metadata: {
-        executionUnit: "architecture_design_generate",
+        executionUnit,
       },
     };
   }
