@@ -3,8 +3,15 @@ import path from "node:path";
 import type { ApplicationConfig } from "../../Runtime/application.js";
 import type { ResourceDirectoryConfig } from "../../Runtime/resource-resolver.js";
 
+export interface WorkspaceResourcesConfig {
+  doc_dir?: string;
+  dist_dir?: string;
+  template_dir?: string;
+  contract_dir?: string;
+}
+
 export interface WorkspaceLocalEnvConfig {
-  resource?: ResourceDirectoryConfig;
+  resources?: WorkspaceResourcesConfig;
   llm?: {
     provider?: "openai" | "deepseek";
     api_key?: string;
@@ -15,11 +22,11 @@ export interface WorkspaceLocalEnvConfig {
 }
 
 const DEFAULT_WORKSPACE_LOCAL_ENV: WorkspaceLocalEnvConfig = {
-  resource: {
-    docDir: "../../meta_layer/resources",
-    distDir: "../../project_layer/projects/sdlc/dist/resources",
-    templateDir: "../../meta_layer/resources/template",
-    contractDir: "../../meta_layer/resources/contract",
+  resources: {
+    doc_dir: "../../meta_layer/resources",
+    dist_dir: "../../project_layer/projects/sdlc/dist/resources",
+    template_dir: "../../meta_layer/resources/template",
+    contract_dir: "../../meta_layer/resources/contract",
   },
   llm: {
     provider: "openai",
@@ -93,7 +100,7 @@ export class WorkspaceLocalEnvService {
   }
 
   private buildResourceResolverConfig(config: WorkspaceLocalEnvConfig): ApplicationConfig["resourceResolver"] | undefined {
-    const resource = normalizeResourceDirectoryConfig(config.resource);
+    const resource = normalizeResourceDirectoryConfig(config.resources);
     if (!resource) {
       return undefined;
     }
@@ -122,24 +129,24 @@ export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promi
   return defaultWorkspaceLocalEnvService.loadApplicationConfig(workspaceRoot);
 }
 
-function normalizeResourceDirectoryConfig(config?: ResourceDirectoryConfig): ResourceDirectoryConfig | undefined {
+function normalizeResourceDirectoryConfig(config?: WorkspaceResourcesConfig): ResourceDirectoryConfig | undefined {
   if (!config) {
     return undefined;
   }
 
   const normalized: ResourceDirectoryConfig = {};
 
-  if (typeof config.docDir === "string" && config.docDir.trim()) {
-    normalized.docDir = config.docDir.trim();
+  if (typeof config.doc_dir === "string" && config.doc_dir.trim()) {
+    normalized.docDir = config.doc_dir.trim();
   }
-  if (typeof config.distDir === "string" && config.distDir.trim()) {
-    normalized.distDir = config.distDir.trim();
+  if (typeof config.dist_dir === "string" && config.dist_dir.trim()) {
+    normalized.distDir = config.dist_dir.trim();
   }
-  if (typeof config.templateDir === "string" && config.templateDir.trim()) {
-    normalized.templateDir = config.templateDir.trim();
+  if (typeof config.template_dir === "string" && config.template_dir.trim()) {
+    normalized.templateDir = config.template_dir.trim();
   }
-  if (typeof config.contractDir === "string" && config.contractDir.trim()) {
-    normalized.contractDir = config.contractDir.trim();
+  if (typeof config.contract_dir === "string" && config.contract_dir.trim()) {
+    normalized.contractDir = config.contract_dir.trim();
   }
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;

@@ -26,13 +26,13 @@ export async function runWorkspaceLocalEnvTests(): Promise<void> {
 
 async function testDefaultContentShape(): Promise<void> {
   const parsed = JSON.parse(getDefaultWorkspaceLocalEnvContent()) as {
-    resource?: { docDir?: string; distDir?: string; templateDir?: string; contractDir?: string };
+    resources?: { doc_dir?: string; dist_dir?: string; template_dir?: string; contract_dir?: string };
     llm?: { provider?: string; api_key?: string; model?: string; timeout_ms?: number };
   };
-  assert.equal(parsed.resource?.docDir, "../../meta_layer/resources");
-  assert.equal(parsed.resource?.templateDir, "../../meta_layer/resources/template");
-  assert.equal(parsed.resource?.contractDir, "../../meta_layer/resources/contract");
-  assert.equal(parsed.resource?.distDir, "../../project_layer/projects/sdlc/dist/resources");
+  assert.equal(parsed.resources?.doc_dir, "../../meta_layer/resources");
+  assert.equal(parsed.resources?.template_dir, "../../meta_layer/resources/template");
+  assert.equal(parsed.resources?.contract_dir, "../../meta_layer/resources/contract");
+  assert.equal(parsed.resources?.dist_dir, "../../project_layer/projects/sdlc/dist/resources");
   assert.equal(parsed.llm?.provider, "openai");
   assert.equal(parsed.llm?.api_key, "your-api-key");
   assert.equal(parsed.llm?.model, "gpt-4.1-mini");
@@ -88,11 +88,11 @@ async function testConfiguredResourceDirectoriesAreParsed(workspaceRoot: string)
     localEnvPath,
     JSON.stringify(
       {
-        resource: {
-          docDir: "../dev-docs",
-          templateDir: "../dev-templates",
-          contractDir: "../dev-contracts",
-          distDir: "../release-dist",
+        resources: {
+          doc_dir: "../dev-docs",
+          template_dir: "../dev-templates",
+          contract_dir: "../dev-contracts",
+          dist_dir: "../release-dist",
         },
       },
       null,
