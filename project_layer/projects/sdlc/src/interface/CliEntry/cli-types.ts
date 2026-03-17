@@ -1,6 +1,7 @@
-import type { GateDecision, TraceEvent } from "../../Runtime/Schema/execution-unit.js";
-import type { ChangedFile } from "../../Runtime/Schema/common.js";
-import type { ComposeRunRequest } from "../../Runtime/Schema/compose-run.js";
+import type { ChangedFile } from "../../Runtime/Schema/runtime.js";
+import type { GateDecision } from "../../SDK/QualityControl/Gate/change-gate.js";
+import type { TraceEvent } from "../../SDK/QualityControl/Trace/trace-recorder.js";
+import type { RuntimeRequest } from "../../Runtime/Schema/runtime.js";
 
 export interface ParsedCommand {
   command: string;
@@ -13,7 +14,7 @@ export interface CLICommandParser {
 }
 
 export interface CLIRequestMapper {
-  map(command: ParsedCommand): Promise<ComposeRunRequest>;
+  map(command: ParsedCommand): Promise<RuntimeRequest>;
 }
 
 export interface ReviewSession {

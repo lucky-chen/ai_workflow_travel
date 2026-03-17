@@ -1,8 +1,8 @@
-import type { ComposeRunRequest } from "../../Runtime/Schema/compose-run.js";
+import type { RuntimeRequest } from "../../Runtime/Schema/runtime.js";
 import type { CLIRequestMapper, ParsedCommand } from "./cli-types.js";
 
-export class DefaultCLIRequestMapper implements CLIRequestMapper {
-  async map(command: ParsedCommand): Promise<ComposeRunRequest> {
+export class CliRequestMapper implements CLIRequestMapper {
+  async map(command: ParsedCommand): Promise<RuntimeRequest> {
     if (command.command === "generate") {
       throw new Error('The legacy "generate" command has been removed. Use "run compose".');
     }
@@ -12,17 +12,23 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     }
 
     const [runMode, runTarget, fromTarget] = command.args;
-    const workspaceRoot = this.readSingleOption(command.options, "workdir")
+    const params = this.readRuntimeParams(command.options);
+    const workspaceRootOption = this.readSingleOption(command.options, "workdir")
       ?? this.readSingleOption(command.options, "workspace");
-    const runId = this.readSingleOption(command.options, "run-id")
-      ?? this.readSingleOption(command.options, "runid");
-
-    if (!workspaceRoot) {
+    if (!workspaceRootOption) {
       throw new Error("Missing required option: --workdir");
     }
 
     if (runMode === "unit") {
-      throw new Error('The legacy "run unit" mode has been removed. Only "run compose" is available.');
+      if (!runTarget) {
+        throw new Error("Missing required execution unit for run unit.");
+      }
+
+      return {
+        mode: "unit",
+        executionUnitId: runTarget,
+        ...(Object.keys(params).length > 0 ? { params } : {}),
+      };
     }
 
     if (runMode !== "compose") {
@@ -31,9 +37,9 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
 
     if (runTarget === "standard") {
       return {
-        workspaceRoot,
+        mode: "compose",
         composeMode: "standard",
-        ...(runId ? { runId } : {}),
+        ...(Object.keys(params).length > 0 ? { params } : {}),
       };
     }
 
@@ -43,10 +49,10 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
       }
 
       return {
-        workspaceRoot,
+        mode: "compose",
         composeMode: "from",
         entryUnit: fromTarget,
-        ...(runId ? { runId } : {}),
+        ...(Object.keys(params).length > 0 ? { params } : {}),
       };
     }
 
@@ -67,5 +73,28 @@ export class DefaultCLIRequestMapper implements CLIRequestMapper {
     }
 
     return value;
+  }
+
+  private readRuntimeParams(options: ParsedCommand["options"]): Record<string, string> {
+    const reservedKeys = new Set(["workdir", "workspace", "run-id", "runid"]);
+    const params: Record<string, string> = {};
+
+    for (const [key, value] of Object.entries(options)) {
+      if (reservedKeys.has(key)) {
+        continue;
+      }
+
+      if (Array.isArray(value)) {
+        throw new Error(`Option "--${key}" must be provided at most once.`);
+      }
+
+      params[this.toCamelCase(key)] = value;
+    }
+
+    return params;
+  }
+
+  private toCamelCase(input: string): string {
+    return input.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
   }
 }

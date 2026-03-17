@@ -1,0 +1,73 @@
+import type { ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
+import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
+import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
+import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
+import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
+import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
+
+export interface RequirementArtifacts {
+  artifactKey: "requirement_design";
+  content: string;
+}
+
+export interface RequirementGeneratorDependencies {
+  llmExecutor: ILlmExecutor;
+  traceRecorder?: ITraceRecorder;
+}
+
+export class RequirementGenerator extends DocumentUnitGenerator<string> {
+  constructor(dependencies: RequirementGeneratorDependencies) {
+    super(dependencies.llmExecutor, dependencies.traceRecorder);
+  }
+
+  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<string> {
+    const inputDocument = getArtifactValue(inputArtifacts, "requirement_design");
+    if (!inputDocument) {
+      throw new Error('Missing required input artifact "requirement_design".');
+    }
+
+    return inputDocument;
+  }
+
+  protected getTemplateResourcePath(): string {
+    return "template/RequirementTemplate.md";
+  }
+
+  protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
+    const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
+    return {
+      prompt: {
+        systemPrompt: [
+          "You are a senior product and technical planning expert.",
+          "You generate a requirement document that follows the provided template structure.",
+          "Treat template comments and contracts as authoring instructions only, not output content.",
+          "Return plain markdown only.",
+        ],
+        userPrompt: {
+          target: executionUnit,
+          inputDocument,
+          template,
+        },
+      },
+      responseFormat: "text",
+      metadata: {
+        executionUnit: "requirement_design_generate",
+      },
+    };
+  }
+
+  protected async buildExecutionUnitResult(result: LlmExecutionResult): Promise<ExecutionUnitResult<RequirementArtifacts>> {
+    const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
+    const isUpdate = executionUnit === "requirement_design_update";
+    return {
+      executionUnitId: "requirement_design",
+      success: true,
+      summary: isUpdate ? "Requirement document updated." : "Requirement document generated.",
+      artifacts: {
+        artifactKey: "requirement_design",
+        content: result.content,
+      },
+    };
+  }
+
+}

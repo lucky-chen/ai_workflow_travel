@@ -1,17 +1,39 @@
-// Artifact store module: defines the local persistence entry for stage artifacts.
+// Artifact store module: defines the local persistence entry for execution-unit artifacts.
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { FilePath } from "../shared/types/common.js";
-import type {
-  GetArtifactRequest,
-  IArtifactStore,
-  ITraceRecorder,
-  ListArtifactRequest,
-  WriteArtifactRequest,
-} from "../shared/contracts/pipeline.js";
+import type { ExecutionUnitId, FilePath, TaskId } from "../Runtime/Schema/runtime.js";
+import type { ITraceRecorder } from "../SDK/QualityControl/Trace/trace-recorder.js";
+
+export interface WriteArtifactRequest {
+  taskId: TaskId;
+  executionUnitId: ExecutionUnitId;
+  filePath: FilePath;
+  content: string;
+  workspaceRoot?: string;
+}
+
+export interface GetArtifactRequest {
+  taskId: TaskId;
+  executionUnitId: ExecutionUnitId;
+  filePath: FilePath;
+  workspaceRoot?: string;
+}
+
+export interface ListArtifactRequest {
+  taskId: TaskId;
+  executionUnitId: ExecutionUnitId;
+  rootDir: FilePath;
+  workspaceRoot?: string;
+}
+
+export interface IArtifactStore {
+  writeArtifact(request: WriteArtifactRequest): Promise<boolean>;
+  getArtifact(request: GetArtifactRequest): Promise<string>;
+  listArtifacts(query: ListArtifactRequest): Promise<string[]>;
+}
 
 export class ArtifactStoreService implements IArtifactStore {
-  // Storage layout: {storageRoot or workspaceRoot/dist/sdlc/artifact_store}/{taskId}/{stageId}/{filePath}
+  // Storage layout: {storageRoot or workspaceRoot/dist/sdlc/artifact_store}/{taskId}/{executionUnitId}/{filePath}
   constructor(
     private readonly storageRoot?: string,
     private readonly traceRecorder?: ITraceRecorder,
@@ -30,7 +52,7 @@ export class ArtifactStoreService implements IArtifactStore {
     await this.traceRecorder?.recordTrace({
       caller: "ArtifactStoreService.writeArtifact",
       category: "artifact",
-      stageId: request.stageId,
+      executionUnitId: request.executionUnitId,
       eventType: "artifact_persisted",
       summary: `Artifact persisted to ${request.filePath}.`,
       payload: {
@@ -42,30 +64,30 @@ export class ArtifactStoreService implements IArtifactStore {
     return true;
   }
 
-  // Public API: artifact read entry used to load upstream stage outputs.
+  // Public API: artifact read entry used to load upstream execution-unit results.
   async getArtifact(request: GetArtifactRequest): Promise<string> {
     const artifactPath = this.getArtifactAbsolutePath(request);
     // Missing files are surfaced as the underlying ENOENT error so callers can decide recovery behavior.
     return readFile(artifactPath, "utf8");
   }
 
-  // Public API: artifact query entry used to inspect stored stage files by directory.
+  // Public API: artifact query entry used to inspect stored execution-unit files by directory.
   async listArtifacts(query: ListArtifactRequest): Promise<string[]> {
-    const baseDirectory = path.join(this.getStageDirectory(query.taskId, query.stageId, query.workspaceRoot), query.rootDir);
+    const baseDirectory = path.join(this.getExecutionUnitDirectory(query.taskId, query.executionUnitId, query.workspaceRoot), query.rootDir);
     return this.walkRelativePaths(baseDirectory);
   }
 
   private getArtifactAbsolutePath(request: {
     taskId: string;
-    stageId: string;
+    executionUnitId: string;
     filePath: string;
     workspaceRoot?: string;
   }): string {
-    return path.join(this.getStageDirectory(request.taskId, request.stageId, request.workspaceRoot), request.filePath);
+    return path.join(this.getExecutionUnitDirectory(request.taskId, request.executionUnitId, request.workspaceRoot), request.filePath);
   }
 
-  private getStageDirectory(taskId: string, stageId: string, workspaceRoot?: string): string {
-    return path.join(this.resolveStorageRoot(workspaceRoot), taskId, stageId);
+  private getExecutionUnitDirectory(taskId: string, executionUnitId: string, workspaceRoot?: string): string {
+    return path.join(this.resolveStorageRoot(workspaceRoot), taskId, executionUnitId);
   }
 
   private resolveStorageRoot(workspaceRoot?: string): string {

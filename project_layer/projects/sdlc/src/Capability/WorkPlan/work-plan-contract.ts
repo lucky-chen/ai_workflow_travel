@@ -1,0 +1,265 @@
+import type {
+  ContractCheckResult,
+  ContractIssue,
+  ExecutionUnitResult,
+  ExecutionContext,
+} from "../../Runtime/Unit/execution-unit.js";
+import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
+import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
+import type { ContractExecutionResult, ContractSpec } from "../../Capability/Shared/document-unit-contract.js";
+import { DocumentUnitContract } from "../../Capability/Shared/document-unit-contract.js";
+import type { WorkPlan, WorkPlanBatch, WorkPlanStatus, WorkPlanStep } from "../../Runtime/Schema/work-plan.js";
+
+interface WorkPlanArtifacts {
+  artifactKey: "work_plan";
+  content: string;
+}
+
+export class WorkPlanContract extends DocumentUnitContract {
+  parseWorkPlan(content: string): WorkPlan {
+    const lines = content.split(/\r?\n/);
+    const steps: WorkPlanStep[] = [];
+    let currentStep: WorkPlanStep | undefined;
+    let currentBatch: WorkPlanBatch | undefined;
+
+    for (const line of lines) {
+      const stepHeadingMatch = line.match(/^### Step (\d+)\.\s+Deliver\s+(.+)$/);
+      if (stepHeadingMatch) {
+        currentStep = {
+          stepId: `step-${stepHeadingMatch[1]}`,
+          title: stepHeadingMatch[2].trim(),
+          status: "not_started",
+          architectureModulesInScope: [],
+          batches: [],
+        };
+        steps.push(currentStep);
+        currentBatch = undefined;
+        continue;
+      }
+
+      if (!currentStep) {
+        continue;
+      }
+
+      const stepStatusMatch = line.match(/^- \[( |x)\]\s*`?Step \d+ is (.+?)`?$/);
+      if (stepStatusMatch) {
+        currentStep.status = this.parseStatus(stepStatusMatch[1], stepStatusMatch[2]);
+        continue;
+      }
+
+      const moduleMatch = line.match(/^  - \[( |x)\]\s*`?(.+?)`?$/);
+      if (moduleMatch && !currentBatch) {
+        currentStep.architectureModulesInScope.push(moduleMatch[2].trim());
+        continue;
+      }
+
+      const batchMatch = line.match(/^- \[( |x)\]\s*Batch (\d+):\s*(.+)$/);
+      if (batchMatch) {
+        currentBatch = {
+          batchId: `batch-${batchMatch[2]}`,
+          title: batchMatch[3].trim(),
+          status: batchMatch[1] === "x" ? "completed" : "not_started",
+          tasks: [],
+        };
+        currentStep.batches.push(currentBatch);
+        continue;
+      }
+
+      const taskMatch = line.match(/^  - \[( |x)\]\s*(.+)$/);
+      if (taskMatch && currentBatch) {
+        currentBatch.tasks.push(taskMatch[2].trim());
+      }
+    }
+
+    if (steps.length === 0 || steps.some((step) => step.batches.length === 0)) {
+      throw new Error("Work plan markdown could not be parsed into a valid structured work plan.");
+    }
+
+    return { steps };
+  }
+
+  protected getContractResourcePath(): string {
+    return "contract/CodeGenerationExecutionPlanTemplate.contract.json";
+  }
+
+  protected getExecutionUnitId(): string {
+    return "work_plan";
+  }
+
+  protected async buildCheckRequest(
+    context: ExecutionContext,
+    output: ExecutionUnitResult,
+    contractSpec: ContractSpec,
+  ): Promise<LlmExecutionRequest> {
+    const workPlanOutput = output as ExecutionUnitResult<WorkPlanArtifacts>;
+    const generatedResult = workPlanOutput.artifacts.content.trim();
+    const itemDesignDocuments = this.parseItemDesignDocuments(
+      getArtifactValue(context.inputArtifacts, "item_design_documents"),
+    );
+
+    return {
+      prompt: {
+        systemPrompt:
+          "You check whether a work plan satisfies the provided contract spec. " +
+          "Return JSON with passed, summary, and issues only.",
+        userPrompt: {
+          target: "work_plan_contract_check",
+          generatedResult,
+          contractSpec,
+          upstreamContext: {
+            requirement_design: getArtifactValue(context.inputArtifacts, "requirement_design"),
+            architecture_design: getArtifactValue(context.inputArtifacts, "architecture_design"),
+            item_design_documents: itemDesignDocuments,
+          },
+          requiredOutputShape: {
+            passed: "boolean",
+            summary: "string",
+            issues: [
+              {
+                checkItem: "string",
+                message: "string",
+                severity: "low | medium | high",
+              },
+            ],
+          },
+        },
+      },
+      responseFormat: "json",
+      metadata: {
+        executionUnit: "work_plan_contract",
+        checkType: "contract",
+      },
+    };
+  }
+
+  protected buildContractResult(result: ContractExecutionResult): ContractCheckResult {
+    return {
+      passed: result.passed,
+      summary: result.summary,
+      issues: result.issues,
+    };
+  }
+
+  protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
+    const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
+      generatedResult: string;
+      contractSpec: ContractSpec;
+    };
+    const content = promptPayload.generatedResult;
+    const contractSpec = promptPayload.contractSpec;
+    const issues: ContractIssue[] = [];
+
+    if (content.length === 0) {
+      issues.push({
+        checkItem: "work_plan_not_empty",
+        message: "Work plan content must not be empty.",
+        severity: "high",
+      });
+    }
+
+    this.collectStructureIssues(content, contractSpec, issues);
+    this.collectWorkflowOrderIssues(content, contractSpec, issues);
+    this.collectStepStructureIssues(content, contractSpec, issues);
+
+    return {
+      passed: issues.length === 0,
+      summary: issues.length === 0
+        ? "Work plan passed contract checks."
+        : "Work plan failed contract checks.",
+      issues,
+    };
+  }
+
+  private parseItemDesignDocuments(rawValue: string | undefined): string[] {
+    if (!rawValue) {
+      return [];
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawValue);
+    } catch {
+      return [];
+    }
+
+    if (!Array.isArray(parsed) || parsed.some((entry) => typeof entry !== "string")) {
+      return [];
+    }
+
+    return parsed;
+  }
+
+  private collectStructureIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
+    const requiredHeadings = [
+      "## 1. Purpose",
+      "## 1.1 Collaboration Rule",
+      "## 2. Workflow Delivery Order",
+      "## 3. Execution Steps",
+    ];
+    const structureContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "document_structure_complete",
+    );
+
+    for (const heading of requiredHeadings) {
+      if (!content.includes(heading)) {
+        issues.push({
+          checkItem: structureContract?.check_item ?? "document_structure_complete",
+          message: `Missing required section: ${heading}`,
+          severity: structureContract?.severity ?? "high",
+        });
+      }
+    }
+  }
+
+  private collectWorkflowOrderIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
+    const workflowContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "workflow_order_consistency",
+    );
+
+    if (!/^\s*1\.\s+/m.test(content) || !/^\s*2\.\s+/m.test(content)) {
+      issues.push({
+        checkItem: workflowContract?.check_item ?? "workflow_order_consistency",
+        message: "Workflow Delivery Order should contain an ordered numbered list.",
+        severity: workflowContract?.severity ?? "high",
+      });
+    }
+  }
+
+  private collectStepStructureIssues(content: string, contractSpec: ContractSpec, issues: ContractIssue[]): void {
+    const executionContract = contractSpec.document_contracts.find(
+      (entry) => entry.check_item === "execution_step_structure_consistency",
+    );
+
+    if (!/### Step \d+\./.test(content)) {
+      issues.push({
+        checkItem: executionContract?.check_item ?? "execution_step_structure_consistency",
+        message: "Execution Steps should contain step-oriented subsections.",
+        severity: executionContract?.severity ?? "high",
+      });
+    }
+
+    if (!content.includes("Architecture modules in scope")) {
+      issues.push({
+        checkItem: executionContract?.check_item ?? "execution_step_structure_consistency",
+        message: "Each step should include an Architecture modules in scope section.",
+        severity: executionContract?.severity ?? "high",
+      });
+    }
+
+    if (!/Batch 1:/m.test(content)) {
+      issues.push({
+        checkItem: executionContract?.check_item ?? "execution_step_structure_consistency",
+        message: "Each step should include batch-oriented delivery items.",
+        severity: executionContract?.severity ?? "high",
+      });
+    }
+  }
+
+  private parseStatus(marker: string, label: string): WorkPlanStatus {
+    if (marker !== "x") {
+      return "not_started";
+    }
+
+    return label.includes("partially completed") ? "in_progress" : "completed";
+  }
+}

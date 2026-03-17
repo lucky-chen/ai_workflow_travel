@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Schema/execution-unit.js";
+import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
 import { describeResourcePath, resolveResourcePath } from "../../Runtime/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 

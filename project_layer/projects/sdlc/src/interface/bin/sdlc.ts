@@ -2,39 +2,25 @@ import { createApplication } from "../../Runtime/application.js";
 import {
   CLIService,
   ConsoleTraceViewer,
-  DefaultCLICommandParser,
-  DefaultCLIRequestMapper,
+  CliCommandParser,
+  CliRequestMapper,
+  loadApplicationConfigFromCommand,
 } from "../CliEntry/cli.js";
-import { loadWorkspaceRuntimeOptions } from "../../Runtime/workspace-local-env.js";
-import { createCliBaselineRuntimeOptions } from "../../testing/scenario-runtime.js";
 
 async function main(): Promise<void> {
-  const workspaceRoot = readWorkspaceRootFromArgv(process.argv.slice(2));
-  const application = process.env.SDLC_TEST_SCENARIO === "fixed_workspace_baseline"
-    ? createApplication(createCliBaselineRuntimeOptions())
-    : createApplication(await loadWorkspaceRuntimeOptions(workspaceRoot));
+  const argv = process.argv.slice(2);
+  const parser = new CliCommandParser();
+  const parsed = parser.parse(argv);
+  const application = createApplication(await loadApplicationConfigFromCommand(parsed));
 
   const cli = new CLIService(
-    new DefaultCLICommandParser(),
-    new DefaultCLIRequestMapper(),
+    parser,
+    new CliRequestMapper(),
     application,
     new ConsoleTraceViewer(),
   );
-  const exitCode = await cli.run(process.argv.slice(2));
+  const exitCode = await cli.run(argv);
   process.exitCode = exitCode;
-}
-
-function readWorkspaceRootFromArgv(argv: string[]): string | undefined {
-  for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] === "--workspace") {
-      const value = argv[index + 1];
-      if (value && !value.startsWith("--")) {
-        return value;
-      }
-    }
-  }
-
-  return undefined;
 }
 
 main().catch((error: unknown) => {

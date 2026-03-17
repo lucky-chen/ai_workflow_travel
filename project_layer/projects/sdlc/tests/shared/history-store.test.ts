@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { HistoryStoreService } from "../../src/data/history-store.js";
+import { HistoryStoreService } from "../../src/Data/history-store.js";
 
 export async function runHistoryStoreTests(): Promise<void> {
   await testHistoryStoreWriteReadAndList();
@@ -19,11 +19,11 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
       scope: {
         taskId: "task-1",
         runId: "run-a",
-        stageId: "implementation",
+        executionUnitId: "implementation",
       },
       summary: "Implementation started.",
       payload: {
-        eventType: "stage_started",
+        eventType: "generation_started",
       },
     });
 
@@ -33,7 +33,7 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
     assert.deepEqual(record.scope, {
       taskId: "task-1",
       runId: "run-a",
-      stageId: "implementation",
+      executionUnitId: "implementation",
     });
 
     await store.writeRecord({
@@ -41,11 +41,11 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
       scope: {
         taskId: "task-2",
         runId: "run-b",
-        stageId: "task_finished",
+        executionUnitId: "validation_finished",
       },
       summary: "Task finished.",
       payload: {
-        eventType: "task_finished",
+        eventType: "validation_finished",
       },
     });
 
@@ -59,14 +59,14 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
       await readFile(path.join(storageRoot, "records", "task-1_run-a.json"), "utf8"),
     ) as Array<{
       recordId: string;
-      scope: { taskId: string; runId: string; stageId: string };
+      scope: { taskId: string; runId: string; executionUnitId: string };
     }>;
     assert.equal(taskBucket.length, 1);
     assert.equal(taskBucket[0]?.recordId, recordId);
     assert.deepEqual(taskBucket[0]?.scope, {
       taskId: "task-1",
       runId: "run-a",
-      stageId: "implementation",
+      executionUnitId: "implementation",
     });
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
@@ -91,7 +91,7 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
         scope: {
           taskId: "",
           runId: "run-invalid",
-          stageId: "architecture_design",
+          executionUnitId: "architecture_design",
         },
         summary: "Missing task id.",
         payload: {},
@@ -105,7 +105,7 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
         scope: {
           taskId: "task-1",
           runId: "",
-          stageId: null,
+          executionUnitId: null,
         },
         summary: "Missing run id.",
         payload: {},
@@ -118,16 +118,16 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
       scope: {
         taskId: "task-1",
         runId: "run-1",
-        stageId: null,
+        executionUnitId: null,
       },
-      summary: "Missing stage id is allowed.",
+      summary: "Missing execution unit id is allowed.",
       payload: {},
     });
     const record = await store.getRecord(recordId);
     assert.deepEqual(record.scope, {
       taskId: "task-1",
       runId: "run-1",
-      stageId: null,
+      executionUnitId: null,
     });
   } finally {
     await rm(storageRoot, { recursive: true, force: true });

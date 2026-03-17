@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactStoreService } from "../../src/data/artifact-store.js";
-import { HistoryStoreService } from "../../src/data/history-store.js";
-import { TraceService } from "../../src/quality-gate/trace-recorder.js";
+import { ArtifactStoreService } from "../../src/Data/artifact-store.js";
+import { HistoryStoreService } from "../../src/Data/history-store.js";
+import { TraceService } from "../../src/SDK/QualityControl/Trace/trace-recorder.js";
 
 export async function runArtifactStoreTests(): Promise<void> {
   await testWriteAndReadArtifact();
@@ -23,7 +23,7 @@ async function testWriteAndReadArtifact(): Promise<void> {
 
     await store.writeArtifact({
       taskId: "task-1",
-      stageId: "implementation",
+      executionUnitId: "implementation",
       filePath: "docs/output.md",
       content: "generated artifact",
     });
@@ -33,7 +33,7 @@ async function testWriteAndReadArtifact(): Promise<void> {
 
     const content = await store.getArtifact({
       taskId: "task-1",
-      stageId: "implementation",
+      executionUnitId: "implementation",
       filePath: "docs/output.md",
     });
 
@@ -43,7 +43,7 @@ async function testWriteAndReadArtifact(): Promise<void> {
     await assert.rejects(
       store.getArtifact({
         taskId: "task-1",
-        stageId: "implementation",
+        executionUnitId: "implementation",
         filePath: "docs/missing.md",
       }),
       (error: unknown) => {
@@ -63,26 +63,26 @@ async function testListArtifactsWithinRoot(): Promise<void> {
     const store = new ArtifactStoreService(storageRoot);
     await store.writeArtifact({
       taskId: "task-2",
-      stageId: "module-design",
+      executionUnitId: "item_design",
       filePath: "docs/a.md",
       content: "A",
     });
     await store.writeArtifact({
       taskId: "task-2",
-      stageId: "module-design",
+      executionUnitId: "item_design",
       filePath: "docs/nested/b.md",
       content: "B",
     });
     await store.writeArtifact({
       taskId: "task-2",
-      stageId: "module-design",
+      executionUnitId: "item_design",
       filePath: "other/c.md",
       content: "C",
     });
 
     const artifacts = await store.listArtifacts({
       taskId: "task-2",
-      stageId: "module-design",
+      executionUnitId: "item_design",
       rootDir: "docs",
     });
 
@@ -100,7 +100,7 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
 
     await store.writeArtifact({
       taskId: "task-default",
-      stageId: "work_execute_contract",
+      executionUnitId: "work_execute_contract",
       filePath: "artifacts/work/work_execute_contract_result.json",
       content: "default workspace artifact",
       workspaceRoot,
@@ -120,7 +120,7 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
     assert.equal(
       await store.getArtifact({
         taskId: "task-default",
-        stageId: "work_execute_contract",
+        executionUnitId: "work_execute_contract",
         filePath: "artifacts/work/work_execute_contract_result.json",
         workspaceRoot,
       }),
@@ -140,7 +140,7 @@ async function testWriteArtifactMirrorsWorkspaceWhenWorkspaceRootProvided(): Pro
 
     await store.writeArtifact({
       taskId: "task-workspace",
-      stageId: "architecture_design",
+      executionUnitId: "architecture_design",
       filePath: "sdlc/docs/TechnicalArchitecture.md",
       content: "workspace mirrored artifact",
       workspaceRoot,
@@ -175,8 +175,8 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
 
     await store.writeArtifact({
       taskId: "task-history",
-      stageId: "module_design",
-      filePath: "sdlc/docs/module_design/Workflow.md",
+      executionUnitId: "item_design",
+      filePath: "sdlc/docs/item_design/Workflow.md",
       content: "history mirrored artifact",
     });
 
@@ -184,7 +184,7 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
       await readFile(path.join(historyRoot, "records", "task-history_run-history.json"), "utf8"),
     ) as Array<{
       category: string;
-      scope: { taskId: string; runId: string; stageId: string };
+      scope: { taskId: string; runId: string; executionUnitId: string };
       summary: string;
       payload: { filePath: string; mirroredToWorkspace: boolean };
     }>;
@@ -194,9 +194,9 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
     assert.deepEqual(historyRecords[0]?.scope, {
       taskId: "task-history",
       runId: "run-history",
-      stageId: "module_design",
+      executionUnitId: "item_design",
     });
-    assert.equal(historyRecords[0]?.payload.filePath, "sdlc/docs/module_design/Workflow.md");
+    assert.equal(historyRecords[0]?.payload.filePath, "sdlc/docs/item_design/Workflow.md");
     assert.equal(historyRecords[0]?.payload.mirroredToWorkspace, false);
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
@@ -212,7 +212,7 @@ async function testListArtifactsOnMissingRoot(): Promise<void> {
 
     const artifacts = await store.listArtifacts({
       taskId: "task-3",
-      stageId: "requirement",
+      executionUnitId: "requirement",
       rootDir: "missing",
     });
 

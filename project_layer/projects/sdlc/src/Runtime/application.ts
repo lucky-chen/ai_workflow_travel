@@ -1,3 +1,5 @@
+import type { RuntimeInput, RuntimeResult } from "./Schema/runtime.js";
+import { RuntimeOrchestrator, type Orchestrator } from "./Orchestrator/index.js";
 import { ArtifactStoreService } from "../Data/artifact-store.js";
 import { HistoryStoreService } from "../Data/history-store.js";
 import { InMemoryChangeGate } from "../SDK/QualityControl/Gate/change-gate.js";
@@ -7,18 +9,8 @@ import {
   type ILlmExecutor,
   type LlmExecutorServiceDependencies,
 } from "../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import type { RuntimeInput, RuntimeResult } from "./Schema/runtime.js";
-import { RuntimeOrchestrator, type Orchestrator } from "./orchestrator.js";
 
-export interface ApplicationInfrastructure {
-  artifactStore: ArtifactStoreService;
-  historyStore: HistoryStoreService;
-  traceRecorder: TraceService;
-  changeGate: InMemoryChangeGate;
-  llmExecutor: ILlmExecutor;
-}
-
-export interface ApplicationOptions {
+export interface ApplicationConfig {
   artifactStorageRoot?: string;
   historyStorageRoot?: string;
   llmExecutor?: LlmExecutorServiceDependencies;
@@ -30,33 +22,28 @@ export interface Application {
   run(input: RuntimeInput): Promise<RuntimeResult>;
 }
 
-export function createApplicationInfrastructure(options: ApplicationOptions = {}): ApplicationInfrastructure {
-  const historyStore = new HistoryStoreService(options.historyStorageRoot);
-  const traceRecorder = new TraceService(historyStore);
-  const artifactStore = new ArtifactStoreService(options.artifactStorageRoot, traceRecorder);
-  const changeGate = options.changeGate ?? new InMemoryChangeGate();
+export class ApplicationService implements Application {
+  constructor(private readonly orchestrator: Orchestrator) {}
 
-  const llmExecutor = options.llmExecutorInstance ?? new LlmExecutorService({
-    ...options.llmExecutor,
-    traceRecorder,
-  });
-
-  return {
-    artifactStore,
-    historyStore,
-    traceRecorder,
-    changeGate,
-    llmExecutor,
-  };
+  async run(input: RuntimeInput): Promise<RuntimeResult> {
+    return this.orchestrator.run(input);
+  }
 }
 
-export function createApplication(options: ApplicationOptions = {}): Application {
-  const infrastructure = createApplicationInfrastructure(options);
-  const orchestrator: Orchestrator = new RuntimeOrchestrator();
-
-  return {
-    async run(input: RuntimeInput): Promise<RuntimeResult> {
-      return orchestrator.run(input);
-    },
-  };
+export function createApplication(config: ApplicationConfig = {}): Application {
+  const historyStore = new HistoryStoreService(config.historyStorageRoot);
+  const traceRecorder = new TraceService(historyStore);
+  const artifactStore = new ArtifactStoreService(config.artifactStorageRoot, traceRecorder);
+  const changeGate = config.changeGate ?? new InMemoryChangeGate();
+  const llmExecutor = config.llmExecutorInstance ?? new LlmExecutorService({
+    ...config.llmExecutor,
+    traceRecorder,
+  });
+  return new ApplicationService(new RuntimeOrchestrator({
+    artifactStore,
+    llmExecutor,
+    traceRecorder,
+    traceService: traceRecorder,
+    changeGate,
+  }));
 }

@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import type { GateDecision } from "../../Runtime/Schema/execution-unit.js";
+import type { GateDecision } from "../../SDK/QualityControl/Gate/change-gate.js";
 import type { IReviewInteraction, ReviewSession } from "./cli-types.js";
 
 export interface ReviewPromptAdapter {

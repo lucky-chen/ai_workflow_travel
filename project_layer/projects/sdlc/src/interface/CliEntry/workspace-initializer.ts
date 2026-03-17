@@ -1,9 +1,9 @@
 import { cp, mkdir, writeFile } from "node:fs/promises";
-import { resolveBundledResourcesDirectory } from "../../shared/resource-resolver.js";
+import { resolveBundledResourcesDirectory } from "../../Runtime/resource-resolver.js";
 import {
   getDefaultWorkspaceLocalEnvContent,
   resolveWorkspaceLocalEnvPath,
-} from "../../Runtime/workspace-local-env.js";
+} from "./workspace-local-env.js";
 import type { WorkspaceInitializer } from "./cli-types.js";
 
 export class ResourceWorkspaceInitializer implements WorkspaceInitializer {

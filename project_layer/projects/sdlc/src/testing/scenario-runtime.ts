@@ -1,28 +1,27 @@
-import type { CompositionRootOptions } from "../app/composition-root.js";
-import { InMemoryChangeGate } from "../quality-gate/change-gate.js";
-import type { LlmExecutorServiceDependencies } from "../sdk/llm-executor/llm-executor.js";
-import type { IImplementationGitCommitter } from "../workflow/stage-runners/implementation-git-committer.js";
-import { ShellRunner } from "../workflow/shell-runner.js";
+import type { ApplicationConfig } from "../Runtime/application.js";
+import { InMemoryChangeGate } from "../SDK/QualityControl/Gate/change-gate.js";
+import type { LlmExecutorServiceDependencies } from "../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 
-export function createCliBaselineRuntimeOptions(): CompositionRootOptions {
+export function createCliBaselineRuntimeOptions(): ApplicationConfig {
   const serviceName = process.env.SDLC_TEST_SERVICE_NAME?.trim() || "baseline-service";
   return {
-    artifactStorageRoot: process.env.SDLC_ARTIFACT_ROOT,
-    llmExecutor: {
-      mode: "mock",
-      mockExecute: createScenarioMockExecute({
-        serviceName,
-        requirementDocument: createScenarioRequirementDocument(serviceName),
-        architectureDocument: createScenarioArchitectureDocument(serviceName),
-        moduleDesignDocument: createScenarioModuleDesignDocument(serviceName),
-        implementationPlanDocument: createScenarioImplementationPlanDocument(serviceName),
-        contractFailureStages: readScenarioContractFailureStages(),
-        contractIssueCategories: readScenarioContractIssueCategories(),
-      }),
-    },
-    shellRunner: new ShellRunner(),
-    gitCommitter: new NoopGitCommitter(),
+    llmExecutor: createCliBaselineLlmExecutor(serviceName),
     changeGate: new InMemoryChangeGate(),
+  };
+}
+
+export function createCliBaselineLlmExecutor(serviceName = process.env.SDLC_TEST_SERVICE_NAME?.trim() || "baseline-service"): LlmExecutorServiceDependencies {
+  return {
+    mode: "mock",
+    mockExecute: createScenarioMockExecute({
+      serviceName,
+      requirementDocument: createScenarioRequirementDocument(serviceName),
+      architectureDocument: createScenarioArchitectureDocument(serviceName),
+      itemDesignDocument: createScenarioItemDesignDocument(serviceName),
+      workPlanDocument: createScenarioWorkPlanDocument(serviceName),
+      contractFailureStages: readScenarioContractFailureStages(),
+      contractIssueCategories: readScenarioContractIssueCategories(),
+    }),
   };
 }
 
@@ -30,8 +29,8 @@ interface ScriptedLlmExecutorDependencies {
   serviceName: string;
   requirementDocument: string;
   architectureDocument: string;
-  moduleDesignDocument: string;
-  implementationPlanDocument: string;
+  itemDesignDocument: string;
+  workPlanDocument: string;
   contractFailureStages: Set<string>;
   contractIssueCategories: string[];
 }
@@ -41,13 +40,13 @@ function createScenarioMockExecute(
 ): NonNullable<LlmExecutorServiceDependencies["mockExecute"]> {
   return async (request) => {
     if (request.metadata?.checkType === "contract") {
-      const stageId = request.metadata?.stage;
-      const shouldFail = typeof stageId === "string"
-        && dependencies.contractFailureStages.has(stageId);
+      const executionUnitId = request.metadata?.executionUnit ?? request.metadata?.stage;
+      const shouldFail = typeof executionUnitId === "string"
+        && dependencies.contractFailureStages.has(executionUnitId);
       return {
         content: JSON.stringify(
           shouldFail
-            ? buildFailedContractResult(dependencies, stageId)
+            ? buildFailedContractResult(dependencies, executionUnitId)
             : {
                 passed: true,
                 summary: "Document passed contract checks.",
@@ -58,19 +57,23 @@ function createScenarioMockExecute(
       };
     }
 
-    switch (request.metadata?.stage) {
-      case "requirement_interpretation":
+    switch (request.metadata?.executionUnit ?? request.metadata?.stage) {
+      case "requirement_design_generate":
+      case "requirement_design":
         return buildTextResult(request, dependencies.requirementDocument);
+      case "architecture_design_generate":
       case "architecture_design":
         return buildTextResult(request, dependencies.architectureDocument);
-      case "module_design":
-        return buildTextResult(request, dependencies.moduleDesignDocument);
-      case "implementation_plan":
-        return buildTextResult(request, dependencies.implementationPlanDocument);
-      case "implementation":
+      case "item_design_generate":
+      case "item_design":
+        return buildTextResult(request, dependencies.itemDesignDocument);
+      case "work_plan_generate":
+      case "work_plan":
+        return buildTextResult(request, dependencies.workPlanDocument);
+      case "work_execute":
         return {
           content: JSON.stringify({
-            summary: `Generated ${dependencies.serviceName} implementation baseline.`,
+            summary: `Generated ${dependencies.serviceName} work execute baseline.`,
             changed_files: [
               {
                 path: "src/index.ts",
@@ -115,22 +118,18 @@ function buildTextResult(
 
 function buildFailedContractResult(
   dependencies: ScriptedLlmExecutorDependencies,
-  stageId: string,
+  executionUnitId: string,
 ): {
   passed: false;
   summary: string;
   issues: Array<{ checkItem: string; message: string; severity: "low" | "medium" | "high" }>;
 } {
-  const issues = dependencies.contractIssueCategories.map((category) => buildScenarioContractIssue(stageId, category));
+  const issues = dependencies.contractIssueCategories.map((category) => buildScenarioContractIssue(executionUnitId, category));
   return {
     passed: false,
-    summary: `${stageId} failed contract checks.`,
+    summary: `${executionUnitId} failed contract checks.`,
     issues,
   };
-}
-
-class NoopGitCommitter implements IImplementationGitCommitter {
-  async commit(): Promise<void> {}
 }
 
 function createScenarioRequirementDocument(serviceName: string): string {
@@ -173,7 +172,7 @@ function createScenarioArchitectureDocument(serviceName: string): string {
   ].join("\n");
 }
 
-function createScenarioModuleDesignDocument(serviceName: string): string {
+function createScenarioItemDesignDocument(serviceName: string): string {
   return [
     "# 1. Module Overview",
     `Workflow coordinates the ${serviceName} generation baseline.`,
@@ -193,7 +192,7 @@ function createScenarioModuleDesignDocument(serviceName: string): string {
   ].join("\n");
 }
 
-function createScenarioImplementationPlanDocument(serviceName: string): string {
+function createScenarioWorkPlanDocument(serviceName: string): string {
   return [
     "# Code Generation Execution Plan",
     "",
@@ -243,38 +242,38 @@ function readScenarioContractIssueCategories(): string[] {
 }
 
 function buildScenarioContractIssue(
-  stageId: string,
+  executionUnitId: string,
   category: string,
 ): { checkItem: string; message: string; severity: "low" | "medium" | "high" } {
   switch (category) {
     case "structure":
       return {
-        checkItem: `${stageId}-structure`,
-        message: `${stageId} is missing required structure sections.`,
+        checkItem: `${executionUnitId}-structure`,
+        message: `${executionUnitId} is missing required structure sections.`,
         severity: "high",
       };
     case "scope":
       return {
-        checkItem: `${stageId}-scope`,
-        message: `${stageId} includes content outside the expected scope.`,
+        checkItem: `${executionUnitId}-scope`,
+        message: `${executionUnitId} includes content outside the expected scope.`,
         severity: "medium",
       };
     case "alignment":
       return {
-        checkItem: `${stageId}-alignment`,
-        message: `${stageId} is not aligned with upstream design artifacts.`,
+        checkItem: `${executionUnitId}-alignment`,
+        message: `${executionUnitId} is not aligned with upstream design artifacts.`,
         severity: "high",
       };
     case "placeholder":
       return {
-        checkItem: `${stageId}-placeholder`,
-        message: `${stageId} still contains unresolved template placeholders.`,
+        checkItem: `${executionUnitId}-placeholder`,
+        message: `${executionUnitId} still contains unresolved template placeholders.`,
         severity: "medium",
       };
     default:
       return {
-        checkItem: `${stageId}-${category}`,
-        message: `${stageId} failed scripted contract category "${category}".`,
+        checkItem: `${executionUnitId}-${category}`,
+        message: `${executionUnitId} failed scripted contract category "${category}".`,
         severity: "medium",
       };
   }

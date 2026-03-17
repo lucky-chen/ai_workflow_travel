@@ -1,6 +1,6 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { FilePath, StageId, TaskId, TraceRef } from "../shared/types/common.js";
+import type { FilePath, ExecutionUnitId, TaskId, TraceRef } from "../Runtime/Schema/runtime.js";
 
 export interface HistoryRecord {
   recordId?: TraceRef;
@@ -9,7 +9,7 @@ export interface HistoryRecord {
   scope?: {
     taskId: TaskId;
     runId: string;
-    stageId: StageId | null;
+    executionUnitId: ExecutionUnitId | null;
   };
   summary?: string;
   payload: Record<string, unknown>;
@@ -18,7 +18,7 @@ export interface HistoryRecord {
 export interface HistoryQuery {
   category?: string;
   taskId?: TaskId;
-  stageId?: StageId;
+  executionUnitId?: ExecutionUnitId;
 }
 
 export interface HistoryTaskContext {
@@ -39,11 +39,11 @@ export class HistoryStoreService {
     const taskId = this.requireTaskId(record.scope?.taskId);
     const resolvedTaskContext = this.resolveTaskContext(taskId);
     const runId = this.requireRunId(this.normalizeOptionalIdentifier(record.scope?.runId) ?? resolvedTaskContext.runId);
-    const stageId = this.normalizeOptionalIdentifier(record.scope?.stageId);
+    const executionUnitId = this.normalizeOptionalIdentifier(record.scope?.executionUnitId);
     const storageRoot = this.resolveStorageRoot(resolvedTaskContext.workspaceRoot);
     const persistedRecord: HistoryRecord = {
       ...record,
-      scope: this.buildScope(taskId, runId, stageId),
+      scope: this.buildScope(taskId, runId, executionUnitId),
       recordId,
     };
     const taskBucketName = this.resolveTaskBucketName(taskId, runId);
@@ -86,7 +86,7 @@ export class HistoryStoreService {
         return false;
       }
 
-      if (query.stageId && record.scope?.stageId !== query.stageId) {
+      if (query.executionUnitId && record.scope?.executionUnitId !== query.executionUnitId) {
         return false;
       }
 
@@ -102,15 +102,15 @@ export class HistoryStoreService {
     throw new Error('History record requires a non-empty "taskId".');
   }
 
-  private buildScope(taskId: TaskId, runId: string, stageId?: StageId): {
+  private buildScope(taskId: TaskId, runId: string, executionUnitId?: ExecutionUnitId): {
     taskId: TaskId;
     runId: string;
-    stageId: StageId | null;
+    executionUnitId: ExecutionUnitId | null;
   } {
     return {
       taskId,
       runId,
-      stageId: stageId ?? null,
+      executionUnitId: executionUnitId ?? null,
     };
   }
 

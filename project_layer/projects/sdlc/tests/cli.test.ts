@@ -7,8 +7,8 @@ import {
   CLIService,
   ConsoleReviewInteraction,
   ConsoleTraceViewer,
-  DefaultCLICommandParser,
-  DefaultCLIRequestMapper,
+  CliCommandParser,
+  CliRequestMapper,
   ResourceWorkspaceInitializer,
 } from "../src/Interface/CliEntry/cli.js";
 import type { Application } from "../src/Runtime/application.js";
@@ -21,9 +21,10 @@ export async function runCliTests(): Promise<void> {
     await testCommandParser(workspaceRoot);
     await testRequestMapperSupportsComposeStandard(workspaceRoot);
     await testRequestMapperSupportsComposeFrom(workspaceRoot);
-    await testRequestMapperRejectsRunUnit(workspaceRoot);
+    await testRequestMapperSupportsUnitRun(workspaceRoot);
     await testRequestMapperRejectsGenerate(workspaceRoot);
     await testCliRunComposeSuccess(workspaceRoot);
+    await testCliRunUnitSuccess(workspaceRoot);
     await testCliInitCopiesResources(workspaceRoot);
     await testReviewInteractionApply();
     await testReviewInteractionReject();
@@ -34,7 +35,7 @@ export async function runCliTests(): Promise<void> {
 }
 
 async function testCommandParser(workspaceRoot: string): Promise<void> {
-  const parser = new DefaultCLICommandParser();
+  const parser = new CliCommandParser();
   assert.deepEqual(
     parser.parse(["run", "compose", "standard", "--workdir", workspaceRoot]),
     {
@@ -48,7 +49,7 @@ async function testCommandParser(workspaceRoot: string): Promise<void> {
 }
 
 async function testRequestMapperSupportsComposeStandard(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
+  const mapper = new CliRequestMapper();
   assert.deepEqual(
     await mapper.map({
       command: "run",
@@ -65,7 +66,7 @@ async function testRequestMapperSupportsComposeStandard(workspaceRoot: string): 
 }
 
 async function testRequestMapperSupportsComposeFrom(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
+  const mapper = new CliRequestMapper();
   assert.deepEqual(
     await mapper.map({
       command: "run",
@@ -83,22 +84,30 @@ async function testRequestMapperSupportsComposeFrom(workspaceRoot: string): Prom
   );
 }
 
-async function testRequestMapperRejectsRunUnit(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
-  await assert.rejects(
-    async () => mapper.map({
+async function testRequestMapperSupportsUnitRun(workspaceRoot: string): Promise<void> {
+  const mapper = new CliRequestMapper();
+  assert.deepEqual(
+    await mapper.map({
       command: "run",
       args: ["unit", "requirement_design_generate"],
       options: {
         workdir: workspaceRoot,
+        "run-id": "run-2",
+        "item-descriptor-path": "tmp/item.json",
       },
     }),
-    /run unit/,
+    {
+      mode: "unit",
+      executionUnitId: "requirement_design_generate",
+      params: {
+        itemDescriptorPath: "tmp/item.json",
+      },
+    },
   );
 }
 
 async function testRequestMapperRejectsGenerate(workspaceRoot: string): Promise<void> {
-  const mapper = new DefaultCLIRequestMapper();
+  const mapper = new CliRequestMapper();
   await assert.rejects(
     async () => mapper.map({
       command: "generate",
@@ -112,8 +121,8 @@ async function testRequestMapperRejectsGenerate(workspaceRoot: string): Promise<
 }
 
 async function testCliRunComposeSuccess(workspaceRoot: string): Promise<void> {
-  const parser = new DefaultCLICommandParser();
-  const mapper = new DefaultCLIRequestMapper();
+  const parser = new CliCommandParser();
+  const mapper = new CliRequestMapper();
   const rendered: string[] = [];
   const traceViewer: ConsoleTraceViewer = {
     renderStatus(message: string): void {
@@ -160,7 +169,6 @@ async function testCliRunComposeSuccess(workspaceRoot: string): Promise<void> {
     context: {
       workspaceRoot,
       runId: "run-1",
-      workspaceLocalEnv: {},
     },
   });
   assert.deepEqual(rendered, [
@@ -170,9 +178,65 @@ async function testCliRunComposeSuccess(workspaceRoot: string): Promise<void> {
   ]);
 }
 
+async function testCliRunUnitSuccess(workspaceRoot: string): Promise<void> {
+  const parser = new CliCommandParser();
+  const mapper = new CliRequestMapper();
+  const rendered: string[] = [];
+  const traceViewer: ConsoleTraceViewer = {
+    renderStatus(message: string): void {
+      rendered.push(`status:${message}`);
+    },
+    renderTrace(event): void {
+      rendered.push(`trace:${event.eventType}:${event.summary}`);
+    },
+    renderResult(summary: string): void {
+      rendered.push(`result:${summary}`);
+    },
+  };
+
+  let capturedInput: RuntimeInput | undefined;
+  const application: Application = {
+    async run(input: RuntimeInput) {
+      capturedInput = input;
+      return {
+        accepted: true,
+        summary: "Unit-run request accepted.",
+      };
+    },
+  };
+
+  const cli = new CLIService(parser, mapper, application, traceViewer);
+  const exitCode = await cli.run([
+    "run",
+    "unit",
+    "requirement_design_generate",
+    "--workdir",
+    workspaceRoot,
+    "--run-id",
+    "run-unit-1",
+  ]);
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(capturedInput, {
+    request: {
+      mode: "unit",
+      executionUnitId: "requirement_design_generate",
+    },
+    context: {
+      workspaceRoot,
+      runId: "run-unit-1",
+    },
+  });
+  assert.deepEqual(rendered, [
+    'trace:task_launch_requested:Launching command "run" for execution unit "requirement_design_generate".',
+    "status:Unit-run request accepted.",
+    "result:Completed command: run",
+  ]);
+}
+
 async function testCliInitCopiesResources(workspaceRoot: string): Promise<void> {
-  const parser = new DefaultCLICommandParser();
-  const mapper = new DefaultCLIRequestMapper();
+  const parser = new CliCommandParser();
+  const mapper = new CliRequestMapper();
   const initializer = new ResourceWorkspaceInitializer();
   const rendered: string[] = [];
   const traceViewer: ConsoleTraceViewer = {

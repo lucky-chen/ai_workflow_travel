@@ -1,6 +1,6 @@
 import type { CLICommandParser, ParsedCommand } from "./cli-types.js";
 
-export class DefaultCLICommandParser implements CLICommandParser {
+export class CliCommandParser implements CLICommandParser {
   parse(argv: string[]): ParsedCommand {
     const [command, ...rest] = argv;
     if (!command) {

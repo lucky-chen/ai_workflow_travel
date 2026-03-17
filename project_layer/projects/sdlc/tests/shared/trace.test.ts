@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { HistoryStoreService } from "../../src/data/history-store.js";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
-import { TraceService } from "../../src/quality-gate/trace-recorder.js";
+import { HistoryStoreService } from "../../src/Data/history-store.js";
+import { InMemoryTraceRecorder } from "../../src/SDK/QualityControl/Trace/trace-recorder.js";
+import { TraceService } from "../../src/SDK/QualityControl/Trace/trace-recorder.js";
 
 export async function runTraceTests(): Promise<void> {
   await testTraceRecorderAssignsStableRefs();
@@ -15,14 +15,14 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
   const recorder = new InMemoryTraceRecorder();
 
   const ref1 = await recorder.recordTrace({
-    stageId: "implementation",
+    executionUnitId: "implementation",
     caller: "trace.test",
-    eventType: "stage_started",
+    eventType: "generation_started",
     summary: "Implementation started.",
   });
   const ref2 = await recorder.recordTrace({
     caller: "trace.test",
-    eventType: "task_finished",
+    eventType: "validation_finished",
     summary: "Task finished.",
   });
 
@@ -32,9 +32,9 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
     {
       ref: "trace-1",
       event: {
-        stageId: "implementation",
+        executionUnitId: "implementation",
         caller: "trace.test",
-        eventType: "stage_started",
+        eventType: "generation_started",
         summary: "Implementation started.",
       },
     },
@@ -42,7 +42,7 @@ async function testTraceRecorderAssignsStableRefs(): Promise<void> {
       ref: "trace-2",
       event: {
         caller: "trace.test",
-        eventType: "task_finished",
+        eventType: "validation_finished",
         summary: "Task finished.",
       },
     },
@@ -60,9 +60,9 @@ async function testTraceServicePersistsHistory(): Promise<void> {
     });
 
     const ref = await recorder.recordTrace({
-      stageId: "implementation",
+      executionUnitId: "implementation",
       caller: "trace.test",
-      eventType: "stage_started",
+      eventType: "generation_started",
       summary: "Implementation started.",
       metadata: {
         source: "pipeline",
@@ -74,11 +74,11 @@ async function testTraceServicePersistsHistory(): Promise<void> {
     assert.deepEqual(record.scope, {
       taskId: "task-1",
       runId: "run-1",
-      stageId: "implementation",
+      executionUnitId: "implementation",
     });
     assert.equal(record.summary, "Implementation started.");
     assert.deepEqual(record.payload, {
-      eventType: "stage_started",
+      eventType: "generation_started",
       metadata: {
         source: "pipeline",
       },

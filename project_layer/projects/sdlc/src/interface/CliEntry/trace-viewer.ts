@@ -1,4 +1,4 @@
-import type { TraceEvent } from "../../Runtime/Schema/execution-unit.js";
+import type { TraceEvent } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { TraceViewer } from "./cli-types.js";
 
 export class ConsoleTraceViewer implements TraceViewer {

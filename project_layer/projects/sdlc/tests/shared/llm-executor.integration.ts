@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { LlmExecutorService } from "../../src/sdk/llm-executor/llm-executor.js";
+import { LlmExecutorService } from "../../src/SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { loadLocalConfig } from "./load-local-config.js";
 
 export async function runLlmExecutorIntegrationTests(): Promise<void> {

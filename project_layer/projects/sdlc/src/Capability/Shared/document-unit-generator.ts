@@ -1,9 +1,9 @@
-import type { IExecutionUnitGenerator, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Schema/execution-unit.js";
-import type { ITraceRecorder } from "../../Runtime/Schema/execution-unit.js";
-import { TRACE_EVENT_TYPES } from "../../Runtime/Schema/execution-unit.js";
+import type { IExecutionUnitGenerator, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
+import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
+import { TRACE_EVENT_TYPES } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import { resolveResourcePath } from "../../Runtime/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import type { ArtifactMap } from "../../Runtime/Schema/common.js";
+import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import { readFile } from "node:fs/promises";
 
 export abstract class DocumentUnitGenerator<TInput = string> implements IExecutionUnitGenerator {

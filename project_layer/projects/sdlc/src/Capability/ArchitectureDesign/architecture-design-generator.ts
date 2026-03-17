@@ -1,5 +1,6 @@
-import { getArtifactValue, type ITraceRecorder, type ExecutionUnitResult } from "../../Runtime/Schema/execution-unit.js";
-import type { ArtifactMap } from "../../Runtime/Schema/common.js";
+import { getArtifactValue, type ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
+import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
+import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
 import { parseDesignDocumentBreakdown } from "../Shared/design-document-breakdown.js";

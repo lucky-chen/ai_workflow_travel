@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 
 import type { FetchLike } from "ai-meta-agent-agent-runtime";
-import { InMemoryTraceRecorder } from "../../src/quality-gate/trace-recorder.js";
-import { LlmExecutorService } from "../../src/sdk/llm-executor/llm-executor.js";
+import { InMemoryTraceRecorder } from "../../src/SDK/QualityControl/Trace/trace-recorder.js";
+import { LlmExecutorService } from "../../src/SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { loadLocalConfig } from "./load-local-config.js";
 
 export async function runLlmExecutorTests(): Promise<void> {
@@ -213,7 +213,7 @@ async function testMockExecutorUsesRequestAwareHandler(): Promise<void> {
   const executor = new LlmExecutorService({
     mode: "mock",
     mockExecute: async (request) => ({
-      content: request.metadata?.stage === "implementation"
+      content: request.metadata?.executionUnit === "work_execute"
         ? "{\"summary\":\"scripted\",\"changed_files\":[]}"
         : "scripted-text",
       responseFormat: request.responseFormat,
@@ -228,7 +228,7 @@ async function testMockExecutorUsesRequestAwareHandler(): Promise<void> {
     },
     responseFormat: "json",
     metadata: {
-      stage: "implementation",
+      executionUnit: "work_execute",
     },
   });
 

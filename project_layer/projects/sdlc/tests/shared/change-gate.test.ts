@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { ChangeReviewPresenter, InMemoryChangeGate, InteractiveChangeGate } from "../../src/quality-gate/change-gate.js";
+import { ChangeReviewPresenter, InMemoryChangeGate, InteractiveChangeGate } from "../../src/SDK/QualityControl/Gate/change-gate.js";
 
 export async function runChangeGateTests(): Promise<void> {
   await testDefaultGateDecision();
@@ -98,7 +98,7 @@ async function testInteractiveGateUsesPresenter(): Promise<void> {
 function createReviewRequest() {
   return {
     taskId: "task-1",
-    stageId: "implementation",
+    executionUnitId: "implementation",
     summary: "Generated three file changes.",
     changedPaths: ["src/a.ts", "src/b.ts"],
     changedFiles: [

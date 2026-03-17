@@ -1,5 +1,5 @@
-import type { IComposeRunService } from "../../Runtime/Schema/compose-run.js";
-import { TRACE_EVENT_TYPES } from "../../Runtime/Schema/execution-unit.js";
+import { TRACE_EVENT_TYPES } from "../../SDK/QualityControl/Trace/trace-recorder.js";
+import type { Application } from "../../Runtime/application.js";
 import type {
   CLICommandParser,
   CLIRequestMapper,
@@ -8,15 +8,17 @@ import type {
   TraceViewer,
   WorkspaceInitializer,
 } from "./cli-types.js";
+import { buildRuntimeContext, type RuntimeContextBuilder } from "./build-runtime-context.js";
 import { ResourceWorkspaceInitializer } from "./workspace-initializer.js";
 
 export class CLIService implements ICLI {
   constructor(
     private readonly commandParser: CLICommandParser,
     private readonly requestMapper: CLIRequestMapper,
-    private readonly composeRunService: IComposeRunService,
+    private readonly application: Application,
     private readonly traceViewer: TraceViewer,
     private readonly workspaceInitializer: WorkspaceInitializer = new ResourceWorkspaceInitializer(),
+    private readonly runtimeContextBuilder: RuntimeContextBuilder = buildRuntimeContext,
   ) {}
 
   async run(argv: string[]): Promise<number> {
@@ -26,16 +28,14 @@ export class CLIService implements ICLI {
     }
 
     const request = await this.requestMapper.map(parsed);
+    const context = await this.runtimeContextBuilder(parsed);
     this.traceViewer.renderTrace({
       caller: "CLIService.run",
       eventType: TRACE_EVENT_TYPES.taskLaunchRequested,
-      summary: `Launching command "${parsed.command}" for compose mode "${request.composeMode}".`,
-      metadata: {
-        composeMode: request.composeMode,
-        ...(request.entryUnit ? { entryUnit: request.entryUnit } : {}),
-      },
+      summary: this.buildLaunchSummary(parsed.command, request),
+      metadata: this.buildLaunchMetadata(request),
     });
-    const result = await this.composeRunService.run(request);
+    const result = await this.application.run({ request, context });
     this.traceViewer.renderStatus(result.summary);
     this.traceViewer.renderResult(`Completed command: ${parsed.command}`);
     return 0;
@@ -48,9 +48,41 @@ export class CLIService implements ICLI {
     this.traceViewer.renderResult(`Copied SDLC resources to ${resourcesDirectory}`);
     return 0;
   }
+
+  private buildLaunchSummary(command: string, request: Awaited<ReturnType<CLIRequestMapper["map"]>>): string {
+    if (request.mode === "unit") {
+      return `Launching command "${command}" for execution unit "${request.executionUnitId}".`;
+    }
+
+    return `Launching command "${command}" for compose mode "${request.composeMode}".`;
+  }
+
+  private buildLaunchMetadata(request: Awaited<ReturnType<CLIRequestMapper["map"]>>): Record<string, string> {
+    if (request.mode === "unit") {
+      return {
+        mode: request.mode,
+        executionUnitId: request.executionUnitId,
+      };
+    }
+
+    return {
+      mode: request.mode,
+      composeMode: request.composeMode,
+      ...(request.entryUnit ? { entryUnit: request.entryUnit } : {}),
+    };
+  }
 }
 
 function readSingleRequiredOption(options: ParsedCommand["options"], ...keys: string[]): string {
+  const value = readOptionalSingleOption(options, ...keys);
+  if (value) {
+    return value;
+  }
+
+  throw new Error(`Missing required option: --${keys[0]}`);
+}
+
+function readOptionalSingleOption(options: ParsedCommand["options"], ...keys: string[]): string | undefined {
   for (const key of keys) {
     const value = options[key];
     if (typeof value === "undefined") {
@@ -63,6 +95,5 @@ function readSingleRequiredOption(options: ParsedCommand["options"], ...keys: st
 
     return value;
   }
-
-  throw new Error(`Missing required option: --${keys[0]}`);
+  return undefined;
 }
