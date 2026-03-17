@@ -6,7 +6,6 @@ import {
   getDefaultWorkspaceLocalEnvContent,
   loadWorkspaceLocalEnvConfig,
   resolveWorkspaceLocalEnvPath,
-  loadWorkspaceRuntimeOptions,
 } from "../../src/Interface/CliEntry/workspace-local-env.js";
 
 export async function runWorkspaceLocalEnvTests(): Promise<void> {
@@ -26,13 +25,10 @@ export async function runWorkspaceLocalEnvTests(): Promise<void> {
 
 async function testDefaultContentShape(): Promise<void> {
   const parsed = JSON.parse(getDefaultWorkspaceLocalEnvContent()) as {
-    resources?: { doc_dir?: string; dist_dir?: string; template_dir?: string; contract_dir?: string };
+    resources?: { root_dir?: string };
     llm?: { provider?: string; api_key?: string; model?: string; timeout_ms?: number };
   };
-  assert.equal(parsed.resources?.doc_dir, "../../meta_layer/resources");
-  assert.equal(parsed.resources?.template_dir, "../../meta_layer/resources/template");
-  assert.equal(parsed.resources?.contract_dir, "../../meta_layer/resources/contract");
-  assert.equal(parsed.resources?.dist_dir, "../../project_layer/projects/sdlc/dist/resources");
+  assert.equal(parsed.resources?.root_dir, "../../meta_layer/resources");
   assert.equal(parsed.llm?.provider, "openai");
   assert.equal(parsed.llm?.api_key, "your-api-key");
   assert.equal(parsed.llm?.model, "gpt-4.1-mini");
@@ -89,10 +85,7 @@ async function testConfiguredResourceDirectoriesAreParsed(workspaceRoot: string)
     JSON.stringify(
       {
         resources: {
-          doc_dir: "../dev-docs",
-          template_dir: "../dev-templates",
-          contract_dir: "../dev-contracts",
-          dist_dir: "../release-dist",
+          root_dir: "../resource-root",
         },
       },
       null,
@@ -101,14 +94,9 @@ async function testConfiguredResourceDirectoriesAreParsed(workspaceRoot: string)
     "utf8",
   );
 
-  const config = await loadWorkspaceRuntimeOptions(workspaceRoot);
-  assert.deepEqual(config.resourceResolver, {
-    resource: {
-      docDir: "../dev-docs",
-      templateDir: "../dev-templates",
-      contractDir: "../dev-contracts",
-      distDir: "../release-dist",
-    },
+  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  assert.deepEqual(config.resources, {
+    root_dir: "../resource-root",
   });
 }
 

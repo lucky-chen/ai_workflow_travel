@@ -2,10 +2,10 @@ import path from "node:path";
 import type { IExecutionUnitGenerator, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import { TRACE_EVENT_TYPES } from "../../SDK/QualityControl/Trace/trace-recorder.js";
-import { getTemplateDir } from "../../Runtime/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import { readFile } from "node:fs/promises";
+import { getTemplateFilePath } from "./workspace-resource-paths.js";
 
 export abstract class DocumentUnitGenerator<TInput = string> implements IExecutionUnitGenerator {
   private static readonly resourceCache = new Map<string, string>();
@@ -48,8 +48,8 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
 
   protected abstract loadInputDocument(inputArtifacts: ArtifactMap): Promise<TInput>;
   protected async loadTemplate(context: ExecutionContext): Promise<string> {
-    const templatePath = path.join(
-      getTemplateDir(),
+    const templatePath = await getTemplateFilePath(
+      context.workspaceRoot,
       path.basename(this.getTemplateResourcePath()),
     );
     const cached = DocumentUnitGenerator.resourceCache.get(templatePath);

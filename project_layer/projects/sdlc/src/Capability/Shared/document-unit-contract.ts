@@ -2,8 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
-import { getContractDir } from "../../Runtime/resource-resolver.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
+import { getContractFilePath } from "./workspace-resource-paths.js";
 
 export interface ContractSpec {
   document_contracts: DocumentContract[];
@@ -53,8 +53,13 @@ export abstract class DocumentUnitContract implements IContractChecker {
   }
 
   protected async loadSpecificContract(context?: ExecutionContext): Promise<ContractSpec> {
-    const contractFilePath = path.join(
-      getContractDir(),
+    const workspaceRoot = context?.workspaceRoot;
+    if (!workspaceRoot) {
+      throw new Error("Document contract loading requires workspaceRoot.");
+    }
+
+    const contractFilePath = await getContractFilePath(
+      workspaceRoot,
       path.basename(this.getContractResourcePath()),
     );
     const cached = DocumentUnitContract.contractCache.get(contractFilePath);

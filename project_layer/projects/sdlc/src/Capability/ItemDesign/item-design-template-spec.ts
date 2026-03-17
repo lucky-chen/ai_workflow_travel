@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
 
 import type { ContractSpec, SectionContract } from "../../Capability/Shared/document-unit-contract.js";
-import { getTemplateDir } from "../../Runtime/resource-resolver.js";
+import { getTemplateFilePath } from "../Shared/workspace-resource-paths.js";
 
 export interface ItemDesignTemplateSpec {
   contractSpec: ContractSpec;
@@ -12,7 +11,11 @@ export interface ItemDesignTemplateSpec {
 const templateSpecCache = new Map<string, ItemDesignTemplateSpec>();
 
 export async function loadItemDesignTemplateSpec(workspaceRoot?: string): Promise<ItemDesignTemplateSpec> {
-  const templatePath = path.join(getTemplateDir(), "ModuleDesignTemplate.md");
+  if (!workspaceRoot) {
+    throw new Error("Item design template loading requires workspaceRoot.");
+  }
+
+  const templatePath = await getTemplateFilePath(workspaceRoot, "ModuleDesignTemplate.md");
   const cached = templateSpecCache.get(templatePath);
   if (cached) {
     return cached;
