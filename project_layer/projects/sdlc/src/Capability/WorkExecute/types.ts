@@ -1,6 +1,5 @@
-// Work-execute generator types: local models used by the work-execute workflow.
-import type { ChangedFile, ProjectFile } from "../../../Runtime/Schema/runtime.js";
-import type { WorkPlan, WorkPlanBatch } from "../../../Runtime/Schema/work-plan.js";
+import type { ChangedFile, ProjectFile } from "../../Runtime/Schema/runtime.js";
+import type { WorkPlan, WorkPlanBatch } from "../../Runtime/Schema/work-plan.js";
 
 export interface ItemDesignDoc {
   itemName: string;

@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { WorkExecuteContract } from "../../../src/Capability/WorkExecute/work-execute-contract.js";
-import { WorkExecuteGenerator } from "../../../src/Capability/WorkExecute/work-execute-generator/work-execute-generator.js";
+import { WorkExecuteGenerator } from "../../../src/Capability/WorkExecute/work-execute-generator.js";
 import { WorkExecuteRuntimeUnit } from "../../../src/Capability/WorkExecute/work-execute-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import type { ExecutionUnitResult, WorkExecuteArtifacts } from "../../../src/Runtime/Unit/execution-unit.js";
@@ -23,8 +23,8 @@ async function testWorkExecuteGeneratorReturnsChangedFiles(): Promise<void> {
     await mkdir(path.join(workspaceRoot, "src"), { recursive: true });
     await writeFile(path.join(workspaceRoot, "src", "index.ts"), "export const oldValue = true;\n", "utf8");
 
-    const generator = new WorkExecuteGenerator({
-      llmExecutor: createMockLlmExecutor(async () => ({
+    const generator = new WorkExecuteGenerator(
+      createMockLlmExecutor(async () => ({
         content: JSON.stringify({
           summary: "Generated Workflow implementation.",
           changed_files: [
@@ -37,7 +37,7 @@ async function testWorkExecuteGeneratorReturnsChangedFiles(): Promise<void> {
         }),
         responseFormat: "json",
       })),
-    });
+    );
 
     const result = await generator.run(
       createExecutionContext(workspaceRoot, "work_execute", {
