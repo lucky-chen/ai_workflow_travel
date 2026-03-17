@@ -10,7 +10,7 @@
     "build": "npm --prefix ../agent_runtime run build && tsc -p tsconfig.json && sh ./scripts/copy-resources.sh",
     "typecheck": "npm --prefix ../agent_runtime run build && tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node dist/tests/run-tests.js",
-    "test:functional": "npm run build && node ../../../user_projects/hello-service/tests/hello-service-baseline.test.mjs",
+    "test:functional": "npm run build && node ../../../user_projects/hello-service/scripts/hello-service-functional.test.mjs",
     "test:llm:integration": "npm run build && node dist/tests/llm-executor.integration.js"
   },
   "dependencies": {

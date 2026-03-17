@@ -19,9 +19,9 @@ principles:
 execution_scope: concept-aligned execution-unit baseline and runtime-boundary follow-up with runtime schema naming work-execute residual cleanup post-alignment simplification and shared-directory removal
 status: completed
 current_focus:
-  stage_id: stage_9_shared_directory_removal
-  batch_id: batch_9_3_shared_directory_cleanup
-  task_id: task_9_3_1
+  stage_id: stage_10_capability_and_black_box_tests
+  batch_id: batch_10_2_hello_service_black_box
+  task_id: task_10_2_2
 stages:
   - stage_id: stage_1_model_alignment_baseline
     name: model alignment baseline
@@ -563,6 +563,49 @@ stages:
       - design document breakdown helpers live under Capability/Shared
       - src/shared no longer exists
       - npm test passes after each batch
+  - stage_id: stage_10_capability_and_black_box_tests
+    name: capability and black-box tests
+    goal: add missing capability-level unit coverage and supplement black-box coverage through the hello-service ci-style entry
+    status: completed
+    batches:
+      - batch_id: batch_10_1_capability_requirement_and_architecture
+        name: capability requirement and architecture
+        goal: cover stable RequirementDesign and ArchitectureDesign behaviors directly at capability level
+        status: completed
+        tasks:
+          - task_id: task_10_1_1
+            summary: add RequirementDesign capability tests for generator contract and runtime unit behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/tests/Capability/RequirementDesign
+              - project_layer/projects/sdlc/tests/run-tests.ts
+          - task_id: task_10_1_2
+            summary: add ArchitectureDesign capability tests for generator contract and runtime unit behavior
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
+              - project_layer/projects/sdlc/tests/run-tests.ts
+      - batch_id: batch_10_2_hello_service_black_box
+        name: hello-service black-box
+        goal: run current sdlc cli unit-run flow against a copied hello-service workspace through the functional ci entry
+        status: completed
+        tasks:
+          - task_id: task_10_2_1
+            summary: update hello-service functional scripts to use run unit commands and current artifact names
+            status: completed
+            involved_files:
+              - user_projects/hello-service/scripts
+              - project_layer/projects/sdlc/package.json
+          - task_id: task_10_2_2
+            summary: allow ci-style black-box tests to inject deterministic mock llm behavior when launching the sdlc cli entry
+            status: completed
+            involved_files:
+              - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
+              - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+    validation:
+      - capability tests run from tests/run-tests.ts
+      - npm test passes
+      - npm run test:functional passes through the hello-service script entry
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model

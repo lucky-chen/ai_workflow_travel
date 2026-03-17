@@ -1,4 +1,6 @@
 import { runApplicationTests } from "./app/application.test.js";
+import { runArchitectureDesignCapabilityTests } from "./Capability/ArchitectureDesign/architecture-design.test.js";
+import { runRequirementDesignCapabilityTests } from "./Capability/RequirementDesign/requirement-design.test.js";
 import { runArtifactStoreTests } from "./shared/artifact-store.test.js";
 import { runChangeGateTests } from "./shared/change-gate.test.js";
 import { runCliTests } from "./cli.test.js";
@@ -14,6 +16,8 @@ async function main(): Promise<void> {
   await runCliTests();
   await runApplicationTests();
   await runOrchestratorTests();
+  await runRequirementDesignCapabilityTests();
+  await runArchitectureDesignCapabilityTests();
   await runHistoryStoreTests();
   await runLlmExecutorTests();
   await runTraceTests();
