@@ -9,7 +9,7 @@ import { TraceService } from "../../src/SDK/QualityControl/Trace/trace-recorder.
 export async function runArtifactStoreTests(): Promise<void> {
   await testWriteAndReadArtifact();
   await testDefaultStorageRootUsesWorkspaceDistDirectory();
-  await testWriteArtifactMirrorsWorkspaceWhenWorkspaceRootProvided();
+  await testWriteArtifactDoesNotMirrorIntermediateOutputWhenWorkspaceRootProvided();
   await testWriteArtifactPersistsHistoryRecord();
   await testListArtifactsWithinRoot();
   await testListArtifactsOnMissingRoot();
@@ -28,7 +28,7 @@ async function testWriteAndReadArtifact(): Promise<void> {
       content: "generated artifact",
     });
 
-    const expectedPath = path.join(storageRoot, "task-1", "implementation", "docs/output.md");
+    const expectedPath = path.join(storageRoot, "task-1", "docs/output.md");
     const persistedContent = await readFile(expectedPath, "utf8");
 
     const content = await store.getArtifact({
@@ -101,7 +101,7 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
     await store.writeArtifact({
       taskId: "task-default",
       executionUnitId: "work_execute_contract",
-      filePath: "artifacts/work/work_execute_contract_result.json",
+      filePath: "work_execute_contract_result.json",
       content: "default workspace artifact",
       workspaceRoot,
     });
@@ -110,10 +110,8 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
       workspaceRoot,
       "dist",
       "sdlc",
-      "artifact_store",
       "task-default",
-      "work_execute_contract",
-      "artifacts/work/work_execute_contract_result.json",
+      "work_execute_contract_result.json",
     );
 
     assert.equal(await readFile(persistedPath, "utf8"), "default workspace artifact");
@@ -121,7 +119,7 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
       await store.getArtifact({
         taskId: "task-default",
         executionUnitId: "work_execute_contract",
-        filePath: "artifacts/work/work_execute_contract_result.json",
+        filePath: "work_execute_contract_result.json",
         workspaceRoot,
       }),
       "default workspace artifact",
@@ -131,7 +129,7 @@ async function testDefaultStorageRootUsesWorkspaceDistDirectory(): Promise<void>
   }
 }
 
-async function testWriteArtifactMirrorsWorkspaceWhenWorkspaceRootProvided(): Promise<void> {
+async function testWriteArtifactDoesNotMirrorIntermediateOutputWhenWorkspaceRootProvided(): Promise<void> {
   const storageRoot = await createTempDir("artifact-store-");
   const workspaceRoot = await createTempDir("artifact-workspace-");
 
@@ -141,18 +139,18 @@ async function testWriteArtifactMirrorsWorkspaceWhenWorkspaceRootProvided(): Pro
     await store.writeArtifact({
       taskId: "task-workspace",
       executionUnitId: "architecture_design",
-      filePath: "sdlc/docs/TechnicalArchitecture.md",
+      filePath: "architecture_design_contract_result.json",
       content: "workspace mirrored artifact",
       workspaceRoot,
     });
 
     assert.equal(
-      await readFile(path.join(storageRoot, "task-workspace", "architecture_design", "sdlc/docs/TechnicalArchitecture.md"), "utf8"),
+      await readFile(path.join(storageRoot, "task-workspace", "architecture_design_contract_result.json"), "utf8"),
       "workspace mirrored artifact",
     );
-    assert.equal(
-      await readFile(path.join(workspaceRoot, "sdlc/docs/TechnicalArchitecture.md"), "utf8"),
-      "workspace mirrored artifact",
+    await assert.rejects(
+      readFile(path.join(workspaceRoot, "architecture_design_contract_result.json"), "utf8"),
+      (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
     );
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
@@ -181,7 +179,7 @@ async function testWriteArtifactPersistsHistoryRecord(): Promise<void> {
     });
 
     const historyRecords = JSON.parse(
-      await readFile(path.join(historyRoot, "records", "task-history_run-history.json"), "utf8"),
+      await readFile(path.join(historyRoot, "run-history", "trace.json"), "utf8"),
     ) as Array<{
       category: string;
       scope: { taskId: string; runId: string; executionUnitId: string };

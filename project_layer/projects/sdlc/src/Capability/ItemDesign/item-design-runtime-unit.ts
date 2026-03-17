@@ -11,15 +11,16 @@ import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-record
 
 const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
 const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
-const ITEM_DESIGN_CONTRACT_RESULT_PATH = "artifacts/item_design/item_design_contract_result.json";
+const ITEM_DESIGN_CONTRACT_RESULT_PATH = "item_design_contract_result.json";
 
 export class ItemDesignRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
     private readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
   ) {
-    super(artifactStore, traceRecorder);
+    super(artifactStore, traceRecorder, resourceRoot);
   }
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
@@ -64,8 +65,8 @@ export class ItemDesignRuntimeUnit extends RuntimeUnitBase {
     const artifacts = output.artifacts as Record<string, unknown>;
     const documentPath = this.readOptionalStringField(artifacts, "documentPath")
       ?? path.posix.join(ITEM_DESIGN_DIRECTORY, `${this.readStringField(artifacts, "moduleName")}.md`);
-    await this.writeArtifact(
-      executionContext,
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
       documentPath,
       this.readStringField(artifacts, "content"),
     );

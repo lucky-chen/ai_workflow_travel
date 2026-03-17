@@ -14,7 +14,11 @@ export async function runHelloServiceFunctionalTest() {
   const workspaceRoot = await createWorkspaceCopy();
 
   try {
-    await runCli(workspaceRoot, ["run", "unit", "requirement_design_generate"], "hello-service-req");
+    await runCli(
+      workspaceRoot,
+      ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
+      "hello-service-req",
+    );
     await runCli(workspaceRoot, ["run", "unit", "architecture_design_generate"], "hello-service-arch");
 
     const itemDescriptorPath = await createItemDescriptor(workspaceRoot);

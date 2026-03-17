@@ -56,7 +56,7 @@ async function testHistoryStoreWriteReadAndList(): Promise<void> {
     assert.equal(taskScopedRecords.length, 1);
     assert.equal(taskScopedRecords[0]?.recordId, recordId);
     const taskBucket = JSON.parse(
-      await readFile(path.join(storageRoot, "records", "task-1_run-a.json"), "utf8"),
+      await readFile(path.join(storageRoot, "run-a", "trace.json"), "utf8"),
     ) as Array<{
       recordId: string;
       scope: { taskId: string; runId: string; executionUnitId: string };

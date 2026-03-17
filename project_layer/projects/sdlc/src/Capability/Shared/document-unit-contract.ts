@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import { getContractFilePath } from "./workspace-resource-paths.js";
+import { getContractFilePath } from "./resource-paths.js";
 
 export interface ContractSpec {
   document_contracts: DocumentContract[];
@@ -61,6 +61,7 @@ export abstract class DocumentUnitContract implements IContractChecker {
     const contractFilePath = await getContractFilePath(
       workspaceRoot,
       path.basename(this.getContractResourcePath()),
+      context.params?.resourceRoot,
     );
     const cached = DocumentUnitContract.contractCache.get(contractFilePath);
     const parsed = cached ?? JSON.parse(await readFile(contractFilePath, "utf8")) as ContractSpec;

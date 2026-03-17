@@ -19,16 +19,28 @@ async function testRequirementGeneratorReturnsGeneratedDocument(): Promise<void>
   const workspaceRoot = await createTempDir("requirement-generator-");
 
   try {
+    let capturedRequest:
+      | {
+          prompt: { userPrompt: unknown };
+        }
+      | undefined;
     const generator = new RequirementGenerator({
-      llmExecutor: createMockLlmExecutor(async () => ({
+      llmExecutor: createMockLlmExecutor(async (request) => {
+        capturedRequest = request;
+        return {
         content: "# Generated Requirement\n\n- generated content\n",
         responseFormat: "text",
-      })),
+        };
+      }),
     });
     const result = await generator.run(
-      createExecutionContext(workspaceRoot, "requirement_design_generate", {
-        requirement_design: "# Existing Requirement\n",
-      }),
+      {
+        ...createExecutionContext(workspaceRoot, "requirement_design_generate"),
+        params: {
+          executionUnit: "requirement_design_generate",
+          userComment: "Generate requirement baseline from user comment.",
+        },
+      },
     );
 
     assert.equal(result.executionUnitId, "requirement_design");
@@ -38,6 +50,10 @@ async function testRequirementGeneratorReturnsGeneratedDocument(): Promise<void>
       artifactKey: "requirement_design",
       content: "# Generated Requirement\n\n- generated content\n",
     });
+    const userPrompt = capturedRequest?.prompt.userPrompt as Record<string, unknown> | undefined;
+    assert.equal(userPrompt?.target, "requirement_design_generate");
+    assert.equal(userPrompt?.userComment, "Generate requirement baseline from user comment.");
+    assert.equal(typeof userPrompt?.template, "string");
   } finally {
     await removeTempDir(workspaceRoot);
   }
@@ -97,6 +113,9 @@ async function testRequirementRuntimeUnitPersistsGeneratedDocument(): Promise<vo
       {
         mode: "unit",
         executionUnitId: "requirement_design_generate",
+        params: {
+          userComment: "Generate runtime requirement from comment.",
+        },
       },
       {
         workspaceRoot,
@@ -110,19 +129,18 @@ async function testRequirementRuntimeUnitPersistsGeneratedDocument(): Promise<vo
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8"),
       "# Runtime Requirement\n\n- persisted content\n",
     );
-    assert.equal(
-      await readFile(
+    await assert.rejects(
+      readFile(
         path.join(
           storageRoot,
           "requirement-runtime-run",
-          "requirement_design_generate",
           "sdlc",
           "docs",
           "Requirement.md",
         ),
         "utf8",
       ),
-      "# Runtime Requirement\n\n- persisted content\n",
+      (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
     );
   } finally {
     await removeTempDir(workspaceRoot);

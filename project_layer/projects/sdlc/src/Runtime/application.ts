@@ -13,6 +13,7 @@ import {
 export interface ApplicationConfig {
   artifactStorageRoot?: string;
   historyStorageRoot?: string;
+  resourceRoot?: string;
   llmExecutor?: LlmExecutorServiceDependencies;
   llmExecutorInstance?: ILlmExecutor;
   changeGate?: InMemoryChangeGate;
@@ -42,6 +43,7 @@ export function createApplication(config: ApplicationConfig = {}): Application {
   return new ApplicationService(new RuntimeOrchestrator({
     artifactStore,
     llmExecutor,
+    resourceRoot: config.resourceRoot,
     traceRecorder,
     traceService: traceRecorder,
     changeGate,

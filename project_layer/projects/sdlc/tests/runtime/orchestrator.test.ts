@@ -45,6 +45,9 @@ async function testRuntimeOrchestratorSupportsRequirementDesignUnitRun(): Promis
       request: {
         mode: "unit",
         executionUnitId: "requirement_design_generate",
+        params: {
+          userComment: "Generate requirement from orchestrator test.",
+        },
       },
       context: {
         workspaceRoot,
@@ -58,12 +61,12 @@ async function testRuntimeOrchestratorSupportsRequirementDesignUnitRun(): Promis
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8"),
       "# Generated Requirement\n\n- generated content\n",
     );
-    assert.equal(
-      await readFile(
-        path.join(storageRoot, "run-unit-1", "requirement_design_generate", "sdlc", "docs", "Requirement.md"),
+    await assert.rejects(
+      readFile(
+        path.join(storageRoot, "run-unit-1", "sdlc", "docs", "Requirement.md"),
         "utf8",
       ),
-      "# Generated Requirement\n\n- generated content\n",
+      (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
     );
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });

@@ -43,26 +43,31 @@ export class RuntimeOrchestrator implements Orchestrator {
       this.dependencies.artifactStore,
       this.dependencies.traceRecorder,
       this.dependencies.llmExecutor,
+      this.dependencies.resourceRoot,
     );
     const architectureDesignUnit = new ArchitectureDesignRuntimeUnit(
       this.dependencies.artifactStore,
       this.dependencies.traceRecorder,
       this.dependencies.llmExecutor,
+      this.dependencies.resourceRoot,
     );
     const itemDesignUnit = new ItemDesignRuntimeUnit(
       this.dependencies.artifactStore,
       this.dependencies.traceRecorder,
       this.dependencies.llmExecutor,
+      this.dependencies.resourceRoot,
     );
     const workPlanUnit = new WorkPlanRuntimeUnit(
       this.dependencies.artifactStore,
       this.dependencies.traceRecorder,
       this.dependencies.llmExecutor,
+      this.dependencies.resourceRoot,
     );
     const workExecuteUnit = new WorkExecuteRuntimeUnit(
       this.dependencies.artifactStore,
       this.dependencies.traceRecorder,
       this.dependencies.llmExecutor,
+      this.dependencies.resourceRoot,
     );
 
     return new Map<string, RuntimeUnit>([

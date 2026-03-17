@@ -13,15 +13,16 @@ const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
 const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
 const WORK_PLAN_PATH = "sdlc/docs/work_plan.yaml";
-const WORK_PLAN_CONTRACT_RESULT_PATH = "artifacts/work/work_plan_contract_result.json";
+const WORK_PLAN_CONTRACT_RESULT_PATH = "work_plan_contract_result.json";
 
 export class WorkPlanRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
     private readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
   ) {
-    super(artifactStore, traceRecorder);
+    super(artifactStore, traceRecorder, resourceRoot);
   }
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
@@ -58,7 +59,7 @@ export class WorkPlanRuntimeUnit extends RuntimeUnitBase {
       traceRecorder: this.traceRecorder,
     }).run(executionContext);
     const artifacts = output.artifacts as Record<string, unknown>;
-    await this.writeArtifact(executionContext, WORK_PLAN_PATH, this.readStringField(artifacts, "content"));
+    await this.writeWorkspaceFile(context.workspaceRoot, WORK_PLAN_PATH, this.readStringField(artifacts, "content"));
     return {
       accepted: true,
       summary: `${output.summary} Persisted to ${WORK_PLAN_PATH}.`,

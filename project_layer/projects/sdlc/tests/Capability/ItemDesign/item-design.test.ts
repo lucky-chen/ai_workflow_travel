@@ -142,12 +142,11 @@ async function testItemDesignRuntimeUnitPersistsGeneratedDocument(): Promise<voi
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8"),
       "# Workflow Design\n\nRuntime item design.\n",
     );
-    assert.equal(
-      await readFile(
+    await assert.rejects(
+      readFile(
         path.join(
           storageRoot,
           "item-design-runtime-run",
-          "item_design_generate",
           "sdlc",
           "docs",
           "item_design",
@@ -155,7 +154,7 @@ async function testItemDesignRuntimeUnitPersistsGeneratedDocument(): Promise<voi
         ),
         "utf8",
       ),
-      "# Workflow Design\n\nRuntime item design.\n",
+      (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
     );
   } finally {
     await removeTempDir(workspaceRoot);

@@ -7,15 +7,16 @@ import type { ILlmExecutor } from "../../SDK/AgentRuntime/LlmExecutor/llm-execut
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 
 const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
-const REQUIREMENT_CONTRACT_RESULT_PATH = "artifacts/requirement/requirement_design_contract_result.json";
+const REQUIREMENT_CONTRACT_RESULT_PATH = "requirement_design_contract_result.json";
 
 export class RequirementDesignRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
     private readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
   ) {
-    super(artifactStore, traceRecorder);
+    super(artifactStore, traceRecorder, resourceRoot);
   }
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
@@ -46,17 +47,24 @@ export class RequirementDesignRuntimeUnit extends RuntimeUnitBase {
   }
 
   private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    const inputArtifacts = {
-      requirement_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, REQUIREMENT_DOCUMENT_PATH),
-    };
+    const userComment = request.params?.userComment?.trim();
+    if (!userComment) {
+      throw new Error('Missing required option: --user-comment');
+    }
+
+    const inputArtifacts = await this.readOptionalWorkspaceFile(
+      context.workspaceRoot,
+      REQUIREMENT_DOCUMENT_PATH,
+      "requirement_design",
+    );
     const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
     const output = await new RequirementGenerator({
       llmExecutor: this.llmExecutor,
       traceRecorder: this.traceRecorder,
     }).run(executionContext);
     const artifacts = output.artifacts as Record<string, unknown>;
-    await this.writeArtifact(
-      executionContext,
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
       REQUIREMENT_DOCUMENT_PATH,
       this.readStringField(artifacts, "content"),
     );

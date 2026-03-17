@@ -93,6 +93,7 @@ async function testRequestMapperSupportsUnitRun(workspaceRoot: string): Promise<
       options: {
         workdir: workspaceRoot,
         "run-id": "run-2",
+        "user-comment": "generate requirement from comment",
         "item-descriptor-path": "tmp/item.json",
       },
     }),
@@ -100,6 +101,7 @@ async function testRequestMapperSupportsUnitRun(workspaceRoot: string): Promise<
       mode: "unit",
       executionUnitId: "requirement_design_generate",
       params: {
+        userComment: "generate requirement from comment",
         itemDescriptorPath: "tmp/item.json",
       },
     },
@@ -214,6 +216,8 @@ async function testCliRunUnitSuccess(workspaceRoot: string): Promise<void> {
     workspaceRoot,
     "--run-id",
     "run-unit-1",
+    "--user-comment",
+    "generate requirement from comment",
   ]);
 
   assert.equal(exitCode, 0);
@@ -221,6 +225,9 @@ async function testCliRunUnitSuccess(workspaceRoot: string): Promise<void> {
     request: {
       mode: "unit",
       executionUnitId: "requirement_design_generate",
+      params: {
+        userComment: "generate requirement from comment",
+      },
     },
     context: {
       workspaceRoot,

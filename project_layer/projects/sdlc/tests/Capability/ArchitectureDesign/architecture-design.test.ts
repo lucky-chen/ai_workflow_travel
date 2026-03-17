@@ -130,6 +130,10 @@ async function testArchitectureRuntimeUnitPersistsDocumentAndBreakdown(): Promis
     ) as Array<{ documentPath: string }>;
     assert.equal(breakdown.length, 1);
     assert.equal(breakdown[0].documentPath, "sdlc/docs/item_design/Workflow.md");
+    await assert.rejects(
+      readFile(path.join(storageRoot, "architecture-runtime-run", "sdlc", "docs", "TechnicalArchitecture.md"), "utf8"),
+      (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
+    );
   } finally {
     await removeTempDir(workspaceRoot);
     await removeTempDir(storageRoot);

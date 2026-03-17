@@ -6,16 +6,17 @@ import type { IArtifactStore } from "../../Data/artifact-store.js";
 import type { ILlmExecutor } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 
-const WORK_EXECUTE_RESULT_PATH = "artifacts/work/work_execute_result.json";
-const WORK_EXECUTE_CONTRACT_RESULT_PATH = "artifacts/work/work_execute_contract_result.json";
+const WORK_EXECUTE_RESULT_PATH = "work_execute.json";
+const WORK_EXECUTE_CONTRACT_RESULT_PATH = "work_execute_contract_result.json";
 
 export class WorkExecuteRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
     private readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
   ) {
-    super(artifactStore, traceRecorder);
+    super(artifactStore, traceRecorder, resourceRoot);
   }
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
@@ -33,7 +34,7 @@ export class WorkExecuteRuntimeUnit extends RuntimeUnitBase {
       success: true,
       summary: "Loaded work execute artifact for contract check.",
       artifacts: this.parseJsonText(
-        await this.readRequiredWorkspaceFile(context.workspaceRoot, WORK_EXECUTE_RESULT_PATH),
+        await this.readStoredArtifact(context.runId, "work_execute", WORK_EXECUTE_RESULT_PATH, context.workspaceRoot),
         "Stored work execute result must be valid JSON.",
       ),
     };

@@ -175,7 +175,7 @@ async function testWorkExecuteRuntimeUnitPersistsGeneratedResult(): Promise<void
     assert.equal(result.accepted, true);
     assert.match(result.summary, /Generated Workflow implementation/);
     assert.deepEqual(
-      JSON.parse(await readFile(path.join(workspaceRoot, "artifacts", "work", "work_execute_result.json"), "utf8")),
+      JSON.parse(await readFile(path.join(storageRoot, "work-execute-runtime-run", "work_execute.json"), "utf8")),
       {
         changedFiles: [
           {

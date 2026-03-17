@@ -25,7 +25,10 @@ export class ItemDesignContract extends DocumentUnitContract {
   }
 
   protected async loadSpecificContract(context?: ExecutionContext): Promise<ContractSpec> {
-    return (await loadItemDesignTemplateSpec(context?.workspaceRoot)).contractSpec;
+    return (await loadItemDesignTemplateSpec(
+      context?.workspaceRoot,
+      context?.params?.resourceRoot,
+    )).contractSpec;
   }
 
   protected async buildCheckRequest(

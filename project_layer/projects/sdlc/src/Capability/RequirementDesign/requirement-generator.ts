@@ -1,4 +1,4 @@
-import type { ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
+import type { ExecutionContext, ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
 import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
@@ -15,25 +15,29 @@ export interface RequirementGeneratorDependencies {
   traceRecorder?: ITraceRecorder;
 }
 
-export class RequirementGenerator extends DocumentUnitGenerator<string> {
+interface RequirementGeneratorInput {
+  existingRequirement?: string;
+  userComment: string;
+}
+
+export class RequirementGenerator extends DocumentUnitGenerator<RequirementGeneratorInput> {
   constructor(dependencies: RequirementGeneratorDependencies) {
     super(dependencies.llmExecutor, dependencies.traceRecorder);
   }
 
-  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<string> {
-    const inputDocument = getArtifactValue(inputArtifacts, "requirement_design");
-    if (!inputDocument) {
-      throw new Error('Missing required input artifact "requirement_design".');
-    }
-
-    return inputDocument;
+  protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<RequirementGeneratorInput> {
+    const existingRequirement = getArtifactValue(inputArtifacts, "requirement_design");
+    return {
+      ...(existingRequirement ? { existingRequirement } : {}),
+      userComment: this.readUserComment(this.getCurrentContext()),
+    };
   }
 
   protected getTemplateResourcePath(): string {
     return "template/RequirementTemplate.md";
   }
 
-  protected buildPrompt(inputDocument: string, template: string): LlmExecutionRequest {
+  protected buildPrompt(inputDocument: RequirementGeneratorInput, template: string): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
     return {
       prompt: {
@@ -45,7 +49,8 @@ export class RequirementGenerator extends DocumentUnitGenerator<string> {
         ],
         userPrompt: {
           target: executionUnit,
-          inputDocument,
+          userComment: inputDocument.userComment,
+          ...(inputDocument.existingRequirement ? { existingRequirement: inputDocument.existingRequirement } : {}),
           template,
         },
       },
@@ -54,6 +59,15 @@ export class RequirementGenerator extends DocumentUnitGenerator<string> {
         executionUnit: "requirement_design_generate",
       },
     };
+  }
+
+  private readUserComment(context?: ExecutionContext): string {
+    const userComment = context?.params?.userComment?.trim();
+    if (!userComment) {
+      throw new Error('Missing required option: --user-comment');
+    }
+
+    return userComment;
   }
 
   protected async buildExecutionUnitResult(result: LlmExecutionResult): Promise<ExecutionUnitResult<RequirementArtifacts>> {
@@ -69,5 +83,4 @@ export class RequirementGenerator extends DocumentUnitGenerator<string> {
       },
     };
   }
-
 }

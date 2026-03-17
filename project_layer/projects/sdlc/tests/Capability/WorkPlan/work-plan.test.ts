@@ -189,19 +189,18 @@ async function testWorkPlanRuntimeUnitPersistsGeneratedPlan(): Promise<void> {
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8"),
       generatedPlan,
     );
-    assert.equal(
-      await readFile(
+    await assert.rejects(
+      readFile(
         path.join(
           storageRoot,
           "work-plan-runtime-run",
-          "work_plan_generate",
           "sdlc",
           "docs",
           "work_plan.yaml",
         ),
         "utf8",
       ),
-      generatedPlan,
+      (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
     );
   } finally {
     await removeTempDir(workspaceRoot);

@@ -5,7 +5,7 @@ import { TRACE_EVENT_TYPES } from "../../SDK/QualityControl/Trace/trace-recorder
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import { readFile } from "node:fs/promises";
-import { getTemplateFilePath } from "./workspace-resource-paths.js";
+import { getTemplateFilePath } from "./resource-paths.js";
 
 export abstract class DocumentUnitGenerator<TInput = string> implements IExecutionUnitGenerator {
   private static readonly resourceCache = new Map<string, string>();
@@ -51,6 +51,7 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
     const templatePath = await getTemplateFilePath(
       context.workspaceRoot,
       path.basename(this.getTemplateResourcePath()),
+      context.params?.resourceRoot,
     );
     const cached = DocumentUnitGenerator.resourceCache.get(templatePath);
     if (cached !== undefined) {

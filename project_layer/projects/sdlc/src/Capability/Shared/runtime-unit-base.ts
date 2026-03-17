@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
@@ -11,6 +11,7 @@ export abstract class RuntimeUnitBase {
   constructor(
     protected readonly artifactStore: IArtifactStore,
     protected readonly traceRecorder: ITraceRecorder,
+    protected readonly resourceRoot?: string,
   ) {}
 
   protected buildExecutionContext(
@@ -28,6 +29,7 @@ export abstract class RuntimeUnitBase {
       params: {
         ...(request.params ?? {}),
         executionUnit: request.executionUnitId,
+        ...(this.resourceRoot ? { resourceRoot: this.resourceRoot } : {}),
       },
     };
   }
@@ -39,6 +41,20 @@ export abstract class RuntimeUnitBase {
       filePath,
       content,
       workspaceRoot: context.workspaceRoot,
+    });
+  }
+
+  protected async readStoredArtifact(
+    taskId: string,
+    executionUnitId: string,
+    filePath: string,
+    workspaceRoot: string,
+  ): Promise<string> {
+    return this.artifactStore.getArtifact({
+      taskId,
+      executionUnitId,
+      filePath,
+      workspaceRoot,
     });
   }
 
@@ -70,6 +86,12 @@ export abstract class RuntimeUnitBase {
       ? targetPath
       : path.resolve(workspaceRoot, targetPath);
     return readFile(resolvedPath, "utf8");
+  }
+
+  protected async writeWorkspaceFile(workspaceRoot: string, relativePath: string, content: string): Promise<void> {
+    const absolutePath = path.join(workspaceRoot, relativePath);
+    await mkdir(path.dirname(absolutePath), { recursive: true });
+    await writeFile(absolutePath, content, "utf8");
   }
 
   protected parseJsonText<T>(content: string, errorMessage: string): T {

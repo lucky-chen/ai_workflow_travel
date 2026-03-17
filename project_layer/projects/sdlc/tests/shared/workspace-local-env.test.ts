@@ -6,6 +6,7 @@ import {
   getDefaultWorkspaceLocalEnvContent,
   loadWorkspaceLocalEnvConfig,
   resolveWorkspaceLocalEnvPath,
+  loadWorkspaceRuntimeOptions,
 } from "../../src/Interface/CliEntry/workspace-local-env.js";
 
 export async function runWorkspaceLocalEnvTests(): Promise<void> {
@@ -94,10 +95,13 @@ async function testConfiguredResourceDirectoriesAreParsed(workspaceRoot: string)
     "utf8",
   );
 
-  const config = await loadWorkspaceLocalEnvConfig(workspaceRoot);
-  assert.deepEqual(config.resources, {
+  const parsed = await loadWorkspaceLocalEnvConfig(workspaceRoot);
+  assert.deepEqual(parsed.resources, {
     root_dir: "../resource-root",
   });
+
+  const config = await loadWorkspaceRuntimeOptions(workspaceRoot);
+  assert.equal(config.resourceRoot, path.resolve(workspaceRoot, "../resource-root"));
 }
 
 async function testInvalidJsonThrowsClearError(workspaceRoot: string): Promise<void> {

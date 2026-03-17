@@ -9,15 +9,16 @@ import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-record
 const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
 const ARCHITECTURE_BREAKDOWN_PATH = "sdlc/docs/architecture_design_breakdown.json";
-const ARCHITECTURE_CONTRACT_RESULT_PATH = "artifacts/architecture/architecture_design_contract_result.json";
+const ARCHITECTURE_CONTRACT_RESULT_PATH = "architecture_design_contract_result.json";
 
 export class ArchitectureDesignRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
     private readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
   ) {
-    super(artifactStore, traceRecorder);
+    super(artifactStore, traceRecorder, resourceRoot);
   }
 
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
@@ -58,14 +59,14 @@ export class ArchitectureDesignRuntimeUnit extends RuntimeUnitBase {
       traceRecorder: this.traceRecorder,
     }).run(executionContext);
     const artifacts = output.artifacts as Record<string, unknown>;
-    await this.writeArtifact(
-      executionContext,
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
       ARCHITECTURE_DOCUMENT_PATH,
       this.readStringField(artifacts, "content"),
     );
     const designDocumentBreakdown = this.readOptionalStringField(artifacts, "design_document_breakdown");
     if (designDocumentBreakdown) {
-      await this.writeArtifact(executionContext, ARCHITECTURE_BREAKDOWN_PATH, designDocumentBreakdown);
+      await this.writeWorkspaceFile(context.workspaceRoot, ARCHITECTURE_BREAKDOWN_PATH, designDocumentBreakdown);
     }
     return {
       accepted: true,

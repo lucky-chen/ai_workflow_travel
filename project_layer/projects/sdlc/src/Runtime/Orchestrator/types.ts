@@ -12,6 +12,7 @@ export interface Orchestrator {
 export interface RuntimeOrchestratorDependencies {
   artifactStore: IArtifactStore;
   llmExecutor: ILlmExecutor;
+  resourceRoot?: string;
   traceRecorder: ITraceRecorder;
   traceService?: TraceService;
   changeGate?: IChangeGate;
