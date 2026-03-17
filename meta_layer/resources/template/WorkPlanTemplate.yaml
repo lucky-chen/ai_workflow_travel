@@ -14,24 +14,28 @@ principles:
 execution_scope: define the implementation scope for this workspace
 status: pending
 current_focus:
+  milestone_id: milestone_1_initial_delivery
   stage_id: stage_1_initial_delivery
   batch_id: batch_1_1_initial_batch
   task_id: task_1_1_1
-stages:
-  - stage_id: stage_1_initial_delivery
+milestones:
+  - milestone_id: milestone_1_initial_delivery
     name: initial delivery
-    goal: describe the first deliverable stage for this workspace
+    goal: describe the first delivery milestone for this workspace
     status: pending
-    batches:
-      - batch_id: batch_1_1_initial_batch
-        name: initial batch
-        goal: describe the first delivery batch for this workspace
+    stages:
+      - stage_id: stage_1_initial_delivery
+        name: initial delivery stage
+        goal: describe the first deliverable stage for this workspace
         status: pending
-        tasks:
-          - task_id: task_1_1_1
-            summary: describe the first concrete implementation task
+        batches:
+          - batch_id: batch_1_1_initial_batch
+            name: initial batch
+            goal: describe the first delivery batch for this workspace
             status: pending
-            involved_files:
-              - src
-    validation:
-      - define the validation outcome for this stage
+            tasks:
+              - task_id: task_1_1_1
+                summary: describe the first concrete implementation task
+                status: pending
+                involved_files:
+                  - src

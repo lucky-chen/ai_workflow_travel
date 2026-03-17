@@ -1,5 +1,6 @@
 import { ArchitectureDesignRuntimeUnit } from "../../Capability/ArchitectureDesign/architecture-design-runtime-unit.js";
 import { ItemDesignRuntimeUnit } from "../../Capability/ItemDesign/item-design-runtime-unit.js";
+import { OverallDesignContractRuntimeUnit } from "../../Capability/OverallDesignContract/overall-design-contract-runtime-unit.js";
 import { RequirementDesignRuntimeUnit } from "../../Capability/RequirementDesign/requirement-runtime-unit.js";
 import { WorkExecuteRuntimeUnit } from "../../Capability/WorkExecute/work-execute-runtime-unit.js";
 import { WorkPlanRuntimeUnit } from "../../Capability/WorkPlan/work-plan-runtime-unit.js";
@@ -63,6 +64,10 @@ export class RuntimeOrchestrator implements Orchestrator {
       this.dependencies.llmExecutor,
       this.dependencies.resourceRoot,
     );
+    const overallDesignContractUnit = new OverallDesignContractRuntimeUnit(
+      this.dependencies.artifactStore,
+      this.dependencies.traceRecorder,
+    );
     const workExecuteUnit = new WorkExecuteRuntimeUnit(
       this.dependencies.artifactStore,
       this.dependencies.traceRecorder,
@@ -80,6 +85,7 @@ export class RuntimeOrchestrator implements Orchestrator {
       ["item_design_generate", itemDesignUnit],
       ["item_design_update", itemDesignUnit],
       ["item_design_contract", itemDesignUnit],
+      ["overall_design_contract", overallDesignContractUnit],
       ["work_plan_generate", workPlanUnit],
       ["work_plan_update", workPlanUnit],
       ["work_plan_contract", workPlanUnit],

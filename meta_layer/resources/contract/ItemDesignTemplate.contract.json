@@ -21,32 +21,32 @@
       "section_id": "1.1",
       "title": "Purpose",
       "checkitems": [
-        "define the purpose of the current module design document",
-        "make the module boundary explicit"
+        "define the purpose of the current item design document",
+        "make the item design boundary explicit"
       ],
       "severity": "medium",
       "expected_format": "`{Purpose}`"
     },
     {
       "section_id": "1.2",
-      "title": "Involved Modules",
+      "title": "Involved Items",
       "checkitems": [
-        "list the directly involved module",
-        "list the collaborating modules only when they are necessary for understanding the design"
+        "list the directly involved item",
+        "list the collaborating items only when they are necessary for understanding the design"
       ],
       "severity": "medium",
-      "expected_format": "This module design directly involves:\n\n- `{ModulePath}`\n\nThis module design collaborates with:\n\n- `{CollaboratorA}`\n- `{CollaboratorB}`"
+      "expected_format": "This item design directly involves:\n\n- `{ItemPath}`\n\nThis item design collaborates with:\n\n- `{CollaboratorA}`\n- `{CollaboratorB}`"
     },
     {
       "section_id": "1.3",
       "title": "Core Functions",
       "checkitems": [
-        "summarize the module role",
+        "summarize the item design role",
         "list the core functions only",
-        "explicitly state what is out of scope for this module"
+        "explicitly state what is out of scope for this item design"
       ],
       "severity": "medium",
-      "expected_format": "`{ModulePath}` is the `{ModuleRole}` module.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{ModuleName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
+      "expected_format": "`{ItemPath}` is the `{ItemRole}` item.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{ItemName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
     },
     {
       "section_id": "2",
@@ -62,7 +62,7 @@
       "title": "Class Diagram",
       "checkitems": [
         "show the important classes, interfaces, and dependencies",
-        "keep the diagram focused on core module structure"
+        "keep the diagram focused on core item structure"
       ],
       "severity": "medium",
       "expected_format": "```plantuml\n' UML class diagram here\n```"
@@ -83,7 +83,7 @@
       "title": "Core Runtime Flow",
       "checkitems": [
         "this section must be expressed using UML sequence diagram language",
-        "the diagram should focus on core runtime interactions between the module and its collaborators"
+        "the diagram should focus on core runtime interactions between the item design and its collaborators"
       ],
       "severity": "medium"
     },
@@ -91,7 +91,7 @@
       "section_id": "3.1",
       "title": "Main Sequence Diagram",
       "checkitems": [
-        "show the main runtime interaction between caller, module, and collaborators",
+        "show the main runtime interaction between caller, item design, and collaborators",
         "keep the flow focused on the primary success path"
       ],
       "severity": "medium",
@@ -101,7 +101,7 @@
       "section_id": "4.1",
       "title": "Core APIs And Fields",
       "checkitems": [
-        "define only stable interfaces and types needed to understand the module",
+        "define only stable interfaces and types needed to understand the item design",
         "prefer concise and implementation-oriented type definitions"
       ],
       "severity": "medium"
@@ -110,21 +110,21 @@
       "section_id": "4.1.1",
       "title": "Public API",
       "checkitems": [
-        "define only the public API that upstream modules need to call",
+        "define only the public API that upstream items need to call",
         "keep the API structure stable and minimal",
         "express the public API in a TypeScript code block",
         "the public API may use interface, type, class signature, or other stable TypeScript boundary forms"
       ],
       "severity": "medium",
-      "expected_format": "```typescript\ninterface I{ModuleName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {ModuleName}Api = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
+      "expected_format": "```typescript\ninterface I{ItemName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {ItemName}Api = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
     },
     {
       "section_id": "4.1.2",
       "title": "Input Types",
       "checkitems": [
-        "define only input structures that belong to this module",
-        "do not repeat upstream shared types unless this module owns them",
-        "when the module contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
+        "define only input structures that belong to this item design",
+        "do not repeat upstream shared types unless this item design owns them",
+        "when the item design contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
         "input format must be defined explicitly in code blocks",
         "do not use natural-language prose to describe input structure"
       ],
@@ -138,7 +138,7 @@
         "define internal runtime structures only when they are necessary for understanding the design",
         "when present, express runtime types in a TypeScript code block",
         "runtime types may use interface, type, class, or other concise TypeScript structures",
-        "omit the entire subsection when the module does not own meaningful runtime types",
+        "omit the entire subsection when the item design does not own meaningful runtime types",
         "do not keep this subsection with prose-only not-applicable statements"
       ],
       "severity": "medium",
@@ -148,7 +148,7 @@
       "section_id": "4.1.4",
       "title": "Output Types",
       "checkitems": [
-        "define the stable output structure produced by this module",
+        "define the stable output structure produced by this item design",
         "make downstream-consumed fields explicit",
         "output format must be defined explicitly in code blocks",
         "do not use natural-language prose to describe output structure"
@@ -158,10 +158,10 @@
     },
     {
       "section_id": "4.1.5",
-      "title": "Module-Specific Rules",
+      "title": "Item-Specific Rules",
       "checkitems": [
-        "add this subsection only when the module has important transformation, validation, mapping, or request-construction rules",
-        "express stable rules that downstream modules depend on",
+        "add this subsection only when the item design has important transformation, validation, mapping, or request-construction rules",
+        "express stable rules that downstream items depend on",
         "prefer bullets over long prose"
       ],
       "severity": "medium",
@@ -171,7 +171,7 @@
       "section_id": "4.2",
       "title": "Constraints",
       "checkitems": [
-        "record the key module constraints and non-goals",
+        "record the key item constraints and non-goals",
         "include runtime semantics here when needed",
         "avoid implementation trivia"
       ],

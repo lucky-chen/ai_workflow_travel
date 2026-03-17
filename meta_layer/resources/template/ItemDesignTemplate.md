@@ -37,7 +37,7 @@
       "do not list alternative types in the output"
     ],
     "severity": "high",
-    "expected_format": "- type: `{DocumentType}`\n- scope: `{ScopeSummary}`\n- includes: `{IncludedItemA}`, `{IncludedItemB}`\n- downstream usage: `{UsageSummary}`\n\nAllowed `DocumentType` values during authoring:\n- `functional_group_design`: one design document for a group of closely related basic units or modules, such as generate, update, and contract for one capability area.\n- `test_design`: one design document for test scope, test layers, coverage boundaries, and guidance for follow-up test cases.\n- `reference_design`: one design document used when the capability already exists elsewhere and this document mainly records the adoption boundary and reference link.\n- `protocol_design`: one design document focused on stable interaction API, request/response contracts, and collaboration protocol only.\n\nIn the actual document output, keep only the selected single `type` value and do not copy the allowed-values guide."
+    "expected_format": "- type: `{DocumentType}`\n- scope: `{ScopeSummary}`\n- includes: `{IncludedItemA}`, `{IncludedItemB}`\n- downstream usage: `{UsageSummary}`\n\nAllowed `DocumentType` values during authoring:\n- `functional_group_design`: one design document for a group of closely related basic units or items, such as generate, update, and contract for one capability area.\n- `test_design`: one design document for test scope, test layers, coverage boundaries, and guidance for follow-up test cases.\n- `reference_design`: one design document used when the capability already exists elsewhere and this document mainly records the adoption boundary and reference link.\n- `protocol_design`: one design document focused on stable interaction API, request/response contracts, and collaboration protocol only.\n\nIn the actual document output, keep only the selected single `type` value and do not copy the allowed-values guide."
   }
 }
 -->
@@ -71,7 +71,7 @@
     "title": "Involved Items",
     "checkitems": [
       "list the directly covered design items",
-      "list collaborating modules, partitions, or external items only when they are necessary for understanding the design"
+      "list collaborating items, partitions, or external items only when they are necessary for understanding the design"
     ],
     "severity": "medium",
     "expected_format": "This design document directly covers:\n\n- `{DesignItemA}`\n- `{DesignItemB}`\n\nThis design document collaborates with:\n\n- `{CollaboratorA}`\n- `{CollaboratorB}`"
@@ -91,7 +91,7 @@
 	        "list the core functions only",
 	        "explicitly state what is out of scope for this design document",
 	        "the opening role statement should use the current design item identity rather than a broader architecture-layer label when they differ",
-	        "when the design item represents several concrete modules, basic units, or one partition-level subsystem, prefer naming those concrete items or the design item itself instead of collapsing back to a broader layer label"
+	        "when the design item represents several concrete items, basic units, or one partition-level subsystem, prefer naming those concrete items or the design item itself instead of collapsing back to a broader layer label"
 	      ],
       "severity": "medium",
       "expected_format": "`{DesignItemName}` is the design item for `{DesignScope}`.\n\nIts core functions are:\n\n- `{CoreFunction1}`\n- `{CoreFunction2}`\n- `{CoreFunction3}`\n- `{CoreFunction4}`\n\n`{DesignItemName}` does not `{OutOfScope1}`, `{OutOfScope2}`, or `{OutOfScope3}`."
@@ -313,7 +313,7 @@
       "describe the internal runtime skeleton of the design item",
       "prefer structured code-block expression such as `plantuml` or other compact skeleton notation over natural-language prose",
       "show the main internal stages, decision points, and handoff points that connect the public API to the internal runtime path",
-      "keep the skeleton at module-design level rather than implementation trivia"
+      "keep the skeleton at item-design level rather than implementation trivia"
     ],
     "severity": "medium",
     "expected_format": "```plantuml\n@startuml\nstart\n:{RuntimeStepA};\nif ({DecisionA}?) then (yes)\n  :{RuntimeStepB};\nelse (no)\n  :{RuntimeStepC};\nendif\n:{RuntimeStepD};\nstop\n@enduml\n```"

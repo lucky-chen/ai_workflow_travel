@@ -1,6 +1,7 @@
 import { runApplicationTests } from "./app/application.test.js";
 import { runArchitectureDesignCapabilityTests } from "./Capability/ArchitectureDesign/architecture-design.test.js";
 import { runItemDesignCapabilityTests } from "./Capability/ItemDesign/item-design.test.js";
+import { runOverallDesignContractCapabilityTests } from "./Capability/OverallDesignContract/overall-design-contract.test.js";
 import { runRequirementDesignCapabilityTests } from "./Capability/RequirementDesign/requirement-design.test.js";
 import { runWorkExecuteCapabilityTests } from "./Capability/WorkExecute/work-execute.test.js";
 import { runWorkPlanCapabilityTests } from "./Capability/WorkPlan/work-plan.test.js";
@@ -21,6 +22,7 @@ async function main(): Promise<void> {
   await runOrchestratorTests();
   await runRequirementDesignCapabilityTests();
   await runArchitectureDesignCapabilityTests();
+  await runOverallDesignContractCapabilityTests();
   await runItemDesignCapabilityTests();
   await runWorkPlanCapabilityTests();
   await runWorkExecuteCapabilityTests();

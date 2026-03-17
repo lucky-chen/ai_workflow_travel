@@ -10,6 +10,7 @@ import { RuntimeOrchestrator } from "../../src/Runtime/Orchestrator/index.js";
 
 export async function runOrchestratorTests(): Promise<void> {
   await testRuntimeOrchestratorSupportsRequirementDesignUnitRun();
+  await testRuntimeOrchestratorSupportsOverallDesignContractUnitRun();
   await testRuntimeOrchestratorRejectsUnsupportedExecutionUnit();
 }
 
@@ -99,6 +100,55 @@ async function testRuntimeOrchestratorRejectsUnsupportedExecutionUnit(): Promise
     }),
     /Unsupported execution unit/,
   );
+}
+
+async function testRuntimeOrchestratorSupportsOverallDesignContractUnitRun(): Promise<void> {
+  const workspaceRoot = await createTempDir("orchestrator-overall-design-");
+  const storageRoot = await createTempDir("orchestrator-overall-design-storage-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs", "item_design"), { recursive: true });
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "# Requirement\n", "utf8");
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "# Architecture\n", "utf8");
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "architecture_design_breakdown.json"),
+      JSON.stringify([{ documentPath: "sdlc/docs/item_design/Workflow.md" }], null, 2),
+      "utf8",
+    );
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "# Workflow\n", "utf8");
+
+    const traceRecorder = new InMemoryTraceRecorder();
+    const orchestrator = new RuntimeOrchestrator({
+      artifactStore: new ArtifactStoreService(storageRoot, traceRecorder),
+      llmExecutor: {
+        async execute() {
+          throw new Error("execute should not be called");
+        },
+      },
+      traceRecorder,
+    });
+
+    const result = await orchestrator.run({
+      request: {
+        mode: "unit",
+        executionUnitId: "overall_design_contract",
+      },
+      context: {
+        workspaceRoot,
+        runId: "run-overall-1",
+      },
+    });
+
+    assert.equal(result.accepted, true);
+    assert.match(result.summary, /overall design contract passed/i);
+    const persisted = JSON.parse(
+      await readFile(path.join(storageRoot, "run-overall-1", "overall_design_contract_result.json"), "utf8"),
+    ) as { passed: boolean };
+    assert.equal(persisted.passed, true);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+    await rm(storageRoot, { recursive: true, force: true });
+  }
 }
 
 async function createTempDir(prefix: string): Promise<string> {

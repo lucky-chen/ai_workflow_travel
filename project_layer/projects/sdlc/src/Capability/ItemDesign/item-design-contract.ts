@@ -17,7 +17,7 @@ interface ItemDesignArtifacts {
 
 export class ItemDesignContract extends DocumentUnitContract {
   protected getContractResourcePath(): string {
-    return "template/ModuleDesignTemplate.md";
+    return "template/ItemDesignTemplate.md";
   }
 
   protected getExecutionUnitId(): string {

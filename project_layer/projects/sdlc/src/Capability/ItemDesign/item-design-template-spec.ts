@@ -15,7 +15,7 @@ export async function loadItemDesignTemplateSpec(workspaceRoot?: string, resourc
     throw new Error("Item design template loading requires workspaceRoot.");
   }
 
-  const templatePath = getTemplateFilePath(workspaceRoot, "ModuleDesignTemplate.md", resourceRoot);
+  const templatePath = getTemplateFilePath(workspaceRoot, "ItemDesignTemplate.md", resourceRoot);
   const cached = templateSpecCache.get(templatePath);
   if (cached) {
     return cached;
@@ -27,7 +27,7 @@ export async function loadItemDesignTemplateSpec(workspaceRoot?: string, resourc
     contractSpec: {
       ...parsed.contractSpec,
       specific_contract: {
-        source: "template/ModuleDesignTemplate.md",
+        source: "template/ItemDesignTemplate.md",
         executionUnit: "item_design",
       },
     },
@@ -45,7 +45,7 @@ export function parseItemDesignTemplateSpec(content: string): ItemDesignTemplate
     ?.document_contracts;
 
   if (!documentContracts) {
-    throw new Error('Module design template must define top-level "document_contracts".');
+    throw new Error('Item design template must define top-level "document_contracts".');
   }
 
   const sectionContracts = blocks
@@ -60,7 +60,7 @@ export function parseItemDesignTemplateSpec(content: string): ItemDesignTemplate
     .filter(isSectionContract);
 
   if (sectionContracts.length === 0) {
-    throw new Error("Module design template must define at least one section contract.");
+    throw new Error("Item design template must define at least one section contract.");
   }
 
   return {

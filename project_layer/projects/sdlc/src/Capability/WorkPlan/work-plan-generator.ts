@@ -73,7 +73,7 @@ export class WorkPlanGenerator extends DocumentUnitGenerator<WorkPlanGeneratorIn
       prompt: {
         systemPrompt:
           "You generate a work plan that follows the provided yaml template structure. " +
-          "Keep the output as valid yaml using the same top-level keys and the same stage batch task hierarchy shape as the template. " +
+          "Keep the output as valid yaml using the same top-level keys and the same milestone stage batch task hierarchy shape as the template. " +
           "Cite the provided shared collaboration standard document path exactly when it is needed in the plan content. " +
           "Return plain yaml only.",
         userPrompt: {

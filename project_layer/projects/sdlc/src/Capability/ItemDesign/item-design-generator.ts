@@ -64,7 +64,7 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
   }
 
   protected getTemplateResourcePath(): string {
-    return "template/ModuleDesignTemplate.md";
+    return "template/ItemDesignTemplate.md";
   }
 
   protected async loadTemplate(context: ExecutionContext): Promise<string> {

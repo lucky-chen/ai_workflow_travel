@@ -19,10 +19,19 @@ interface ParsedWorkPlanDocument {
   execution_scope: string;
   status: string;
   current_focus: {
+    milestone_id: string;
     stage_id: string;
     batch_id: string;
     task_id: string;
   };
+  milestones: ParsedWorkPlanMilestone[];
+}
+
+interface ParsedWorkPlanMilestone {
+  milestone_id: string;
+  name: string;
+  goal: string;
+  status: string;
   stages: ParsedWorkPlanStage[];
 }
 
@@ -32,7 +41,6 @@ interface ParsedWorkPlanStage {
   goal: string;
   status: string;
   batches: ParsedWorkPlanBatch[];
-  validation: string[];
 }
 
 interface ParsedWorkPlanBatch {
@@ -60,17 +68,17 @@ export class WorkPlanContract extends DocumentUnitContract {
       document_contracts: [
         {
           check_item: "yaml_work_plan_structure_complete",
-          description: "Work plan should keep the expected yaml top-level keys and stage hierarchy.",
+          description: "Work plan should keep the expected yaml top-level keys and milestone hierarchy.",
           severity: "high",
         },
         {
           check_item: "yaml_work_plan_focus_consistency",
-          description: "Work plan should define a current focus and per-stage validation entries.",
+          description: "Work plan should define a current focus that points to milestone, stage, batch, and task entries.",
           severity: "high",
         },
         {
           check_item: "yaml_work_plan_task_structure",
-          description: "Work plan should keep stage batch task structure with ids summaries and statuses.",
+          description: "Work plan should keep milestone stage batch task structure with ids summaries and statuses.",
           severity: "high",
         },
       ],
@@ -164,8 +172,8 @@ export class WorkPlanContract extends DocumentUnitContract {
     const parsedPlan = this.parseWorkPlan(content, issues);
     if (parsedPlan) {
       this.collectTopLevelStructureIssues(parsedPlan, contractSpec, issues);
-      this.collectFocusAndValidationIssues(parsedPlan, contractSpec, issues);
-      this.collectStageBatchTaskIssues(parsedPlan, contractSpec, issues);
+      this.collectFocusIssues(parsedPlan, contractSpec, issues);
+      this.collectMilestoneStageBatchTaskIssues(parsedPlan, contractSpec, issues);
     }
 
     return {
@@ -255,12 +263,12 @@ export class WorkPlanContract extends DocumentUnitContract {
     if (!content.current_focus || typeof content.current_focus !== "object") {
       this.pushIssue(issues, structureContract, "Missing required top-level key: current_focus");
     }
-    if (!Array.isArray(content.stages)) {
-      this.pushIssue(issues, structureContract, "Missing required top-level key: stages");
+    if (!Array.isArray(content.milestones)) {
+      this.pushIssue(issues, structureContract, "Missing required top-level key: milestones");
     }
   }
 
-  private collectFocusAndValidationIssues(
+  private collectFocusIssues(
     content: ParsedWorkPlanDocument,
     contractSpec: ContractSpec,
     issues: ContractIssue[],
@@ -269,6 +277,9 @@ export class WorkPlanContract extends DocumentUnitContract {
       (entry) => entry.check_item === "yaml_work_plan_focus_consistency",
     );
 
+    if (!content.current_focus || typeof content.current_focus.milestone_id !== "string" || content.current_focus.milestone_id.length === 0) {
+      this.pushIssue(issues, focusContract, "current_focus should include milestone_id");
+    }
     if (!content.current_focus || typeof content.current_focus.stage_id !== "string" || content.current_focus.stage_id.length === 0) {
       this.pushIssue(issues, focusContract, "current_focus should include stage_id");
     }
@@ -278,13 +289,9 @@ export class WorkPlanContract extends DocumentUnitContract {
     if (!content.current_focus || typeof content.current_focus.task_id !== "string" || content.current_focus.task_id.length === 0) {
       this.pushIssue(issues, focusContract, "current_focus should include task_id");
     }
-
-    if (!Array.isArray(content.stages) || content.stages.some((stage) => !Array.isArray(stage?.validation) || stage.validation.length === 0)) {
-      this.pushIssue(issues, focusContract, "Each stage should include a validation section.");
-    }
   }
 
-  private collectStageBatchTaskIssues(
+  private collectMilestoneStageBatchTaskIssues(
     content: ParsedWorkPlanDocument,
     contractSpec: ContractSpec,
     issues: ContractIssue[],
@@ -293,20 +300,29 @@ export class WorkPlanContract extends DocumentUnitContract {
       (entry) => entry.check_item === "yaml_work_plan_task_structure",
     );
 
-    if (!Array.isArray(content.stages) || content.stages.length === 0) {
-      this.pushIssue(issues, taskContract, "Work plan should define at least one stage entry under stages.");
+    if (!Array.isArray(content.milestones) || content.milestones.length === 0) {
+      this.pushIssue(issues, taskContract, "Work plan should define at least one milestone entry under milestones.");
       return;
     }
 
-    if (content.stages.some((stage) => typeof stage.stage_id !== "string" || stage.stage_id.length === 0)) {
+    if (content.milestones.some((milestone) => typeof milestone.milestone_id !== "string" || milestone.milestone_id.length === 0)) {
+      this.pushIssue(issues, taskContract, "Each milestone should include milestone_id.");
+    }
+
+    if (content.milestones.some((milestone) => !Array.isArray(milestone.stages) || milestone.stages.length === 0)) {
+      this.pushIssue(issues, taskContract, "Work plan should define at least one stage entry under milestones.");
+    }
+
+    const stages = content.milestones.flatMap((milestone) => Array.isArray(milestone.stages) ? milestone.stages : []);
+    if (stages.some((stage) => typeof stage.stage_id !== "string" || stage.stage_id.length === 0)) {
       this.pushIssue(issues, taskContract, "Each stage should include stage_id.");
     }
 
-    if (content.stages.some((stage) => !Array.isArray(stage.batches) || stage.batches.length === 0)) {
+    if (stages.some((stage) => !Array.isArray(stage.batches) || stage.batches.length === 0)) {
       this.pushIssue(issues, taskContract, "Work plan should define at least one batch entry under stages.");
     }
 
-    const batches = content.stages.flatMap((stage) => Array.isArray(stage.batches) ? stage.batches : []);
+    const batches = stages.flatMap((stage) => Array.isArray(stage.batches) ? stage.batches : []);
     if (batches.some((batch) => typeof batch.batch_id !== "string" || batch.batch_id.length === 0)) {
       this.pushIssue(issues, taskContract, "Each batch should include batch_id.");
     }
