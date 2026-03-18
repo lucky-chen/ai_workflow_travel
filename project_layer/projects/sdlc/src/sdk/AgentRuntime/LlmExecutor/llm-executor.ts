@@ -68,8 +68,6 @@ export class LlmExecutorService implements ILlmExecutor {
         ? request.metadata.executionUnitId
         : typeof request.metadata?.executionUnit === "string"
           ? request.metadata.executionUnit
-          : typeof request.metadata?.stage === "string"
-            ? request.metadata.stage
           : undefined,
       eventType: TRACE_EVENT_TYPES.llmExecutionStarted,
       summary: "LLM execution started.",
@@ -102,8 +100,6 @@ export class LlmExecutorService implements ILlmExecutor {
         ? request.metadata.executionUnitId
         : typeof request.metadata?.executionUnit === "string"
           ? request.metadata.executionUnit
-          : typeof request.metadata?.stage === "string"
-            ? request.metadata.stage
           : undefined,
       eventType: TRACE_EVENT_TYPES.llmExecutionFinished,
       summary: "LLM execution finished.",

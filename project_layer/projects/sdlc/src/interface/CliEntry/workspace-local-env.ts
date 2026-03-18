@@ -1,13 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ApplicationConfig } from "../../Runtime/application.js";
-import type { ResourceDirectoryConfig } from "../../Runtime/resource-resolver.js";
 
 export interface WorkspaceResourcesConfig {
-  doc_dir?: string;
-  dist_dir?: string;
-  template_dir?: string;
-  contract_dir?: string;
+  root_dir?: string;
 }
 
 export interface WorkspaceLocalEnvConfig {
@@ -23,10 +19,7 @@ export interface WorkspaceLocalEnvConfig {
 
 const DEFAULT_WORKSPACE_LOCAL_ENV: WorkspaceLocalEnvConfig = {
   resources: {
-    doc_dir: "../../meta_layer/resources",
-    dist_dir: "../../project_layer/projects/sdlc/dist/resources",
-    template_dir: "../../meta_layer/resources/template",
-    contract_dir: "../../meta_layer/resources/contract",
+    root_dir: "../../meta_layer/resources",
   },
   llm: {
     provider: "openai",
@@ -79,13 +72,13 @@ export class WorkspaceLocalEnvService {
   async loadApplicationConfig(workspaceRoot?: string): Promise<ApplicationConfig> {
     const parsed = await this.loadConfig(workspaceRoot);
     const llm = parsed.llm;
-    const resourceResolver = this.buildResourceResolverConfig(parsed);
+    const resourceRoot = this.resolveResourceRoot(parsed, workspaceRoot);
     if (!llm?.provider || !llm.api_key || !llm.model || llm.api_key === "your-api-key") {
-      return resourceResolver ? { resourceResolver } : {};
+      return resourceRoot ? { resourceRoot } : {};
     }
 
     return {
-      ...(resourceResolver ? { resourceResolver } : {}),
+      ...(resourceRoot ? { resourceRoot } : {}),
       llmExecutor: {
         mode: "real",
         realProvider: {
@@ -99,15 +92,17 @@ export class WorkspaceLocalEnvService {
     };
   }
 
-  private buildResourceResolverConfig(config: WorkspaceLocalEnvConfig): ApplicationConfig["resourceResolver"] | undefined {
-    const resource = normalizeResourceDirectoryConfig(config.resources);
-    if (!resource) {
+  private resolveResourceRoot(config: WorkspaceLocalEnvConfig, workspaceRoot?: string): string | undefined {
+    const rootDir = config.resources?.root_dir?.trim();
+    if (!rootDir) {
       return undefined;
     }
 
-    return {
-      resource,
-    };
+    if (!workspaceRoot || path.isAbsolute(rootDir)) {
+      return rootDir;
+    }
+
+    return path.resolve(workspaceRoot, rootDir);
   }
 }
 
@@ -127,27 +122,4 @@ export async function loadWorkspaceLocalEnvConfig(workspaceRoot?: string): Promi
 
 export async function loadWorkspaceRuntimeOptions(workspaceRoot?: string): Promise<ApplicationConfig> {
   return defaultWorkspaceLocalEnvService.loadApplicationConfig(workspaceRoot);
-}
-
-function normalizeResourceDirectoryConfig(config?: WorkspaceResourcesConfig): ResourceDirectoryConfig | undefined {
-  if (!config) {
-    return undefined;
-  }
-
-  const normalized: ResourceDirectoryConfig = {};
-
-  if (typeof config.doc_dir === "string" && config.doc_dir.trim()) {
-    normalized.docDir = config.doc_dir.trim();
-  }
-  if (typeof config.dist_dir === "string" && config.dist_dir.trim()) {
-    normalized.distDir = config.dist_dir.trim();
-  }
-  if (typeof config.template_dir === "string" && config.template_dir.trim()) {
-    normalized.templateDir = config.template_dir.trim();
-  }
-  if (typeof config.contract_dir === "string" && config.contract_dir.trim()) {
-    normalized.contractDir = config.contract_dir.trim();
-  }
-
-  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }

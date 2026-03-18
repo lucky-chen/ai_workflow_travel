@@ -33,19 +33,23 @@ export interface IArtifactStore {
 }
 
 export class ArtifactStoreService implements IArtifactStore {
-  // Storage layout: {storageRoot or workspaceRoot/dist/sdlc/artifact_store}/{taskId}/{executionUnitId}/{filePath}
+  // Storage layout: {storageRoot or workspaceRoot/dist/sdlc}/{taskId}/{filePath}
   constructor(
     private readonly storageRoot?: string,
     private readonly traceRecorder?: ITraceRecorder,
   ) {}
 
-  // Public API: persistent artifact entry used by workflow and generators.
+  // Public API: persistent artifact entry used by runtime units and generators.
   async writeArtifact(request: WriteArtifactRequest): Promise<boolean> {
     const artifactPath = this.getArtifactAbsolutePath(request);
     await this.writeFileAt(artifactPath, request.content);
 
-    if (request.workspaceRoot) {
-      const workspaceArtifactPath = path.join(request.workspaceRoot, request.filePath);
+    const shouldMirrorToWorkspace = Boolean(
+      request.workspaceRoot && request.filePath.startsWith("sdlc/"),
+    );
+
+    if (shouldMirrorToWorkspace) {
+      const workspaceArtifactPath = path.join(request.workspaceRoot!, request.filePath);
       await this.writeFileAt(workspaceArtifactPath, request.content);
     }
 
@@ -57,7 +61,7 @@ export class ArtifactStoreService implements IArtifactStore {
       summary: `Artifact persisted to ${request.filePath}.`,
       payload: {
         filePath: request.filePath,
-        mirroredToWorkspace: Boolean(request.workspaceRoot),
+        mirroredToWorkspace: shouldMirrorToWorkspace,
       },
     });
 
@@ -73,7 +77,7 @@ export class ArtifactStoreService implements IArtifactStore {
 
   // Public API: artifact query entry used to inspect stored execution-unit files by directory.
   async listArtifacts(query: ListArtifactRequest): Promise<string[]> {
-    const baseDirectory = path.join(this.getExecutionUnitDirectory(query.taskId, query.executionUnitId, query.workspaceRoot), query.rootDir);
+    const baseDirectory = path.join(this.getTaskDirectory(query.taskId, query.workspaceRoot), query.rootDir);
     return this.walkRelativePaths(baseDirectory);
   }
 
@@ -83,11 +87,11 @@ export class ArtifactStoreService implements IArtifactStore {
     filePath: string;
     workspaceRoot?: string;
   }): string {
-    return path.join(this.getExecutionUnitDirectory(request.taskId, request.executionUnitId, request.workspaceRoot), request.filePath);
+    return path.join(this.getTaskDirectory(request.taskId, request.workspaceRoot), request.filePath);
   }
 
-  private getExecutionUnitDirectory(taskId: string, executionUnitId: string, workspaceRoot?: string): string {
-    return path.join(this.resolveStorageRoot(workspaceRoot), taskId, executionUnitId);
+  private getTaskDirectory(taskId: string, workspaceRoot?: string): string {
+    return path.join(this.resolveStorageRoot(workspaceRoot), taskId);
   }
 
   private resolveStorageRoot(workspaceRoot?: string): string {
@@ -99,7 +103,7 @@ export class ArtifactStoreService implements IArtifactStore {
       throw new Error('Artifact store requires "workspaceRoot" when no explicit storageRoot is configured.');
     }
 
-    return path.resolve(workspaceRoot, "dist", "sdlc", "artifact_store");
+    return path.resolve(workspaceRoot, "dist", "sdlc");
   }
 
   private async writeFileAt(targetPath: string, content: string): Promise<void> {

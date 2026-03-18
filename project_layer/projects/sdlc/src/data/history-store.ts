@@ -1,6 +1,6 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { FilePath, ExecutionUnitId, TaskId, TraceRef } from "../Runtime/Schema/runtime.js";
+import type { ExecutionUnitId, TaskId, TraceRef } from "../Runtime/Schema/runtime.js";
 
 export interface HistoryRecord {
   recordId?: TraceRef;
@@ -46,8 +46,7 @@ export class HistoryStoreService {
       scope: this.buildScope(taskId, runId, executionUnitId),
       recordId,
     };
-    const taskBucketName = this.resolveTaskBucketName(taskId, runId);
-    const targetPath = path.join(storageRoot, "records", `${taskBucketName}.json`);
+    const targetPath = path.join(storageRoot, runId, "trace.json");
     const updatedBucket = await this.readBucket(targetPath);
     updatedBucket.push(persistedRecord);
     await this.writeBucket(targetPath, updatedBucket);
@@ -68,8 +67,7 @@ export class HistoryStoreService {
   }
 
   async listRecords(query: HistoryQuery = {}): Promise<HistoryRecord[]> {
-    const recordsDirectory = path.join(this.resolveStorageRoot(), "records");
-    const recordFiles = await this.listRecordFiles(recordsDirectory);
+    const recordFiles = await this.listRecordFiles(this.resolveStorageRoot());
     const records = await Promise.all(
       recordFiles.map(async (entry) => {
         const raw = await readFile(entry, "utf8");
@@ -126,10 +124,6 @@ export class HistoryStoreService {
     return typeof value === "string" && value.trim() ? value as Exclude<T, null> : undefined;
   }
 
-  private resolveTaskBucketName(taskId?: TaskId, runId?: string): string {
-    return runId ? `${taskId ?? "_global"}_${runId}` : (taskId ?? "_global");
-  }
-
   private resolveTaskContext(taskId: TaskId): HistoryTaskContext {
     const resolved = this.workspaceRootResolver?.(taskId);
     if (!resolved) {
@@ -151,10 +145,10 @@ export class HistoryStoreService {
     }
 
     if (workspaceRoot) {
-      return path.resolve(workspaceRoot, "dist", "sdlc", "history_store");
+      return path.resolve(workspaceRoot, "dist", "sdlc");
     }
 
-    return path.resolve(process.cwd(), "dist", "sdlc", "history_store");
+    return path.resolve(process.cwd(), "dist", "sdlc");
   }
 
 
@@ -182,16 +176,11 @@ export class HistoryStoreService {
     await writeFile(targetPath, content, "utf8");
   }
 
-  private async listRecordFiles(recordsDirectory: string): Promise<string[]> {
-    let entries: Array<{ name: string; isFile: boolean }>;
+  private async listRecordFiles(storageRoot: string): Promise<string[]> {
+    let entries;
 
     try {
-      entries = await readdir(recordsDirectory, { withFileTypes: true }).then((items) =>
-        items.map((item) => ({
-          name: item.name,
-          isFile: item.isFile(),
-        })),
-      );
+      entries = await readdir(storageRoot, { withFileTypes: true });
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
       if (nodeError.code === "ENOENT") {
@@ -202,7 +191,20 @@ export class HistoryStoreService {
     }
 
     return entries
-      .filter((entry) => entry.isFile && entry.name.endsWith(".json"))
-      .map((entry) => path.join(recordsDirectory, entry.name as FilePath));
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(storageRoot, entry.name, "trace.json"))
+      .reduce<Promise<string[]>>(async (previousPromise, candidatePath) => {
+        const collected = await previousPromise;
+        try {
+          await access(candidatePath);
+          collected.push(candidatePath);
+        } catch (error) {
+          const nodeError = error as NodeJS.ErrnoException;
+          if (nodeError.code !== "ENOENT") {
+            throw error;
+          }
+        }
+        return collected;
+      }, Promise.resolve([]));
   }
 }

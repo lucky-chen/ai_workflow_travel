@@ -4,7 +4,7 @@ import type { CLIRequestMapper, ParsedCommand } from "./cli-types.js";
 export class CliRequestMapper implements CLIRequestMapper {
   async map(command: ParsedCommand): Promise<RuntimeRequest> {
     if (command.command === "generate") {
-      throw new Error('The legacy "generate" command has been removed. Use "run compose".');
+      throw new Error('The legacy "generate" command has been removed. Use "run unit" or "run compose".');
     }
 
     if (command.command !== "run") {

@@ -19,14 +19,7 @@ export async function buildRuntimeContext(parsed: ParsedCommand): Promise<Runtim
 
 export async function loadApplicationConfigFromCommand(parsed: ParsedCommand): Promise<ApplicationConfig> {
   const workspaceRoot = readOptionalSingleOption(parsed.options, "workdir", "workspace");
-  const workspaceConfig = workspaceRoot ? await loadWorkspaceRuntimeOptions(workspaceRoot) : {};
-  return {
-    ...workspaceConfig,
-    resourceResolver: {
-      ...workspaceConfig.resourceResolver,
-      ...(workspaceRoot ? { workdir: workspaceRoot } : {}),
-    },
-  };
+  return workspaceRoot ? loadWorkspaceRuntimeOptions(workspaceRoot) : {};
 }
 
 function readSingleRequiredOption(options: ParsedCommand["options"], ...keys: string[]): string {
