@@ -1,7 +1,7 @@
 import type { RuntimeInput, RuntimeResult } from "./Schema/runtime.js";
 import { RuntimeOrchestrator, type Orchestrator } from "./Orchestrator/index.js";
 import { ArtifactStoreService } from "../Data/artifact-store.js";
-import { HistoryStoreService } from "../Data/history-store.js";
+import { HistoryStoreService, type HistoryTaskContext } from "../Data/history-store.js";
 import { InMemoryChangeGate } from "../SDK/QualityControl/Gate/change-gate.js";
 import { TraceService } from "../SDK/QualityControl/Trace/trace-recorder.js";
 import {
@@ -24,15 +24,23 @@ export interface Application {
 }
 
 export class ApplicationService implements Application {
-  constructor(private readonly orchestrator: Orchestrator) {}
+  constructor(
+    private readonly orchestrator: Orchestrator,
+    private readonly registerHistoryContext?: (input: RuntimeInput) => void,
+  ) {}
 
   async run(input: RuntimeInput): Promise<RuntimeResult> {
+    this.registerHistoryContext?.(input);
     return this.orchestrator.run(input);
   }
 }
 
 export function createApplication(config: ApplicationConfig = {}): Application {
-  const historyStore = new HistoryStoreService(config.historyStorageRoot);
+  const historyTaskContexts = new Map<string, HistoryTaskContext>();
+  const historyStore = new HistoryStoreService(
+    config.historyStorageRoot,
+    (taskId) => historyTaskContexts.get(taskId),
+  );
   const traceRecorder = new TraceService(historyStore);
   const artifactStore = new ArtifactStoreService(config.artifactStorageRoot, traceRecorder);
   const changeGate = config.changeGate ?? new InMemoryChangeGate();
@@ -40,12 +48,20 @@ export function createApplication(config: ApplicationConfig = {}): Application {
     ...config.llmExecutor,
     traceRecorder,
   });
-  return new ApplicationService(new RuntimeOrchestrator({
-    artifactStore,
-    llmExecutor,
-    resourceRoot: config.resourceRoot,
-    traceRecorder,
-    traceService: traceRecorder,
-    changeGate,
-  }));
+  return new ApplicationService(
+    new RuntimeOrchestrator({
+      artifactStore,
+      llmExecutor,
+      resourceRoot: config.resourceRoot,
+      traceRecorder,
+      traceService: traceRecorder,
+      changeGate,
+    }),
+    (input) => {
+      historyTaskContexts.set(input.context.runId, {
+        workspaceRoot: input.context.workspaceRoot,
+        runId: input.context.runId,
+      });
+    },
+  );
 }

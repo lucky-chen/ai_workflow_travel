@@ -24,13 +24,12 @@ principles:
 execution_scope: concept-aligned execution-unit baseline and runtime-boundary
   follow-up with runtime schema naming work-execute residual cleanup
   post-alignment simplification and shared-directory removal
-status: completed
+status: in_progress
 current_focus:
   milestone_id: milestone_1_active_execution_alignment
-  stage_id: stage_11_residual_alignment_follow_up
-  residual_stage_id: residual_stage_11_3_legacy_cleanup
-  batch_id: batch_11_3_2_legacy_cleanup
-  task_id: task_11_3_2
+  stage_id: stage_12_hello_service_black_box_test_matrix
+  batch_id: batch_12_2_missing_black_box_cases
+  task_id: task_12_2_1
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model
@@ -968,3 +967,58 @@ milestones:
                         involved_files:
                           - project_layer/projects/sdlc/src
                           - project_layer/projects/sdlc/tests
+      - stage_id: stage_12_hello_service_black_box_test_matrix
+        name: hello-service black-box test matrix
+        goal: make hello-service black-box test entry coverage explicit and keep the
+          runnable aggregated runtime and contract entries aligned with the current
+          runId-based artifact and trace paths
+        status: in_progress
+        batches:
+          - batch_id: batch_12_1_test_entry_matrix_and_runtime_blockers
+            name: test entry matrix and runtime blockers
+            goal: complete the black-box test entry inventory and fix the runtime blockers
+              that currently prevent aggregated entry execution
+            status: completed
+            tasks:
+              - task_id: task_12_1_1
+                summary: fill the hello-service black-box test registry with the complete
+                  runtime generator and contract matrix and mark unimplemented
+                  entries explicitly
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests/hello-service-tests.mjs
+                  - user_projects/hello-service/package.json
+                  - project_layer/projects/sdlc/package.json
+              - task_id: task_12_1_2
+                summary: fix runId-scoped trace persistence so aggregated runtime and contract
+                  test entries read trace.json from the copied workspace instead
+                  of process cwd
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Runtime/application.ts
+                  - project_layer/projects/sdlc/src/Data/history-store.ts
+                  - project_layer/projects/sdlc/tests/shared/history-store.test.ts
+              - task_id: task_12_1_3
+                summary: verify the hello-service runtime and contract aggregated test entries
+                  against the current registry and record remaining unimplemented
+                  matrix items without pretending coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests/hello-service-tests.mjs
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+          - batch_id: batch_12_2_missing_black_box_cases
+            name: missing black-box cases
+            goal: implement the remaining generator contract and runtime matrix entries in
+              small verified batches without overstating coverage
+            status: pending
+            tasks:
+              - task_id: task_12_2_1
+                summary: implement the next high-value black-box entries starting with
+                  contract success and generator failure cases that do not duplicate
+                  current runtime success coverage
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - user_projects/hello-service/package.json
+                  - project_layer/projects/sdlc/package.json

@@ -7,6 +7,7 @@ import { HistoryStoreService } from "../../src/Data/history-store.js";
 export async function runHistoryStoreTests(): Promise<void> {
   await testHistoryStoreWriteReadAndList();
   await testHistoryStoreRequiresTaskId();
+  await testHistoryStoreResolvesWorkspaceRootFromTaskContext();
 }
 
 async function testHistoryStoreWriteReadAndList(): Promise<void> {
@@ -131,5 +132,44 @@ async function testHistoryStoreRequiresTaskId(): Promise<void> {
     });
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
+  }
+}
+
+async function testHistoryStoreResolvesWorkspaceRootFromTaskContext(): Promise<void> {
+  const workspaceRoot = await createTempDir("history-workspace-");
+
+  try {
+    const store = new HistoryStoreService(
+      undefined,
+      (taskId) => taskId === "task-workspace"
+        ? { workspaceRoot, runId: "run-from-context" }
+        : undefined,
+    );
+
+    await store.writeRecord({
+      category: "trace",
+      scope: {
+        taskId: "task-workspace",
+        runId: "",
+        executionUnitId: "requirement_design_generate",
+      },
+      summary: "Workspace scoped trace.",
+      payload: {
+        eventType: "generation_started",
+      },
+    });
+
+    const bucketPath = path.join(workspaceRoot, "dist", "sdlc", "run-from-context", "trace.json");
+    const taskBucket = JSON.parse(await readFile(bucketPath, "utf8")) as Array<{
+      scope: { taskId: string; runId: string; executionUnitId: string | null };
+    }>;
+    assert.equal(taskBucket.length, 1);
+    assert.deepEqual(taskBucket[0]?.scope, {
+      taskId: "task-workspace",
+      runId: "run-from-context",
+      executionUnitId: "requirement_design_generate",
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
   }
 }
