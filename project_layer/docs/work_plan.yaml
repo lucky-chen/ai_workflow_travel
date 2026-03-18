@@ -1011,13 +1011,13 @@ milestones:
             name: missing black-box cases
             goal: implement the remaining generator contract and runtime matrix entries in
               small verified batches without overstating coverage
-            status: pending
+            status: in_progress
             tasks:
               - task_id: task_12_2_1
                 summary: implement the next high-value black-box entries starting with
                   contract success and generator failure cases that do not duplicate
                   current runtime success coverage
-                status: pending
+                status: in_progress
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json
