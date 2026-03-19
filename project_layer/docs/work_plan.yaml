@@ -28,7 +28,7 @@ status: in_progress
 current_focus:
   milestone_id: milestone_1_active_execution_alignment
   stage_id: stage_12_hello_service_black_box_test_matrix
-  batch_id: batch_12_2_missing_black_box_cases
+  batch_id: batch_12_2_contract_black_box_matrix
   task_id: task_12_2_1
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
@@ -974,11 +974,12 @@ milestones:
           runId-based artifact and trace paths
         status: in_progress
         batches:
-          - batch_id: batch_12_1_test_entry_matrix_and_runtime_blockers
-            name: test entry matrix and runtime blockers
-            goal: complete the black-box test entry inventory and fix the runtime blockers
-              that currently prevent aggregated entry execution
-            status: completed
+          - batch_id: batch_12_1_runtime_black_box_matrix
+            name: runtime black-box matrix
+            goal: make the hello-service runtime black-box entry matrix explicit and
+              keep the runnable runtime aggregated entry aligned with the current
+              runId-based artifact and trace paths
+            status: in_progress
             tasks:
               - task_id: task_12_1_1
                 summary: fill the hello-service black-box test registry with the complete
@@ -1007,16 +1008,42 @@ milestones:
                   - user_projects/hello-service/tests/hello-service-tests.mjs
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
-          - batch_id: batch_12_2_missing_black_box_cases
-            name: missing black-box cases
-            goal: implement the remaining generator contract and runtime matrix entries in
-              small verified batches without overstating coverage
+              - task_id: task_12_1_4
+                summary: implement the remaining runtime matrix entries and restore
+                  runtime unit-flow or baseline success only after the hello-service
+                  fixture matches the latest requirement and downstream contract
+                  expectations
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - user_projects/hello-service/package.json
+                  - project_layer/projects/sdlc/package.json
+          - batch_id: batch_12_2_contract_black_box_matrix
+            name: contract black-box matrix
+            goal: implement the contract black-box matrix in small verified batches without
+              overstating success coverage
             status: in_progress
             tasks:
               - task_id: task_12_2_1
-                summary: implement the next high-value black-box entries starting with
-                  contract success and generator failure cases that do not duplicate
-                  current runtime success coverage
+                summary: implement the remaining contract matrix entries including success
+                  and failure paths, while only marking a contract success case
+                  complete after the current hello-service fixture actually passes
+                  the latest contract rules
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - user_projects/hello-service/package.json
+                  - project_layer/projects/sdlc/package.json
+                status: in_progress
+          - batch_id: batch_12_3_generator_black_box_matrix
+            name: generator black-box matrix
+            goal: implement the generator black-box matrix in small verified batches without
+              duplicating existing runtime success coverage
+            status: in_progress
+            tasks:
+              - task_id: task_12_3_1
+                summary: implement the remaining generator matrix entries, starting with
+                  failure cases that exercise generator-specific input validation
+                  and then adding success and real-llm cases
                 status: in_progress
                 involved_files:
                   - user_projects/hello-service/tests
