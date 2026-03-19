@@ -17,7 +17,10 @@
       <main class="content-grid">
         <section class="panel summary-panel">
           <div class="panel-header">
-            <h2>Overall Summary</h2>
+            <div>
+              <h2>Overall Summary</h2>
+              <p id="selected-milestone" class="panel-subtitle">Milestone: loading</p>
+            </div>
             <span id="plan-status" class="status-chip">loading</span>
           </div>
           <div id="top-summary" class="summary-grid"></div>
@@ -33,6 +36,10 @@
         <section class="panel stages-panel">
           <div class="panel-header">
             <h2>Stage Progress</h2>
+            <label class="milestone-filter">
+              <span>Milestone</span>
+              <select id="milestone-select"></select>
+            </label>
           </div>
           <div id="stages" class="stage-stack"></div>
         </section>
@@ -51,6 +58,20 @@
           <div id="resolved-decisions" class="list-stack"></div>
         </section>
       </main>
+    </div>
+
+    <div id="detail-modal" class="detail-modal" hidden>
+      <div id="detail-modal-backdrop" class="detail-modal-backdrop"></div>
+      <div class="detail-modal-shell" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+        <div class="detail-modal-header">
+          <div>
+            <p id="detail-modal-kicker" class="task-detail-label">Detail</p>
+            <h2 id="detail-modal-title">Detail</h2>
+          </div>
+          <button id="detail-modal-close" class="detail-modal-close" type="button" aria-label="Close detail">Close</button>
+        </div>
+        <div id="detail-modal-body" class="detail-modal-body"></div>
+      </div>
     </div>
 
     <script type="module" src="./app.js"></script>

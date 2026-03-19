@@ -75,16 +75,19 @@ async function buildPlanPayload() {
       milestoneId: milestone.milestone_id,
       milestoneName: milestone.name,
       stageId: stage.stage_id,
-      stageName: stage.name,
       stageStatus: stage.status,
       goal: stage.goal,
+      deliveredFeature: stage.delivered_feature || null,
+      featureScope: Array.isArray(stage.feature_scope) ? stage.feature_scope : [],
       batches: (Array.isArray(stage.batches) ? stage.batches : []).map((batch) => ({
         batchId: batch.batch_id,
+        batchType: batch.batch_type || null,
         batchName: batch.name,
         batchStatus: batch.status,
         goal: batch.goal,
+        covers: Array.isArray(batch.covers) ? batch.covers : [],
         tasks: (Array.isArray(batch.tasks) ? batch.tasks : []).map((task) => ({
-          taskId: task.task_id,
+          taskName: task.task_name || task.task_id || null,
           summary: task.summary,
           status: task.status,
           involvedFiles: task.involved_files || [],
@@ -97,15 +100,14 @@ async function buildPlanPayload() {
     planName: plan.plan_name,
     target: plan.target,
     status: plan.status,
-    currentFocus: resolveCurrentFocus(plan.current_focus, stageItems),
+    currentFocus: resolveCurrentFocus(plan.workflow?.current_focus, stageItems),
     topSummary: buildTopSummary(stageItems),
-    activeItems: collectActiveItems(stageItems),
     stages: stageItems.map((stage) => ({
       ...stage,
       summary: summarizeStage(stage),
     })),
-    openQuestions: Array.isArray(plan.open_questions) ? plan.open_questions : [],
-    resolvedDecisions: Array.isArray(plan.resolved_decisions) ? plan.resolved_decisions : [],
+    openQuestions: Array.isArray(plan.governance?.decisions?.open) ? plan.governance.decisions.open : [],
+    resolvedDecisions: Array.isArray(plan.governance?.decisions?.resolved) ? plan.governance.decisions.resolved : [],
   };
 }
 
@@ -146,34 +148,6 @@ function summarizeStage(stage) {
   };
 }
 
-function collectActiveItems(stages) {
-  const activeItems = [];
-
-  for (const stage of stages) {
-    for (const batch of stage.batches) {
-      for (const task of batch.tasks) {
-        if (task.status === "completed") {
-          continue;
-        }
-
-        activeItems.push({
-          milestoneId: stage.milestoneId,
-          milestoneName: stage.milestoneName,
-          stageId: stage.stageId,
-          stageName: stage.stageName,
-          batchId: batch.batchId,
-          batchName: batch.batchName,
-          taskId: task.taskId,
-          summary: task.summary,
-          status: task.status,
-        });
-      }
-    }
-  }
-
-  return activeItems;
-}
-
 function resolveCurrentFocus(currentFocus, stages) {
   if (!currentFocus) {
     return null;
@@ -181,15 +155,14 @@ function resolveCurrentFocus(currentFocus, stages) {
 
   const targetStage = stages.find((stage) => stage.stageId === currentFocus.stage_id);
   const targetBatch = targetStage?.batches.find((batch) => batch.batchId === currentFocus.batch_id);
-  const targetTask = targetBatch?.tasks.find((task) => task.taskId === currentFocus.task_id);
+  const targetTask = targetBatch?.tasks.find((task) => task.taskName === currentFocus.task_name);
 
   return {
     milestoneId: currentFocus.milestone_id,
     stageId: currentFocus.stage_id,
     batchId: currentFocus.batch_id,
-    taskId: currentFocus.task_id,
+    taskName: currentFocus.task_name,
     milestoneName: targetStage?.milestoneName || null,
-    stageName: targetStage?.stageName || null,
     batchName: targetBatch?.batchName || null,
     taskSummary: targetTask?.summary || null,
     taskStatus: targetTask?.status || null,

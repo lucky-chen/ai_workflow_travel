@@ -1,1194 +1,1056 @@
-version: 1
-plan_name: project_layer_runtime_alignment_work_plan
-target: align project_layer runtime concepts, execution units, and runtime
-  composition boundaries with the current requirement and architecture documents
-sources:
-  requirement_doc: project_layer/docs/Requirement.md
-  architecture_doc: project_layer/docs/TechnicalArchitecture.md
-  breakdown_docs_dir: project_layer/docs/breakdown_docs
-  active_work_plan: project_layer/docs/work_plan.yaml
-  code_root: project_layer/projects
-principles:
-  - keep document terminology, runtime terminology, artifact naming, and CLI
-    entry semantics consistent
-  - keep Basic Execution Units, Runtime Composition Modes, and quality-control
-    concepts separated at plan level
-  - remove legacy business concepts from primary runtime semantics as each
-    execution-unit batch is implemented
-  - prefer minimal necessary code change per batch
-  - split model-alignment work from feature-addition work
-  - do not mix unrelated refactors into the same batch
-  - only mark work complete after code and tests are updated and verified
-  - preserve stable logical artifact names defined by the design docs even when
-    runtime compatibility layers remain active
-execution_scope: concept-aligned execution-unit baseline and runtime-boundary
-  follow-up with runtime schema naming work-execute residual cleanup
-  post-alignment simplification and shared-directory removal
+version: 2
+plan_name: project_layer_feature_delivery_work_plan
 status: in_progress
-current_focus:
-  milestone_id: milestone_1_active_execution_alignment
-  stage_id: stage_12_hello_service_black_box_test_matrix
-  batch_id: batch_12_1_runtime_black_box_matrix
-  task_id: task_12_1_4
-deferred_after_first_batch_set:
-  - full regression rename sweep across all historical tests
-  - black-box end-to-end validation under the final naming model
-  - deeper partition alignment for runtime, data store, llm capability, quality
-    control, and test design breakdown docs
-open_questions:
-  - confirm whether item_design is a direct business rename of module_design or
-    whether item selection must support non-module targets in v1
-  - confirm whether architecture_design_contract should exist as a distinct
-    runnable unit or stay as an internal contract runner behind
-    architecture_design in v1
-resolved_decisions:
-  - work_plan.yaml is the only active execution baseline for the current
-    implementation work
-  - work_plan.yaml should use a real yaml structure and should not carry
-    markdown content in a yaml path
-  - a temporary compatibility layer for legacy stage identifiers is active
-    during the first batch set
-  - requirement_design, item_design, and work_plan generate and update baselines
-    are already implemented and verified
-  - the legacy stage runtime path has been removed from active runtime
-    entrypoints and only compose-run interface placeholders remain until
-    compose-run design is completed
-  - current requirement and architecture documents still treat compose-run as a
-    reserved current-version boundary, so the runtime keeps the placeholder
-    behavior and does not implement richer multi-step orchestration in this
-    batch
-  - non-runtime protocol and shared helper naming has been narrowed from
-    pipeline and document-stage terminology to execution-unit terminology where
-    those paths remain active
-  - Runtime/Schema is the chosen name for internal runtime boundary types
-    because it is more precise than Protocols, Contracts, or Boundary in this
-    project
+target: deliver each documented SDLC feature as an independently usable capability,
+  from runtime foundation to mock black-box usability and then real-llm usability
+context:
+  docs:
+    requirement: project_layer/docs/Requirement.md
+    architecture: project_layer/docs/TechnicalArchitecture.md
+    breakdown_dir: project_layer/docs/breakdown_docs
+  code:
+    root: project_layer/projects
+  active_work_plan: project_layer/docs/work_plan.yaml
+  scope: feature-by-feature delivery plan for requirement architecture item
+    overall-design-contract work-plan work-execute runtime entry black-box coverage
+    and real-llm verification
+workflow:
+  current_focus:
+    milestone_id: milestone_1_v1_current_delivery
+    stage_id: document update boundary usable
+    batch_id: batch_9_1_update_boundary_alignment
+    task_name: stop internal llm in document updates
+  execution_rules:
+    - finish all tasks in the current batch before advancing to the next batch in the same stage
+    - a stage is completed only after all of its implementation and verification batches are completed
+    - after a stage is completed, move current_focus to the first incomplete batch of the next stage
+governance:
+  principles:
+    - each stage must deliver one feature or one directly usable system capability
+    - each batch uses a fixed type label so implementation and verification are visually distinct
+    - each feature stage may contain multiple small batches, but each batch must be either implementation or verification
+    - each stage defines feature_scope explicitly, and each batch declares covers from that scope
+    - generate update and contract stay as separate basic execution units
+    - document contract rules come from template-extracted hints and contract json, not duplicated hand-coded business rules
+    - a stage is only completed after code tests and artifact behavior are verified
+    - runtime mock coverage and real-llm coverage are tracked separately
+    - do not mark real-llm coverage complete until it is actually executed and stable
+    - keep hello-service as the main black-box verification fixture
+  decisions:
+    resolved:
+      - work_plan.yaml is the only active execution baseline for implementation tracking
+      - batch_type is restricted to implementation or verification
+      - feature semantics are defined by stage feature_scope, while verification only provides evidence
+      - document generate units create artifacts, while document update units return external-update handoff payloads instead of rewriting artifacts directly
+      - document contract execution uses static-first checking and only runs llm semantic validation after static pass when llm is enabled
+      - hello-service black-box tests use createWorkspaceCopy by default; direct in-place runs are reserved for manual debugging only
+    open:
+      - compose-run remains a reserved boundary in the current design docs and still lacks a completed usable delivery definition
 milestones:
-  - milestone_id: milestone_1_active_execution_alignment
-    name: active execution alignment
-    goal: align project_layer runtime concepts, execution units, and runtime
-      composition boundaries with the current requirement and architecture
-      documents
+  - milestone_id: milestone_1_v1_current_delivery
+    name: v1 current delivery
+    goal: deliver the current-version usable SDLC capability set defined by the active requirement and architecture documents
     status: in_progress
     stages:
-      - stage_id: stage_1_model_alignment_baseline
-        name: model alignment baseline
-        goal: replace the legacy stage model with the current basic execution unit model
-          at planning level and runtime boundary level
+      - stage_id: runtime foundation usable
+        goal: make runtime entry artifact persistence directory structure schema
+          naming and runtime-unit orchestration usable for all later features
         status: completed
+        delivered_feature: usable run-unit runtime foundation
+        feature_scope:
+          - runtime_entry
+          - orchestrator_dispatch
+          - workspace_paths
+          - artifact_paths
+          - trace_persistence
         batches:
-          - batch_id: batch_1_1_plan_and_term_alignment
-            name: execution plan and term alignment
-            goal: establish one canonical vocabulary and one canonical execution model
+          - batch_id: batch_0_1_runtime_entry_and_cli
+            batch_type: implementation
+            name: implementation
+            goal: expose stable run unit and compose-run entry boundaries
             status: completed
+            covers:
+              - runtime_entry
+              - orchestrator_dispatch
             tasks:
-              - task_id: task_1_1_1
-                summary: establish work_plan.yaml as the active execution baseline and remove
-                  dependency on the legacy markdown execution plan
+              - task_name: align cli request creation
+                summary: align CLI and request creation with run unit and compose-run semantics
                 status: completed
                 involved_files:
-                  - project_layer/docs/work_plan.yaml
-                expected_output:
-                  - work_plan.yaml is the only active execution baseline for
-                    current implementation work
-              - task_id: task_1_1_2
-                summary: define the canonical mapping between current document functional points
-                  and runtime stage identifiers
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/shared/contracts/pipeline.ts
-                  - project_layer/projects/sdlc/src/app/composition-root.ts
-                  - project_layer/projects/sdlc/src/interface/cli.ts
-                expected_output:
-                  - one stable naming model or one explicit compatibility
-                    mapping layer
-              - task_id: task_1_1_3
-                summary: inventory and remove legacy hard-coded terminology from pipeline CLI
-                  tests and runtime metadata
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src
-                  - project_layer/projects/sdlc/tests
-                expected_output:
-                  - old stage names are either removed or isolated behind a
-                    compatibility boundary
-        validation:
-          - no new plan or runtime entry uses the legacy stage names as the
-            primary business vocabulary
-          - CLI and registry can reference the canonical model consistently
-      - stage_id: stage_2_document_unit_baseline
-        name: document unit baseline
-        goal: make requirement architecture item and work-plan units exist as real
-          generator contract and runner flows
-        status: completed
-        batches:
-          - batch_id: batch_2_1_requirement_design_units
-            name: requirement design units
-            goal: make requirement generate update and contract align with the current
-              requirement document model
-            status: completed
-            tasks:
-              - task_id: task_2_1_1
-                summary: replace passthrough requirement generation with real requirement
-                  document generation
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution/requirement-generator.ts
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/requirement-stage-runner.ts
-                  - project_layer/projects/sdlc/tests/requirement
-              - task_id: task_2_1_2
-                summary: update requirement contract checks to the current Requirement.md
-                  structure and terminology
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/contract/requirement-contract.ts
-                  - project_layer/projects/sdlc/tests/requirement
-              - task_id: task_2_1_3
-                summary: add requirement_design_update baseline with current external-update
-                  boundary semantics
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests
-          - batch_id: batch_2_2_architecture_design_units
-            name: architecture design units
-            goal: make architecture generate update and contract align with the current
-              architecture document model and derived item targets
-            status: completed
-            tasks:
-              - task_id: task_2_2_1
-                summary: add architecture_design_update baseline, make architecture generation
-                  distinguish generate vs update semantics, and stop exposing
-                  generate-only architecture semantics as the only primary path
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution/architecture-design-generator.ts
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/architecture-stage-runner.ts
-                  - project_layer/projects/sdlc/src/shared/contracts/pipeline.ts
-                  - project_layer/projects/sdlc/tests/architecture
-              - task_id: task_2_2_2
-                summary: add architecture_design_contract baseline and stop treating contract
-                  checks as only an internal side effect of architecture
-                  generation
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/contract
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests/architecture
-              - task_id: task_2_2_3
-                summary: align architecture design output artifacts with stable logical names
-                  such as architecture_design_template and
-                  architecture_design_contract_result
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/contract
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests/architecture
-          - batch_id: batch_2_3_item_design_units
-            name: item design units
-            goal: migrate module_design semantics to item_design semantics and keep
-              one-target-per-run behavior
-            status: completed
-            tasks:
-              - task_id: task_2_3_1
-                summary: replace module_design business terminology with item_design in runtime
-                  contracts generators runners and tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution/module-design-generator.ts
-                  - project_layer/projects/sdlc/src/contract/module-design-contract.ts
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/module-stage-runner.ts
-                  - project_layer/projects/sdlc/src/workflow/pipeline/module-design-fanout.ts
-                  - project_layer/projects/sdlc/tests/module-design
-              - task_id: task_2_3_2
-                summary: align architecture breakdown parsing and fan-out flow to item design
-                  targets instead of module naming assumptions
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/shared/design-document-breakdown.ts
-                  - project_layer/projects/sdlc/src/workflow/pipeline/module-design-fanout.ts
-                  - project_layer/projects/sdlc/tests/architecture
-                  - project_layer/projects/sdlc/tests/workflow
-              - task_id: task_2_3_3
-                summary: add item_design_update baseline with one target item per run
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests
-          - batch_id: batch_2_4_work_plan_units
-            name: work plan units
-            goal: migrate implementation_plan semantics to work_plan semantics and move the
-              artifact to work_plan.yaml
-            status: completed
-            tasks:
-              - task_id: task_2_4_1
-                summary: replace implementation_plan business terminology with work_plan in
-                  generator contract runner CLI and tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
-                  - project_layer/projects/sdlc/src/contract/implementation-plan-contract.ts
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/implementation-plan-stage-runner.ts
-                  - project_layer/projects/sdlc/src/interface/cli.ts
-                  - project_layer/projects/sdlc/tests/implementation-plan
-              - task_id: task_2_4_2
-                summary: switch the accepted plan artifact from markdown execution plan to a
-                  real yaml work_plan.yaml while preserving stage batch task
-                  structure
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution/implementation-plan-generator.ts
-                  - project_layer/projects/sdlc/src/contract/implementation-plan-contract.ts
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/stage-artifact-paths.ts
-                  - project_layer/projects/sdlc/tests
-              - task_id: task_2_4_3
-                summary: add work_plan_update baseline with current external-update boundary
-                  semantics on the yaml work plan structure
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests
-        validation:
-          - direct unit runs exist for requirement design architecture design
-            item design and work plan
-          - work_plan artifact is emitted as yaml and preserves stage batch task
-            structure
-          - tests cover generator contract and runner success and failure cases
-          - architecture design units distinguish generate update and contract
-            semantics explicitly
-      - stage_id: stage_3_cross_design_and_execution_contracts
-        name: cross design and execution contracts
-        goal: add cross-document contract control and separate work execution from work
-          execution contract
-        status: completed
-        batches:
-          - batch_id: batch_3_1_overall_design_contract
-            name: overall design contract
-            goal: validate requirement architecture item and work-plan outputs together
-              through one cross-document contract boundary
-            status: completed
-            tasks:
-              - task_id: task_3_1_1
-                summary: implement overall_design_contract runtime unit and result artifact
-                  naming aligned with overall_design_contract_result
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/contract
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests
-              - task_id: task_3_1_2
-                summary: feed overall_design_contract with requirement architecture item and
-                  work_plan artifacts using stable logical artifact names
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/shared/contracts
-                  - project_layer/projects/sdlc/src/workflow/pipeline
-                  - project_layer/projects/sdlc/tests/workflow
-          - batch_id: batch_3_2_work_execute_units
-            name: work execute units
-            goal: split work execution and work execution contract into separate execution
-              units with stable result artifacts
-            status: completed
-            tasks:
-              - task_id: task_3_2_1
-                summary: align implementation execution runtime semantics with work_execute and
-                  keep accepted work plan and design artifacts as required
-                  inputs
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution/implementation-generator
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/implementation-stage-runner.ts
-                  - project_layer/projects/sdlc/tests/implementation-execution
-              - task_id: task_3_2_2
-                summary: separate work_execute_contract from work_execute and emit
-                  work_execute_contract_result.json with the stable logical
-                  artifact name work_execute_contract_result
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/workflow/stage-runners/validation-stage-runner.ts
-                  - project_layer/projects/sdlc/src/shared/contracts
-                  - project_layer/projects/sdlc/tests
-              - task_id: task_3_2_3
-                summary: align work_execute input and output artifact names with work_execute
-                  design-doc constraints instead of legacy implementation
-                  terminology
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/shared/contracts
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests
-        validation:
-          - overall_design_contract exists as an independently runnable
-            execution unit
-          - work_execute and work_execute_contract are separate runtime units
-          - contract result artifact names match the design-doc logical names
-      - stage_id: stage_4_runtime_composition_modes
-        name: runtime composition modes
-        goal: align runtime entry and orchestration with the documented run-unit and
-          compose-run modes
-        status: completed
-        batches:
-          - batch_id: batch_4_1_cli_entry_and_request_factory
-            name: cli entry and request factory
-            goal: align CLI entry semantics with the design-doc runtime entry model
-            status: completed
-            tasks:
-              - task_id: task_4_1_1
-                summary: replace stage-oriented CLI generate entry semantics with run unit and
-                  run compose command semantics defined in cli_entry_design.md
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/interface/cli.ts
-                  - project_layer/projects/sdlc/src/bin
+                  - project_layer/projects/sdlc/src/Interface
                   - project_layer/projects/sdlc/tests/cli.test.ts
-              - task_id: task_4_1_2
-                summary: align runtime request creation with unit-run and compose-run boundaries
-                  instead of legacy stage launch assumptions
+              - task_name: align runtime unit dispatch
+                summary: align runtime and orchestrator boundaries with independent execution-unit dispatch
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/interface
-                  - project_layer/projects/sdlc/src/shared/contracts
-                  - project_layer/projects/sdlc/tests
-          - batch_id: batch_4_2_runtime_orchestration_boundary
-            name: runtime orchestration boundary
-            goal: align runtime orchestration with the documented Runtime and Orchestrator
-              boundary and composition-mode launch flexibility
-            status: completed
-            tasks:
-              - task_id: task_4_2_1
-                summary: split independent unit run handling from compose-run continuation
-                  handling in runtime orchestration
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/workflow/pipeline
-                  - project_layer/projects/sdlc/src/app/composition-root.ts
-                  - project_layer/projects/sdlc/tests/workflow
-              - task_id: task_4_2_2
-                summary: align runtime metadata and task records with execution-unit and
-                  compose-run terminology instead of only stage terminology
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/shared/contracts/pipeline.ts
-                  - project_layer/projects/sdlc/src/workflow/pipeline
-                  - project_layer/projects/sdlc/tests/workflow
-        validation:
-          - CLI exposes documented run unit and run compose modes
-          - runtime orchestration distinguishes independent unit runs from
-            compose-run continuation
-      - stage_id: stage_5_layered_directory_restructure
-        name: layered directory restructure
-        goal: reorganize the codebase into Interface Runtime Capability SDK Data and
-          Test partitions while keeping runtime behavior stable
-        status: completed
-        batches:
-          - batch_id: batch_5_1_interface_and_runtime_entry
-            name: interface and runtime entry
-            goal: establish Interface and single-layer Runtime top-level directories and
-              move current entry modules into their architecture-aligned
-              locations
-            status: completed
-            tasks:
-              - task_id: task_5_1_1
-                summary: move cli entry executable composition root and workspace runtime config
-                  files into Interface and single-layer Runtime directories and
-                  repair imports exports and affected tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Interface/CliEntry/cli.ts
-                  - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
-                  - project_layer/projects/sdlc/src/Runtime/composition-root.ts
-                  - project_layer/projects/sdlc/src/Runtime/workspace-local-env.ts
-                  - project_layer/projects/sdlc/src/index.ts
-                  - project_layer/projects/sdlc/src/shared/resource-resolver.ts
-                  - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
-                  - project_layer/projects/sdlc/src/quality-gate/change-gate.ts
-                  - project_layer/projects/sdlc/tests/cli.test.ts
-                  - project_layer/projects/sdlc/tests/app/composition-root.test.ts
-                  - project_layer/projects/sdlc/tests/shared/workspace-local-env.test.ts
-              - task_id: task_5_1_2
-                summary: move runtime orchestration files from workflow pipeline into Runtime
-                  Orchestrator and align imports without changing orchestration
-                  behavior
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator
-                  - project_layer/projects/sdlc/tests/workflow
-          - batch_id: batch_5_2_capability_partition_by_stage
-            name: capability partition by stage
-            goal: reorganize capability code by RequirementDesign ArchitectureDesign
-              ItemDesign OverallDesignContract WorkPlan and WorkExecute instead
-              of execution contract splits
-            status: completed
-            tasks:
-              - task_id: task_5_2_1
-                summary: migrate requirement and architecture capability files into stage-based
-                  directories and repair imports tests and public exports
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/contract
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests/requirement
-                  - project_layer/projects/sdlc/tests/architecture
-              - task_id: task_5_2_2
-                summary: migrate item design and work plan capability files into stage-based
-                  directories and repair imports tests and public exports
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/contract
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests/module-design
-                  - project_layer/projects/sdlc/tests/implementation-plan
-              - task_id: task_5_2_3
-                summary: migrate work execute and overall design contract capability files into
-                  stage-based directories and repair imports tests and public
-                  exports
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/execution
-                  - project_layer/projects/sdlc/src/contract
-                  - project_layer/projects/sdlc/src/workflow/stage-runners
-                  - project_layer/projects/sdlc/tests/implementation-execution
-                  - project_layer/projects/sdlc/tests/overall-design-contract
-                  - project_layer/projects/sdlc/tests/validation
-          - batch_id: batch_5_3_sdk_data_and_protocol_cleanup
-            name: sdk data and protocol cleanup
-            goal: place quality control and persistence code under SDK and Data and reduce
-              shared into stable protocol boundaries
-            status: completed
-            tasks:
-              - task_id: task_5_3_1
-                summary: move quality control and llm executor modules under SDK partitions,
-                  repair imports tests and exports, and remove the emptied
-                  legacy sdk and quality-gate directories
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/SDK
-                  - project_layer/projects/sdlc/tests/shared
-              - task_id: task_5_3_2
-                summary: move artifact and history persistence modules under Data, move stable
-                  contract and type entry points under Protocols, fold Runtime
-                  into a single layer, and remove the emptied legacy directories
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Data
-                  - project_layer/projects/sdlc/src/Protocols
                   - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/projects/sdlc/tests/shared
-        validation:
-          - source directories follow Interface Runtime Capability SDK Data
-            partitions at top level
-          - Capability directories are grouped by stage concept rather than by
-            execution contract split
-          - npm test passes after each migration task
-      - stage_id: stage_6_compose_run_interface_only
-        name: compose run interface only
-        goal: remove the legacy stage runtime path and leave only compose-run interfaces
-          and placeholder entry behavior until compose-run design is completed
-        status: completed
-        batches:
-          - batch_id: batch_6_1_stage_runtime_removal
-            name: stage runtime removal
-            goal: remove effective stage orchestration entry points and preserve only
-              compose-run interface skeletons
+                  - project_layer/projects/sdlc/tests/runtime
+          - batch_id: batch_0_2_runtime_paths_and_artifacts
+            batch_type: verification
+            name: verification
+            goal: stabilize workdir paths result artifacts and trace persistence
             status: completed
+            covers:
+              - workspace_paths
+              - artifact_paths
+              - trace_persistence
             tasks:
-              - task_id: task_6_1_1
-                summary: replace runtime pipeline and registry composition with a compose-run
-                  service placeholder and remove stage runtime entry exposure
-                  from composition-root and public exports
+              - task_name: standardize workdir document paths
+                summary: standardize persistent docs under workdir/sdlc and transient results under workdir/dist/sdlc/runId
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/composition-root.ts
-                  - project_layer/projects/sdlc/src/Runtime/compose-run-service.ts
-                  - project_layer/projects/sdlc/src/Protocols/compose-run.ts
-                  - project_layer/projects/sdlc/src/index.ts
-              - task_id: task_6_1_2
-                summary: remove legacy stage-oriented cli and test entry behavior, keep run
-                  compose only, and delete stage runtime tests and runtime files
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Interface/CliEntry/cli.ts
-                  - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator
-                  - project_layer/projects/sdlc/src/Capability
-                  - project_layer/projects/sdlc/tests
-              - task_id: task_6_1_3
-                summary: replace non-runtime stage and pipeline protocol remnants with
-                  execution-unit protocol naming and clean leftover shared
-                  filenames comments and tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Protocols
-                  - project_layer/projects/sdlc/src/Capability
                   - project_layer/projects/sdlc/src/Data
-                  - project_layer/projects/sdlc/src/SDK
+                  - project_layer/projects/sdlc/src/Runtime
+              - task_name: align trace and result naming
+                summary: align trace and contract result naming with the current runtime model
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Data
                   - project_layer/projects/sdlc/tests/shared
         validation:
-          - createApplicationRuntime exposes composeRunService and no longer
-            exposes pipeline or registry
-          - CLI rejects legacy generate and run unit commands
-          - npm test passes with compose-run placeholder behavior
-          - execution-unit protocols and shared helper names no longer use
-            pipeline or document-stage as the primary concept labels
-      - stage_id: stage_7_runtime_schema_and_work_execute_cleanup
-        name: runtime schema and work execute cleanup
-        goal: remove remaining ambiguous runtime boundary naming, eliminate
-          implementation-prefixed work-execute file names, and refactor
-          duplicated execution-unit helper logic
+          - run unit is the primary usable runtime path
+          - trace.json and result artifacts resolve under workdir/dist/sdlc/runId
+
+      - stage_id: requirement design usable
+        goal: make requirement design generate update and contract independently usable
+          with current design-doc semantics
         status: completed
+        delivered_feature: requirement design
+        feature_scope:
+          - generator
+          - update
+          - contract
+          - mock_black_box
         batches:
-          - batch_id: batch_7_1_runtime_schema_rename
-            name: runtime schema rename
-            goal: rename the internal runtime boundary directory from Contracts to Schema so
-              it no longer collides with business contract terminology
+          - batch_id: batch_1_1_requirement_units
+            batch_type: implementation
+            name: implementation
+            goal: complete requirement generate update and contract runtime behavior
             status: completed
+            covers:
+              - generator
+              - update
             tasks:
-              - task_id: task_7_1_1
-                summary: rename Runtime/Contracts to Runtime/Schema and repair imports tests and
-                  public exports without changing runtime behavior
+              - task_name: implement requirement generate
+                summary: implement requirement generate as a real document generator with current template and prompt flow
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/Schema
-                  - project_layer/projects/sdlc/src/index.ts
-                  - project_layer/projects/sdlc/src
-                  - project_layer/projects/sdlc/tests
-          - batch_id: batch_7_2_work_execute_naming_cleanup
-            name: work execute naming cleanup
-            goal: replace remaining implementation-prefixed file names and type names in
-              WorkExecute and work-plan schema code
-            status: completed
-            tasks:
-              - task_id: task_7_2_1
-                summary: rename implementation-contract and implementation-generator paths under
-                  WorkExecute to work-execute names and repair imports exports
-                  and tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/src/index.ts
-                  - project_layer/projects/sdlc/tests
-              - task_id: task_7_2_2
-                summary: rename ImplementationExecutionArtifacts and ImplementationWorkPlan
-                  schema types to work-execute and work-plan names and remove
-                  implementation-prefixed active exports
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/Schema
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-          - batch_id: batch_7_3_duplicate_code_refactor
-            name: duplicate code refactor
-            goal: reduce repeated execution-unit helper logic after the naming cleanup
-              without changing behavior
-            status: completed
-            tasks:
-              - task_id: task_7_3_1
-                summary: extract shared execution-unit context access from document generators
-                  so requirement architecture item and work-plan generators no
-                  longer duplicate currentContext handling and requested-unit
-                  resolution
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/Shared/document-unit-generator.ts
                   - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-              - task_id: task_7_3_2
-                summary: inspect remaining loader and prompt-builder duplication in WorkExecute
-                  and extract only one low-risk shared helper if repeated logic
-                  is still active after batch 7_2
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/tests
-        validation:
-          - Runtime/Schema is the only runtime boundary directory name
-          - no active export path uses implementation-prefixed work-execute
-            files or schema types as the primary name
-          - document generators share the same execution-unit context helper
-            path instead of duplicating local currentContext state
-          - npm test passes after each batch
-      - stage_id: stage_8_post_alignment_simplification
-        name: post alignment simplification
-        goal: remove transitional wrapper design and noisy default naming where the
-          current codebase has only one active implementation path
-        status: completed
-        batches:
-          - batch_id: batch_8_1_runtime_entry_simplification
-            name: runtime entry simplification
-            goal: simplify the Application entry so it no longer carries unused config
-              override layers or dead default assembly placeholders
-            status: completed
-            tasks:
-              - task_id: task_8_1_1
-                summary: remove unused Application override layers and keep Application creation
-                  as one direct runtime entry path
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/application.ts
-                  - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
-                  - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
-                  - project_layer/projects/sdlc/tests/app/application.test.ts
-          - batch_id: batch_8_2_cli_naming_simplification
-            name: cli naming simplification
-            goal: remove default-prefixed CLI class names when only one active parser and
-              one active mapper exist
-            status: completed
-            tasks:
-              - task_id: task_8_2_1
-                summary: rename DefaultCLICommandParser and DefaultCLIRequestMapper to direct
-                  CliEntry names and repair call sites and tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Interface/CliEntry
-                  - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
-                  - project_layer/projects/sdlc/tests/cli.test.ts
-          - batch_id: batch_8_3_work_execute_contract_naming
-            name: work execute contract naming
-            goal: remove default-prefixed helper names in WorkExecute contract flow when
-              only one shell-based preparer implementation exists
-            status: completed
-            tasks:
-              - task_id: task_8_3_1
-                summary: rename DefaultExecutionEnvironmentPreparer to a direct shell-oriented
-                  preparer name and keep WorkExecuteContract assembly explicit
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute/work-execute-contract.ts
-        validation:
-          - Application creation no longer exposes unused override or dead
-            assembly layers
-          - CLI parser and mapper names match the single active implementation
-            path
-          - WorkExecute contract helper names no longer imply multiple active
-            implementations where only one exists
-          - npm test passes after each batch
-      - stage_id: stage_9_shared_directory_removal
-        name: shared directory removal
-        goal: remove the leftover shared top-level directory by relocating its remaining
-          helpers into Runtime and Capability/Shared based on actual
-          responsibility
-        status: completed
-        batches:
-          - batch_id: batch_9_1_runtime_resource_resolution
-            name: runtime resource resolution
-            goal: move resource path resolution into Runtime because it belongs to workspace
-              and runtime resource lookup behavior
-            status: completed
-            tasks:
-              - task_id: task_9_1_1
-                summary: move resource-resolver from shared into Runtime and repair imports and
-                  tests
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/resource-resolver.ts
-                  - project_layer/projects/sdlc/src/Interface/CliEntry
-                  - project_layer/projects/sdlc/src/Capability/Shared
-                  - project_layer/projects/sdlc/tests/shared
-          - batch_id: batch_9_2_capability_breakdown_helpers
-            name: capability breakdown helpers
-            goal: move design-document breakdown parsing into Capability/Shared because it
-              serves capability-layer design artifact handling
-            status: completed
-            tasks:
-              - task_id: task_9_2_1
-                summary: move design-document-breakdown from shared into Capability/Shared and
-                  repair imports
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/Shared/design-document-breakdown.ts
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-          - batch_id: batch_9_3_shared_directory_cleanup
-            name: shared directory cleanup
-            goal: delete the emptied shared directory and verify there are no shared-path
-              import remnants
-            status: completed
-            tasks:
-              - task_id: task_9_3_1
-                summary: remove the empty shared directory and verify no source or test imports
-                  still depend on src/shared
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/shared
-                  - project_layer/projects/sdlc/src
-                  - project_layer/projects/sdlc/tests
-        validation:
-          - resource resolution helpers live under Runtime
-          - design document breakdown helpers live under Capability/Shared
-          - src/shared no longer exists
-          - npm test passes after each batch
-      - stage_id: stage_10_capability_and_black_box_tests
-        name: capability and black-box tests
-        goal: add missing capability-level unit coverage and supplement black-box
-          coverage through the hello-service ci-style entry
-        status: completed
-        batches:
-          - batch_id: batch_10_1_capability_requirement_and_architecture
-            name: capability requirement and architecture
-            goal: cover stable RequirementDesign and ArchitectureDesign behaviors directly
-              at capability level
-            status: completed
-            tasks:
-              - task_id: task_10_1_1
-                summary: add RequirementDesign capability tests for generator contract and
-                  runtime unit behavior
-                status: completed
-                involved_files:
                   - project_layer/projects/sdlc/tests/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/tests/run-tests.ts
-              - task_id: task_10_1_2
-                summary: add ArchitectureDesign capability tests for generator contract and
-                  runtime unit behavior
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/tests/run-tests.ts
-          - batch_id: batch_10_2_hello_service_black_box
-            name: hello-service black-box
-            goal: run current sdlc cli unit-run flow against a copied hello-service
-              workspace through the functional ci entry
-            status: completed
-            tasks:
-              - task_id: task_10_2_1
-                summary: update hello-service functional scripts to use run unit commands and
-                  current artifact names
-                status: completed
-                involved_files:
-                  - user_projects/hello-service/scripts
-                  - project_layer/projects/sdlc/package.json
-              - task_id: task_10_2_2
-                summary: allow ci-style black-box tests to inject deterministic mock llm
-                  behavior when launching the sdlc cli entry
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Interface/bin/sdlc.ts
-                  - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
-          - batch_id: batch_10_3_remaining_capabilities
-            name: remaining capabilities
-            goal: cover ItemDesign WorkPlan and WorkExecute behaviors directly at capability
-              level
-            status: completed
-            tasks:
-              - task_id: task_10_3_1
-                summary: add ItemDesign capability tests for generator contract and runtime unit
-                  behavior
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
-                  - project_layer/projects/sdlc/tests/run-tests.ts
-              - task_id: task_10_3_2
-                summary: add WorkPlan capability tests for generator contract and runtime unit
-                  behavior
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
-                  - project_layer/projects/sdlc/tests/run-tests.ts
-              - task_id: task_10_3_3
-                summary: add WorkExecute capability tests for generator contract and runtime
-                  unit behavior
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/WorkExecute
-                  - project_layer/projects/sdlc/tests/run-tests.ts
-        validation:
-          - capability tests run from tests/run-tests.ts
-          - npm test passes
-          - npm run test:functional passes through the hello-service script entry
-      - stage_id: stage_11_residual_alignment_follow_up
-        name: residual alignment follow-up
-        goal: record and reduce the remaining gaps between the current codebase and the
-          latest requirement and architecture documents
-        status: completed
-        milestones:
-          - milestone_id: milestone_11_1_concept_not_aligned
-            name: concept not aligned
-            goal: remove remaining naming and boundary mismatches where the active code
-              still exposes legacy or partial concepts
-            status: completed
-            stages:
-              - residual_stage_id: residual_stage_11_1_low_risk_concept_cleanup
-                name: low-risk concept cleanup
-                goal: remove simple naming and metadata remnants that do not require new runtime
-                  capability work
-                status: completed
-                batches:
-                  - batch_id: batch_11_1_1_low_risk_concept_cleanup
-                    name: low-risk concept cleanup
-                    goal: clear simple legacy execution-unit metadata and concept propagation
-                      remnants
-                    status: completed
-                    tasks:
-                      - task_id: task_11_1_1
-                        summary: remove legacy runtime metadata fallback and active legacy artifact
-                          alias compatibility from current runtime and test
-                          helper paths
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src/Runtime/Unit/execution-unit.ts
-                          - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
-                      - task_id: task_11_1_2
-                        summary: align update-unit llm metadata and item-design template resource-root
-                          propagation with execution-unit semantics
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src/Capability/RequirementDesign/requirement-generator.ts
-                          - project_layer/projects/sdlc/src/Capability/ArchitectureDesign/architecture-design-generator.ts
-                          - project_layer/projects/sdlc/src/Capability/ItemDesign/item-design-generator.ts
-                          - project_layer/projects/sdlc/src/Capability/WorkPlan/work-plan-generator.ts
-                          - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
-              - residual_stage_id: residual_stage_11_1_remaining_concept_alignment
-                name: remaining concept alignment
-                goal: align concepts that still differ from the latest requirement and
-                  architecture documents after low-risk cleanup
-                status: completed
-                batches:
-                  - batch_id: batch_11_1_2_remaining_concept_alignment
-                    name: remaining concept alignment
-                    goal: resolve remaining active concept mismatches in runtime and capability
-                      boundaries
-                    status: completed
-                    tasks:
-                      - task_id: task_11_1_3
-                        summary: align the final work-plan concept model with milestone stage batch
-                          task structure and remove the remaining residual runtime
-                          terminology mismatch in active work-plan paths
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src
-                          - project_layer/docs/Requirement.md
-                          - project_layer/docs/TechnicalArchitecture.md
-                          - meta_layer/resources/template/WorkPlanTemplate.yaml
-                      - task_id: task_11_1_4
-                        summary: replace item-design template resource naming so active code no longer
-                          exposes ModuleDesignTemplate as the primary template
-                          concept
-                        status: completed
-                        involved_files:
-                          - meta_layer/resources/template/ItemDesignTemplate.md
-                          - meta_layer/resources/contract/ItemDesignTemplate.contract.json
-                          - project_layer/projects/sdlc/src/Capability/ItemDesign
-          - milestone_id: milestone_11_2_concept_aligned_impl_missing
-            name: concept aligned but implementation missing
-            goal: implement capabilities and runtime paths that already exist in the design
-              docs and naming model but are still absent in active code
-            status: completed
-            stages:
-              - residual_stage_id: residual_stage_11_2_missing_execution_units
-                name: missing execution units
-                goal: add documented execution units that the runtime model already names but
-                  current active code still does not implement
-                status: pending
-                batches:
-                  - batch_id: batch_11_2_1_overall_design_contract
-                    name: overall design contract
-                    goal: add the missing overall_design_contract execution unit and its result
-                      artifact path
-                    status: completed
-                    tasks:
-                      - task_id: task_11_2_1
-                        summary: implement overall_design_contract as an independently runnable
-                          execution unit with result artifact coverage
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src/Capability
-                          - project_layer/projects/sdlc/src/Runtime/Orchestrator
-                          - project_layer/projects/sdlc/tests
-              - residual_stage_id: residual_stage_11_2_missing_runtime_modes
-                name: missing runtime modes
-                goal: decide whether reserved runtime modes remain placeholder-only or need
-                  current-version implementation
-                status: completed
-                batches:
-                  - batch_id: batch_11_2_2_compose_run
-                    name: compose-run
-                    goal: define whether compose-run stays placeholder-only or receives
-                      current-version runtime behavior
-                    status: completed
-                    tasks:
-                      - task_id: task_11_2_2
-                        summary: decide and implement the current-version compose-run behavior beyond
-                          the placeholder boundary if the design docs no longer
-                          treat it as reserved-only behavior
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src/Runtime
-                          - project_layer/projects/sdlc/src/Interface
-                          - project_layer/projects/sdlc/tests
-          - milestone_id: milestone_11_3_behavior_still_legacy
-            name: behavior still legacy
-            goal: remove behaviors that keep current execution units on older assumptions
-              after the naming model has already been aligned
-            status: completed
-            stages:
-              - residual_stage_id: residual_stage_11_3_work_plan_behavior
-                name: work plan behavior
-                goal: narrow the work-plan behavior if the final design no longer keeps the
-                  older stage-heavy structure
-                status: completed
-                batches:
-                  - batch_id: batch_11_3_1_work_plan_behavior
-                    name: work plan behavior
-                    goal: reduce stage-heavy behavior that may still reflect the older
-                      execution-plan model
-                    status: completed
-                    tasks:
-                      - task_id: task_11_3_1
-                        summary: narrow work-plan generation and contract behavior if the final design
-                          no longer requires stage-heavy yaml semantics such as
-                          per-stage validation blocks
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src/Capability/WorkPlan
-                          - project_layer/projects/sdlc/tests/Capability/WorkPlan
-              - residual_stage_id: residual_stage_11_3_legacy_cleanup
-                name: legacy cleanup
-                goal: remove remaining compatibility behaviors and fixture wording after active
-                  runtime and capability paths no longer consume them
-                status: completed
-                batches:
-                  - batch_id: batch_11_3_2_legacy_cleanup
-                    name: legacy cleanup
-                    goal: delete old-model runtime compatibility and fixture wording once no active
-                      path consumes it
-                    status: completed
-                    tasks:
-                      - task_id: task_11_3_2
-                        summary: remove remaining legacy compatibility behavior and old-model fixture
-                          wording after active runtime and capability paths no
-                          longer consume them
-                        status: completed
-                        involved_files:
-                          - project_layer/projects/sdlc/src
-                          - project_layer/projects/sdlc/tests
-      - stage_id: stage_12_hello_service_black_box_test_matrix
-        name: hello-service black-box test matrix
-        goal: make hello-service black-box test entry coverage explicit and keep the
-          runnable aggregated runtime and contract entries aligned with the current
-          runId-based artifact and trace paths
-        status: in_progress
-        batches:
-          - batch_id: batch_12_1_runtime_black_box_matrix
-            name: runtime black-box matrix
-            goal: make the hello-service runtime black-box entry matrix explicit and
-              keep the runnable runtime aggregated entry aligned with the current
-              runId-based artifact and trace paths
-            status: in_progress
-            tasks:
-              - task_id: task_12_1_1
-                summary: fill the hello-service black-box test registry with the complete
-                  runtime generator and contract matrix and mark unimplemented
-                  entries explicitly
-                status: completed
-                involved_files:
-                  - user_projects/hello-service/tests/hello-service-tests.mjs
-                  - user_projects/hello-service/package.json
-                  - project_layer/projects/sdlc/package.json
-              - task_id: task_12_1_2
-                summary: fix runId-scoped trace persistence so aggregated runtime and contract
-                  test entries read trace.json from the copied workspace instead
-                  of process cwd
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/application.ts
-                  - project_layer/projects/sdlc/src/Data/history-store.ts
-                  - project_layer/projects/sdlc/tests/shared/history-store.test.ts
-              - task_id: task_12_1_3
-                summary: verify the hello-service runtime and contract aggregated test entries
-                  against the current registry and record remaining unimplemented
-                  matrix items without pretending coverage
-                status: completed
-                involved_files:
-                  - user_projects/hello-service/tests/hello-service-tests.mjs
-                  - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
-              - task_id: task_12_1_4
-                summary: implement the remaining runtime matrix entries and restore
-                  runtime unit-flow or baseline success only after the hello-service
-                  fixture matches the latest requirement and downstream contract
-                  expectations
-                status: in_progress
-                involved_files:
-                  - user_projects/hello-service/tests
-                  - user_projects/hello-service/package.json
-                  - project_layer/projects/sdlc/package.json
-                progress_notes:
-                  - runtime:document-generation:success implemented
-                  - runtime:document-generation:failure implemented
-                  - runtime:unit-flow:success implemented
-                  - runtime:unit-flow:failure implemented
-                  - runtime:baseline:success implemented
-                  - runtime:baseline:failure implemented
-                  - all real-llm runtime entries still pending
-          - batch_id: batch_12_2_contract_black_box_matrix
-            name: contract black-box matrix
-            goal: implement the contract black-box matrix in small verified batches without
-              overstating success coverage
-            status: in_progress
-            tasks:
-              - task_id: task_12_2_1
-                summary: implement the remaining contract matrix entries including success
-                  and failure paths, while only marking a contract success case
-                  complete after the current hello-service fixture actually passes
-                  the latest contract rules
-                involved_files:
-                  - user_projects/hello-service/tests
-                  - user_projects/hello-service/package.json
-                  - project_layer/projects/sdlc/package.json
-                status: in_progress
-          - batch_id: batch_12_3_generator_black_box_matrix
-            name: generator black-box matrix
-            goal: implement the generator black-box matrix in small verified batches without
-              duplicating existing runtime success coverage
-            status: in_progress
-            tasks:
-              - task_id: task_12_3_1
-                summary: implement the remaining generator matrix entries, starting with
-                  failure cases that exercise generator-specific input validation
-                  and then adding success and real-llm cases
-                status: in_progress
-                involved_files:
-                  - user_projects/hello-service/tests
-                  - user_projects/hello-service/package.json
-                  - project_layer/projects/sdlc/package.json
-                progress_notes:
-                  - generator:requirement-design success and failure implemented
-                  - generator:architecture-design success and failure implemented
-                  - generator:item-design success and failure implemented
-                  - generator:work-plan success and failure implemented
-                  - generator:work-execute success and failure implemented
-                  - all generator real-llm entries still pending
-      - stage_id: stage_13_document_contract_two_layer_alignment
-        name: document contract two-layer alignment
-        goal: align document contracts to a two-layer model where static checks are
-          driven by template-extracted contract json and semantic checks run by llm
-          only after static pass
-        status: completed
-        batches:
-          - batch_id: batch_13_1_static_engine_requirement_architecture
-            name: static engine for requirement and architecture
-            goal: add the shared static document contract checker, switch
-              DocumentUnitContract to static-first execution, and remove business
-              hard-coding from requirement and architecture document contracts
-            status: completed
-            tasks:
-              - task_id: task_13_1_1
-                summary: add a shared static document contract checker that reads the
-                  current template-extracted contract json and enforces document
-                  skeleton and expected-format rules without introducing a new
-                  heavy contract DSL
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/Shared/document-unit-contract.ts
-                  - project_layer/projects/sdlc/src/Capability/Shared/contract-spec-loader.ts
-                  - project_layer/projects/sdlc/src/Capability/Shared
-                  - meta_layer/resources/contract
-              - task_id: task_13_1_2
-                summary: wire requirement and architecture runtime-unit contract paths to
-                  pass llmExecutor into the document contract layer and stop
-                  relying on code-hardcoded business rules for static checks
+              - task_name: split requirement runtime units
+                summary: split requirement generate update and contract into independent runtime units
                 status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/RequirementDesign
+                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+              - task_name: realign requirement update handoff
+                summary: realign requirement update to return an external-update handoff instead of rewriting the document inside the unit
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
+                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+          - batch_id: batch_1_2_requirement_contract_and_tests
+            batch_type: verification
+            name: verification
+            goal: make requirement contract and black-box coverage usable
+            status: completed
+            covers:
+              - contract
+              - mock_black_box
+            tasks:
+              - task_name: move requirement contract to static-first
+                summary: move requirement contract to the static-first document contract flow
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
+                  - project_layer/projects/sdlc/src/Capability/Shared
+              - task_name: verify requirement mock black-box coverage
+                summary: verify requirement mock runtime generator and contract black-box coverage with hello-service
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+        validation:
+          - requirement_design_generate requirement_design_update and requirement_design_contract are independently runnable
+          - requirement update returns an external action payload
+          - hello-service mock requirement coverage is runnable
+
+      - stage_id: architecture design usable
+        goal: make architecture design generate update and contract independently usable
+          and align architecture breakdown output with downstream item design
+        status: completed
+        delivered_feature: architecture design
+        feature_scope:
+          - generator
+          - update
+          - contract
+          - breakdown_artifact
+          - downstream_item_inputs
+          - mock_black_box
+        batches:
+          - batch_id: batch_2_1_architecture_units
+            batch_type: implementation
+            name: implementation
+            goal: complete architecture generate update and contract runtime behavior
+            status: completed
+            covers:
+              - generator
+              - update
+              - breakdown_artifact
+            tasks:
+              - task_name: implement architecture generate
+                summary: implement architecture generate with current template contract prompt inputs and design breakdown output
+                status: completed
+                involved_files:
                   - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/tests/Capability
-          - batch_id: batch_13_2_static_engine_item_work_plan
-            name: static engine for item and work plan
-            goal: move item and work-plan document contract paths onto the shared
-              static-first model and remove remaining template-format hard-coding
-              from those document contracts
-            status: completed
-            tasks:
-              - task_id: task_13_2_1
-                summary: switch item_design_contract to the shared static checker and
-                  remove code-hardcoded template-format checks that should be
-                  derived from the extracted contract json
+                  - meta_layer/resources/template
+                  - meta_layer/resources/contract
+              - task_name: split architecture runtime units
+                summary: split architecture generate update and contract into independent runtime units
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
-              - task_id: task_13_2_2
-                summary: switch work_plan_contract to the shared two-layer contract flow
-                  while keeping yaml parsing and plan-structure checks in the
-                  static layer
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+              - task_name: realign architecture update handoff
+                summary: realign architecture update to return an external-update handoff instead of rewriting the document inside the unit
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
-          - batch_id: batch_13_3_success_fixture_realignment
-            name: success fixture realignment
-            goal: realign hello-service handcrafted success fixtures with the latest
-              template-derived contract rules after the static-first checker is
-              active
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+          - batch_id: batch_2_2_architecture_contract_and_breakdown
+            batch_type: verification
+            name: verification
+            goal: make architecture contract and breakdown artifacts usable for downstream item selection
             status: completed
+            covers:
+              - contract
+              - downstream_item_inputs
+              - mock_black_box
             tasks:
-              - task_id: task_13_3_1
-                summary: rewrite or replace the hello-service handcrafted requirement,
-                  architecture, and item design success fixtures so contract
-                  success cases reflect the current template-derived rules
+              - task_name: align architecture static contract
+                summary: align architecture contract with template-extracted hints and static-first checking
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json
+              - task_name: validate architecture breakdown section
+                summary: require architecture contract to validate the 7.2 breakdown section against architecture_design_breakdown.json
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - project_layer/projects/sdlc/src/Capability/Shared/design-document-breakdown.ts
+              - task_name: verify architecture generate and contract
+                summary: verify architecture generate and contract pass against hello-service under mock and direct rerun validation
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/sdlc/docs
-                  - project_layer/projects/sdlc/package.json
-      - stage_id: stage_14_runtime_unit_boundary_realignment
-        name: runtime unit boundary realignment
-        goal: align runtime-unit code boundaries with the design-doc model where
-          generate update and contract are independent basic execution units
+        validation:
+          - architecture_design_generate architecture_design_update and architecture_design_contract are independently runnable
+          - architecture_design_breakdown.json is generated and consumed downstream
+          - hello-service architecture generate plus contract passes
+
+      - stage_id: item design usable
+        goal: make item design generate update and contract independently usable and
+          fully driven by architecture breakdown targets
         status: completed
+        delivered_feature: item design
+        feature_scope:
+          - generator
+          - update
+          - contract
+          - breakdown_inputs
+          - mock_black_box
         batches:
-          - batch_id: batch_14_1_requirement_architecture_unit_split
-            name: requirement and architecture unit split
-            goal: split requirement and architecture runtime units into independent
-              generate update and contract runtime-unit classes
+          - batch_id: batch_3_1_item_units
+            batch_type: implementation
+            name: implementation
+            goal: complete item design generate update and contract runtime behavior
             status: completed
+            covers:
+              - generator
+              - update
             tasks:
-              - task_id: task_14_1_1
-                summary: replace capability-level requirement and architecture runtime-unit
-                  branch handling with distinct generate update and contract
-                  classes and register them independently in RuntimeOrchestrator
-                status: completed
-                involved_files:
-                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
-                  - project_layer/projects/sdlc/tests/Capability
-                  - project_layer/projects/sdlc/tests/runtime
-          - batch_id: batch_14_2_item_work_plan_unit_split
-            name: item and work plan unit split
-            goal: split item-design and work-plan runtime units into independent
-              generate update and contract runtime-unit classes
-            status: completed
-            tasks:
-              - task_id: task_14_2_1
-                summary: replace capability-level item-design and work-plan runtime-unit
-                  branch handling with distinct generate update and contract
-                  classes and register them independently in RuntimeOrchestrator
+              - task_name: align item design semantics
+                summary: replace module_design semantics with item_design semantics and keep one target item per run
                 status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - meta_layer/resources/template/ItemDesignTemplate.md
+              - task_name: split item-design runtime units
+                summary: split item-design generate update and contract into independent runtime units
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ItemDesign
                   - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
-                  - project_layer/projects/sdlc/tests/Capability
-          - batch_id: batch_14_3_update_behavior_realignment
-            name: update behavior realignment
-            goal: align update unit inputs outputs and external-update boundary
-              semantics with the design docs instead of treating update as a
-              generate variant
+              - task_name: realign item-design update handoff
+                summary: realign item-design update to return an external-update handoff instead of rewriting the document inside the unit
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ItemDesign
+                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+          - batch_id: batch_3_2_item_inputs_and_contract
+            batch_type: verification
+            name: verification
+            goal: derive item inputs from architecture breakdown and make item contract usable
             status: completed
+            covers:
+              - contract
+              - breakdown_inputs
+              - mock_black_box
             tasks:
-              - task_id: task_14_3_1
-                summary: realign document update units so update takes current artifact
-                  input and returns external-update-oriented prompt and action
-                  outputs instead of directly rewriting artifacts inside the unit
+              - task_name: derive item inputs from breakdown
+                summary: derive item descriptor and related black-box inputs from architecture_design_breakdown.json instead of hard-coded test names
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+              - task_name: move item contract to static-first
+                summary: move item design contract to the static-first document contract flow
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ItemDesign
+                  - project_layer/projects/sdlc/src/Capability/Shared
+        validation:
+          - item_design_generate item_design_update and item_design_contract are independently runnable
+          - item selection comes from architecture_design_breakdown.json
+          - hello-service item-design mock coverage is runnable
+
+      - stage_id: overall design contract usable
+        goal: make the cross-document overall design contract independently usable
+        status: completed
+        delivered_feature: overall design contract
+        feature_scope:
+          - contract
+          - result_artifact
+        batches:
+          - batch_id: batch_4_1_overall_contract_runtime
+            batch_type: implementation
+            name: implementation
+            goal: implement and verify overall_design_contract as a runnable unit
+            status: completed
+            covers:
+              - contract
+              - result_artifact
+            tasks:
+              - task_name: implement overall design contract
+                summary: implement overall_design_contract with stable result artifact output
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/OverallDesignContract
+                  - project_layer/projects/sdlc/tests/Capability/OverallDesignContract
+              - task_name: wire overall design contract inputs
+                summary: feed overall_design_contract from requirement architecture item and work-plan outputs using stable logical artifact names
                 status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability
+                  - project_layer/projects/sdlc/src/Data
+        validation:
+          - overall_design_contract is directly runnable and writes overall_design_contract_result.json
+
+      - stage_id: work plan usable
+        goal: make work plan generate update and contract independently usable on the
+          milestone-stage-batch-task yaml model
+        status: completed
+        delivered_feature: work plan
+        feature_scope:
+          - generator
+          - update
+          - contract
+          - yaml_model
+        batches:
+          - batch_id: batch_5_1_work_plan_units
+            batch_type: implementation
+            name: implementation
+            goal: complete work plan generate update and contract runtime behavior
+            status: completed
+            covers:
+              - generator
+              - update
+            tasks:
+              - task_name: implement work plan artifact
+                summary: replace implementation_plan semantics with work_plan and emit a real yaml artifact
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - meta_layer/resources/template/WorkPlanTemplate.yaml
+              - task_name: split work-plan runtime units
+                summary: split work-plan generate update and contract into independent runtime units
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+              - task_name: realign work-plan update handoff
+                summary: realign work-plan update to return an external-update handoff instead of rewriting the yaml inside the unit
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+          - batch_id: batch_5_2_work_plan_contract_and_model
+            batch_type: verification
+            name: verification
+            goal: make work-plan contract and yaml model align with current design docs
+            status: completed
+            covers:
+              - contract
+              - yaml_model
+            tasks:
+              - task_name: move work-plan contract to static-first
+                summary: move work_plan_contract to the static-first contract flow
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/projects/sdlc/src/Capability/Shared
+              - task_name: align work-plan structure
+                summary: align work_plan to the milestones stages batches tasks structure and remove residual old-model behavior
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/docs/Requirement.md
+                  - project_layer/docs/TechnicalArchitecture.md
+        validation:
+          - work_plan_generate work_plan_update and work_plan_contract are independently runnable
+          - work_plan.yaml follows the milestone-stage-batch-task model
+
+      - stage_id: work execute usable
+        goal: make work_execute and work_execute_contract independently usable with stable
+          result naming and runtime storage
+        status: completed
+        delivered_feature: work execute
+        feature_scope:
+          - executor
+          - contract
+          - result_artifacts
+        batches:
+          - batch_id: batch_6_1_work_execute_units
+            batch_type: implementation
+            name: implementation
+            goal: complete work_execute and work_execute_contract runtime behavior
+            status: completed
+            covers:
+              - executor
+              - contract
+              - result_artifacts
+            tasks:
+              - task_name: align work-execute io and naming
+                summary: align work_execute inputs outputs and naming with current design-doc semantics
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkExecute
+                  - project_layer/projects/sdlc/tests/Capability/WorkExecute
+              - task_name: separate work-execute runtime units
+                summary: keep work_execute and work_execute_contract as separate runtime units with stable result artifacts
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkExecute
+                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+        validation:
+          - work_execute and work_execute_contract are independently runnable
+          - results and trace paths are stable under workdir/dist/sdlc/runId
+
+      - stage_id: document contract engine usable
+        goal: make the shared two-layer document contract engine usable for all
+          document-type contracts
+        status: completed
+        delivered_feature: shared document contract engine
+        feature_scope:
+          - static_first_contract_engine
+          - semantic_follow_up
+          - generator_prompt_alignment
+        batches:
+          - batch_id: batch_7_1_static_first_engine
+            batch_type: implementation
+            name: implementation
+            goal: make static checks the first layer for document contracts
+            status: completed
+            covers:
+              - static_first_contract_engine
+              - semantic_follow_up
+            tasks:
+              - task_name: add shared static document contract engine
+                summary: add shared static document contract checking driven by template-extracted contract json
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/Shared
+                  - meta_layer/resources/contract
+              - task_name: switch document contracts to static-first
+                summary: switch requirement architecture item and work-plan contracts to static-first execution and llm semantic follow-up
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability
+                  - project_layer/projects/sdlc/tests/Capability
+          - batch_id: batch_7_2_generator_prompt_alignment
+            batch_type: verification
+            name: verification
+            goal: align document generators with templates and template-derived contracts
+            status: completed
+            covers:
+              - generator_prompt_alignment
+            tasks:
+              - task_name: pass contract content into prompts
+                summary: pass template contract content into document generator prompts and strip template hints from prompt template bodies
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/Shared/document-unit-generator.ts
+                  - project_layer/projects/sdlc/src/Capability
+              - task_name: separate architecture format and content hints
+                summary: separate expected format from content checks in architecture hints and sync template contract and design docs
+                status: completed
+                involved_files:
+                  - project_layer/docs/TechnicalArchitecture.md
+                  - meta_layer/resources/template/TechnicalArchitectureTemplate.md
+                  - meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json
+        validation:
+          - document contracts run static-first
+          - generator prompts consume template plus contract without leaking authoring hints into output
+
+      - stage_id: hello-service mock black-box usable
+        goal: make hello-service mock runtime generator and contract black-box coverage usable
+          as the main regression fixture
+        status: completed
+        delivered_feature: hello-service mock black-box regression
+        feature_scope:
+          - test_registry
+          - copied_workspace_paths
+          - runtime_mock_matrix
+          - generator_mock_matrix
+          - contract_mock_matrix
+        batches:
+          - batch_id: batch_8_1_black_box_registry_and_paths
+            batch_type: implementation
+            name: implementation
+            goal: stabilize test entry registry copied workspace execution and trace lookup
+            status: completed
+            covers:
+              - test_registry
+              - copied_workspace_paths
+            tasks:
+              - task_name: fill hello-service test registry
+                summary: fill the hello-service test registry and keep unimplemented entries explicit
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests/hello-service-tests.mjs
+                  - user_projects/hello-service/package.json
+                  - project_layer/projects/sdlc/package.json
+              - task_name: fix copied workspace trace paths
+                summary: make copied workspace runs resolve trace.json and runId-scoped artifacts correctly
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Runtime/application.ts
+                  - project_layer/projects/sdlc/src/Data/history-store.ts
+                  - user_projects/hello-service/tests
+          - batch_id: batch_8_2_mock_matrix_completion
+            batch_type: verification
+            name: verification
+            goal: complete the mock runtime generator and contract matrix used for local regression
+            status: completed
+            covers:
+              - runtime_mock_matrix
+              - generator_mock_matrix
+              - contract_mock_matrix
+            tasks:
+              - task_name: verify runtime document-generation mock
+                summary: verify runtime mock success and failure coverage for document-generation
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify runtime unit-flow mock
+                summary: verify runtime mock success and failure coverage for unit-flow
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify runtime baseline mock
+                summary: verify runtime mock success and failure coverage for baseline
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify requirement generator mock
+                summary: verify requirement generator mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify architecture generator mock
+                summary: verify architecture generator mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify item generator mock
+                summary: verify item-design generator mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify work-plan generator mock
+                summary: verify work-plan generator mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify work-execute generator mock
+                summary: verify work-execute generator mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify requirement contract mock
+                summary: verify requirement contract mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify architecture contract mock
+                summary: verify architecture contract mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify item contract mock
+                summary: verify item-design contract mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify overall contract mock
+                summary: verify overall-design contract mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify work-plan contract mock
+                summary: verify work-plan contract mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+              - task_name: verify work-execute contract mock
+                summary: verify work-execute contract mock success and failure coverage
+                status: completed
+                involved_files:
+                  - user_projects/hello-service/tests
+        validation:
+          - npm run test:functional:runtime passes
+          - npm run test:functional:generator passes
+          - npm run test:functional:contract passes under mock coverage
+
+      - stage_id: document update boundary usable
+        goal: make document update behavior consistently follow the external-plugin
+          handoff model across requirement architecture item and work-plan
+        status: in_progress
+        delivered_feature: external-update handoff boundary
+        feature_scope:
+          - external_update_handoff
+          - no_internal_llm_execution
+        batches:
+          - batch_id: batch_9_1_update_boundary_alignment
+            batch_type: implementation
+            name: implementation
+            goal: align all document update units with the design-doc update model
+            status: in_progress
+            covers:
+              - external_update_handoff
+              - no_internal_llm_execution
+            tasks:
+              - task_name: stop requirement update llm
+                summary: stop requirement update from calling llm inside the unit and keep it limited to prompt-plus-action output
+                status: in_progress
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
+                  - project_layer/projects/sdlc/tests/Capability/RequirementDesign
+              - task_name: stop architecture update llm
+                summary: stop architecture update from calling llm inside the unit and keep it limited to prompt-plus-action output
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
+              - task_name: stop item-design update llm
+                summary: stop item-design update from calling llm inside the unit and keep it limited to prompt-plus-action output
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ItemDesign
+                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
+              - task_name: stop work-plan update llm
+                summary: stop work-plan update from calling llm inside the unit and keep it limited to prompt-plus-action output
+                status: in_progress
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
+          - batch_id: batch_9_2_update_boundary_verification
+            batch_type: verification
+            name: verification
+            goal: verify that all document update units now return prompt-plus-action payloads without internal llm execution
+            status: pending
+            covers:
+              - external_update_handoff
+              - no_internal_llm_execution
+            tasks:
+              - task_name: verify requirement update handoff
+                summary: verify requirement update returns prompt plus external action without internal llm execution
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests/Capability/RequirementDesign
+                  - user_projects/hello-service/tests
+              - task_name: verify architecture update handoff
+                summary: verify architecture update returns prompt plus external action without internal llm execution
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
+                  - user_projects/hello-service/tests
+              - task_name: verify item-design update handoff
+                summary: verify item-design update returns prompt plus external action without internal llm execution
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
+                  - user_projects/hello-service/tests
+              - task_name: verify work-plan update handoff
+                summary: verify work-plan update returns prompt plus external action without internal llm execution
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
+                  - user_projects/hello-service/tests
+        validation:
+          - all document update units return externalAction results
+          - update behavior no longer reuses generate semantics
+          - no document update unit executes llm inside the unit boundary
+
+      - stage_id: hello-service real-llm usable
+        goal: make hello-service real-llm verification usable and stable for the
+          documented feature chain
+        status: in_progress
+        delivered_feature: hello-service real-llm verification
+        feature_scope:
+          - architecture_real_llm
+          - remaining_runtime_real_llm
+          - remaining_generator_real_llm
+          - remaining_contract_real_llm
+        batches:
+          - batch_id: batch_10_1_architecture_real_llm_validation
+            batch_type: verification
+            name: verification
+            goal: use architecture as the first stable real-llm validation slice
+            status: in_progress
+            covers:
+              - architecture_real_llm
+            tasks:
+              - task_name: keep architecture real-llm passing
+                summary: keep architecture generate plus contract passing under real-llm execution and preserve the current clean-workspace validation path
+                status: in_progress
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - user_projects/hello-service/sdlc/docs
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - meta_layer/resources/template/TechnicalArchitectureTemplate.md
+                  - meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json
+                progress_notes:
+                  - architecture real-llm generate plus contract has passed once after hint cleanup
+                  - the path still needs to be stabilized as a maintained test entry instead of an ad hoc rerun
+          - batch_id: batch_10_2_remaining_real_llm_matrix
+            batch_type: verification
+            name: verification
+            goal: complete the remaining real-llm runtime generator and contract validation matrix
+            status: pending
+            covers:
+              - remaining_runtime_real_llm
+              - remaining_generator_real_llm
+              - remaining_contract_real_llm
+            tasks:
+              - task_name: verify runtime document-generation real-llm
+                summary: implement and verify the runtime real-llm entry for document-generation
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify runtime unit-flow real-llm
+                summary: implement and verify the runtime real-llm entry for unit-flow
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify runtime baseline real-llm
+                summary: implement and verify the runtime real-llm entry for baseline
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify requirement generator real-llm
+                summary: implement and verify the requirement generator real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify architecture generator real-llm
+                summary: implement and verify the architecture generator real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify item generator real-llm
+                summary: implement and verify the item-design generator real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify work-plan generator real-llm
+                summary: implement and verify the work-plan generator real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify work-execute generator real-llm
+                summary: implement and verify the work-execute generator real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify requirement contract real-llm
+                summary: implement and verify the requirement contract real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify architecture contract real-llm
+                summary: implement and verify the architecture contract real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify item contract real-llm
+                summary: implement and verify the item-design contract real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify overall contract real-llm
+                summary: implement and verify the overall-design contract real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify work-plan contract real-llm
+                summary: implement and verify the work-plan contract real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify work-execute contract real-llm
+                summary: implement and verify the work-execute contract real-llm entry
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+        validation:
+          - real-llm coverage is executable from hello-service tests
+          - each completed real-llm entry has an actual passing record, not only a mock equivalent
+
+      - stage_id: compose-run reserved boundary
+        goal: keep compose-run aligned with the current design docs as a reserved but
+          not-yet-usable boundary until the docs define a complete deliverable
+        status: pending
+        delivered_feature: explicit compose-run boundary placeholder
+        feature_scope:
+          - placeholder_boundary
+        batches:
+          - batch_id: batch_11_1_placeholder_consistency
+            batch_type: verification
+            name: verification
+            goal: keep compose-run exposed only as a documented placeholder and prevent it
+              from silently regressing into legacy stage orchestration
+            status: pending
+            covers:
+              - placeholder_boundary
+            tasks:
+              - task_name: preserve compose-run placeholder boundary
+                summary: preserve compose-run as an explicit interface-only placeholder until the design docs define a full usable feature
+                status: pending
+                involved_files:
                   - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/Requirement.md
+                  - project_layer/docs/TechnicalArchitecture.md
+        validation:
+          - compose-run remains explicit and non-misleading
+          - no active path treats legacy multi-stage orchestration as the delivered compose-run feature
+  - milestone_id: milestone_2_v2_mcp_change_and_gate_integration
+    name: v2 mcp change and gate integration
+    goal: integrate external mcp capabilities so update prompts gate decisions and change payloads can form one usable continuation loop
+    status: pending
+    stages:
+      - stage_id: update prompt mcp handoff usable
+        goal: make document update prompt outputs consumable by external mcp capabilities through one stable handoff shape
+        status: pending
+        delivered_feature: mcp update prompt handoff
+        feature_scope:
+          - mcp_action_shape
+          - update_prompt_payload
+          - target_path_binding
+        batches:
+          - batch_id: batch_12_1_update_prompt_mcp_handoff
+            batch_type: implementation
+            name: implementation
+            goal: align update externalAction payloads with an mcp-consumable handoff contract
+            status: pending
+            covers:
+              - mcp_action_shape
+              - update_prompt_payload
+              - target_path_binding
+            tasks:
+              - task_name: define mcp update action payload
+                summary: define one stable mcp-oriented action payload for requirement architecture item-design and work-plan update prompts
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/projects/sdlc/src/Capability
+                  - project_layer/docs/breakdown_docs/runtime_design.md
+          - batch_id: batch_12_2_update_prompt_mcp_handoff_verification
+            batch_type: verification
+            name: verification
+            goal: verify that document update outputs can be handed to external mcp capabilities without extra shape translation
+            status: pending
+            covers:
+              - mcp_action_shape
+              - update_prompt_payload
+              - target_path_binding
+            tasks:
+              - task_name: verify update prompt handoff payloads
+                summary: verify update prompt handoff payloads against the runtime external-action boundary and document update design docs
+                status: pending
+                involved_files:
                   - project_layer/projects/sdlc/tests
+                  - project_layer/docs/breakdown_docs/runtime_design.md
+                  - project_layer/docs/breakdown_docs/requirement_design.md
+                  - project_layer/docs/breakdown_docs/architecture_design.md
+                  - project_layer/docs/breakdown_docs/item_design.md
+                  - project_layer/docs/breakdown_docs/work_design.md
+        validation:
+          - update-style units expose one stable mcp-consumable handoff payload
+          - target path and prompt payload remain stable across requirement architecture item-design and work-plan
+
+      - stage_id: change payload integration usable
+        goal: make external mcp changes payloads readable by runtime continuation logic and bind them back to artifact refresh
+        status: pending
+        delivered_feature: mcp change payload integration
+        feature_scope:
+          - changes_payload_shape
+          - changed_artifact_binding
+          - downstream_resume_input
+        batches:
+          - batch_id: batch_13_1_change_payload_integration
+            batch_type: implementation
+            name: implementation
+            goal: define the runtime-facing change payload contract returned by external mcp execution
+            status: pending
+            covers:
+              - changes_payload_shape
+              - changed_artifact_binding
+              - downstream_resume_input
+            tasks:
+              - task_name: define external changes payload
+                summary: add one stable changes payload shape so runtime can read changed files updated artifacts and continuation-ready outputs from external mcp execution
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/breakdown_docs/runtime_design.md
+          - batch_id: batch_13_2_change_payload_integration_verification
+            batch_type: verification
+            name: verification
+            goal: verify that runtime can consume external change payloads without reopening document update boundaries
+            status: pending
+            covers:
+              - changes_payload_shape
+              - changed_artifact_binding
+              - downstream_resume_input
+            tasks:
+              - task_name: verify external change payload ingestion
+                summary: verify runtime can map external mcp change payloads back to artifact refresh and continuation input
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - user_projects/hello-service/tests
+        validation:
+          - external mcp change payloads are readable by runtime continuation logic
+          - changed artifacts can be rebound to downstream continuation input
+
+      - stage_id: gate-driven external continuation usable
+        goal: make gate decisions participate in external continuation so accepted and rejected changes follow explicit next-step rules
+        status: pending
+        delivered_feature: gate-driven external continuation
+        feature_scope:
+          - gate_decision_input
+          - continuation_branching
+          - rejection_return_path
+        batches:
+          - batch_id: batch_14_1_gate_driven_external_continuation
+            batch_type: implementation
+            name: implementation
+            goal: connect gate decisions to external continuation input and branching behavior
+            status: pending
+            covers:
+              - gate_decision_input
+              - continuation_branching
+              - rejection_return_path
+            tasks:
+              - task_name: define gate continuation rules
+                summary: define how gate decisions accept reject or return external mcp update and change results to the next runtime step
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/projects/sdlc/src/Capability
+                  - project_layer/docs/breakdown_docs/quality_control_design.md
+                  - project_layer/docs/breakdown_docs/runtime_design.md
+          - batch_id: batch_14_2_gate_driven_external_continuation_verification
+            batch_type: verification
+            name: verification
+            goal: verify gate-driven branching on external continuation paths
+            status: pending
+            covers:
+              - gate_decision_input
+              - continuation_branching
+              - rejection_return_path
+            tasks:
+              - task_name: verify gate continuation paths
+                summary: verify pass and reject gate paths for external mcp continuation without collapsing back into manual ad hoc handling
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - user_projects/hello-service/tests
+        validation:
+          - gate decisions drive explicit continuation or return paths for external results
+          - rejected external changes do not silently continue downstream
+
+      - stage_id: mcp-assisted artifact update loop usable
+        goal: make update prompt generation external mcp execution changes return gate review and artifact refresh work as one usable loop
+        status: pending
+        delivered_feature: mcp-assisted artifact update loop
+        feature_scope:
+          - update_loop
+          - artifact_refresh
+          - continuation_after_update
+        batches:
+          - batch_id: batch_15_1_mcp_assisted_update_loop
+            batch_type: implementation
+            name: implementation
+            goal: connect update prompt handoff changes payloads and gate continuation into one artifact update loop
+            status: pending
+            covers:
+              - update_loop
+              - artifact_refresh
+              - continuation_after_update
+            tasks:
+              - task_name: implement end-to-end update loop
+                summary: implement one end-to-end update loop that starts from update prompt handoff reaches external mcp execution receives changes and refreshes artifacts for downstream continuation
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/projects/sdlc/src/Capability
+                  - project_layer/projects/sdlc/src/Data
+                  - user_projects/hello-service/tests
+          - batch_id: batch_15_2_mcp_assisted_update_loop_verification
+            batch_type: verification
+            name: verification
+            goal: verify the full mcp-assisted update loop on at least one document capability path
+            status: pending
+            covers:
+              - update_loop
+              - artifact_refresh
+              - continuation_after_update
+            tasks:
+              - task_name: verify external mcp update loop
+                summary: verify one full external mcp update loop through hello-service including prompt handoff changes return gate decision and refreshed artifact state
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+        validation:
+          - at least one document update path completes through mcp handoff changes return gate and artifact refresh
+          - the refreshed artifact becomes valid downstream input without reopening the old update boundary
