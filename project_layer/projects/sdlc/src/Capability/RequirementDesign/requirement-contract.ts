@@ -30,8 +30,8 @@ export class RequirementContract extends DocumentUnitContract {
     output: ExecutionUnitResult,
     contractSpec: ContractSpec,
   ) {
-    const requirementOutput = output as ExecutionUnitResult<RequirementArtifacts>;
-    return runMarkdownDocumentStaticChecks(requirementOutput.artifacts.content.trim(), contractSpec);
+    const generatedArtifacts = this.readGeneratedArtifacts(output);
+    return runMarkdownDocumentStaticChecks(generatedArtifacts.content.trim(), contractSpec);
   }
 
   protected skipSemanticFallbackWithoutLlm(): boolean {
@@ -43,8 +43,7 @@ export class RequirementContract extends DocumentUnitContract {
     output: ExecutionUnitResult,
     contractSpec: ContractSpec,
   ): Promise<LlmExecutionRequest> {
-    const requirementOutput = output as ExecutionUnitResult<RequirementArtifacts>;
-    const generatedResult = requirementOutput.artifacts.content.trim();
+    const generatedResult = this.readGeneratedArtifacts(output).content.trim();
 
     return {
       prompt: {
@@ -82,5 +81,14 @@ export class RequirementContract extends DocumentUnitContract {
       summary: result.summary,
       issues: result.issues,
     };
+  }
+
+  private readGeneratedArtifacts(output: ExecutionUnitResult): Extract<RequirementArtifacts, { artifactKey: "requirement_design" }> {
+    const artifacts = (output as ExecutionUnitResult<RequirementArtifacts>).artifacts;
+    if (artifacts.artifactKey !== "requirement_design") {
+      throw new Error("Requirement contract expects a generated requirement artifact.");
+    }
+
+    return artifacts;
   }
 }

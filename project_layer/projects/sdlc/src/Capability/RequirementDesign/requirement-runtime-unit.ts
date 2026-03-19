@@ -8,26 +8,95 @@ import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-record
 
 const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 const REQUIREMENT_CONTRACT_RESULT_PATH = "requirement_design_contract_result.json";
+const REQUIREMENT_UPDATE_RESULT_PATH = "requirement_design_update_result.json";
 
-export class RequirementDesignRuntimeUnit extends RuntimeUnitBase {
+abstract class RequirementDesignRuntimeUnitBase extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
-    private readonly llmExecutor: ILlmExecutor,
+    protected readonly llmExecutor: ILlmExecutor,
     resourceRoot?: string,
   ) {
     super(artifactStore, traceRecorder, resourceRoot);
   }
 
-  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    if (request.executionUnitId === "requirement_design_contract") {
-      return this.runContract(request, context);
+  protected async runGenerator(
+    request: UnitRuntimeRequest,
+    context: RuntimeContext,
+    inputArtifacts: Record<string, string>,
+  ): Promise<RuntimeResult> {
+    const userComment = request.params?.userComment?.trim();
+    if (!userComment) {
+      throw new Error('Missing required option: --user-comment');
     }
 
-    return this.runGenerate(request, context);
+    const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
+    const output = await new RequirementGenerator({
+      llmExecutor: this.llmExecutor,
+      traceRecorder: this.traceRecorder,
+    }).run(executionContext);
+    const artifacts = output.artifacts as Record<string, unknown>;
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
+      REQUIREMENT_DOCUMENT_PATH,
+      this.readStringField(artifacts, "content"),
+    );
+    return {
+      accepted: true,
+      summary: `${output.summary} Persisted to ${REQUIREMENT_DOCUMENT_PATH}.`,
+    };
   }
+}
 
-  private async runContract(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+export class RequirementDesignGenerateRuntimeUnit extends RequirementDesignRuntimeUnitBase {
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    return this.runGenerator(request, context, {});
+  }
+}
+
+export class RequirementDesignUpdateRuntimeUnit extends RequirementDesignRuntimeUnitBase {
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const inputArtifacts = await this.readOptionalWorkspaceFile(
+      context.workspaceRoot,
+      REQUIREMENT_DOCUMENT_PATH,
+      "requirement_design",
+    );
+    const userComment = request.params?.userComment?.trim();
+    if (!userComment) {
+      throw new Error('Missing required option: --user-comment');
+    }
+
+    const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
+    const output = await new RequirementGenerator({
+      llmExecutor: this.llmExecutor,
+      traceRecorder: this.traceRecorder,
+    }).run(executionContext);
+    const artifacts = output.artifacts as Record<string, unknown>;
+    const prompt = this.readStringField(artifacts, "prompt");
+    const targetPath = this.readStringField(artifacts, "targetPath");
+    const externalAction = {
+      tool: "external_plugin" as const,
+      operation: "update_markdown",
+      targetPath,
+      payload: {
+        prompt,
+      },
+    };
+    await this.writeArtifact(
+      executionContext,
+      REQUIREMENT_UPDATE_RESULT_PATH,
+      JSON.stringify({ prompt, action: externalAction }, null, 2),
+    );
+    return {
+      accepted: true,
+      summary: `${output.summary} Persisted to ${REQUIREMENT_UPDATE_RESULT_PATH}.`,
+      externalAction,
+    };
+  }
+}
+
+export class RequirementDesignContractRuntimeUnit extends RequirementDesignRuntimeUnitBase {
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     const output = {
       executionUnitId: "requirement_design",
       success: true,
@@ -43,36 +112,6 @@ export class RequirementDesignRuntimeUnit extends RuntimeUnitBase {
     return {
       accepted: true,
       summary: `${result.summary} Persisted to ${REQUIREMENT_CONTRACT_RESULT_PATH}.`,
-    };
-  }
-
-  private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    const userComment = request.params?.userComment?.trim();
-    if (!userComment) {
-      throw new Error('Missing required option: --user-comment');
-    }
-
-    const inputArtifacts = request.executionUnitId === "requirement_design_update"
-      ? await this.readOptionalWorkspaceFile(
-        context.workspaceRoot,
-        REQUIREMENT_DOCUMENT_PATH,
-        "requirement_design",
-      )
-      : {};
-    const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
-    const output = await new RequirementGenerator({
-      llmExecutor: this.llmExecutor,
-      traceRecorder: this.traceRecorder,
-    }).run(executionContext);
-    const artifacts = output.artifacts as Record<string, unknown>;
-    await this.writeWorkspaceFile(
-      context.workspaceRoot,
-      REQUIREMENT_DOCUMENT_PATH,
-      this.readStringField(artifacts, "content"),
-    );
-    return {
-      accepted: true,
-      summary: `${output.summary} Persisted to ${REQUIREMENT_DOCUMENT_PATH}.`,
     };
   }
 }

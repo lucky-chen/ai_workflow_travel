@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { ItemDesignContract } from "../../../src/Capability/ItemDesign/item-design-contract.js";
 import { ItemDesignGenerator } from "../../../src/Capability/ItemDesign/item-design-generator.js";
-import { ItemDesignRuntimeUnit } from "../../../src/Capability/ItemDesign/item-design-runtime-unit.js";
+import {
+  ItemDesignGenerateRuntimeUnit,
+  ItemDesignUpdateRuntimeUnit,
+} from "../../../src/Capability/ItemDesign/item-design-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
@@ -12,7 +15,8 @@ import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTem
 export async function runItemDesignCapabilityTests(): Promise<void> {
   await testItemDesignGeneratorReturnsGeneratedDocument();
   await testItemDesignContractReportsMissingStructure();
-  await testItemDesignRuntimeUnitPersistsGeneratedDocument();
+  await testItemDesignGenerateRuntimeUnitPersistsGeneratedDocument();
+  await testItemDesignUpdateRuntimeUnitReturnsExternalAction();
 }
 
 async function testItemDesignGeneratorReturnsGeneratedDocument(): Promise<void> {
@@ -84,7 +88,7 @@ async function testItemDesignContractReportsMissingStructure(): Promise<void> {
   }
 }
 
-async function testItemDesignRuntimeUnitPersistsGeneratedDocument(): Promise<void> {
+async function testItemDesignGenerateRuntimeUnitPersistsGeneratedDocument(): Promise<void> {
   const workspaceRoot = await createTempDir("item-design-runtime-unit-");
   const storageRoot = await createTempDir("item-design-artifacts-");
 
@@ -109,7 +113,7 @@ async function testItemDesignRuntimeUnitPersistsGeneratedDocument(): Promise<voi
     );
 
     const traceRecorder = new InMemoryTraceRecorder();
-    const runtimeUnit = new ItemDesignRuntimeUnit(
+    const runtimeUnit = new ItemDesignGenerateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
       createMockLlmExecutor(async () => ({
@@ -155,6 +159,82 @@ async function testItemDesignRuntimeUnitPersistsGeneratedDocument(): Promise<voi
         "utf8",
       ),
       (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
+    );
+  } finally {
+    await removeTempDir(workspaceRoot);
+    await removeTempDir(storageRoot);
+  }
+}
+
+async function testItemDesignUpdateRuntimeUnitReturnsExternalAction(): Promise<void> {
+  const workspaceRoot = await createTempDir("item-design-update-runtime-unit-");
+  const storageRoot = await createTempDir("item-design-update-artifacts-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs", "item_design"), { recursive: true });
+    const descriptorPath = path.join(workspaceRoot, "tmp", "workflow-item-update.json");
+    await mkdir(path.dirname(descriptorPath), { recursive: true });
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"),
+      "# Architecture Input\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"),
+      "# Existing Workflow Design\n",
+      "utf8",
+    );
+    await writeFile(
+      descriptorPath,
+      JSON.stringify({
+        name: "Workflow",
+        responsibilities: ["define the hello function contract"],
+        documentPath: "sdlc/docs/item_design/Workflow.md",
+        description: "Workflow item design baseline.",
+      }),
+      "utf8",
+    );
+
+    const traceRecorder = new InMemoryTraceRecorder();
+    const runtimeUnit = new ItemDesignUpdateRuntimeUnit(
+      new ArtifactStoreService(storageRoot, traceRecorder),
+      traceRecorder,
+      createMockLlmExecutor(async () => ({
+        content: "Update the current item design markdown using the new architecture constraints.",
+        responseFormat: "text",
+        metadata: {
+          itemName: "Workflow",
+          documentPath: "sdlc/docs/item_design/Workflow.md",
+        },
+      })),
+    );
+
+    const result = await runtimeUnit.run(
+      {
+        mode: "unit",
+        executionUnitId: "item_design_update",
+        params: {
+          itemDescriptorPath: path.relative(workspaceRoot, descriptorPath),
+        },
+      },
+      {
+        workspaceRoot,
+        runId: "item-design-update-runtime-run",
+      },
+    );
+
+    assert.equal(result.accepted, true);
+    assert.deepEqual(result.externalAction, {
+      tool: "external_plugin",
+      operation: "update_markdown",
+      targetPath: "sdlc/docs/item_design/Workflow.md",
+      payload: {
+        prompt: "Update the current item design markdown using the new architecture constraints.",
+      },
+    });
+    assert.equal(
+      await readFile(path.join(workspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8"),
+      "# Existing Workflow Design\n",
     );
   } finally {
     await removeTempDir(workspaceRoot);

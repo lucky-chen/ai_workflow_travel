@@ -12,47 +12,54 @@ import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-record
 const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
 const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
 const ITEM_DESIGN_CONTRACT_RESULT_PATH = "item_design_contract_result.json";
+const ITEM_DESIGN_UPDATE_RESULT_PATH = "item_design_update_result.json";
 
-export class ItemDesignRuntimeUnit extends RuntimeUnitBase {
+abstract class ItemDesignRuntimeUnitBase extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
-    private readonly llmExecutor: ILlmExecutor,
+    protected readonly llmExecutor: ILlmExecutor,
     resourceRoot?: string,
   ) {
     super(artifactStore, traceRecorder, resourceRoot);
   }
 
-  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    if (request.executionUnitId === "item_design_contract") {
-      return this.runContract(request, context);
+  protected async loadItemDescriptor(workspaceRoot: string, request: UnitRuntimeRequest): Promise<ItemDescriptor> {
+    if (request.params?.itemDescriptor) {
+      return this.parseJsonText<ItemDescriptor>(
+        request.params.itemDescriptor,
+        'Option "--item-descriptor" must be valid JSON.',
+      );
     }
 
-    return this.runGenerate(request, context);
+    if (request.params?.itemDescriptorPath) {
+      return this.parseJsonText<ItemDescriptor>(
+        await this.readUserFile(workspaceRoot, request.params.itemDescriptorPath),
+        'Option "--item-descriptor-path" must point to valid JSON.',
+      );
+    }
+
+    throw new Error('Missing required option: --item-descriptor or --item-descriptor-path');
   }
 
-  private async runContract(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    const itemDesignPath = await this.resolveItemDesignDocumentPath(context.workspaceRoot, request);
-    const output = {
-      executionUnitId: "item_design",
-      success: true,
-      summary: "Loaded item design artifact for contract check.",
-      artifacts: {
-        artifactKey: "item_design_document",
-        moduleName: path.basename(itemDesignPath, path.extname(itemDesignPath)),
-        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, itemDesignPath),
-      },
-    };
-    const executionContext = this.buildExecutionContext(request, context, {});
-    const result = await new ItemDesignContract(this.llmExecutor).check(executionContext, output);
-    await this.writeArtifact(executionContext, ITEM_DESIGN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
-    return {
-      accepted: true,
-      summary: `${result.summary} Persisted to ${ITEM_DESIGN_CONTRACT_RESULT_PATH}.`,
-    };
+  protected async resolveItemDesignDocumentPath(workspaceRoot: string, request: UnitRuntimeRequest): Promise<string> {
+    if (request.params?.documentPath) {
+      return request.params.documentPath;
+    }
+
+    const directoryPath = path.join(workspaceRoot, ITEM_DESIGN_DIRECTORY);
+    const fileNames = (await readdir(directoryPath)).filter((entry) => entry.endsWith(".md")).sort();
+    if (fileNames.length === 1) {
+      return path.posix.join(ITEM_DESIGN_DIRECTORY, fileNames[0]);
+    }
+
+    throw new Error('Missing required option: --document-path');
   }
 
-  private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+  protected async runGenerator(
+    request: UnitRuntimeRequest,
+    context: RuntimeContext,
+  ): Promise<RuntimeResult> {
     const descriptor = await this.loadItemDescriptor(context.workspaceRoot, request);
     const executionContext = this.buildExecutionContext(request, context, {
       architecture_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
@@ -75,36 +82,72 @@ export class ItemDesignRuntimeUnit extends RuntimeUnitBase {
       summary: `${output.summary} Persisted to ${documentPath}.`,
     };
   }
+}
 
-  private async loadItemDescriptor(workspaceRoot: string, request: UnitRuntimeRequest): Promise<ItemDescriptor> {
-    if (request.params?.itemDescriptor) {
-      return this.parseJsonText<ItemDescriptor>(
-        request.params.itemDescriptor,
-        'Option "--item-descriptor" must be valid JSON.',
-      );
-    }
-
-    if (request.params?.itemDescriptorPath) {
-      return this.parseJsonText<ItemDescriptor>(
-        await this.readUserFile(workspaceRoot, request.params.itemDescriptorPath),
-        'Option "--item-descriptor-path" must point to valid JSON.',
-      );
-    }
-
-    throw new Error('Missing required option: --item-descriptor or --item-descriptor-path');
+export class ItemDesignGenerateRuntimeUnit extends ItemDesignRuntimeUnitBase {
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    return this.runGenerator(request, context);
   }
+}
 
-  private async resolveItemDesignDocumentPath(workspaceRoot: string, request: UnitRuntimeRequest): Promise<string> {
-    if (request.params?.documentPath) {
-      return request.params.documentPath;
-    }
+export class ItemDesignUpdateRuntimeUnit extends ItemDesignRuntimeUnitBase {
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const descriptor = await this.loadItemDescriptor(context.workspaceRoot, request);
+    const currentItemArtifacts = descriptor.documentPath
+      ? await this.readOptionalWorkspaceFile(context.workspaceRoot, descriptor.documentPath, "item_design_document")
+      : {};
+    const executionContext = this.buildExecutionContext(request, context, {
+      architecture_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
+      item_descriptors: JSON.stringify(descriptor),
+      ...currentItemArtifacts,
+    });
+    const output = await new ItemDesignGenerator({
+      llmExecutor: this.llmExecutor,
+      traceRecorder: this.traceRecorder,
+    }).run(executionContext);
+    const artifacts = output.artifacts as Record<string, unknown>;
+    const prompt = this.readStringField(artifacts, "prompt");
+    const targetPath = this.readStringField(artifacts, "targetPath");
+    const externalAction = {
+      tool: "external_plugin" as const,
+      operation: "update_markdown",
+      targetPath,
+      payload: {
+        prompt,
+      },
+    };
+    await this.writeArtifact(
+      executionContext,
+      ITEM_DESIGN_UPDATE_RESULT_PATH,
+      JSON.stringify({ prompt, action: externalAction }, null, 2),
+    );
+    return {
+      accepted: true,
+      summary: `${output.summary} Persisted to ${ITEM_DESIGN_UPDATE_RESULT_PATH}.`,
+      externalAction,
+    };
+  }
+}
 
-    const directoryPath = path.join(workspaceRoot, ITEM_DESIGN_DIRECTORY);
-    const fileNames = (await readdir(directoryPath)).filter((entry) => entry.endsWith(".md")).sort();
-    if (fileNames.length === 1) {
-      return path.posix.join(ITEM_DESIGN_DIRECTORY, fileNames[0]);
-    }
-
-    throw new Error('Missing required option: --document-path');
+export class ItemDesignContractRuntimeUnit extends ItemDesignRuntimeUnitBase {
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const itemDesignPath = await this.resolveItemDesignDocumentPath(context.workspaceRoot, request);
+    const output = {
+      executionUnitId: "item_design",
+      success: true,
+      summary: "Loaded item design artifact for contract check.",
+      artifacts: {
+        artifactKey: "item_design_document",
+        moduleName: path.basename(itemDesignPath, path.extname(itemDesignPath)),
+        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, itemDesignPath),
+      },
+    };
+    const executionContext = this.buildExecutionContext(request, context, {});
+    const result = await new ItemDesignContract(this.llmExecutor).check(executionContext, output);
+    await this.writeArtifact(executionContext, ITEM_DESIGN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
+    return {
+      accepted: true,
+      summary: `${result.summary} Persisted to ${ITEM_DESIGN_CONTRACT_RESULT_PATH}.`,
+    };
   }
 }

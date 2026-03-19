@@ -45,7 +45,15 @@ export interface RuntimeInput {
   context: RuntimeContext;
 }
 
+export interface ExternalAction {
+  tool: "external_plugin" | "external_execution";
+  operation: string;
+  targetPath: string;
+  payload?: Record<string, unknown>;
+}
+
 export interface RuntimeResult {
   accepted: boolean;
   summary: string;
+  externalAction?: ExternalAction;
 }

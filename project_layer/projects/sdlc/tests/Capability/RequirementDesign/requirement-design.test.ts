@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { RequirementContract } from "../../../src/Capability/RequirementDesign/requirement-contract.js";
 import { RequirementGenerator } from "../../../src/Capability/RequirementDesign/requirement-generator.js";
-import { RequirementDesignRuntimeUnit } from "../../../src/Capability/RequirementDesign/requirement-runtime-unit.js";
+import {
+  RequirementDesignGenerateRuntimeUnit,
+  RequirementDesignUpdateRuntimeUnit,
+} from "../../../src/Capability/RequirementDesign/requirement-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
@@ -13,7 +16,8 @@ export async function runRequirementDesignCapabilityTests(): Promise<void> {
   await testRequirementGeneratorReturnsGeneratedDocument();
   await testRequirementGeneratorOmitsExistingRequirementForGenerate();
   await testRequirementContractReportsMissingSections();
-  await testRequirementRuntimeUnitPersistsGeneratedDocument();
+  await testRequirementGenerateRuntimeUnitPersistsGeneratedDocument();
+  await testRequirementUpdateRuntimeUnitLoadsCurrentDocument();
 }
 
 async function testRequirementGeneratorReturnsGeneratedDocument(): Promise<void> {
@@ -125,7 +129,7 @@ async function testRequirementContractReportsMissingSections(): Promise<void> {
   }
 }
 
-async function testRequirementRuntimeUnitPersistsGeneratedDocument(): Promise<void> {
+async function testRequirementGenerateRuntimeUnitPersistsGeneratedDocument(): Promise<void> {
   const workspaceRoot = await createTempDir("requirement-runtime-unit-");
   const storageRoot = await createTempDir("requirement-artifacts-");
 
@@ -138,7 +142,7 @@ async function testRequirementRuntimeUnitPersistsGeneratedDocument(): Promise<vo
     );
 
     const traceRecorder = new InMemoryTraceRecorder();
-    const runtimeUnit = new RequirementDesignRuntimeUnit(
+    const runtimeUnit = new RequirementDesignGenerateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
       createMockLlmExecutor(async () => ({
@@ -179,6 +183,75 @@ async function testRequirementRuntimeUnitPersistsGeneratedDocument(): Promise<vo
         "utf8",
       ),
       (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
+    );
+  } finally {
+    await removeTempDir(workspaceRoot);
+    await removeTempDir(storageRoot);
+  }
+}
+
+async function testRequirementUpdateRuntimeUnitLoadsCurrentDocument(): Promise<void> {
+  const workspaceRoot = await createTempDir("requirement-update-runtime-unit-");
+  const storageRoot = await createTempDir("requirement-update-artifacts-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs"), { recursive: true });
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"),
+      "# Existing Requirement\n\n- keep this as update input\n",
+      "utf8",
+    );
+
+    let capturedExistingRequirement: unknown;
+    const traceRecorder = new InMemoryTraceRecorder();
+    const runtimeUnit = new RequirementDesignUpdateRuntimeUnit(
+      new ArtifactStoreService(storageRoot, traceRecorder),
+      traceRecorder,
+      createMockLlmExecutor(async (request) => {
+        capturedExistingRequirement = (request.prompt.userPrompt as Record<string, unknown>).existingRequirement;
+        return {
+          content: "Update the existing requirement markdown with the new user intent.",
+          responseFormat: "text",
+        };
+      }),
+    );
+
+    const result = await runtimeUnit.run(
+      {
+        mode: "unit",
+        executionUnitId: "requirement_design_update",
+        params: {
+          userComment: "Update current requirement from comment.",
+        },
+      },
+      {
+        workspaceRoot,
+        runId: "requirement-update-runtime-run",
+      },
+    );
+
+    assert.equal(result.accepted, true);
+    assert.equal(capturedExistingRequirement, "# Existing Requirement\n\n- keep this as update input\n");
+    assert.deepEqual(result.externalAction, {
+      tool: "external_plugin",
+      operation: "update_markdown",
+      targetPath: "sdlc/docs/Requirement.md",
+      payload: {
+        prompt: "Update the existing requirement markdown with the new user intent.",
+      },
+    });
+    assert.equal(
+      await readFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8"),
+      "# Existing Requirement\n\n- keep this as update input\n",
+    );
+    assert.equal(
+      JSON.parse(
+        await readFile(
+          path.join(storageRoot, "requirement-update-runtime-run", "requirement_design_update_result.json"),
+          "utf8",
+        ),
+      ).prompt,
+      "Update the existing requirement markdown with the new user intent.",
     );
   } finally {
     await removeTempDir(workspaceRoot);

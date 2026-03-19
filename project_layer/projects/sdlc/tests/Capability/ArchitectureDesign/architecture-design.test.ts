@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { ArchitectureDesignContract } from "../../../src/Capability/ArchitectureDesign/architecture-design-contract.js";
 import { ArchitectureDesignGenerator } from "../../../src/Capability/ArchitectureDesign/architecture-design-generator.js";
-import { ArchitectureDesignRuntimeUnit } from "../../../src/Capability/ArchitectureDesign/architecture-design-runtime-unit.js";
+import {
+  ArchitectureDesignGenerateRuntimeUnit,
+  ArchitectureDesignUpdateRuntimeUnit,
+} from "../../../src/Capability/ArchitectureDesign/architecture-design-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
@@ -14,7 +17,8 @@ export async function runArchitectureDesignCapabilityTests(): Promise<void> {
   await testArchitectureGeneratorOmitsCurrentDocumentForGenerate();
   await testArchitectureContractReportsMissingHeadings();
   await testArchitectureContractRequiresBreakdownJsonToCoverReferencedDocuments();
-  await testArchitectureRuntimeUnitPersistsDocumentAndBreakdown();
+  await testArchitectureGenerateRuntimeUnitPersistsDocumentAndBreakdown();
+  await testArchitectureUpdateRuntimeUnitLoadsCurrentDocument();
 }
 
 async function testArchitectureGeneratorReturnsDocumentAndBreakdown(): Promise<void> {
@@ -284,7 +288,7 @@ async function testArchitectureContractRequiresBreakdownJsonToCoverReferencedDoc
   }
 }
 
-async function testArchitectureRuntimeUnitPersistsDocumentAndBreakdown(): Promise<void> {
+async function testArchitectureGenerateRuntimeUnitPersistsDocumentAndBreakdown(): Promise<void> {
   const workspaceRoot = await createTempDir("architecture-runtime-unit-");
   const storageRoot = await createTempDir("architecture-artifacts-");
 
@@ -304,7 +308,7 @@ async function testArchitectureRuntimeUnitPersistsDocumentAndBreakdown(): Promis
       "",
     ].join("\n");
     const traceRecorder = new InMemoryTraceRecorder();
-    const runtimeUnit = new ArchitectureDesignRuntimeUnit(
+    const runtimeUnit = new ArchitectureDesignGenerateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
       createMockLlmExecutor(async () => ({
@@ -338,6 +342,77 @@ async function testArchitectureRuntimeUnitPersistsDocumentAndBreakdown(): Promis
     await assert.rejects(
       readFile(path.join(storageRoot, "architecture-runtime-run", "sdlc", "docs", "TechnicalArchitecture.md"), "utf8"),
       (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
+    );
+  } finally {
+    await removeTempDir(workspaceRoot);
+    await removeTempDir(storageRoot);
+  }
+}
+
+async function testArchitectureUpdateRuntimeUnitLoadsCurrentDocument(): Promise<void> {
+  const workspaceRoot = await createTempDir("architecture-update-runtime-unit-");
+  const storageRoot = await createTempDir("architecture-update-artifacts-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs"), { recursive: true });
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"),
+      "# Requirement Input\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"),
+      "# Existing Architecture\n",
+      "utf8",
+    );
+
+    let capturedCurrentDocument: unknown;
+    const traceRecorder = new InMemoryTraceRecorder();
+    const runtimeUnit = new ArchitectureDesignUpdateRuntimeUnit(
+      new ArtifactStoreService(storageRoot, traceRecorder),
+      traceRecorder,
+      createMockLlmExecutor(async (request) => {
+        capturedCurrentDocument = (request.prompt.userPrompt as Record<string, unknown>).currentArchitectureDocument;
+        return {
+          content: "Update the current architecture markdown with the revised requirement context.",
+          responseFormat: "text",
+        };
+      }),
+    );
+
+    const result = await runtimeUnit.run(
+      {
+        mode: "unit",
+        executionUnitId: "architecture_design_update",
+      },
+      {
+        workspaceRoot,
+        runId: "architecture-update-runtime-run",
+      },
+    );
+
+    assert.equal(result.accepted, true);
+    assert.equal(capturedCurrentDocument, "# Existing Architecture\n");
+    assert.deepEqual(result.externalAction, {
+      tool: "external_plugin",
+      operation: "update_markdown",
+      targetPath: "sdlc/docs/TechnicalArchitecture.md",
+      payload: {
+        prompt: "Update the current architecture markdown with the revised requirement context.",
+      },
+    });
+    assert.equal(
+      await readFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8"),
+      "# Existing Architecture\n",
+    );
+    assert.equal(
+      JSON.parse(
+        await readFile(
+          path.join(storageRoot, "architecture-update-runtime-run", "architecture_design_update_result.json"),
+          "utf8",
+        ),
+      ).prompt,
+      "Update the current architecture markdown with the revised requirement context.",
     );
   } finally {
     await removeTempDir(workspaceRoot);

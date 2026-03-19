@@ -1137,3 +1137,58 @@ milestones:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/sdlc/docs
                   - project_layer/projects/sdlc/package.json
+      - stage_id: stage_14_runtime_unit_boundary_realignment
+        name: runtime unit boundary realignment
+        goal: align runtime-unit code boundaries with the design-doc model where
+          generate update and contract are independent basic execution units
+        status: completed
+        batches:
+          - batch_id: batch_14_1_requirement_architecture_unit_split
+            name: requirement and architecture unit split
+            goal: split requirement and architecture runtime units into independent
+              generate update and contract runtime-unit classes
+            status: completed
+            tasks:
+              - task_id: task_14_1_1
+                summary: replace capability-level requirement and architecture runtime-unit
+                  branch handling with distinct generate update and contract
+                  classes and register them independently in RuntimeOrchestrator
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - project_layer/projects/sdlc/tests/Capability
+                  - project_layer/projects/sdlc/tests/runtime
+          - batch_id: batch_14_2_item_work_plan_unit_split
+            name: item and work plan unit split
+            goal: split item-design and work-plan runtime units into independent
+              generate update and contract runtime-unit classes
+            status: completed
+            tasks:
+              - task_id: task_14_2_1
+                summary: replace capability-level item-design and work-plan runtime-unit
+                  branch handling with distinct generate update and contract
+                  classes and register them independently in RuntimeOrchestrator
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ItemDesign
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - project_layer/projects/sdlc/tests/Capability
+          - batch_id: batch_14_3_update_behavior_realignment
+            name: update behavior realignment
+            goal: align update unit inputs outputs and external-update boundary
+              semantics with the design docs instead of treating update as a
+              generate variant
+            status: completed
+            tasks:
+              - task_id: task_14_3_1
+                summary: realign document update units so update takes current artifact
+                  input and returns external-update-oriented prompt and action
+                  outputs instead of directly rewriting artifacts inside the unit
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/projects/sdlc/tests

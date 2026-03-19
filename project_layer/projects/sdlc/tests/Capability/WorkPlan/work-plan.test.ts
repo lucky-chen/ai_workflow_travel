@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { WorkPlanContract } from "../../../src/Capability/WorkPlan/work-plan-contract.js";
 import { WorkPlanGenerator } from "../../../src/Capability/WorkPlan/work-plan-generator.js";
-import { WorkPlanRuntimeUnit } from "../../../src/Capability/WorkPlan/work-plan-runtime-unit.js";
+import {
+  WorkPlanGenerateRuntimeUnit,
+  WorkPlanUpdateRuntimeUnit,
+} from "../../../src/Capability/WorkPlan/work-plan-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
@@ -12,7 +15,8 @@ import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTem
 export async function runWorkPlanCapabilityTests(): Promise<void> {
   await testWorkPlanGeneratorReturnsGeneratedPlan();
   await testWorkPlanContractReportsMissingStructure();
-  await testWorkPlanRuntimeUnitPersistsGeneratedPlan();
+  await testWorkPlanGenerateRuntimeUnitPersistsGeneratedPlan();
+  await testWorkPlanUpdateRuntimeUnitReturnsExternalAction();
 }
 
 async function testWorkPlanGeneratorReturnsGeneratedPlan(): Promise<void> {
@@ -119,7 +123,7 @@ async function testWorkPlanContractReportsMissingStructure(): Promise<void> {
   }
 }
 
-async function testWorkPlanRuntimeUnitPersistsGeneratedPlan(): Promise<void> {
+async function testWorkPlanGenerateRuntimeUnitPersistsGeneratedPlan(): Promise<void> {
   const workspaceRoot = await createTempDir("work-plan-runtime-unit-");
   const storageRoot = await createTempDir("work-plan-artifacts-");
 
@@ -171,7 +175,7 @@ async function testWorkPlanRuntimeUnitPersistsGeneratedPlan(): Promise<void> {
       "                  - src/index.ts",
     ].join("\n");
     const traceRecorder = new InMemoryTraceRecorder();
-    const runtimeUnit = new WorkPlanRuntimeUnit(
+    const runtimeUnit = new WorkPlanGenerateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
       createMockLlmExecutor(async () => ({
@@ -209,6 +213,57 @@ async function testWorkPlanRuntimeUnitPersistsGeneratedPlan(): Promise<void> {
         "utf8",
       ),
       (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
+    );
+  } finally {
+    await removeTempDir(workspaceRoot);
+    await removeTempDir(storageRoot);
+  }
+}
+
+async function testWorkPlanUpdateRuntimeUnitReturnsExternalAction(): Promise<void> {
+  const workspaceRoot = await createTempDir("work-plan-update-runtime-unit-");
+  const storageRoot = await createTempDir("work-plan-update-artifacts-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs", "item_design"), { recursive: true });
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "# Requirement Input\n", "utf8");
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "# Architecture Input\n", "utf8");
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "# Workflow Design\n", "utf8");
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "work_plan.yaml"), "version: 1\nplan_name: existing\n", "utf8");
+
+    const traceRecorder = new InMemoryTraceRecorder();
+    const runtimeUnit = new WorkPlanUpdateRuntimeUnit(
+      new ArtifactStoreService(storageRoot, traceRecorder),
+      traceRecorder,
+      createMockLlmExecutor(async () => ({
+        content: "Update the current work plan yaml to reflect the revised design scope.",
+        responseFormat: "text",
+      })),
+    );
+
+    const result = await runtimeUnit.run(
+      {
+        mode: "unit",
+        executionUnitId: "work_plan_update",
+      },
+      {
+        workspaceRoot,
+        runId: "work-plan-update-runtime-run",
+      },
+    );
+
+    assert.equal(result.accepted, true);
+    assert.deepEqual(result.externalAction, {
+      tool: "external_plugin",
+      operation: "update_markdown",
+      targetPath: "sdlc/docs/work_plan.yaml",
+      payload: {
+        prompt: "Update the current work plan yaml to reflect the revised design scope.",
+      },
+    });
+    assert.equal(
+      await readFile(path.join(workspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8"),
+      "version: 1\nplan_name: existing\n",
     );
   } finally {
     await removeTempDir(workspaceRoot);

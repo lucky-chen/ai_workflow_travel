@@ -5,11 +5,17 @@ import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../.
 import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 import { parseDesignDocumentBreakdown } from "../Shared/design-document-breakdown.js";
 
-export interface ArchitectureDesignArtifacts {
-  artifactKey: "architecture_design";
-  content: string;
-  design_document_breakdown: string;
-}
+export type ArchitectureDesignArtifacts =
+  | {
+    artifactKey: "architecture_design";
+    content: string;
+    design_document_breakdown: string;
+  }
+  | {
+    artifactKey: "architecture_design_update";
+    prompt: string;
+    targetPath: string;
+  };
 
 export interface ArchitectureDesignGeneratorDependencies {
   llmExecutor: ILlmExecutor;
@@ -48,16 +54,26 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
   ): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("architecture_design_generate");
     const includeCurrentArchitectureDocument = executionUnit === "architecture_design_update";
+    const systemPrompt = includeCurrentArchitectureDocument
+      ? [
+        "You are a top-tier Senior Technical Architect with deep expertise and years of experience in full-stack architecture.",
+        "You produce one markdown update instruction for an external plugin to update the current technical architecture document.",
+        "Use the current architecture document as the base document.",
+        "Use the contract rules to identify what must change and what structure must remain aligned.",
+        "Do not output the final updated architecture document.",
+        "Return only the update instruction text.",
+      ]
+      : [
+        "You are a top-tier Senior Technical Architect with deep expertise and years of experience in full-stack architecture.",
+        "You generate a technical architecture document that follows the provided template structure.",
+        "Use the template as the document skeleton.",
+        "Use the contract rules as the chapter content and format requirements.",
+        "Do not output template comments or contract schema names.",
+        "Return plain markdown only.",
+      ];
     return {
       prompt: {
-        systemPrompt: [
-          "You are a top-tier Senior Technical Architect with deep expertise and years of experience in full-stack architecture.",
-          "You generate a technical architecture document that follows the provided template structure.",
-          "Use the template as the document skeleton.",
-          "Use the contract rules as the chapter content and format requirements.",
-          "Do not output template comments or contract schema names.",
-          "Return plain markdown only.",
-        ],
+        systemPrompt,
         userPrompt: {
           target: executionUnit,
           requirementDocument: inputDocument.requirementDocument,
@@ -76,23 +92,32 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
   }
 
   protected async buildExecutionUnitResult(result: LlmExecutionResult): Promise<ExecutionUnitResult<ArchitectureDesignArtifacts>> {
-    const designDocumentBreakdown = parseDesignDocumentBreakdown(result.content);
     const executionUnit = this.readRequestedExecutionUnit("architecture_design_generate");
     const isUpdate = executionUnit === "architecture_design_update";
     return {
       executionUnitId: "architecture_design",
       success: true,
-      summary: isUpdate ? "Architecture design document updated." : "Architecture design document generated.",
-      artifacts: {
-        artifactKey: "architecture_design",
-        content: result.content,
-        design_document_breakdown: JSON.stringify(designDocumentBreakdown),
-      },
+      summary: isUpdate ? "Architecture update prompt generated." : "Architecture design document generated.",
+      artifacts: isUpdate
+        ? {
+          artifactKey: "architecture_design_update",
+          prompt: result.content,
+          targetPath: "sdlc/docs/TechnicalArchitecture.md",
+        }
+        : {
+          artifactKey: "architecture_design",
+          content: result.content,
+          design_document_breakdown: JSON.stringify(parseDesignDocumentBreakdown(result.content)),
+        },
     };
   }
 
   protected buildGenerationFinishedPayload(output: ExecutionUnitResult): Record<string, unknown> | undefined {
-    const artifacts = output.artifacts as Partial<ArchitectureDesignArtifacts>;
+    const artifacts = output.artifacts as ArchitectureDesignArtifacts;
+    if (artifacts.artifactKey !== "architecture_design") {
+      return undefined;
+    }
+
     if (typeof artifacts.design_document_breakdown !== "string") {
       return undefined;
     }
