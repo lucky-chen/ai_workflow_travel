@@ -1,0 +1,45 @@
+{
+  "document_contracts": [
+    {
+      "check_item": "overall_design_requirement_present",
+      "description": "Overall design contract requires a non-empty requirement design artifact.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_architecture_present",
+      "description": "Overall design contract requires a non-empty architecture design artifact.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_item_documents_present",
+      "description": "Overall design contract requires at least one item design document artifact.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_item_documents_json",
+      "description": "Overall design item design document artifact must be valid JSON array content.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_item_documents_shape",
+      "description": "Overall design item design document entries must contain path and content fields.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_breakdown_json",
+      "description": "Overall design breakdown artifact must be valid JSON when present.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_breakdown_shape",
+      "description": "Overall design breakdown entries must contain documentPath fields.",
+      "severity": "high"
+    },
+    {
+      "check_item": "overall_design_breakdown_coverage",
+      "description": "Overall design breakdown document references must be covered by item design documents.",
+      "severity": "high"
+    }
+  ],
+  "section_contracts": []
+}

@@ -9,6 +9,8 @@ import type {
 } from "../../Runtime/Unit/execution-unit.js";
 import type { ChangedFile } from "../../Runtime/Schema/runtime.js";
 import { ShellRunner } from "../../Runtime/shell-runner.js";
+import type { ContractSpec } from "../Shared/document-unit-contract.js";
+import { findDocumentContract, loadContractSpecFromJson } from "../Shared/contract-spec-loader.js";
 
 export interface ExecutionEnvironment {
   generatedResult: {
@@ -75,7 +77,8 @@ export class ShellCommandTestRunner implements ITestRunner {
 }
 
 export class ContractResultBuilder {
-  build(testRunResult: TestRunResult): ContractCheckResult {
+  build(testRunResult: TestRunResult, contractSpec: ContractSpec): ContractCheckResult {
+    const failureContract = findDocumentContract(contractSpec, "work_execute_contract");
     return {
       passed: testRunResult.success,
       summary: testRunResult.summary,
@@ -83,9 +86,9 @@ export class ContractResultBuilder {
         ? []
         : [
             {
-              checkItem: testRunResult.scriptName,
+              checkItem: failureContract?.check_item ?? testRunResult.scriptName,
               message: testRunResult.logs ?? testRunResult.summary,
-              severity: "high",
+              severity: failureContract?.severity ?? "high",
             },
           ],
     };
@@ -112,8 +115,14 @@ export class WorkExecuteContract implements IContractChecker {
     context: ExecutionContext,
     output: ExecutionUnitResult<WorkExecuteArtifacts>,
   ): Promise<ContractCheckResult> {
+    const contractSpec = await loadContractSpecFromJson(
+      context.workspaceRoot,
+      "WorkExecuteContract.contract.json",
+      "work_execute_contract",
+      typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
+    );
     const environment = await this.environmentPreparer.prepare(context, output);
     const testResult = await this.testRunner.run(environment);
-    return this.resultBuilder.build(testResult);
+    return this.resultBuilder.build(testResult, contractSpec);
   }
 }

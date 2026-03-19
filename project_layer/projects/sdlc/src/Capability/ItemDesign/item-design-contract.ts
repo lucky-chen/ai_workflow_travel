@@ -4,7 +4,6 @@ import type {
   ExecutionUnitResult,
   ExecutionContext,
 } from "../../Runtime/Unit/execution-unit.js";
-import { loadItemDesignTemplateSpec } from "./item-design-template-spec.js";
 import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../../Capability/Shared/document-unit-contract.js";
 import { DocumentUnitContract } from "../../Capability/Shared/document-unit-contract.js";
@@ -17,18 +16,11 @@ interface ItemDesignArtifacts {
 
 export class ItemDesignContract extends DocumentUnitContract {
   protected getContractResourcePath(): string {
-    return "template/ItemDesignTemplate.md";
+    return "contract/ItemDesignTemplate.contract.json";
   }
 
   protected getExecutionUnitId(): string {
     return "item_design";
-  }
-
-  protected async loadSpecificContract(context?: ExecutionContext): Promise<ContractSpec> {
-    return (await loadItemDesignTemplateSpec(
-      context?.workspaceRoot,
-      context?.params?.resourceRoot,
-    )).contractSpec;
   }
 
   protected async buildCheckRequest(

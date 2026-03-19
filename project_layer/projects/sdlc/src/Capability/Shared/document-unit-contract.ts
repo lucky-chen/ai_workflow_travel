@@ -1,9 +1,6 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import { getContractFilePath } from "./resource-paths.js";
+import { loadContractSpecFromJson } from "./contract-spec-loader.js";
 
 export interface ContractSpec {
   document_contracts: DocumentContract[];
@@ -34,8 +31,6 @@ export interface ContractExecutionResult {
 }
 
 export abstract class DocumentUnitContract implements IContractChecker {
-  private static readonly contractCache = new Map<string, ContractSpec>();
-
   constructor(private readonly llmExecutor?: ILlmExecutor) {}
 
   async check(context: ExecutionContext, output: ExecutionUnitResult): Promise<ContractCheckResult> {
@@ -58,24 +53,13 @@ export abstract class DocumentUnitContract implements IContractChecker {
       throw new Error("Document contract loading requires workspaceRoot.");
     }
 
-    const contractFilePath = await getContractFilePath(
+    const contractFileName = this.getContractResourcePath().replace(/^contract\//, "");
+    const baseSpec = await loadContractSpecFromJson(
       workspaceRoot,
-      path.basename(this.getContractResourcePath()),
-      context.params?.resourceRoot,
+      contractFileName,
+      this.getExecutionUnitId(),
+      typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
     );
-    const cached = DocumentUnitContract.contractCache.get(contractFilePath);
-    const parsed = cached ?? JSON.parse(await readFile(contractFilePath, "utf8")) as ContractSpec;
-    if (!cached) {
-      DocumentUnitContract.contractCache.set(contractFilePath, parsed);
-    }
-    const baseSpec: ContractSpec = {
-      document_contracts: parsed.document_contracts,
-      section_contracts: parsed.section_contracts,
-      specific_contract: {
-        source: this.getContractResourcePath(),
-        executionUnit: this.getExecutionUnitId(),
-      },
-    };
     return this.refineLoadedContract(baseSpec);
   }
 

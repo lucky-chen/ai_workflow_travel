@@ -63,35 +63,8 @@ interface WorkPlanArtifacts {
 }
 
 export class WorkPlanContract extends DocumentUnitContract {
-  protected async loadSpecificContract(): Promise<ContractSpec> {
-    return {
-      document_contracts: [
-        {
-          check_item: "yaml_work_plan_structure_complete",
-          description: "Work plan should keep the expected yaml top-level keys and milestone hierarchy.",
-          severity: "high",
-        },
-        {
-          check_item: "yaml_work_plan_focus_consistency",
-          description: "Work plan should define a current focus that points to milestone, stage, batch, and task entries.",
-          severity: "high",
-        },
-        {
-          check_item: "yaml_work_plan_task_structure",
-          description: "Work plan should keep milestone stage batch task structure with ids summaries and statuses.",
-          severity: "high",
-        },
-      ],
-      section_contracts: [],
-      specific_contract: {
-        source: "template/WorkPlanTemplate.yaml",
-        executionUnit: "work_plan",
-      },
-    };
-  }
-
   protected getContractResourcePath(): string {
-    return "template/WorkPlanTemplate.yaml";
+    return "contract/WorkPlanTemplate.contract.json";
   }
 
   protected getExecutionUnitId(): string {

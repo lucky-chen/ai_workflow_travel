@@ -1,0 +1,10 @@
+{
+  "document_contracts": [
+    {
+      "check_item": "work_execute_contract",
+      "description": "Work execute contract requires the configured test command to pass in the target workspace.",
+      "severity": "high"
+    }
+  ],
+  "section_contracts": []
+}

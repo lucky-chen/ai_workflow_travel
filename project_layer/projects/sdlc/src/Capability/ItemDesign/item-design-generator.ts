@@ -4,6 +4,7 @@ import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
+import { loadContractSpecFromJson } from "../Shared/contract-spec-loader.js";
 import { loadItemDesignTemplateSpec } from "./item-design-template-spec.js";
 
 export interface ItemDescriptor {
@@ -68,15 +69,27 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
   }
 
   protected async loadTemplate(context: ExecutionContext): Promise<string> {
-    const spec = await loadItemDesignTemplateSpec(
+    const templateSpec = await loadItemDesignTemplateSpec(
       context.workspaceRoot,
       typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
     );
-    return JSON.stringify(spec);
+    const contractSpec = await loadContractSpecFromJson(
+      context.workspaceRoot,
+      "ItemDesignTemplate.contract.json",
+      "item_design",
+      typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
+    );
+    return JSON.stringify({
+      contractSpec,
+      outputSkeleton: templateSpec.outputSkeleton,
+    });
   }
 
   protected buildPrompt(inputDocument: ItemDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
-    const templateSpec = JSON.parse(template) as Awaited<ReturnType<typeof loadItemDesignTemplateSpec>>;
+    const templateSpec = JSON.parse(template) as {
+      contractSpec: Awaited<ReturnType<typeof loadContractSpecFromJson>>;
+      outputSkeleton: string;
+    };
     const executionUnit = this.readRequestedExecutionUnit("item_design_generate");
     return {
       prompt: {
