@@ -1013,7 +1013,7 @@ milestones:
                   runtime unit-flow or baseline success only after the hello-service
                   fixture matches the latest requirement and downstream contract
                   expectations
-                status: pending
+                status: in_progress
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json

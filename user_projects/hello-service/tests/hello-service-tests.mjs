@@ -25,9 +25,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "runtime:document-generation:real-llm:failure",
       "Real LLM failure path for document generation flow.",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:unit-flow:success",
-      "Full unit runtime success flow. Current hello-service fixture does not satisfy the latest requirement and downstream contract expectations yet.",
+      "Full unit runtime success flow.",
+      "hello-service-unit-flow-success.test.mjs",
+      "runHelloServiceSuccessTest",
     ),
     unimplementedEntry(
       "runtime:unit-flow:failure",
@@ -43,7 +45,7 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
     unimplementedEntry(
       "runtime:baseline:success",
-      "Baseline runtime aggregation flow. It still depends on the not-yet-aligned full unit runtime success flow.",
+      "Baseline runtime aggregation flow. It is still blocked by the unresolved real-llm runtime coverage path.",
     ),
     unimplementedEntry(
       "runtime:baseline:failure",

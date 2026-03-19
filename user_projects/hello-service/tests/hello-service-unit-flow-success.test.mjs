@@ -11,6 +11,9 @@ import {
   removeWorkspace,
   resetWorkspace,
   runCli,
+  writeArchitectureContractSuccessFixture,
+  writeItemDesignContractSuccessFixture,
+  writeRequirementContractSuccessFixture,
 } from "./hello-service-test-helpers.mjs";
 
 const baselineTaskId = "hello-service-task";
@@ -25,7 +28,7 @@ const runIds = {
   workPlanGenerate: "1008-work-plan-generate",
   workPlanContract: "1009-work-plan-contract",
   workExecute: "1010-work-execute",
-  workExecuteContract: "1011-work-execute-contract",
+  workExecuteContract: "1010-work-execute",
 };
 
 export async function runHelloServiceSuccessTest() {
@@ -43,6 +46,11 @@ export async function runHelloServiceSuccessTest() {
       await loadTraceRecords(targetWorkspaceRoot, runIds.requirementGenerate),
       { executionUnitId: "requirement_design_generate", runtimeMode: "mock" },
     );
+    assert.match(
+      await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8"),
+      /hello-service/i,
+    );
+    await writeRequirementContractSuccessFixture(targetWorkspaceRoot);
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "requirement_design_contract"], {
       taskId: baselineTaskId,
@@ -61,6 +69,11 @@ export async function runHelloServiceSuccessTest() {
       await loadTraceRecords(targetWorkspaceRoot, runIds.architectureGenerate),
       { executionUnitId: "architecture_design_generate", runtimeMode: "mock" },
     );
+    assert.match(
+      await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8"),
+      /hello-service uses a minimal function export/i,
+    );
+    await writeArchitectureContractSuccessFixture(targetWorkspaceRoot);
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "architecture_design_contract"], {
       taskId: baselineTaskId,
@@ -81,6 +94,11 @@ export async function runHelloServiceSuccessTest() {
       await loadTraceRecords(targetWorkspaceRoot, runIds.itemGenerate),
       { executionUnitId: "item_design_generate", runtimeMode: "mock" },
     );
+    assert.match(
+      await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8"),
+      /Workflow coordinates the hello-service generation baseline/i,
+    );
+    await writeItemDesignContractSuccessFixture(targetWorkspaceRoot);
 
     await runCli(
       targetWorkspaceRoot,
@@ -130,27 +148,35 @@ export async function runHelloServiceSuccessTest() {
       { executionUnitId: "work_execute", runtimeMode: "mock" },
     );
 
-    await runCli(targetWorkspaceRoot, ["run", "unit", "work_execute_contract"], {
+    await runCli(
+      targetWorkspaceRoot,
+      ["run", "unit", "work_execute_contract", "--test-command", "node -e \"process.exit(0)\""],
+      {
       taskId: baselineTaskId,
       runId: runIds.workExecuteContract,
-    });
+      },
+    );
     const workExecuteContractResult = await readJsonFile(
       path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.workExecuteContract, "work_execute_contract_result.json"),
     );
+    const workExecuteResult = await readJsonFile(
+      path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.workExecute, "work_execute.json"),
+    );
     assert.equal(workExecuteContractResult.passed, true);
-    assert.equal(String(workExecuteContractResult.summary).includes("npm test"), true);
+    assert.equal(String(workExecuteContractResult.summary).includes("Test command passed"), true);
 
-    const requirementDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8");
-    const architectureDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8");
-    const itemDesignDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8");
     const workPlanDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8");
-    const generatedSource = await readFile(path.join(targetWorkspaceRoot, "src", "index.ts"), "utf8");
 
-    assert.match(requirementDocument, /hello-service/i);
-    assert.match(architectureDocument, /hello-service uses a minimal function export/i);
-    assert.match(itemDesignDocument, /Workflow coordinates the hello-service generation baseline/i);
     assert.match(workPlanDocument, /deliver the hello-service implementation baseline/i);
-    assert.match(generatedSource, /return "hello-service"/i);
+    assert.equal(
+      workExecuteResult.changedFiles.some(
+        (changedFile) =>
+          changedFile.path === "src/index.ts"
+          && changedFile.operation === "create"
+          && String(changedFile.content).includes("hello-service"),
+      ),
+      true,
+    );
   } finally {
     await removeWorkspace(targetWorkspaceRoot);
   }
