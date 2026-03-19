@@ -47,22 +47,23 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "runtime:unit-flow:real-llm:failure",
       "Real LLM failure path for full unit flow.",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:baseline:success",
-      "Baseline runtime aggregation flow. It is still blocked by the unresolved real-llm runtime coverage path.",
+      "Baseline runtime aggregation flow.",
+      "hello-service-baseline.test.mjs",
+      "runHelloServiceBaselineTest",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:baseline:failure",
       "Baseline runtime failure aggregation flow.",
+      "hello-service-baseline-failure.test.mjs",
+      "runHelloServiceBaselineFailureTest",
     ),
     unimplementedEntry(
       "runtime:baseline:real-llm:success",
       "Baseline aggregation with real LLM success path.",
     ),
-    unimplementedEntry(
-      "runtime:baseline:real-llm:failure",
-      "Baseline aggregation with real LLM failure path.",
-    ),
+    unimplementedEntry("runtime:baseline:real-llm:failure", "Baseline aggregation with real LLM failure path."),
   ],
   generator: [
     implementedEntry(
