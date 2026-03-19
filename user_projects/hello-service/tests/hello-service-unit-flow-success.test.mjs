@@ -6,6 +6,7 @@ import {
   createItemDescriptor,
   createPreparedStepContext,
   createWorkspaceCopy,
+  getPrimaryItemDesignDocumentPath,
   loadTraceRecords,
   readJsonFile,
   removeWorkspace,
@@ -95,14 +96,14 @@ export async function runHelloServiceSuccessTest() {
       { executionUnitId: "item_design_generate", runtimeMode: "mock" },
     );
     assert.match(
-      await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8"),
-      /Workflow coordinates the hello-service generation baseline/i,
+      await readFile(path.join(targetWorkspaceRoot, await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)), "utf8"),
+      /coordinates the hello-service generation baseline/i,
     );
     await writeItemDesignContractSuccessFixture(targetWorkspaceRoot);
 
     await runCli(
       targetWorkspaceRoot,
-      ["run", "unit", "item_design_contract", "--document-path", "sdlc/docs/item_design/Workflow.md"],
+      ["run", "unit", "item_design_contract", "--document-path", await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)],
       { taskId: baselineTaskId, runId: runIds.itemContract },
     );
     assert.equal(

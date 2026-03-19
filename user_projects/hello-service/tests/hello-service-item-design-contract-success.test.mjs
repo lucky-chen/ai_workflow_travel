@@ -3,11 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   createWorkspaceCopy,
+  getPrimaryItemDesignDocumentPath,
   loadTraceRecords,
   readJsonFile,
   removeWorkspace,
   resetWorkspace,
   runCli,
+  writeArchitectureBreakdownFixture,
   writeItemDesignContractSuccessFixture,
 } from "./hello-service-test-helpers.mjs";
 
@@ -19,11 +21,12 @@ export async function runHelloServiceItemDesignContractSuccessTest() {
 
   try {
     await resetWorkspace(targetWorkspaceRoot);
+    await writeArchitectureBreakdownFixture(targetWorkspaceRoot);
     await writeItemDesignContractSuccessFixture(targetWorkspaceRoot);
 
     await runCli(
       targetWorkspaceRoot,
-      ["run", "unit", "item_design_contract", "--document-path", "sdlc/docs/item_design/Workflow.md"],
+      ["run", "unit", "item_design_contract", "--document-path", await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)],
       { taskId: successTaskId, runId },
     );
 

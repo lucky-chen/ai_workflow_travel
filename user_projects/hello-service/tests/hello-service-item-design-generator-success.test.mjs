@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   createItemDescriptor,
   createWorkspaceCopy,
+  getPrimaryItemDesignDocumentPath,
   removeWorkspace,
   resetWorkspace,
   runCli,
@@ -39,8 +40,8 @@ export async function runHelloServiceItemDesignGeneratorSuccessTest() {
       { taskId: successTaskId, runId: runIds.itemGenerate },
     );
 
-    const document = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8");
-    assert.equal(document.includes("Workflow"), true);
+    const document = await readFile(path.join(targetWorkspaceRoot, await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)), "utf8");
+    assert.equal(/hello-service|EchoService/i.test(document), true);
   } finally {
     await removeWorkspace(targetWorkspaceRoot);
   }

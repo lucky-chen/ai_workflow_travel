@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   createWorkspaceCopy,
   createItemDescriptor,
+  getPrimaryItemDesignDocumentPath,
   loadTraceRecords,
   readJsonFile,
   removeWorkspace,
@@ -42,7 +43,7 @@ export async function runHelloServiceItemDesignContractFailureTest() {
     );
     await runCli(
       targetWorkspaceRoot,
-      ["run", "unit", "item_design_contract", "--document-path", "sdlc/docs/item_design/Workflow.md"],
+      ["run", "unit", "item_design_contract", "--document-path", await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)],
       { taskId: failureTaskId, runId: runIds.itemContract },
     );
 

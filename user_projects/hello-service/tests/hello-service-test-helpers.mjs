@@ -9,6 +9,7 @@ export const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta
 const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
+const DEFAULT_ITEM_NAME = "EchoService";
 
 export async function createWorkspaceCopy() {
   const copiedWorkspaceRoot = await mkdtemp(path.join(os.tmpdir(), "hello-service-sdlc-"));
@@ -139,19 +140,17 @@ export async function readJsonFile(filePath) {
 }
 
 export async function createItemDescriptor(targetWorkspaceRoot) {
+  const breakdownEntry = await getPrimaryBreakdownEntry(targetWorkspaceRoot);
   const descriptorDirectory = path.join(targetWorkspaceRoot, "tmp");
   await mkdir(descriptorDirectory, { recursive: true });
-  const descriptorPath = path.join(descriptorDirectory, "workflow-item.json");
+  const descriptorPath = path.join(descriptorDirectory, `${breakdownEntry.targetName}.json`);
   await writeFile(
     descriptorPath,
     JSON.stringify({
-      name: "Workflow",
-      responsibilities: [
-        "define the hello function contract",
-        "keep implementation minimal",
-      ],
-      documentPath: "sdlc/docs/item_design/Workflow.md",
-      description: "Workflow item design baseline.",
+      name: breakdownEntry.targetName,
+      responsibilities: breakdownEntry.responsibilities,
+      documentPath: breakdownEntry.documentPath,
+      description: breakdownEntry.description,
     }, null, 2),
     "utf8",
   );
@@ -159,9 +158,10 @@ export async function createItemDescriptor(targetWorkspaceRoot) {
 }
 
 export async function createPreparedStepContext(targetWorkspaceRoot) {
+  const breakdownEntry = await getPrimaryBreakdownEntry(targetWorkspaceRoot);
   const requirementDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8");
   const architectureDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8");
-  const itemDesignDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8");
+  const itemDesignDocument = await readFile(path.join(targetWorkspaceRoot, breakdownEntry.documentPath), "utf8");
 
   const contextDirectory = path.join(targetWorkspaceRoot, "tmp");
   await mkdir(contextDirectory, { recursive: true });
@@ -174,9 +174,9 @@ export async function createPreparedStepContext(targetWorkspaceRoot) {
         steps: [
           {
             stepId: "step-1",
-            title: "Workflow baseline",
+            title: `${breakdownEntry.targetName} baseline`,
             status: "not_started",
-            architectureModulesInScope: ["Workflow"],
+            architectureModulesInScope: [breakdownEntry.targetName],
             batches: [
               {
                 batchId: "batch-1",
@@ -199,7 +199,7 @@ export async function createPreparedStepContext(targetWorkspaceRoot) {
         architectureDocument,
         itemDesignDocuments: [
           {
-            itemName: "Workflow",
+            itemName: breakdownEntry.targetName,
             content: itemDesignDocument,
           },
         ],
@@ -226,13 +226,47 @@ export async function writeArchitectureContractSuccessFixture(targetWorkspaceRoo
   );
 }
 
+export async function writeArchitectureBreakdownFixture(targetWorkspaceRoot) {
+  const breakdownPath = path.join(targetWorkspaceRoot, "sdlc", "docs", "architecture_design_breakdown.json");
+  await mkdir(path.dirname(breakdownPath), { recursive: true });
+  await writeFile(
+    breakdownPath,
+    JSON.stringify([
+      {
+        name: DEFAULT_ITEM_NAME,
+        targetName: DEFAULT_ITEM_NAME,
+        targetType: "item_design",
+        documentPath: `sdlc/docs/item_design/${DEFAULT_ITEM_NAME}.md`,
+        description: `Design document for ${DEFAULT_ITEM_NAME}.`,
+        responsibilities: [`Design document for ${DEFAULT_ITEM_NAME}.`],
+      },
+    ], null, 2),
+    "utf8",
+  );
+}
+
 export async function writeItemDesignContractSuccessFixture(targetWorkspaceRoot) {
+  const breakdownEntry = await getPrimaryBreakdownEntry(targetWorkspaceRoot);
   await writeMarkdownFixtureFromContractSpec(
     targetWorkspaceRoot,
     "ItemDesignTemplate.contract.json",
-    path.join("sdlc", "docs", "item_design", "Workflow.md"),
-    "# Workflow Design\n",
+    breakdownEntry.documentPath,
+    `# ${breakdownEntry.targetName} Design\n`,
   );
+}
+
+export async function getPrimaryBreakdownEntry(targetWorkspaceRoot) {
+  const breakdownPath = path.join(targetWorkspaceRoot, "sdlc", "docs", "architecture_design_breakdown.json");
+  const breakdown = await readJsonFile(breakdownPath);
+  if (!Array.isArray(breakdown) || breakdown.length === 0 || typeof breakdown[0]?.documentPath !== "string") {
+    throw new Error(`Missing usable design document entry in ${breakdownPath}`);
+  }
+
+  return breakdown[0];
+}
+
+export async function getPrimaryItemDesignDocumentPath(targetWorkspaceRoot) {
+  return (await getPrimaryBreakdownEntry(targetWorkspaceRoot)).documentPath;
 }
 
 async function writeMarkdownFixtureFromContractSpec(targetWorkspaceRoot, contractFileName, relativePath, title = "") {
@@ -272,8 +306,8 @@ function resolvePlaceholderValue(key) {
     ArchitectureStyle: "modular monolith",
     CollaboratorA: "RequirementDesign",
     CollaboratorB: "WorkPlan",
-    ItemName: "Workflow",
-    ItemPath: "Workflow",
+    ItemName: DEFAULT_ITEM_NAME,
+    ItemPath: DEFAULT_ITEM_NAME,
     METHOD: "POST",
     PATH: "/hello",
     SystemName: "hello-service",

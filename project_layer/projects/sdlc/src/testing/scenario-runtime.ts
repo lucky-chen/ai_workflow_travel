@@ -35,6 +35,8 @@ interface ScriptedLlmExecutorDependencies {
   contractIssueCategories: string[];
 }
 
+const BASELINE_ITEM_NAME = "EchoService";
+
 function createScenarioMockExecute(
   dependencies: ScriptedLlmExecutorDependencies,
 ): NonNullable<LlmExecutorServiceDependencies["mockExecute"]> {
@@ -166,20 +168,25 @@ function createScenarioArchitectureDocument(serviceName: string): string {
     `The service exposes one hello function returning a stable string for ${serviceName}.`,
     "",
     "# 3. Module Design",
-    "- Workflow",
+    `- ${BASELINE_ITEM_NAME}`,
     "",
     "# 4. Data and State",
     "No persistent state is required.",
     "",
     "# 5. Validation Strategy",
     "Validate that the generated file exists and exports the expected function.",
+    "",
+    "## 7. Design Documents",
+    "",
+    "### 7.2 Design Document Breakdown",
+    `- [${BASELINE_ITEM_NAME}](sdlc/docs/item_design/${BASELINE_ITEM_NAME}.md): Item design baseline for the generated hello-service module.`,
   ].join("\n");
 }
 
 function createScenarioItemDesignDocument(serviceName: string): string {
   return [
     "# 1. Module Overview",
-    `Workflow coordinates the ${serviceName} generation baseline.`,
+    `${BASELINE_ITEM_NAME} coordinates the ${serviceName} generation baseline.`,
     "",
     "# 2. Responsibilities",
     "- define the hello function contract",

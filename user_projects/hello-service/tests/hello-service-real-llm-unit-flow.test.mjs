@@ -3,6 +3,7 @@ import {
   assertUnitLlmTrace,
   createItemDescriptor,
   createWorkspaceCopy,
+  getPrimaryItemDesignDocumentPath,
   loadTraceRecords,
   readJsonFile,
   removeWorkspace,
@@ -81,7 +82,7 @@ export async function runHelloServiceRealLlmTest() {
 
     await runCli(
       targetWorkspaceRoot,
-      ["run", "unit", "item_design_contract", "--document-path", "sdlc/docs/item_design/Workflow.md"],
+      ["run", "unit", "item_design_contract", "--document-path", await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)],
       { taskId: realLlmTaskId, runId: runIds.itemContract, runtimeMode: "real" },
     );
     assertUnitLlmTrace(

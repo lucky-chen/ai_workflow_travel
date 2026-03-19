@@ -5,6 +5,7 @@ import {
   createItemDescriptor,
   createPreparedStepContext,
   createWorkspaceCopy,
+  getPrimaryItemDesignDocumentPath,
   readJsonFile,
   removeWorkspace,
   resetWorkspace,
@@ -65,7 +66,7 @@ export async function runHelloServiceUnitFlowFailureTest() {
     await writeItemDesignContractSuccessFixture(targetWorkspaceRoot);
     await runCli(
       targetWorkspaceRoot,
-      ["run", "unit", "item_design_contract", "--document-path", "sdlc/docs/item_design/Workflow.md"],
+      ["run", "unit", "item_design_contract", "--document-path", await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)],
       { taskId: failureTaskId, runId: runIds.itemContract },
     );
 
