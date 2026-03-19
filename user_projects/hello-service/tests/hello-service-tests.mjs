@@ -59,7 +59,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
   ],
   generator: [
-    unimplementedEntry("generator:requirement-design:success", "Requirement design generator success cases."),
+    implementedEntry(
+      "generator:requirement-design:success",
+      "Requirement design generator success cases.",
+      "hello-service-requirement-generator-success.test.mjs",
+      "runHelloServiceRequirementGeneratorSuccessTest",
+    ),
     implementedEntry(
       "generator:requirement-design:failure",
       "Requirement design generator failure cases.",
@@ -68,14 +73,24 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
     unimplementedEntry("generator:requirement-design:real-llm:success", "Requirement design generator real LLM success cases."),
     unimplementedEntry("generator:requirement-design:real-llm:failure", "Requirement design generator real LLM failure cases."),
-    unimplementedEntry("generator:architecture-design:success", "Architecture design generator success cases."),
+    implementedEntry(
+      "generator:architecture-design:success",
+      "Architecture design generator success cases.",
+      "hello-service-architecture-generator-success.test.mjs",
+      "runHelloServiceArchitectureGeneratorSuccessTest",
+    ),
     unimplementedEntry(
       "generator:architecture-design:failure",
       "Architecture design generator failure cases. Current hello-service fixture still allows architecture generation without a stricter upstream requirement precondition.",
     ),
     unimplementedEntry("generator:architecture-design:real-llm:success", "Architecture design generator real LLM success cases."),
     unimplementedEntry("generator:architecture-design:real-llm:failure", "Architecture design generator real LLM failure cases."),
-    unimplementedEntry("generator:item-design:success", "Item design generator success cases."),
+    implementedEntry(
+      "generator:item-design:success",
+      "Item design generator success cases.",
+      "hello-service-item-design-generator-success.test.mjs",
+      "runHelloServiceItemDesignGeneratorSuccessTest",
+    ),
     implementedEntry(
       "generator:item-design:failure",
       "Item design generator failure cases.",
@@ -84,7 +99,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
     unimplementedEntry("generator:item-design:real-llm:success", "Item design generator real LLM success cases."),
     unimplementedEntry("generator:item-design:real-llm:failure", "Item design generator real LLM failure cases."),
-    unimplementedEntry("generator:work-plan:success", "Work plan generator success cases."),
+    implementedEntry(
+      "generator:work-plan:success",
+      "Work plan generator success cases.",
+      "hello-service-work-plan-generator-success.test.mjs",
+      "runHelloServiceWorkPlanGeneratorSuccessTest",
+    ),
     implementedEntry(
       "generator:work-plan:failure",
       "Work plan generator failure cases.",
@@ -93,7 +113,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
     unimplementedEntry("generator:work-plan:real-llm:success", "Work plan generator real LLM success cases."),
     unimplementedEntry("generator:work-plan:real-llm:failure", "Work plan generator real LLM failure cases."),
-    unimplementedEntry("generator:work-execute:success", "Work execute generator success cases."),
+    implementedEntry(
+      "generator:work-execute:success",
+      "Work execute generator success cases.",
+      "hello-service-work-execute-generator-success.test.mjs",
+      "runHelloServiceWorkExecuteGeneratorSuccessTest",
+    ),
     implementedEntry(
       "generator:work-execute:failure",
       "Work execute generator failure cases.",
