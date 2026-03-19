@@ -1,4 +1,4 @@
-import type { ContractCheckResult, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
+import type { ContractCheckResult, ContractIssue, IContractChecker, ExecutionUnitResult, ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { loadContractSpecFromJson } from "./contract-spec-loader.js";
 
@@ -35,8 +35,31 @@ export abstract class DocumentUnitContract implements IContractChecker {
 
   async check(context: ExecutionContext, output: ExecutionUnitResult): Promise<ContractCheckResult> {
     const contractSpec = await this.loadSpecificContract(context);
+    const staticIssues = this.collectStaticIssues(context, output, contractSpec);
+    if (staticIssues.length > 0) {
+      return this.buildContractResult({
+        passed: false,
+        summary: "Document failed contract checks in the static layer.",
+        issues: staticIssues,
+      });
+    }
+
+    if (!this.shouldRunSemanticCheck(context)) {
+      if (this.llmExecutor === undefined && !this.skipSemanticFallbackWithoutLlm()) {
+        const request = await this.buildCheckRequest(context, output, contractSpec);
+        const result = this.checkAgainstPromptRequest(request);
+        return this.buildContractResult(result);
+      }
+
+      return this.buildContractResult({
+        passed: true,
+        summary: "Document passed static contract checks.",
+        issues: [],
+      });
+    }
+
     const request = await this.buildCheckRequest(context, output, contractSpec);
-    const result = await this.executeCheck(request);
+    const result = await this.executeSemanticCheck(request);
     return this.buildContractResult(result);
   }
 
@@ -63,21 +86,41 @@ export abstract class DocumentUnitContract implements IContractChecker {
     return this.refineLoadedContract(baseSpec);
   }
 
+  protected collectStaticIssues(
+    _context: ExecutionContext,
+    _output: ExecutionUnitResult,
+    _contractSpec: ContractSpec,
+  ): ContractIssue[] {
+    return [];
+  }
+
+  protected shouldRunSemanticCheck(context: ExecutionContext): boolean {
+    if (context.params?.contractSemanticCheck === "off") {
+      return false;
+    }
+
+    return this.llmExecutor !== undefined;
+  }
+
+  protected skipSemanticFallbackWithoutLlm(): boolean {
+    return false;
+  }
+
   protected abstract buildCheckRequest(
     context: ExecutionContext,
     output: ExecutionUnitResult,
     contractSpec: ContractSpec,
   ): Promise<LlmExecutionRequest>;
 
-  protected async executeCheck(
+  protected async executeSemanticCheck(
     request: LlmExecutionRequest,
   ): Promise<ContractExecutionResult> {
-    if (this.llmExecutor) {
-      const result = await this.llmExecutor.execute(request);
-      return this.parseExecutionResult(result);
+    if (!this.llmExecutor) {
+      throw new Error("Semantic contract checks require llmExecutor.");
     }
 
-    return this.checkAgainstPromptRequest(request);
+    const result = await this.llmExecutor.execute(request);
+    return this.parseExecutionResult(result);
   }
 
   protected parseExecutionResult(result: LlmExecutionResult): ContractExecutionResult {
@@ -188,7 +231,10 @@ export abstract class DocumentUnitContract implements IContractChecker {
 
   protected abstract buildContractResult(result: ContractExecutionResult): ContractCheckResult;
 
-  protected abstract checkAgainstPromptRequest(
+  protected checkAgainstPromptRequest(
     request: LlmExecutionRequest,
-  ): ContractExecutionResult;
+  ): ContractExecutionResult {
+    void request;
+    throw new Error("Semantic contract fallback without llmExecutor is not supported.");
+  }
 }

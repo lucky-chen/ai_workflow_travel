@@ -71,7 +71,7 @@ async function testArchitectureContractReportsMissingHeadings(): Promise<void> {
     assert.equal(result.passed, false);
     assert.match(result.summary, /failed contract checks/i);
     assert.equal(
-      result.issues.some((issue) => issue.message.includes("Missing required heading") || issue.message.includes("Missing required subsection")),
+      result.issues.some((issue) => issue.message.includes("Missing required section")),
       true,
     );
   } finally {

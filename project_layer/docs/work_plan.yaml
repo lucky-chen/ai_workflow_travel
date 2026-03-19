@@ -27,9 +27,9 @@ execution_scope: concept-aligned execution-unit baseline and runtime-boundary
 status: in_progress
 current_focus:
   milestone_id: milestone_1_active_execution_alignment
-  stage_id: stage_12_hello_service_black_box_test_matrix
-  batch_id: batch_12_2_contract_black_box_matrix
-  task_id: task_12_2_1
+  stage_id: stage_13_document_contract_two_layer_alignment
+  batch_id: batch_13_2_static_engine_item_work_plan
+  task_id: task_13_2_1
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model
@@ -1048,4 +1048,77 @@ milestones:
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json
+                  - project_layer/projects/sdlc/package.json
+      - stage_id: stage_13_document_contract_two_layer_alignment
+        name: document contract two-layer alignment
+        goal: align document contracts to a two-layer model where static checks are
+          driven by template-extracted contract json and semantic checks run by llm
+          only after static pass
+        status: in_progress
+        batches:
+          - batch_id: batch_13_1_static_engine_requirement_architecture
+            name: static engine for requirement and architecture
+            goal: add the shared static document contract checker, switch
+              DocumentUnitContract to static-first execution, and remove business
+              hard-coding from requirement and architecture document contracts
+            status: completed
+            tasks:
+              - task_id: task_13_1_1
+                summary: add a shared static document contract checker that reads the
+                  current template-extracted contract json and enforces document
+                  skeleton and expected-format rules without introducing a new
+                  heavy contract DSL
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/Shared/document-unit-contract.ts
+                  - project_layer/projects/sdlc/src/Capability/Shared/contract-spec-loader.ts
+                  - project_layer/projects/sdlc/src/Capability/Shared
+                  - meta_layer/resources/contract
+              - task_id: task_13_1_2
+                summary: wire requirement and architecture runtime-unit contract paths to
+                  pass llmExecutor into the document contract layer and stop
+                  relying on code-hardcoded business rules for static checks
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
+                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - project_layer/projects/sdlc/tests/Capability
+          - batch_id: batch_13_2_static_engine_item_work_plan
+            name: static engine for item and work plan
+            goal: move item and work-plan document contract paths onto the shared
+              static-first model and remove remaining template-format hard-coding
+              from those document contracts
+            status: in_progress
+            tasks:
+              - task_id: task_13_2_1
+                summary: switch item_design_contract to the shared static checker and
+                  remove code-hardcoded template-format checks that should be
+                  derived from the extracted contract json
+                status: in_progress
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/ItemDesign
+                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
+              - task_id: task_13_2_2
+                summary: switch work_plan_contract to the shared two-layer contract flow
+                  while keeping yaml parsing and plan-structure checks in the
+                  static layer
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
+          - batch_id: batch_13_3_success_fixture_realignment
+            name: success fixture realignment
+            goal: realign hello-service handcrafted success fixtures with the latest
+              template-derived contract rules after the static-first checker is
+              active
+            status: pending
+            tasks:
+              - task_id: task_13_3_1
+                summary: rewrite or replace the hello-service handcrafted requirement,
+                  architecture, and item design success fixtures so contract
+                  success cases reflect the current template-derived rules
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - user_projects/hello-service/sdlc/docs
                   - project_layer/projects/sdlc/package.json
