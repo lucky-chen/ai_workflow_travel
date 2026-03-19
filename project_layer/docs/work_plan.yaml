@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: document update boundary usable
     batch_id: batch_9_2_update_boundary_verification
-    task_name: verify item-design update handoff
+    task_name: verify work-plan update handoff
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -690,13 +690,13 @@ milestones:
                   - user_projects/hello-service/tests
               - task_name: verify item-design update handoff
                 summary: verify item-design update returns prompt plus external action without internal llm execution
-                status: in_progress
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests/Capability/ItemDesign
                   - user_projects/hello-service/tests
               - task_name: verify work-plan update handoff
                 summary: verify work-plan update returns prompt plus external action without internal llm execution
-                status: pending
+                status: in_progress
                 involved_files:
                   - project_layer/projects/sdlc/tests/Capability/WorkPlan
                   - user_projects/hello-service/tests
