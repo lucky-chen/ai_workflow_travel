@@ -129,9 +129,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     unimplementedEntry("generator:work-execute:real-llm:failure", "Work execute generator real LLM failure cases."),
   ],
   contract: [
-    unimplementedEntry(
+    implementedEntry(
       "contract:requirement-design:success",
-      "Requirement design contract success cases. Current hello-service fixture still does not satisfy the latest requirement contract success expectations.",
+      "Requirement design contract success cases.",
+      "hello-service-requirement-contract-success.test.mjs",
+      "runHelloServiceRequirementContractSuccessTest",
     ),
     implementedEntry(
       "contract:requirement-design:failure",
@@ -141,9 +143,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
     unimplementedEntry("contract:requirement-design:real-llm:success", "Requirement design contract real LLM success cases."),
     unimplementedEntry("contract:requirement-design:real-llm:failure", "Requirement design contract real LLM failure cases."),
-    unimplementedEntry(
+    implementedEntry(
       "contract:architecture-design:success",
-      "Architecture design contract success cases. Current hello-service fixture still does not satisfy the latest architecture contract success expectations.",
+      "Architecture design contract success cases.",
+      "hello-service-architecture-contract-success.test.mjs",
+      "runHelloServiceArchitectureContractSuccessTest",
     ),
     implementedEntry(
       "contract:architecture-design:failure",
@@ -153,9 +157,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
     ),
     unimplementedEntry("contract:architecture-design:real-llm:success", "Architecture design contract real LLM success cases."),
     unimplementedEntry("contract:architecture-design:real-llm:failure", "Architecture design contract real LLM failure cases."),
-    unimplementedEntry(
+    implementedEntry(
       "contract:item-design:success",
-      "Item design contract success cases. Current handcrafted hello-service fixture has not been fully aligned with the latest item design contract section rules yet.",
+      "Item design contract success cases.",
+      "hello-service-item-design-contract-success.test.mjs",
+      "runHelloServiceItemDesignContractSuccessTest",
     ),
     implementedEntry(
       "contract:item-design:failure",

@@ -210,6 +210,129 @@ export async function createPreparedStepContext(targetWorkspaceRoot) {
   return path.relative(targetWorkspaceRoot, preparedStepContextPath);
 }
 
+export async function writeRequirementContractSuccessFixture(targetWorkspaceRoot) {
+  await writeMarkdownFixtureFromContractSpec(
+    targetWorkspaceRoot,
+    "RequirementTemplate.contract.json",
+    path.join("sdlc", "docs", "Requirement.md"),
+  );
+}
+
+export async function writeArchitectureContractSuccessFixture(targetWorkspaceRoot) {
+  await writeMarkdownFixtureFromContractSpec(
+    targetWorkspaceRoot,
+    "TechnicalArchitectureTemplate.contract.json",
+    path.join("sdlc", "docs", "TechnicalArchitecture.md"),
+  );
+}
+
+export async function writeItemDesignContractSuccessFixture(targetWorkspaceRoot) {
+  await writeMarkdownFixtureFromContractSpec(
+    targetWorkspaceRoot,
+    "ItemDesignTemplate.contract.json",
+    path.join("sdlc", "docs", "item_design", "Workflow.md"),
+    "# Workflow Design\n",
+  );
+}
+
+async function writeMarkdownFixtureFromContractSpec(targetWorkspaceRoot, contractFileName, relativePath, title = "") {
+  const contractSpecPath = path.join(projectRoot, "meta_layer", "resources", "contract", contractFileName);
+  const contractSpec = JSON.parse(await readFile(contractSpecPath, "utf8"));
+  const renderedDocument = renderMarkdownDocumentFromContractSpec(contractSpec, title);
+  const absolutePath = path.join(targetWorkspaceRoot, relativePath);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, renderedDocument, "utf8");
+}
+
+function renderMarkdownDocumentFromContractSpec(contractSpec, title = "") {
+  const sections = contractSpec.section_contracts.map((section) => {
+    const headingLevel = Math.min(section.section_id.split(".").length, 6);
+    const heading = `${"#".repeat(headingLevel)} ${section.section_id}. ${replacePlaceholders(section.title)}`;
+    const body = renderSectionBody(section.expected_format);
+    return `${heading}\n\n${body}`.trim();
+  });
+
+  return `${title}${sections.join("\n\n")}\n`;
+}
+
+function renderSectionBody(expectedFormat) {
+  if (typeof expectedFormat !== "string" || expectedFormat.trim().length === 0) {
+    return "- Sample bullet";
+  }
+
+  return replacePlaceholders(expectedFormat).replace(/\nNo prose outside code blocks\.\s*$/i, "");
+}
+
+function replacePlaceholders(text) {
+  return text.replace(/\{([^}]+)\}/g, (_match, key) => resolvePlaceholderValue(key));
+}
+
+function resolvePlaceholderValue(key) {
+  const directOverrides = {
+    ArchitectureStyle: "modular monolith",
+    CollaboratorA: "RequirementDesign",
+    CollaboratorB: "WorkPlan",
+    ItemName: "Workflow",
+    ItemPath: "Workflow",
+    METHOD: "POST",
+    PATH: "/hello",
+    SystemName: "hello-service",
+  };
+  if (key in directOverrides) {
+    return directOverrides[key];
+  }
+
+  if (/Type$/.test(key)) {
+    return toPascalCase(key);
+  }
+
+  if (/Field/.test(key)) {
+    return toCamelCase(key);
+  }
+
+  if (/Path$/.test(key)) {
+    return `/${toKebabCase(key)}`;
+  }
+
+  if (/Description|Summary|Goal|Purpose|Role|Responsibility|Problem|Ability|Constraint|Reason|Support|Matters|Boundary/i.test(key)) {
+    return `sample ${toWords(key)}`;
+  }
+
+  return `Sample${toPascalCase(key)}`;
+}
+
+function toPascalCase(value) {
+  return value
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
+
+function toCamelCase(value) {
+  const pascal = toPascalCase(value);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+function toKebabCase(value) {
+  return value
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.toLowerCase())
+    .join("-");
+}
+
+function toWords(value) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 async function normalizeLocalEnvForCurrentCli(targetWorkspaceRoot) {
   const localEnvPath = path.join(targetWorkspaceRoot, "sdlc", "local_env.json");
   const localEnv = JSON.parse(await readFile(localEnvPath, "utf8"));

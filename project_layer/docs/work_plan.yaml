@@ -27,9 +27,9 @@ execution_scope: concept-aligned execution-unit baseline and runtime-boundary
 status: in_progress
 current_focus:
   milestone_id: milestone_1_active_execution_alignment
-  stage_id: stage_13_document_contract_two_layer_alignment
-  batch_id: batch_13_3_success_fixture_realignment
-  task_id: task_13_3_1
+  stage_id: stage_12_hello_service_black_box_test_matrix
+  batch_id: batch_12_1_runtime_black_box_matrix
+  task_id: task_12_1_4
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model
@@ -1054,7 +1054,7 @@ milestones:
         goal: align document contracts to a two-layer model where static checks are
           driven by template-extracted contract json and semantic checks run by llm
           only after static pass
-        status: in_progress
+        status: completed
         batches:
           - batch_id: batch_13_1_static_engine_requirement_architecture
             name: static engine for requirement and architecture
@@ -1111,13 +1111,13 @@ milestones:
             goal: realign hello-service handcrafted success fixtures with the latest
               template-derived contract rules after the static-first checker is
               active
-            status: in_progress
+            status: completed
             tasks:
               - task_id: task_13_3_1
                 summary: rewrite or replace the hello-service handcrafted requirement,
                   architecture, and item design success fixtures so contract
                   success cases reflect the current template-derived rules
-                status: in_progress
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/sdlc/docs

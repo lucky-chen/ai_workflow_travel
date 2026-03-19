@@ -8,6 +8,7 @@ import {
   removeWorkspace,
   resetWorkspace,
   runCli,
+  writeRequirementContractSuccessFixture,
 } from "./hello-service-test-helpers.mjs";
 
 const successTaskId = "hello-service-requirement-contract-success-task";
@@ -21,18 +22,11 @@ export async function runHelloServiceRequirementContractSuccessTest() {
 
   try {
     await resetWorkspace(targetWorkspaceRoot);
+    await writeRequirementContractSuccessFixture(targetWorkspaceRoot);
 
-    await runCli(
-      targetWorkspaceRoot,
-      ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
-      { taskId: successTaskId, runId: runIds.requirementGenerate },
-    );
     await runCli(targetWorkspaceRoot, ["run", "unit", "requirement_design_contract"], {
       taskId: successTaskId,
       runId: runIds.requirementContract,
-      extraEnv: {
-        SDLC_TEST_CONTRACT_SUCCESS_STAGES: "requirement_design_contract",
-      },
     });
 
     const traceRecords = await loadTraceRecords(targetWorkspaceRoot, runIds.requirementContract);
