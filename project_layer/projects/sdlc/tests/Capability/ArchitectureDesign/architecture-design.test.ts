@@ -21,6 +21,11 @@ async function testArchitectureGeneratorReturnsDocumentAndBreakdown(): Promise<v
   const workspaceRoot = await createTempDir("architecture-generator-");
 
   try {
+    let capturedRequest:
+      | {
+          prompt: { userPrompt: unknown };
+        }
+      | undefined;
     const content = [
       "# 1. Overview",
       "",
@@ -29,10 +34,13 @@ async function testArchitectureGeneratorReturnsDocumentAndBreakdown(): Promise<v
       "",
     ].join("\n");
     const generator = new ArchitectureDesignGenerator({
-      llmExecutor: createMockLlmExecutor(async () => ({
-        content,
-        responseFormat: "text",
-      })),
+      llmExecutor: createMockLlmExecutor(async (request) => {
+        capturedRequest = request;
+        return {
+          content,
+          responseFormat: "text",
+        };
+      }),
     });
     const result = await generator.run(
       createExecutionContext(workspaceRoot, "architecture_design_generate", {
@@ -48,6 +56,9 @@ async function testArchitectureGeneratorReturnsDocumentAndBreakdown(): Promise<v
       JSON.parse((result.artifacts as { design_document_breakdown: string }).design_document_breakdown).length,
       1,
     );
+    const userPrompt = capturedRequest?.prompt.userPrompt as Record<string, unknown> | undefined;
+    assert.equal(typeof userPrompt?.template, "string");
+    assert.equal(typeof userPrompt?.templateContract, "object");
   } finally {
     await removeTempDir(workspaceRoot);
   }

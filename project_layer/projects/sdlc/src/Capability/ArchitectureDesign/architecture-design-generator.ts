@@ -2,7 +2,7 @@ import { getArtifactValue, type ExecutionUnitResult } from "../../Runtime/Unit/e
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
+import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 import { parseDesignDocumentBreakdown } from "../Shared/design-document-breakdown.js";
 
 export interface ArchitectureDesignArtifacts {
@@ -42,7 +42,10 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
     return "template/TechnicalArchitectureTemplate.md";
   }
 
-  protected buildPrompt(inputDocument: ArchitectureDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
+  protected buildPrompt(
+    inputDocument: ArchitectureDesignGeneratorInputPayload,
+    promptMaterials: DocumentPromptMaterials,
+  ): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("architecture_design_generate");
     const includeCurrentArchitectureDocument = executionUnit === "architecture_design_update";
     return {
@@ -50,8 +53,9 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
         systemPrompt: [
           "You are a top-tier Senior Technical Architect with deep expertise and years of experience in full-stack architecture.",
           "You generate a technical architecture document that follows the provided template structure.",
-          "When creating architecture documents, you must adhere to the document_contracts requirements found in the JSON header comment of the template file",
-          "hen drafting chapter content, ensure compliance with the requirements defined in the comments beneath each respective chapter. These comments follow JSON format and must be contained within the section_contract field.",
+          "Use the template as the document skeleton.",
+          "Use the contract rules as the chapter content and format requirements.",
+          "Do not output template comments or contract schema names.",
           "Return plain markdown only.",
         ],
         userPrompt: {
@@ -60,7 +64,8 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
           ...(includeCurrentArchitectureDocument && inputDocument.currentArchitectureDocument
             ? { currentArchitectureDocument: inputDocument.currentArchitectureDocument }
             : {}),
-          template,
+          template: promptMaterials.template,
+          templateContract: promptMaterials.contractSpec,
         },
       },
       responseFormat: "text",

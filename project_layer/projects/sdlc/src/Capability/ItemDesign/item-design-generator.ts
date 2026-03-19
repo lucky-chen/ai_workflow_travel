@@ -3,7 +3,7 @@ import { getArtifactValue, type ExecutionContext } from "../../Runtime/Unit/exec
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
-import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
+import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 import { loadContractSpecFromJson } from "../Shared/contract-spec-loader.js";
 import { loadItemDesignTemplateSpec } from "./item-design-template-spec.js";
 
@@ -68,7 +68,7 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
     return "template/ItemDesignTemplate.md";
   }
 
-  protected async loadTemplate(context: ExecutionContext): Promise<string> {
+  protected async loadPromptMaterials(context: ExecutionContext): Promise<DocumentPromptMaterials> {
     const templateSpec = await loadItemDesignTemplateSpec(
       context.workspaceRoot,
       typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
@@ -79,22 +79,20 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
       "item_design",
       typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
     );
-    return JSON.stringify({
+    return {
+      template: templateSpec.outputSkeleton,
       contractSpec,
-      outputSkeleton: templateSpec.outputSkeleton,
-    });
+    };
   }
 
-  protected buildPrompt(inputDocument: ItemDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
-    const templateSpec = JSON.parse(template) as {
-      contractSpec: Awaited<ReturnType<typeof loadContractSpecFromJson>>;
-      outputSkeleton: string;
-    };
+  protected buildPrompt(inputDocument: ItemDesignGeneratorInputPayload, promptMaterials: DocumentPromptMaterials): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("item_design_generate");
     return {
       prompt: {
         systemPrompt:
           "You generate an item design document that follows the provided template structure. " +
+          "Use the template as the document skeleton. " +
+          "Use the contract rules as the chapter content and format requirements. " +
           "Treat template rules as authoring instructions only, not as output content. " +
           "Do not copy template comments, contract schema names, generator internals, or validation internals into the document unless the architecture explicitly defines them. " +
           "Return plain markdown only.",
@@ -102,8 +100,8 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
           target: executionUnit,
           architectureDocument: inputDocument.architectureDocument,
           itemDescriptor: inputDocument.itemDescriptor,
-          templateRules: templateSpec.contractSpec,
-          templateSkeleton: templateSpec.outputSkeleton,
+          templateContract: promptMaterials.contractSpec,
+          template: promptMaterials.template,
         },
       },
       responseFormat: "text",

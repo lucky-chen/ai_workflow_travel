@@ -6,6 +6,13 @@ import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../.
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import { readFile } from "node:fs/promises";
 import { getTemplateFilePath } from "./resource-paths.js";
+import { loadContractSpecFromJson } from "./contract-spec-loader.js";
+import type { ContractSpec } from "./document-unit-contract.js";
+
+export interface DocumentPromptMaterials {
+  template: string;
+  contractSpec?: ContractSpec;
+}
 
 export abstract class DocumentUnitGenerator<TInput = string> implements IExecutionUnitGenerator {
   private static readonly resourceCache = new Map<string, string>();
@@ -27,8 +34,8 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
 
     try {
       const inputDocument = await this.loadInputDocument(context.inputArtifacts);
-      const template = await this.loadTemplate(context);
-      const request = this.buildPrompt(inputDocument, template);
+      const promptMaterials = await this.loadPromptMaterials(context);
+      const request = this.buildPrompt(inputDocument, promptMaterials);
       const result = await this.executeGeneration(request);
       const output = await this.buildExecutionUnitResult(result);
 
@@ -47,6 +54,13 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
   }
 
   protected abstract loadInputDocument(inputArtifacts: ArtifactMap): Promise<TInput>;
+  protected async loadPromptMaterials(context: ExecutionContext): Promise<DocumentPromptMaterials> {
+    const template = await this.loadTemplate(context);
+    return {
+      template,
+      contractSpec: await this.loadContractSpec(context),
+    };
+  }
   protected async loadTemplate(context: ExecutionContext): Promise<string> {
     const templatePath = await getTemplateFilePath(
       context.workspaceRoot,
@@ -63,7 +77,17 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
     return template;
   }
   protected abstract getTemplateResourcePath(): string;
-  protected abstract buildPrompt(inputDocument: TInput, template: string): LlmExecutionRequest;
+  protected async loadContractSpec(context: ExecutionContext): Promise<ContractSpec | undefined> {
+    const templateFileName = path.basename(this.getTemplateResourcePath());
+    const contractFileName = templateFileName.replace(/\.[^.]+$/, ".contract.json");
+    return loadContractSpecFromJson(
+      context.workspaceRoot,
+      contractFileName,
+      context.executionUnitId,
+      typeof context.params?.resourceRoot === "string" ? context.params.resourceRoot : undefined,
+    );
+  }
+  protected abstract buildPrompt(inputDocument: TInput, promptMaterials: DocumentPromptMaterials): LlmExecutionRequest;
   protected buildGenerationFinishedPayload(_output: ExecutionUnitResult): Record<string, unknown> | undefined {
     return undefined;
   }

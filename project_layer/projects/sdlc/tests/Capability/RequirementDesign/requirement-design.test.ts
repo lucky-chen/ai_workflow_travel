@@ -55,6 +55,7 @@ async function testRequirementGeneratorReturnsGeneratedDocument(): Promise<void>
     assert.equal(userPrompt?.target, "requirement_design_generate");
     assert.equal(userPrompt?.userComment, "Generate requirement baseline from user comment.");
     assert.equal(typeof userPrompt?.template, "string");
+    assert.equal(typeof userPrompt?.templateContract, "object");
   } finally {
     await removeTempDir(workspaceRoot);
   }

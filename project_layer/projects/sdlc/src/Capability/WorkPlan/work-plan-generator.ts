@@ -2,7 +2,7 @@ import { getArtifactValue, type ExecutionUnitResult } from "../../Runtime/Unit/e
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
+import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 
 export interface WorkPlanArtifacts {
   artifactKey: "work_plan";
@@ -67,12 +67,14 @@ export class WorkPlanGenerator extends DocumentUnitGenerator<WorkPlanGeneratorIn
     return "template/WorkPlanTemplate.yaml";
   }
 
-  protected buildPrompt(inputDocument: WorkPlanGeneratorInputPayload, template: string): LlmExecutionRequest {
+  protected buildPrompt(inputDocument: WorkPlanGeneratorInputPayload, promptMaterials: DocumentPromptMaterials): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("work_plan_generate");
     return {
       prompt: {
         systemPrompt:
           "You generate a work plan that follows the provided yaml template structure. " +
+          "Use the template as the output skeleton. " +
+          "Use the contract rules as the content and format requirements for each section. " +
           "Keep the output as valid yaml using the same top-level keys and the same milestone stage batch task hierarchy shape as the template. " +
           "Cite the provided shared collaboration standard document path exactly when it is needed in the plan content. " +
           "Return plain yaml only.",
@@ -82,7 +84,8 @@ export class WorkPlanGenerator extends DocumentUnitGenerator<WorkPlanGeneratorIn
           architectureDocument: inputDocument.architectureDocument,
           itemDesignDocuments: inputDocument.itemDesignDocuments,
           sharedCollaborationStandardPath: inputDocument.sharedCollaborationStandardPath,
-          template,
+          template: promptMaterials.template,
+          templateContract: promptMaterials.contractSpec,
         },
       },
       responseFormat: "text",

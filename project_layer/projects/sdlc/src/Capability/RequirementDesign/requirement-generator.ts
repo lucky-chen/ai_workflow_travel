@@ -3,7 +3,7 @@ import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import { DocumentUnitGenerator } from "../../Capability/Shared/document-unit-generator.js";
+import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 
 export interface RequirementArtifacts {
   artifactKey: "requirement_design";
@@ -37,7 +37,7 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
     return "template/RequirementTemplate.md";
   }
 
-  protected buildPrompt(inputDocument: RequirementGeneratorInput, template: string): LlmExecutionRequest {
+  protected buildPrompt(inputDocument: RequirementGeneratorInput, promptMaterials: DocumentPromptMaterials): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
     const includeExistingRequirement = executionUnit === "requirement_design_update";
     return {
@@ -45,7 +45,9 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
         systemPrompt: [
           "You are a senior product and technical planning expert.",
           "You generate a requirement document that follows the provided template structure.",
-          "Treat template comments and contracts as authoring instructions only, not output content.",
+          "Use the template as the document skeleton.",
+          "Use the contract rules as the chapter content and format requirements.",
+          "Treat template comments and contract schema as authoring instructions only, not output content.",
           "Return plain markdown only.",
         ],
         userPrompt: {
@@ -54,7 +56,8 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
           ...(includeExistingRequirement && inputDocument.existingRequirement
             ? { existingRequirement: inputDocument.existingRequirement }
             : {}),
-          template,
+          template: promptMaterials.template,
+          templateContract: promptMaterials.contractSpec,
         },
       },
       responseFormat: "text",
