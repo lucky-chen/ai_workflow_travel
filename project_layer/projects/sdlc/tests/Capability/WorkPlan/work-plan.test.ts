@@ -235,10 +235,9 @@ async function testWorkPlanUpdateRuntimeUnitReturnsExternalAction(): Promise<voi
     const runtimeUnit = new WorkPlanUpdateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
-      createMockLlmExecutor(async () => ({
-        content: "Update the current work plan yaml to reflect the revised design scope.",
-        responseFormat: "text",
-      })),
+      createMockLlmExecutor(async () => {
+        throw new Error("Work-plan update runtime unit must not call llmExecutor.");
+      }),
     );
 
     const result = await runtimeUnit.run(
@@ -258,12 +257,57 @@ async function testWorkPlanUpdateRuntimeUnitReturnsExternalAction(): Promise<voi
       operation: "update_markdown",
       targetPath: "sdlc/docs/work_plan.yaml",
       payload: {
-        prompt: "Update the current work plan yaml to reflect the revised design scope.",
+        prompt: [
+          "Update the existing work plan yaml document.",
+          "",
+          "Requirement document:",
+          "# Requirement Input",
+          "",
+          "Architecture document:",
+          "# Architecture Input",
+          "",
+          "Item design documents:",
+          JSON.stringify(["# Workflow Design\n"], null, 2),
+          "",
+          "Current work plan document:",
+          "version: 1\nplan_name: existing",
+          "",
+          "Return one yaml-oriented update instruction for an external editor.",
+          "Keep the work plan aligned with the requirement document, architecture document, item design documents, template structure, and contract requirements.",
+          "Do not apply the change directly.",
+        ].join("\n"),
       },
     });
     assert.equal(
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8"),
       "version: 1\nplan_name: existing\n",
+    );
+    assert.equal(
+      JSON.parse(
+        await readFile(
+          path.join(storageRoot, "work-plan-update-runtime-run", "work_plan_update_result.json"),
+          "utf8",
+        ),
+      ).prompt,
+      [
+        "Update the existing work plan yaml document.",
+        "",
+        "Requirement document:",
+        "# Requirement Input",
+        "",
+        "Architecture document:",
+        "# Architecture Input",
+        "",
+        "Item design documents:",
+        JSON.stringify(["# Workflow Design\n"], null, 2),
+        "",
+        "Current work plan document:",
+        "version: 1\nplan_name: existing",
+        "",
+        "Return one yaml-oriented update instruction for an external editor.",
+        "Keep the work plan aligned with the requirement document, architecture document, item design documents, template structure, and contract requirements.",
+        "Do not apply the change directly.",
+      ].join("\n"),
     );
   } finally {
     await removeTempDir(workspaceRoot);

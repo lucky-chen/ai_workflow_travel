@@ -18,8 +18,8 @@ workflow:
   current_focus:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: document update boundary usable
-    batch_id: batch_9_1_update_boundary_alignment
-    task_name: stop work-plan update llm
+    batch_id: batch_9_2_update_boundary_verification
+    task_name: verify requirement update handoff
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -637,7 +637,7 @@ milestones:
             batch_type: implementation
             name: implementation
             goal: align all document update units with the design-doc update model
-            status: in_progress
+            status: completed
             covers:
               - external_update_handoff
               - no_internal_llm_execution
@@ -662,7 +662,7 @@ milestones:
                   - project_layer/projects/sdlc/tests/Capability/ItemDesign
               - task_name: stop work-plan update llm
                 summary: stop work-plan update from calling llm inside the unit and keep it limited to prompt-plus-action output
-                status: in_progress
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/WorkPlan
                   - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
@@ -671,14 +671,14 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify that all document update units now return prompt-plus-action payloads without internal llm execution
-            status: pending
+            status: in_progress
             covers:
               - external_update_handoff
               - no_internal_llm_execution
             tasks:
               - task_name: verify requirement update handoff
                 summary: verify requirement update returns prompt plus external action without internal llm execution
-                status: pending
+                status: in_progress
                 involved_files:
                   - project_layer/projects/sdlc/tests/Capability/RequirementDesign
                   - user_projects/hello-service/tests

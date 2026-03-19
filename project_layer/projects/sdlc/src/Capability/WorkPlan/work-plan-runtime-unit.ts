@@ -16,6 +16,46 @@ const WORK_PLAN_PATH = "sdlc/docs/work_plan.yaml";
 const WORK_PLAN_CONTRACT_RESULT_PATH = "work_plan_contract_result.json";
 const WORK_PLAN_UPDATE_RESULT_PATH = "work_plan_update_result.json";
 
+function buildWorkPlanUpdatePrompt(
+  requirementDocument: string,
+  architectureDocument: string,
+  itemDesignDocuments: string[],
+  currentWorkPlanDocument?: string,
+): string {
+  const normalizedRequirement = requirementDocument.trim();
+  const normalizedArchitecture = architectureDocument.trim();
+  const normalizedCurrentPlan = currentWorkPlanDocument?.trim() ?? "";
+  const sections = [
+    "Update the existing work plan yaml document.",
+    "",
+    "Requirement document:",
+    normalizedRequirement,
+    "",
+    "Architecture document:",
+    normalizedArchitecture,
+    "",
+    "Item design documents:",
+    JSON.stringify(itemDesignDocuments, null, 2),
+  ];
+
+  if (normalizedCurrentPlan.length > 0) {
+    sections.push(
+      "",
+      "Current work plan document:",
+      normalizedCurrentPlan,
+    );
+  }
+
+  sections.push(
+    "",
+    "Return one yaml-oriented update instruction for an external editor.",
+    "Keep the work plan aligned with the requirement document, architecture document, item design documents, template structure, and contract requirements.",
+    "Do not apply the change directly.",
+  );
+
+  return sections.join("\n");
+}
+
 abstract class WorkPlanRuntimeUnitBase extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
@@ -71,17 +111,19 @@ export class WorkPlanGenerateRuntimeUnit extends WorkPlanRuntimeUnitBase {
 
 export class WorkPlanUpdateRuntimeUnit extends WorkPlanRuntimeUnitBase {
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    const executionContext = this.buildExecutionContext(request, context, {
+    const inputArtifacts: Record<string, string> = {
       ...(await this.loadWorkPlanInputArtifacts(context.workspaceRoot)),
       ...(await this.readOptionalWorkspaceFile(context.workspaceRoot, WORK_PLAN_PATH, "work_plan")),
-    });
-    const output = await new WorkPlanGenerator({
-      llmExecutor: this.llmExecutor,
-      traceRecorder: this.traceRecorder,
-    }).run(executionContext);
-    const artifacts = output.artifacts as Record<string, unknown>;
-    const prompt = this.readStringField(artifacts, "prompt");
-    const targetPath = this.readStringField(artifacts, "targetPath");
+    };
+    const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
+    const itemDesignDocuments = JSON.parse(inputArtifacts.item_design_documents) as string[];
+    const prompt = buildWorkPlanUpdatePrompt(
+      inputArtifacts.requirement_design,
+      inputArtifacts.architecture_design,
+      itemDesignDocuments,
+      inputArtifacts.work_plan,
+    );
+    const targetPath = WORK_PLAN_PATH;
     const externalAction = {
       tool: "external_plugin" as const,
       operation: "update_markdown",
@@ -97,7 +139,7 @@ export class WorkPlanUpdateRuntimeUnit extends WorkPlanRuntimeUnitBase {
     );
     return {
       accepted: true,
-      summary: `${output.summary} Persisted to ${WORK_PLAN_UPDATE_RESULT_PATH}.`,
+      summary: `Work plan update prompt generated. Persisted to ${WORK_PLAN_UPDATE_RESULT_PATH}.`,
       externalAction,
     };
   }
