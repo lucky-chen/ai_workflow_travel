@@ -202,17 +202,12 @@ async function testRequirementUpdateRuntimeUnitLoadsCurrentDocument(): Promise<v
       "utf8",
     );
 
-    let capturedExistingRequirement: unknown;
     const traceRecorder = new InMemoryTraceRecorder();
     const runtimeUnit = new RequirementDesignUpdateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
-      createMockLlmExecutor(async (request) => {
-        capturedExistingRequirement = (request.prompt.userPrompt as Record<string, unknown>).existingRequirement;
-        return {
-          content: "Update the existing requirement markdown with the new user intent.",
-          responseFormat: "text",
-        };
+      createMockLlmExecutor(async () => {
+        throw new Error("Requirement update runtime unit must not call llmExecutor.");
       }),
     );
 
@@ -231,13 +226,24 @@ async function testRequirementUpdateRuntimeUnitLoadsCurrentDocument(): Promise<v
     );
 
     assert.equal(result.accepted, true);
-    assert.equal(capturedExistingRequirement, "# Existing Requirement\n\n- keep this as update input\n");
     assert.deepEqual(result.externalAction, {
       tool: "external_plugin",
       operation: "update_markdown",
       targetPath: "sdlc/docs/Requirement.md",
       payload: {
-        prompt: "Update the existing requirement markdown with the new user intent.",
+        prompt: [
+          "Update the existing requirement markdown document.",
+          "",
+          "User request:",
+          "Update current requirement from comment.",
+          "",
+          "Current requirement document:",
+          "# Existing Requirement\n\n- keep this as update input",
+          "",
+          "Return one markdown-only update instruction for an external editor.",
+          "Keep the document aligned with the existing template structure and contract requirements.",
+          "Do not apply the change directly.",
+        ].join("\n"),
       },
     });
     assert.equal(
@@ -251,7 +257,19 @@ async function testRequirementUpdateRuntimeUnitLoadsCurrentDocument(): Promise<v
           "utf8",
         ),
       ).prompt,
-      "Update the existing requirement markdown with the new user intent.",
+      [
+        "Update the existing requirement markdown document.",
+        "",
+        "User request:",
+        "Update current requirement from comment.",
+        "",
+        "Current requirement document:",
+        "# Existing Requirement\n\n- keep this as update input",
+        "",
+        "Return one markdown-only update instruction for an external editor.",
+        "Keep the document aligned with the existing template structure and contract requirements.",
+        "Do not apply the change directly.",
+      ].join("\n"),
     );
   } finally {
     await removeTempDir(workspaceRoot);

@@ -10,6 +10,33 @@ const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 const REQUIREMENT_CONTRACT_RESULT_PATH = "requirement_design_contract_result.json";
 const REQUIREMENT_UPDATE_RESULT_PATH = "requirement_design_update_result.json";
 
+function buildRequirementUpdatePrompt(userComment: string, existingRequirement?: string): string {
+  const normalizedRequirement = existingRequirement?.trim() ?? "";
+  const sections = [
+    "Update the existing requirement markdown document.",
+    "",
+    "User request:",
+    userComment,
+  ];
+
+  if (normalizedRequirement.length > 0) {
+    sections.push(
+      "",
+      "Current requirement document:",
+      normalizedRequirement,
+    );
+  }
+
+  sections.push(
+    "",
+    "Return one markdown-only update instruction for an external editor.",
+    "Keep the document aligned with the existing template structure and contract requirements.",
+    "Do not apply the change directly.",
+  );
+
+  return sections.join("\n");
+}
+
 abstract class RequirementDesignRuntimeUnitBase extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
@@ -67,13 +94,8 @@ export class RequirementDesignUpdateRuntimeUnit extends RequirementDesignRuntime
     }
 
     const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
-    const output = await new RequirementGenerator({
-      llmExecutor: this.llmExecutor,
-      traceRecorder: this.traceRecorder,
-    }).run(executionContext);
-    const artifacts = output.artifacts as Record<string, unknown>;
-    const prompt = this.readStringField(artifacts, "prompt");
-    const targetPath = this.readStringField(artifacts, "targetPath");
+    const prompt = buildRequirementUpdatePrompt(userComment, inputArtifacts.requirement_design);
+    const targetPath = REQUIREMENT_DOCUMENT_PATH;
     const externalAction = {
       tool: "external_plugin" as const,
       operation: "update_markdown",
@@ -89,7 +111,7 @@ export class RequirementDesignUpdateRuntimeUnit extends RequirementDesignRuntime
     );
     return {
       accepted: true,
-      summary: `${output.summary} Persisted to ${REQUIREMENT_UPDATE_RESULT_PATH}.`,
+      summary: `Requirement update prompt generated. Persisted to ${REQUIREMENT_UPDATE_RESULT_PATH}.`,
       externalAction,
     };
   }
