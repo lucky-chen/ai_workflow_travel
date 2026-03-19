@@ -12,6 +12,37 @@ const ARCHITECTURE_BREAKDOWN_PATH = "sdlc/docs/architecture_design_breakdown.jso
 const ARCHITECTURE_CONTRACT_RESULT_PATH = "architecture_design_contract_result.json";
 const ARCHITECTURE_UPDATE_RESULT_PATH = "architecture_design_update_result.json";
 
+function buildArchitectureUpdatePrompt(
+  requirementDocument: string,
+  currentArchitectureDocument?: string,
+): string {
+  const normalizedRequirement = requirementDocument.trim();
+  const normalizedArchitecture = currentArchitectureDocument?.trim() ?? "";
+  const sections = [
+    "Update the existing technical architecture markdown document.",
+    "",
+    "Requirement document:",
+    normalizedRequirement,
+  ];
+
+  if (normalizedArchitecture.length > 0) {
+    sections.push(
+      "",
+      "Current architecture document:",
+      normalizedArchitecture,
+    );
+  }
+
+  sections.push(
+    "",
+    "Return one markdown-only update instruction for an external editor.",
+    "Keep the architecture aligned with the requirement document, template structure, and contract requirements.",
+    "Do not apply the change directly.",
+  );
+
+  return sections.join("\n");
+}
+
 abstract class ArchitectureDesignRuntimeUnitBase extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
@@ -59,17 +90,16 @@ export class ArchitectureDesignGenerateRuntimeUnit extends ArchitectureDesignRun
 
 export class ArchitectureDesignUpdateRuntimeUnit extends ArchitectureDesignRuntimeUnitBase {
   async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
-    const executionContext = this.buildExecutionContext(request, context, {
+    const inputArtifacts: Record<string, string> = {
       requirement_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, REQUIREMENT_DOCUMENT_PATH),
       ...(await this.readOptionalWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH, "architecture_design")),
-    });
-    const output = await new ArchitectureDesignGenerator({
-      llmExecutor: this.llmExecutor,
-      traceRecorder: this.traceRecorder,
-    }).run(executionContext);
-    const artifacts = output.artifacts as Record<string, unknown>;
-    const prompt = this.readStringField(artifacts, "prompt");
-    const targetPath = this.readStringField(artifacts, "targetPath");
+    };
+    const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
+    const prompt = buildArchitectureUpdatePrompt(
+      inputArtifacts.requirement_design,
+      inputArtifacts.architecture_design,
+    );
+    const targetPath = ARCHITECTURE_DOCUMENT_PATH;
     const externalAction = {
       tool: "external_plugin" as const,
       operation: "update_markdown",
@@ -85,7 +115,7 @@ export class ArchitectureDesignUpdateRuntimeUnit extends ArchitectureDesignRunti
     );
     return {
       accepted: true,
-      summary: `${output.summary} Persisted to ${ARCHITECTURE_UPDATE_RESULT_PATH}.`,
+      summary: `Architecture update prompt generated. Persisted to ${ARCHITECTURE_UPDATE_RESULT_PATH}.`,
       externalAction,
     };
   }

@@ -366,17 +366,12 @@ async function testArchitectureUpdateRuntimeUnitLoadsCurrentDocument(): Promise<
       "utf8",
     );
 
-    let capturedCurrentDocument: unknown;
     const traceRecorder = new InMemoryTraceRecorder();
     const runtimeUnit = new ArchitectureDesignUpdateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
-      createMockLlmExecutor(async (request) => {
-        capturedCurrentDocument = (request.prompt.userPrompt as Record<string, unknown>).currentArchitectureDocument;
-        return {
-          content: "Update the current architecture markdown with the revised requirement context.",
-          responseFormat: "text",
-        };
+      createMockLlmExecutor(async () => {
+        throw new Error("Architecture update runtime unit must not call llmExecutor.");
       }),
     );
 
@@ -392,13 +387,24 @@ async function testArchitectureUpdateRuntimeUnitLoadsCurrentDocument(): Promise<
     );
 
     assert.equal(result.accepted, true);
-    assert.equal(capturedCurrentDocument, "# Existing Architecture\n");
     assert.deepEqual(result.externalAction, {
       tool: "external_plugin",
       operation: "update_markdown",
       targetPath: "sdlc/docs/TechnicalArchitecture.md",
       payload: {
-        prompt: "Update the current architecture markdown with the revised requirement context.",
+        prompt: [
+          "Update the existing technical architecture markdown document.",
+          "",
+          "Requirement document:",
+          "# Requirement Input",
+          "",
+          "Current architecture document:",
+          "# Existing Architecture",
+          "",
+          "Return one markdown-only update instruction for an external editor.",
+          "Keep the architecture aligned with the requirement document, template structure, and contract requirements.",
+          "Do not apply the change directly.",
+        ].join("\n"),
       },
     });
     assert.equal(
@@ -412,7 +418,19 @@ async function testArchitectureUpdateRuntimeUnitLoadsCurrentDocument(): Promise<
           "utf8",
         ),
       ).prompt,
-      "Update the current architecture markdown with the revised requirement context.",
+      [
+        "Update the existing technical architecture markdown document.",
+        "",
+        "Requirement document:",
+        "# Requirement Input",
+        "",
+        "Current architecture document:",
+        "# Existing Architecture",
+        "",
+        "Return one markdown-only update instruction for an external editor.",
+        "Keep the architecture aligned with the requirement document, template structure, and contract requirements.",
+        "Do not apply the change directly.",
+      ].join("\n"),
     );
   } finally {
     await removeTempDir(workspaceRoot);
