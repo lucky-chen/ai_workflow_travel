@@ -307,10 +307,13 @@
       "allow lightweight notes on key inputs, outputs, or ownership boundaries only when they help explain the architecture",
       "module names must use English identifiers only",
       "module names must start with an uppercase letter",
-      "module names must not contain spaces"
+      "module names must not contain spaces",
+      "keep the notes lightweight and architecture-oriented",
+      "keep the field structure consistent within the section when optional fields are used",
+      "do not split this section into an additional mandatory module-capabilities subsection"
     ],
     "severity": "medium",
-    "expected_format": "This section may be organized by architecture layer or partition when that improves readability.\n\n- **`LayerOrPartitionA`**\n  - `ModuleA`\n    - responsibility: `{ResponsibilityA}`\n    - inputs: `{InputBoundaryA}`\n    - outputs: `{OutputBoundaryA}`\n    - ownership boundary: `{OwnershipBoundaryA}`\n  - `ModuleB`\n    - responsibility: `{ResponsibilityB}`\n    - inputs: `{InputBoundaryB}`\n    - outputs: `{OutputBoundaryB}`\n\n- **`LayerOrPartitionB`**\n  - `ModuleC`\n    - responsibility: `{ResponsibilityC}`\n\nKeep the notes lightweight and architecture-oriented. Not every module needs every field, but the structure should stay consistent within the section. Do not split this section into an additional mandatory module-capabilities subsection."
+    "expected_format": "This section may be organized by architecture layer or partition when that improves readability.\n\n- **`LayerOrPartitionA`**\n  - `ModuleA`\n    - responsibility: `{ResponsibilityA}`\n    - inputs: `{InputBoundaryA}`\n    - outputs: `{OutputBoundaryA}`\n    - ownership boundary: `{OwnershipBoundaryA}`\n  - `ModuleB`\n    - responsibility: `{ResponsibilityB}`\n    - inputs: `{InputBoundaryB}`\n    - outputs: `{OutputBoundaryB}`\n\n- **`LayerOrPartitionB`**\n  - `ModuleC`\n    - responsibility: `{ResponsibilityC}`"
   }
 }
 -->
@@ -326,10 +329,13 @@
       "explain how modules collaborate at a high level",
       "group interactions by major interaction step, user scenario, or control point",
       "make it clear which interactions belong to the current mainline and which are future-stage extensions when relevant",
-      "keep this section at cross-module interaction level rather than module-internal detail"
+      "keep this section at cross-module interaction level rather than module-internal detail",
+      "for each scenario, make user scenario, stage position, and interaction goal explicit before listing interaction cases",
+      "for each interaction case, make summary, modules involved, and control focus explicit",
+      "when adding lightweight shared interaction shapes, keep them at architecture boundary level rather than detailed API or storage schema level"
     ],
     "severity": "medium",
-    "expected_format": "This section describes high-level cross-module interaction.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section in two main steps:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`\n\nWithin each `5.3.x.x` interaction case, continue to deeper levels only when needed for readability. The deepest useful level should typically be one of these structures:\n\n```plantuml\n@startuml\nactor User\nparticipant ModuleA\nparticipant ModuleB\nUser -> ModuleA: `{Action}`\nModuleA -> ModuleB: `{Delegation}`\nModuleB -> ModuleA: `{Result}`\n@enduml\n```\n\n```text\n{METHOD} {PATH} => request { `{RequestShape}` } => response { `{ResponseShape}` }\n```\n\nUse `plantuml` for cross-module interaction views and `text` for lightweight public API or shared interface shapes. These views should capture only the shared boundary and collaboration path that matter at architecture level.\n\nFor each scenario, prefer this information order:\n- user scenario or trigger\n- current stage versus future-stage position\n- interaction goal\n- interaction cases under `5.3.x.x`\n- lightweight shared interaction shape when needed\n\nDo not include detailed request fields, storage schema, or module-internal algorithms here."
+    "expected_format": "This section describes high-level cross-module interaction.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section in two main steps:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`"
   }
 }
 -->
