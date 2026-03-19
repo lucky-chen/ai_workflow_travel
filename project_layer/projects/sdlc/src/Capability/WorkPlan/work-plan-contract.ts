@@ -5,7 +5,7 @@ import type {
   ExecutionContext,
 } from "../../Runtime/Unit/execution-unit.js";
 import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
-import { normalizeUserPromptContent, type LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
+import type { ILlmExecutor, LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../../Capability/Shared/document-unit-contract.js";
 import { DocumentUnitContract } from "../../Capability/Shared/document-unit-contract.js";
 import { parse as parseYaml } from "yaml";
@@ -63,12 +63,48 @@ interface WorkPlanArtifacts {
 }
 
 export class WorkPlanContract extends DocumentUnitContract {
+  constructor(llmExecutor?: ILlmExecutor) {
+    super(llmExecutor);
+  }
+
   protected getContractResourcePath(): string {
     return "contract/WorkPlanTemplate.contract.json";
   }
 
   protected getExecutionUnitId(): string {
     return "work_plan";
+  }
+
+  protected collectStaticIssues(
+    _context: ExecutionContext,
+    output: ExecutionUnitResult,
+    contractSpec: ContractSpec,
+  ): ContractIssue[] {
+    const workPlanOutput = output as ExecutionUnitResult<WorkPlanArtifacts>;
+    const content = workPlanOutput.artifacts.content.trim();
+    const issues: ContractIssue[] = [];
+
+    if (content.length === 0) {
+      issues.push({
+        checkItem: "yaml_work_plan_structure_complete",
+        message: "Work plan content must not be empty.",
+        severity: "high",
+      });
+      return issues;
+    }
+
+    const parsedPlan = this.parseWorkPlan(content, issues);
+    if (parsedPlan) {
+      this.collectTopLevelStructureIssues(parsedPlan, contractSpec, issues);
+      this.collectFocusIssues(parsedPlan, contractSpec, issues);
+      this.collectMilestoneStageBatchTaskIssues(parsedPlan, contractSpec, issues);
+    }
+
+    return issues;
+  }
+
+  protected skipSemanticFallbackWithoutLlm(): boolean {
+    return true;
   }
 
   protected async buildCheckRequest(
@@ -122,39 +158,6 @@ export class WorkPlanContract extends DocumentUnitContract {
       passed: result.passed,
       summary: result.summary,
       issues: result.issues,
-    };
-  }
-
-  protected checkAgainstPromptRequest(request: LlmExecutionRequest): ContractExecutionResult {
-    const promptPayload = JSON.parse(normalizeUserPromptContent(request.prompt.userPrompt)) as {
-      generatedResult: string;
-      contractSpec: ContractSpec;
-    };
-    const content = promptPayload.generatedResult;
-    const contractSpec = promptPayload.contractSpec;
-    const issues: ContractIssue[] = [];
-
-    if (content.length === 0) {
-      issues.push({
-        checkItem: "work_plan_not_empty",
-        message: "Work plan content must not be empty.",
-        severity: "high",
-      });
-    }
-
-    const parsedPlan = this.parseWorkPlan(content, issues);
-    if (parsedPlan) {
-      this.collectTopLevelStructureIssues(parsedPlan, contractSpec, issues);
-      this.collectFocusIssues(parsedPlan, contractSpec, issues);
-      this.collectMilestoneStageBatchTaskIssues(parsedPlan, contractSpec, issues);
-    }
-
-    return {
-      passed: issues.length === 0,
-      summary: issues.length === 0
-        ? "Work plan passed contract checks."
-        : "Work plan failed contract checks.",
-      issues,
     };
   }
 

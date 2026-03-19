@@ -44,7 +44,7 @@ export class ItemDesignRuntimeUnit extends RuntimeUnitBase {
       },
     };
     const executionContext = this.buildExecutionContext(request, context, {});
-    const result = await new ItemDesignContract().check(executionContext, output);
+    const result = await new ItemDesignContract(this.llmExecutor).check(executionContext, output);
     await this.writeArtifact(executionContext, ITEM_DESIGN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
     return {
       accepted: true,

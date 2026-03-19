@@ -28,8 +28,8 @@ status: in_progress
 current_focus:
   milestone_id: milestone_1_active_execution_alignment
   stage_id: stage_13_document_contract_two_layer_alignment
-  batch_id: batch_13_2_static_engine_item_work_plan
-  task_id: task_13_2_1
+  batch_id: batch_13_3_success_fixture_realignment
+  task_id: task_13_3_1
 deferred_after_first_batch_set:
   - full regression rename sweep across all historical tests
   - black-box end-to-end validation under the final naming model
@@ -1088,13 +1088,13 @@ milestones:
             goal: move item and work-plan document contract paths onto the shared
               static-first model and remove remaining template-format hard-coding
               from those document contracts
-            status: in_progress
+            status: completed
             tasks:
               - task_id: task_13_2_1
                 summary: switch item_design_contract to the shared static checker and
                   remove code-hardcoded template-format checks that should be
                   derived from the extracted contract json
-                status: in_progress
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/ItemDesign
                   - project_layer/projects/sdlc/tests/Capability/ItemDesign
@@ -1102,7 +1102,7 @@ milestones:
                 summary: switch work_plan_contract to the shared two-layer contract flow
                   while keeping yaml parsing and plan-structure checks in the
                   static layer
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/WorkPlan
                   - project_layer/projects/sdlc/tests/Capability/WorkPlan
@@ -1111,13 +1111,13 @@ milestones:
             goal: realign hello-service handcrafted success fixtures with the latest
               template-derived contract rules after the static-first checker is
               active
-            status: pending
+            status: in_progress
             tasks:
               - task_id: task_13_3_1
                 summary: rewrite or replace the hello-service handcrafted requirement,
                   architecture, and item design success fixtures so contract
                   success cases reflect the current template-derived rules
-                status: pending
+                status: in_progress
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/sdlc/docs

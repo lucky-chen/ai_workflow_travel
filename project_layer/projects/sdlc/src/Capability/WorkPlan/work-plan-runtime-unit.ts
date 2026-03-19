@@ -44,7 +44,7 @@ export class WorkPlanRuntimeUnit extends RuntimeUnitBase {
         content: await this.readRequiredWorkspaceFile(context.workspaceRoot, WORK_PLAN_PATH),
       },
     };
-    const result = await new WorkPlanContract().check(executionContext, output);
+    const result = await new WorkPlanContract(this.llmExecutor).check(executionContext, output);
     await this.writeArtifact(executionContext, WORK_PLAN_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
     return {
       accepted: true,
