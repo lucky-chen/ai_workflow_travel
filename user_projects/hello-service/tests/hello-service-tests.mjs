@@ -13,9 +13,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-document-generation-flow.test.mjs",
       "runHelloServiceFunctionalTest",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:document-generation:failure",
       "Runtime failure path for document generation flow.",
+      "hello-service-document-generation-flow-failure.test.mjs",
+      "runHelloServiceDocumentGenerationFailureTest",
     ),
     unimplementedEntry(
       "runtime:document-generation:real-llm:success",
@@ -31,9 +33,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-unit-flow-success.test.mjs",
       "runHelloServiceSuccessTest",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:unit-flow:failure",
       "Runtime failure path for full unit flow.",
+      "hello-service-unit-flow-failure.test.mjs",
+      "runHelloServiceUnitFlowFailureTest",
     ),
     unimplementedEntry(
       "runtime:unit-flow:real-llm:success",

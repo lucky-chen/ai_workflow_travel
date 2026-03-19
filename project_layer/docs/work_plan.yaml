@@ -1018,6 +1018,12 @@ milestones:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - runtime:document-generation:success implemented
+                  - runtime:document-generation:failure implemented
+                  - runtime:unit-flow:success implemented
+                  - runtime:unit-flow:failure implemented
+                  - baseline and all real-llm runtime entries still pending
           - batch_id: batch_12_2_contract_black_box_matrix
             name: contract black-box matrix
             goal: implement the contract black-box matrix in small verified batches without
