@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: document update boundary usable
     batch_id: batch_9_1_update_boundary_alignment
-    task_name: stop item-design update llm
+    task_name: stop work-plan update llm
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -656,13 +656,13 @@ milestones:
                   - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
               - task_name: stop item-design update llm
                 summary: stop item-design update from calling llm inside the unit and keep it limited to prompt-plus-action output
-                status: in_progress
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/ItemDesign
                   - project_layer/projects/sdlc/tests/Capability/ItemDesign
               - task_name: stop work-plan update llm
                 summary: stop work-plan update from calling llm inside the unit and keep it limited to prompt-plus-action output
-                status: pending
+                status: in_progress
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/WorkPlan
                   - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts

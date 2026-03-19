@@ -199,14 +199,9 @@ async function testItemDesignUpdateRuntimeUnitReturnsExternalAction(): Promise<v
     const runtimeUnit = new ItemDesignUpdateRuntimeUnit(
       new ArtifactStoreService(storageRoot, traceRecorder),
       traceRecorder,
-      createMockLlmExecutor(async () => ({
-        content: "Update the current item design markdown using the new architecture constraints.",
-        responseFormat: "text",
-        metadata: {
-          itemName: "Workflow",
-          documentPath: "sdlc/docs/item_design/Workflow.md",
-        },
-      })),
+      createMockLlmExecutor(async () => {
+        throw new Error("Item-design update runtime unit must not call llmExecutor.");
+      }),
     );
 
     const result = await runtimeUnit.run(
@@ -229,12 +224,61 @@ async function testItemDesignUpdateRuntimeUnitReturnsExternalAction(): Promise<v
       operation: "update_markdown",
       targetPath: "sdlc/docs/item_design/Workflow.md",
       payload: {
-        prompt: "Update the current item design markdown using the new architecture constraints.",
+        prompt: [
+          'Update the existing item design markdown document for "Workflow".',
+          "",
+          "Architecture document:",
+          "# Architecture Input",
+          "",
+          "Item descriptor:",
+          JSON.stringify({
+            name: "Workflow",
+            responsibilities: ["define the hello function contract"],
+            documentPath: "sdlc/docs/item_design/Workflow.md",
+            description: "Workflow item design baseline.",
+          }, null, 2),
+          "",
+          "Current item design document:",
+          "# Existing Workflow Design",
+          "",
+          "Return one markdown-only update instruction for an external editor.",
+          "Keep the item design aligned with the architecture document, item descriptor, template structure, and contract requirements.",
+          "Do not apply the change directly.",
+        ].join("\n"),
       },
     });
     assert.equal(
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "item_design", "Workflow.md"), "utf8"),
       "# Existing Workflow Design\n",
+    );
+    assert.equal(
+      JSON.parse(
+        await readFile(
+          path.join(storageRoot, "item-design-update-runtime-run", "item_design_update_result.json"),
+          "utf8",
+        ),
+      ).prompt,
+      [
+        'Update the existing item design markdown document for "Workflow".',
+        "",
+        "Architecture document:",
+        "# Architecture Input",
+        "",
+        "Item descriptor:",
+        JSON.stringify({
+          name: "Workflow",
+          responsibilities: ["define the hello function contract"],
+          documentPath: "sdlc/docs/item_design/Workflow.md",
+          description: "Workflow item design baseline.",
+        }, null, 2),
+        "",
+        "Current item design document:",
+        "# Existing Workflow Design",
+        "",
+        "Return one markdown-only update instruction for an external editor.",
+        "Keep the item design aligned with the architecture document, item descriptor, template structure, and contract requirements.",
+        "Do not apply the change directly.",
+      ].join("\n"),
     );
   } finally {
     await removeTempDir(workspaceRoot);

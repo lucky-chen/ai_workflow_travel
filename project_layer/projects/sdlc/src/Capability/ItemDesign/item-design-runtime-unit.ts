@@ -14,6 +14,41 @@ const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
 const ITEM_DESIGN_CONTRACT_RESULT_PATH = "item_design_contract_result.json";
 const ITEM_DESIGN_UPDATE_RESULT_PATH = "item_design_update_result.json";
 
+function buildItemDesignUpdatePrompt(
+  architectureDocument: string,
+  descriptor: ItemDescriptor,
+  currentItemDocument?: string,
+): string {
+  const normalizedArchitecture = architectureDocument.trim();
+  const normalizedCurrentItem = currentItemDocument?.trim() ?? "";
+  const sections = [
+    `Update the existing item design markdown document for "${descriptor.name}".`,
+    "",
+    "Architecture document:",
+    normalizedArchitecture,
+    "",
+    "Item descriptor:",
+    JSON.stringify(descriptor, null, 2),
+  ];
+
+  if (normalizedCurrentItem.length > 0) {
+    sections.push(
+      "",
+      "Current item design document:",
+      normalizedCurrentItem,
+    );
+  }
+
+  sections.push(
+    "",
+    "Return one markdown-only update instruction for an external editor.",
+    "Keep the item design aligned with the architecture document, item descriptor, template structure, and contract requirements.",
+    "Do not apply the change directly.",
+  );
+
+  return sections.join("\n");
+}
+
 abstract class ItemDesignRuntimeUnitBase extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
@@ -96,18 +131,18 @@ export class ItemDesignUpdateRuntimeUnit extends ItemDesignRuntimeUnitBase {
     const currentItemArtifacts = descriptor.documentPath
       ? await this.readOptionalWorkspaceFile(context.workspaceRoot, descriptor.documentPath, "item_design_document")
       : {};
-    const executionContext = this.buildExecutionContext(request, context, {
+    const inputArtifacts: Record<string, string> = {
       architecture_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
       item_descriptors: JSON.stringify(descriptor),
       ...currentItemArtifacts,
-    });
-    const output = await new ItemDesignGenerator({
-      llmExecutor: this.llmExecutor,
-      traceRecorder: this.traceRecorder,
-    }).run(executionContext);
-    const artifacts = output.artifacts as Record<string, unknown>;
-    const prompt = this.readStringField(artifacts, "prompt");
-    const targetPath = this.readStringField(artifacts, "targetPath");
+    };
+    const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
+    const prompt = buildItemDesignUpdatePrompt(
+      inputArtifacts.architecture_design,
+      descriptor,
+      inputArtifacts.item_design_document,
+    );
+    const targetPath = descriptor.documentPath ?? "";
     const externalAction = {
       tool: "external_plugin" as const,
       operation: "update_markdown",
@@ -123,7 +158,7 @@ export class ItemDesignUpdateRuntimeUnit extends ItemDesignRuntimeUnitBase {
     );
     return {
       accepted: true,
-      summary: `${output.summary} Persisted to ${ITEM_DESIGN_UPDATE_RESULT_PATH}.`,
+      summary: `Item design update prompt generated for "${descriptor.name}". Persisted to ${ITEM_DESIGN_UPDATE_RESULT_PATH}.`,
       externalAction,
     };
   }
