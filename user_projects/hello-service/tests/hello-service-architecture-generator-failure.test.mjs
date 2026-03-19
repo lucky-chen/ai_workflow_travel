@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -16,6 +17,7 @@ export async function runHelloServiceArchitectureGeneratorFailureTest() {
 
   try {
     await resetWorkspace(targetWorkspaceRoot);
+    await rm(path.join(targetWorkspaceRoot, "sdlc", "docs", "Requirement.md"), { force: true });
 
     const result = await runCliExpectFailure(
       targetWorkspaceRoot,

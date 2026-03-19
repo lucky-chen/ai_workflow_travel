@@ -1057,6 +1057,13 @@ milestones:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - generator:requirement-design success and failure implemented
+                  - generator:architecture-design success and failure implemented
+                  - generator:item-design success and failure implemented
+                  - generator:work-plan success and failure implemented
+                  - generator:work-execute success and failure implemented
+                  - all generator real-llm entries still pending
       - stage_id: stage_13_document_contract_two_layer_alignment
         name: document contract two-layer alignment
         goal: align document contracts to a two-layer model where static checks are

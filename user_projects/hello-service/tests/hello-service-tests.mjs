@@ -86,9 +86,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-architecture-generator-success.test.mjs",
       "runHelloServiceArchitectureGeneratorSuccessTest",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "generator:architecture-design:failure",
-      "Architecture design generator failure cases. Current hello-service fixture still allows architecture generation without a stricter upstream requirement precondition.",
+      "Architecture design generator failure cases.",
+      "hello-service-architecture-generator-failure.test.mjs",
+      "runHelloServiceArchitectureGeneratorFailureTest",
     ),
     unimplementedEntry("generator:architecture-design:real-llm:success", "Architecture design generator real LLM success cases."),
     unimplementedEntry("generator:architecture-design:real-llm:failure", "Architecture design generator real LLM failure cases."),
