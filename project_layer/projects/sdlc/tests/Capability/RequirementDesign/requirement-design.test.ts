@@ -11,6 +11,7 @@ import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTem
 
 export async function runRequirementDesignCapabilityTests(): Promise<void> {
   await testRequirementGeneratorReturnsGeneratedDocument();
+  await testRequirementGeneratorOmitsExistingRequirementForGenerate();
   await testRequirementContractReportsMissingSections();
   await testRequirementRuntimeUnitPersistsGeneratedDocument();
 }
@@ -54,6 +55,42 @@ async function testRequirementGeneratorReturnsGeneratedDocument(): Promise<void>
     assert.equal(userPrompt?.target, "requirement_design_generate");
     assert.equal(userPrompt?.userComment, "Generate requirement baseline from user comment.");
     assert.equal(typeof userPrompt?.template, "string");
+  } finally {
+    await removeTempDir(workspaceRoot);
+  }
+}
+
+async function testRequirementGeneratorOmitsExistingRequirementForGenerate(): Promise<void> {
+  const workspaceRoot = await createTempDir("requirement-generator-generate-no-existing-");
+
+  try {
+    let capturedRequest:
+      | {
+          prompt: { userPrompt: unknown };
+        }
+      | undefined;
+    const generator = new RequirementGenerator({
+      llmExecutor: createMockLlmExecutor(async (request) => {
+        capturedRequest = request;
+        return {
+          content: "# Generated Requirement\n",
+          responseFormat: "text",
+        };
+      }),
+    });
+
+    await generator.run({
+      ...createExecutionContext(workspaceRoot, "requirement_design_generate", {
+        requirement_design: "# Existing Requirement\n",
+      }),
+      params: {
+        executionUnit: "requirement_design_generate",
+        userComment: "Generate requirement baseline from user comment.",
+      },
+    });
+
+    const userPrompt = capturedRequest?.prompt.userPrompt as Record<string, unknown> | undefined;
+    assert.equal("existingRequirement" in (userPrompt ?? {}), false);
   } finally {
     await removeTempDir(workspaceRoot);
   }

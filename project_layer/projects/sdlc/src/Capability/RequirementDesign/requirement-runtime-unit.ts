@@ -52,11 +52,13 @@ export class RequirementDesignRuntimeUnit extends RuntimeUnitBase {
       throw new Error('Missing required option: --user-comment');
     }
 
-    const inputArtifacts = await this.readOptionalWorkspaceFile(
-      context.workspaceRoot,
-      REQUIREMENT_DOCUMENT_PATH,
-      "requirement_design",
-    );
+    const inputArtifacts = request.executionUnitId === "requirement_design_update"
+      ? await this.readOptionalWorkspaceFile(
+        context.workspaceRoot,
+        REQUIREMENT_DOCUMENT_PATH,
+        "requirement_design",
+      )
+      : {};
     const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
     const output = await new RequirementGenerator({
       llmExecutor: this.llmExecutor,

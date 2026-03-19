@@ -51,7 +51,9 @@ export class ArchitectureDesignRuntimeUnit extends RuntimeUnitBase {
   private async runGenerate(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
     const inputArtifacts = {
       requirement_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, REQUIREMENT_DOCUMENT_PATH),
-      ...(await this.readOptionalWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH, "architecture_design")),
+      ...(request.executionUnitId === "architecture_design_update"
+        ? await this.readOptionalWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH, "architecture_design")
+        : {}),
     };
     const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
     const output = await new ArchitectureDesignGenerator({

@@ -39,6 +39,7 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
 
   protected buildPrompt(inputDocument: RequirementGeneratorInput, template: string): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
+    const includeExistingRequirement = executionUnit === "requirement_design_update";
     return {
       prompt: {
         systemPrompt: [
@@ -50,7 +51,9 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
         userPrompt: {
           target: executionUnit,
           userComment: inputDocument.userComment,
-          ...(inputDocument.existingRequirement ? { existingRequirement: inputDocument.existingRequirement } : {}),
+          ...(includeExistingRequirement && inputDocument.existingRequirement
+            ? { existingRequirement: inputDocument.existingRequirement }
+            : {}),
           template,
         },
       },

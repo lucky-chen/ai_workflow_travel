@@ -1,7 +1,7 @@
 import type { ContractIssue } from "../../Runtime/Unit/execution-unit.js";
 import type { ContractSpec, DocumentContract, SectionContract } from "./document-unit-contract.js";
 
-const PLACEHOLDER_PATTERN = /\{[^}]+\}/;
+const PLACEHOLDER_PATTERN = /\{[A-Za-z][A-Za-z0-9_]*\}/;
 const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/;
 
 export function runMarkdownDocumentStaticChecks(
@@ -91,17 +91,16 @@ function findSectionHeadingLine(
   section: SectionContract,
 ): { lineIndex: number; level: number } | null {
   const lines = content.split("\n");
-  const level = getHeadingLevel(section.section_id);
   const bodyPattern = buildHeadingBodyPattern(section);
 
   for (let index = 0; index < lines.length; index += 1) {
     const match = lines[index].match(HEADING_PATTERN);
-    if (!match || match[1].length !== level) {
+    if (!match) {
       continue;
     }
 
     if (bodyPattern.test(match[2].trim())) {
-      return { lineIndex: index, level };
+      return { lineIndex: index, level: match[1].length };
     }
   }
 
@@ -133,13 +132,8 @@ function buildHeadingBodyPattern(section: SectionContract): RegExp {
 }
 
 function formatSectionHeadingDisplay(section: SectionContract): string {
-  const prefix = "#".repeat(getHeadingLevel(section.section_id));
   const title = PLACEHOLDER_PATTERN.test(section.title) ? "<title>" : section.title;
-  return `${prefix} ${section.section_id}. ${title}`;
-}
-
-function getHeadingLevel(sectionId: string): number {
-  return Math.min(sectionId.split(".").length, 6);
+  return `section ${section.section_id}. ${title}`;
 }
 
 function sectionContainsCodeBlock(sectionContent: string, language: string): boolean {

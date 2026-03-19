@@ -1,33 +1,32 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
-
-const sourceWorkspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const projectRoot = path.resolve(sourceWorkspaceRoot, "..", "..");
-const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
-const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
+import {
+  createWorkspaceCopy,
+  removeWorkspace,
+  resetWorkspace,
+  runCli,
+} from "./hello-service-test-helpers.mjs";
 
 export async function runHelloServiceFunctionalTest() {
   const workspaceRoot = await createWorkspaceCopy();
 
   try {
-    await runCli(
-      workspaceRoot,
-      ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
-      "hello-service-req",
-    );
-    await runCli(workspaceRoot, ["run", "unit", "architecture_design_generate"], "hello-service-arch");
+    await resetWorkspace(workspaceRoot);
+
+    await runCli(workspaceRoot, ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"], {
+      runId: "hello-service-req",
+    });
+    await runCli(workspaceRoot, ["run", "unit", "architecture_design_generate"], { runId: "hello-service-arch" });
 
     const itemDescriptorPath = await createItemDescriptor(workspaceRoot);
     await runCli(
       workspaceRoot,
       ["run", "unit", "item_design_generate", "--item-descriptor-path", itemDescriptorPath],
-      "hello-service-item",
+      { runId: "hello-service-item" },
     );
-    await runCli(workspaceRoot, ["run", "unit", "work_plan_generate"], "hello-service-plan");
+    await runCli(workspaceRoot, ["run", "unit", "work_plan_generate"], { runId: "hello-service-plan" });
 
     const requirementDocument = await readFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8");
     const architectureDocument = await readFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8");
@@ -40,25 +39,8 @@ export async function runHelloServiceFunctionalTest() {
     assert.match(itemDesignDocument, /Workflow coordinates the hello-service generation baseline/i);
     assert.match(workPlanDocument, /deliver the hello-service implementation baseline/i);
   } finally {
-    await rm(workspaceRoot, { recursive: true, force: true });
+    await removeWorkspace(workspaceRoot);
   }
-}
-
-async function createWorkspaceCopy() {
-  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "hello-service-sdlc-"));
-  await cp(sourceWorkspaceRoot, workspaceRoot, {
-    recursive: true,
-    filter(sourcePath) {
-      const relativePath = path.relative(sourceWorkspaceRoot, sourcePath);
-      if (!relativePath) {
-        return true;
-      }
-
-      const topLevelName = relativePath.split(path.sep)[0];
-      return !["node_modules", "dist", ".artifact-store", "reports"].includes(topLevelName);
-    },
-  });
-  return workspaceRoot;
 }
 
 async function createItemDescriptor(workspaceRoot) {
@@ -79,34 +61,6 @@ async function createItemDescriptor(workspaceRoot) {
     "utf8",
   );
   return path.relative(workspaceRoot, descriptorPath);
-}
-
-async function runCli(workspaceRoot, args, runId) {
-  const child = spawn(process.execPath, [cliEntry, ...args, "--workdir", workspaceRoot, "--run-id", runId], {
-    cwd: sdlcProjectRoot,
-    env: {
-      ...process.env,
-      SDLC_TEST_SCENARIO: "fixed_workspace_baseline",
-      SDLC_TEST_SERVICE_NAME: "hello-service",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-
-  let stdout = "";
-  let stderr = "";
-  child.stdout.on("data", (chunk) => {
-    stdout += String(chunk);
-  });
-  child.stderr.on("data", (chunk) => {
-    stderr += String(chunk);
-  });
-
-  const exitCode = await new Promise((resolve, reject) => {
-    child.on("error", reject);
-    child.on("close", resolve);
-  });
-
-  assert.equal(exitCode, 0, `CLI failed.\nstdout:\n${stdout}\nstderr:\n${stderr}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

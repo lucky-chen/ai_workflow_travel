@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -33,6 +33,7 @@ export async function runHelloServiceOverallDesignContractFailureTest() {
       taskId: failureTaskId,
       runId: runIds.architectureGenerate,
     });
+    await rm(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design"), { recursive: true, force: true });
     await mkdir(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design"), { recursive: true });
     await runCli(targetWorkspaceRoot, ["run", "unit", "overall_design_contract"], {
       taskId: failureTaskId,

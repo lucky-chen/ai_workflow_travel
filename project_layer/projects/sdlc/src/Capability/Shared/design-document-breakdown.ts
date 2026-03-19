@@ -26,15 +26,15 @@ export function parseDesignDocumentBreakdown(content: string): DesignDocumentDes
 }
 
 function parseDesignDocumentLine(line: string): DesignDocumentDescriptor | null {
-  const match = line.match(/^- (?:`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))[:：]\s*(.+)$/);
+  const match = line.match(/^- (?:`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))(?:[:：]\s*(.+))?$/);
   if (!match) {
     return null;
   }
 
   const rawDocumentPath = match[1] ?? match[3] ?? "";
   const documentPath = normalizeDocumentPath(rawDocumentPath);
-  const description = match[4].trim();
-  if (documentPath.length === 0 || description.length === 0) {
+  const description = (match[4] ?? "").trim();
+  if (documentPath.length === 0) {
     return null;
   }
 
@@ -43,8 +43,8 @@ function parseDesignDocumentLine(line: string): DesignDocumentDescriptor | null 
     targetName: inferTargetName(documentPath),
     targetType: "item_design",
     documentPath,
-    description,
-    responsibilities: [description],
+    description: description || `Design document for ${inferTargetName(documentPath)}.`,
+    responsibilities: [description || `Design document for ${inferTargetName(documentPath)}.`],
   };
 }
 

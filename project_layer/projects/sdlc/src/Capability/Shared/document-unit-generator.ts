@@ -58,7 +58,7 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
       return cached;
     }
 
-    const template = await readFile(templatePath, "utf8");
+    const template = this.sanitizeTemplateForPrompt(await readFile(templatePath, "utf8"));
     DocumentUnitGenerator.resourceCache.set(templatePath, template);
     return template;
   }
@@ -86,4 +86,11 @@ export abstract class DocumentUnitGenerator<TInput = string> implements IExecuti
   }
 
   protected abstract buildExecutionUnitResult(result: LlmExecutionResult): Promise<ExecutionUnitResult>;
+
+  protected sanitizeTemplateForPrompt(template: string): string {
+    return template
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
 }

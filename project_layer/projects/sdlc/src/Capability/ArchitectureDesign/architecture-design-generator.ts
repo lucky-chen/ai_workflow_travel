@@ -44,6 +44,7 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
 
   protected buildPrompt(inputDocument: ArchitectureDesignGeneratorInputPayload, template: string): LlmExecutionRequest {
     const executionUnit = this.readRequestedExecutionUnit("architecture_design_generate");
+    const includeCurrentArchitectureDocument = executionUnit === "architecture_design_update";
     return {
       prompt: {
         systemPrompt: [
@@ -56,7 +57,9 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
         userPrompt: {
           target: executionUnit,
           requirementDocument: inputDocument.requirementDocument,
-          currentArchitectureDocument: inputDocument.currentArchitectureDocument ?? "",
+          ...(includeCurrentArchitectureDocument && inputDocument.currentArchitectureDocument
+            ? { currentArchitectureDocument: inputDocument.currentArchitectureDocument }
+            : {}),
           template,
         },
       },

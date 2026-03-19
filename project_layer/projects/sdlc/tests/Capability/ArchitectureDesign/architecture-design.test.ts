@@ -11,7 +11,9 @@ import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTem
 
 export async function runArchitectureDesignCapabilityTests(): Promise<void> {
   await testArchitectureGeneratorReturnsDocumentAndBreakdown();
+  await testArchitectureGeneratorOmitsCurrentDocumentForGenerate();
   await testArchitectureContractReportsMissingHeadings();
+  await testArchitectureContractRequiresBreakdownJsonToCoverReferencedDocuments();
   await testArchitectureRuntimeUnitPersistsDocumentAndBreakdown();
 }
 
@@ -51,6 +53,40 @@ async function testArchitectureGeneratorReturnsDocumentAndBreakdown(): Promise<v
   }
 }
 
+async function testArchitectureGeneratorOmitsCurrentDocumentForGenerate(): Promise<void> {
+  const workspaceRoot = await createTempDir("architecture-generator-generate-no-current-");
+
+  try {
+    let capturedRequest:
+      | {
+          prompt: { userPrompt: unknown };
+        }
+      | undefined;
+    const generator = new ArchitectureDesignGenerator({
+      llmExecutor: createMockLlmExecutor(async (request) => {
+        capturedRequest = request;
+        return {
+          content: "# Technical Architecture\n",
+          responseFormat: "text",
+        };
+      }),
+    });
+
+    await generator.run(
+      createExecutionContext(workspaceRoot, "architecture_design_generate", {
+        requirement_design: "# Requirement\n",
+        architecture_design: "# Existing Architecture\n",
+      }),
+    );
+
+    const userPrompt = capturedRequest?.prompt.userPrompt as Record<string, unknown> | undefined;
+    assert.equal(userPrompt?.target, "architecture_design_generate");
+    assert.equal("currentArchitectureDocument" in (userPrompt ?? {}), false);
+  } finally {
+    await removeTempDir(workspaceRoot);
+  }
+}
+
 async function testArchitectureContractReportsMissingHeadings(): Promise<void> {
   const workspaceRoot = await createTempDir("architecture-contract-");
 
@@ -72,6 +108,164 @@ async function testArchitectureContractReportsMissingHeadings(): Promise<void> {
     assert.match(result.summary, /failed contract checks/i);
     assert.equal(
       result.issues.some((issue) => issue.message.includes("Missing required section")),
+      true,
+    );
+  } finally {
+    await removeTempDir(workspaceRoot);
+  }
+}
+
+async function testArchitectureContractRequiresBreakdownJsonToCoverReferencedDocuments(): Promise<void> {
+  const workspaceRoot = await createTempDir("architecture-contract-breakdown-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs"), { recursive: true });
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "architecture_design_breakdown.json"),
+      JSON.stringify([], null, 2),
+      "utf8",
+    );
+
+    const content = [
+      "# Technical Architecture",
+      "",
+      "## 1. Purpose",
+      "",
+      "Define the overall technical architecture of the `hello-service` platform.",
+      "",
+      "- Team members: provide a shared high-level baseline for the team.",
+      "- Senior engineers: review architecture direction and boundaries.",
+      "- Junior engineers: understand system and module structure for later design and implementation.",
+      "",
+      "## 2. Scope",
+      "",
+      "### 2.1 In Scope",
+      "",
+      "- Overall system interaction and control flow at architecture level.",
+      "",
+      "### 2.2 Out of Scope",
+      "",
+      "- Detailed module internals and implementation logic.",
+      "",
+      "## 3. Design Drivers",
+      "",
+      "- Driver A",
+      "",
+      "# 4. Architecture Design",
+      "",
+      "### 4.1 Architecture Style",
+      "",
+      "The system adopts a `modular monolith` architecture.",
+      "",
+      "### 4.2 Layers or Partitions",
+      "",
+      "- `InterfaceLayer`: request entry",
+      "- `ApplicationLayer`: business orchestration",
+      "- `DataLayer`: persistence boundary",
+      "",
+      "### 4.3 Allowed Dependencies",
+      "",
+      "ALLOW:",
+      "- `InterfaceLayer` -> `ApplicationLayer`",
+      "- `ApplicationLayer` -> `DataLayer`",
+      "",
+      "### 4.4 High-level Diagram",
+      "",
+      "```text",
+      "[High-level architecture diagram here]",
+      "```",
+      "",
+      "### 4.5 Runtime Topology",
+      "",
+      "- `RuntimeNodeA`: role a",
+      "",
+      "### 4.6 Technology Choices",
+      "",
+      "- `InterfaceLayer`: `Node.js` for request handling",
+      "",
+      "## 5. System Interactions",
+      "",
+      "### 5.1 Primary Interaction Path",
+      "",
+      "```text",
+      "[Main flow diagram here]",
+      "```",
+      "",
+      "1. `Step1`",
+      "",
+      "`FlowSummary`",
+      "",
+      "### 5.2 Core Modules",
+      "",
+      "- **`LayerOrPartitionA`**",
+      "  - `ModuleA`",
+      "    - responsibility: `ResponsibilityA`",
+      "",
+      "### 5.3 Interaction Model",
+      "",
+      "This section describes high-level cross-module interaction.",
+      "",
+      "### 5.4 Key Considerations",
+      "",
+      "- `ImportantConsideration1`",
+      "",
+      "## 6. Non-Functional Considerations",
+      "",
+      "### 6.1 High Availability",
+      "",
+      "- Why it matters:",
+      "  - `Reason1`",
+      "- Architectural support:",
+      "  - `Support1`",
+      "",
+      "### 6.2 High Scalability",
+      "",
+      "- Why it matters:",
+      "  - `Reason1`",
+      "- Architectural support:",
+      "  - `Support1`",
+      "",
+      "### 6.3 High Performance",
+      "",
+      "- Why it matters:",
+      "  - `Reason1`",
+      "- Architectural support:",
+      "  - `Support1`",
+      "",
+      "## 7. Design Documents",
+      "",
+      "### 7.1 Design Document Categories",
+      "",
+      "- `CategoryA`",
+      "- `CategoryB`",
+      "- `CategoryC`",
+      "",
+      "### 7.2 Design Document Breakdown",
+      "",
+      "- [workflow_design](sdlc/docs/item_design/Workflow.md): covers Workflow.",
+      "",
+      "## 8. Open Issues",
+      "",
+      "- `OpenIssue1`",
+      "",
+    ].join("\n");
+
+    const result = await new ArchitectureDesignContract().check(
+      createExecutionContext(workspaceRoot, "architecture_design_contract"),
+      {
+        executionUnitId: "architecture_design",
+        success: true,
+        summary: "Loaded architecture design artifact for contract check.",
+        artifacts: {
+          artifactKey: "architecture_design",
+          content,
+        },
+      },
+    );
+
+    assert.equal(result.passed, false);
+    assert.equal(
+      result.issues.some((issue) => issue.message.includes("architecture_design_breakdown.json is missing documentPath entries")),
       true,
     );
   } finally {

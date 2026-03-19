@@ -35,7 +35,7 @@ export abstract class DocumentUnitContract implements IContractChecker {
 
   async check(context: ExecutionContext, output: ExecutionUnitResult): Promise<ContractCheckResult> {
     const contractSpec = await this.loadSpecificContract(context);
-    const staticIssues = this.collectStaticIssues(context, output, contractSpec);
+    const staticIssues = await this.collectStaticIssues(context, output, contractSpec);
     if (staticIssues.length > 0) {
       return this.buildContractResult({
         passed: false,
@@ -90,7 +90,7 @@ export abstract class DocumentUnitContract implements IContractChecker {
     _context: ExecutionContext,
     _output: ExecutionUnitResult,
     _contractSpec: ContractSpec,
-  ): ContractIssue[] {
+  ): Promise<ContractIssue[]> | ContractIssue[] {
     return [];
   }
 
