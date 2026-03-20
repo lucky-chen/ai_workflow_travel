@@ -17,9 +17,9 @@ context:
 workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
-    stage_id: update prompt mcp handoff usable
-    batch_id: batch_12_2_update_prompt_mcp_handoff_verification
-    task_name: verify update prompt handoff payloads
+    stage_id: change payload integration usable
+    batch_id: batch_13_1_change_payload_integration
+    task_name: define external changes payload
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -947,11 +947,11 @@ milestones:
   - milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     name: v2 mcp change and gate integration
     goal: integrate external mcp capabilities so update prompts gate decisions and change payloads can form one usable continuation loop
-    status: pending
+    status: in_progress
     stages:
       - stage_id: update prompt mcp handoff usable
         goal: make document update prompt outputs consumable by external mcp capabilities through one stable handoff shape
-        status: pending
+        status: completed
         delivered_feature: mcp update prompt handoff
         feature_scope:
           - mcp_action_shape
@@ -987,7 +987,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify that document update outputs can be handed to external mcp capabilities without extra shape translation
-            status: in_progress
+            status: completed
             covers:
               - mcp_action_shape
               - update_prompt_payload
@@ -995,7 +995,7 @@ milestones:
             tasks:
               - task_name: verify update prompt handoff payloads
                 summary: verify update prompt handoff payloads against the runtime external-action boundary and document update design docs
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - project_layer/docs/breakdown_docs/runtime_design.md
@@ -1004,8 +1004,8 @@ milestones:
                   - project_layer/docs/breakdown_docs/item_design.md
                   - project_layer/docs/breakdown_docs/work_design.md
                 progress_notes:
-                  - add shape-level tests for all update-style runtime units instead of validating only one sample unit
-                  - verification passes only when external mcp consumers can read the payload without per-unit translation logic
+                  - verified requirement architecture item-design and work-plan update runtime units against the same payload field names and targetArtifact binding contract
+                  - confirmed the capability test suite passes after the update payload shape was unified without per-unit field translation
         validation:
           - update-style units expose one stable mcp-consumable handoff payload
           - target path and prompt payload remain stable across requirement architecture item-design and work-plan
