@@ -82,7 +82,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-requirement-generator-failure.test.mjs",
       "runHelloServiceRequirementGeneratorFailureTest",
     ),
-    unimplementedEntry("generator:requirement-design:real-llm:success", "Requirement design generator real LLM success cases."),
+    implementedEntry(
+      "generator:requirement-design:real-llm:success",
+      "Requirement design generator real LLM success cases.",
+      "hello-service-requirement-generator-real-llm.test.mjs",
+      "runHelloServiceRequirementGeneratorRealLlmTest",
+    ),
     unimplementedEntry("generator:requirement-design:real-llm:failure", "Requirement design generator real LLM failure cases."),
     implementedEntry(
       "generator:architecture-design:success",
