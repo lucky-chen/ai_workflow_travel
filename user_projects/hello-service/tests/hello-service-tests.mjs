@@ -217,7 +217,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-item-design-contract-failure.test.mjs",
       "runHelloServiceItemDesignContractFailureTest",
     ),
-    unimplementedEntry("contract:item-design:real-llm:success", "Item design contract real LLM success cases."),
+    implementedEntry(
+      "contract:item-design:real-llm:success",
+      "Item design contract real LLM success cases.",
+      "hello-service-item-design-contract-real-llm.test.mjs",
+      "runHelloServiceItemDesignContractRealLlmTest",
+    ),
     unimplementedEntry("contract:item-design:real-llm:failure", "Item design contract real LLM failure cases."),
     implementedEntry(
       "contract:overall-design:success",
