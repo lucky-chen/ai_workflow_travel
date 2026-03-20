@@ -4,14 +4,14 @@ import {
 import {
   ArchitectureDesignGenerateRuntimeUnit,
 } from "../../Capability/ArchitectureDesign/architecture-design-generator.js";
-import { ArchitectureDesignUpdateRuntimeUnit } from "../../Capability/ArchitectureDesign/architecture-design-update-runtime-unit.js";
+import { ArchitectureDesignUpdateRuntimeUnit } from "../../Capability/ArchitectureDesign/architecture-design-update.js";
 import {
   ItemDesignContractRuntimeUnit,
 } from "../../Capability/ItemDesign/item-design-contract.js";
 import {
   ItemDesignGenerateRuntimeUnit,
 } from "../../Capability/ItemDesign/item-design-generator.js";
-import { ItemDesignUpdateRuntimeUnit } from "../../Capability/ItemDesign/item-design-update-runtime-unit.js";
+import { ItemDesignUpdateRuntimeUnit } from "../../Capability/ItemDesign/item-design-update.js";
 import { OverallDesignContractRuntimeUnit } from "../../Capability/OverallDesignContract/overall-design-contract-runtime-unit.js";
 import {
   RequirementDesignContractRuntimeUnit,
@@ -19,7 +19,7 @@ import {
 import {
   RequirementDesignGenerateRuntimeUnit,
 } from "../../Capability/RequirementDesign/requirement-generator.js";
-import { RequirementDesignUpdateRuntimeUnit } from "../../Capability/RequirementDesign/requirement-update-runtime-unit.js";
+import { RequirementDesignUpdateRuntimeUnit } from "../../Capability/RequirementDesign/requirement-update.js";
 import { WorkExecuteRuntimeUnit } from "../../Capability/WorkExecute/work-execute-runtime-unit.js";
 import {
   WorkPlanContractRuntimeUnit,
@@ -27,7 +27,7 @@ import {
 import {
   WorkPlanGenerateRuntimeUnit,
 } from "../../Capability/WorkPlan/work-plan-generator.js";
-import { WorkPlanUpdateRuntimeUnit } from "../../Capability/WorkPlan/work-plan-update-runtime-unit.js";
+import { WorkPlanUpdateRuntimeUnit } from "../../Capability/WorkPlan/work-plan-update.js";
 import type { RuntimeInput, RuntimeResult } from "../Schema/runtime.js";
 import type { Orchestrator, RuntimeOrchestratorDependencies, RuntimeUnit } from "./types.js";
 

@@ -7,7 +7,7 @@ import {
   WorkPlanGenerator,
   WorkPlanGenerateRuntimeUnit,
 } from "../../../src/Capability/WorkPlan/work-plan-generator.js";
-import { WorkPlanUpdateRuntimeUnit } from "../../../src/Capability/WorkPlan/work-plan-update-runtime-unit.js";
+import { WorkPlanUpdateRuntimeUnit } from "../../../src/Capability/WorkPlan/work-plan-update.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";

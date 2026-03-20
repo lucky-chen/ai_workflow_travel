@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { RequirementContract } from "../../../src/Capability/RequirementDesign/requirement-contract.js";
 import { RequirementGenerator, RequirementDesignGenerateRuntimeUnit } from "../../../src/Capability/RequirementDesign/requirement-generator.js";
-import { RequirementDesignUpdateRuntimeUnit } from "../../../src/Capability/RequirementDesign/requirement-update-runtime-unit.js";
+import { RequirementDesignUpdateRuntimeUnit } from "../../../src/Capability/RequirementDesign/requirement-update.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";

@@ -7,7 +7,7 @@ import {
   ArchitectureDesignGenerator,
   ArchitectureDesignGenerateRuntimeUnit,
 } from "../../../src/Capability/ArchitectureDesign/architecture-design-generator.js";
-import { ArchitectureDesignUpdateRuntimeUnit } from "../../../src/Capability/ArchitectureDesign/architecture-design-update-runtime-unit.js";
+import { ArchitectureDesignUpdateRuntimeUnit } from "../../../src/Capability/ArchitectureDesign/architecture-design-update.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";

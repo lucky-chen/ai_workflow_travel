@@ -17,18 +17,11 @@ export interface ItemDescriptor {
 }
 
 export type ItemDesignArtifacts =
-  | {
+  {
     artifactKey: "item_design_document";
     moduleName: string;
     documentPath: string;
     content: string;
-  }
-  | {
-    artifactKey: "item_design_update";
-    moduleName: string;
-    documentPath: string;
-    prompt: string;
-    targetPath: string;
   };
 
 export interface ItemDesignGeneratorDependencies {
@@ -42,7 +35,6 @@ export const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
 interface ItemDesignGeneratorInputPayload {
   architectureDocument: string;
   itemDescriptor: ItemDescriptor;
-  currentItemDocument?: string;
 }
 
 export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGeneratorInputPayload> {
@@ -75,7 +67,6 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
     return {
       architectureDocument,
       itemDescriptor: parsed,
-      currentItemDocument: getArtifactValue(inputArtifacts, "item_design_document"),
     };
   }
 
@@ -101,30 +92,20 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
   }
 
   protected buildPrompt(inputDocument: ItemDesignGeneratorInputPayload, promptMaterials: DocumentPromptMaterials): LlmExecutionRequest {
-    const executionUnit = this.readRequestedExecutionUnit("item_design_generate");
-    const isUpdate = executionUnit === "item_design_update";
+    const executionUnit = "item_design_generate";
     return {
       prompt: {
         systemPrompt:
-          isUpdate
-            ? "You produce one markdown update instruction for an external plugin to update the current item design document. " +
-              "Use the current item design document as the base document. " +
-              "Use the contract rules to identify what must change and what structure must remain aligned. " +
-              "Do not output the final updated item design document. " +
-              "Return only the update instruction text."
-            : "You generate an item design document that follows the provided template structure. " +
-              "Use the template as the document skeleton. " +
-              "Use the contract rules as the chapter content and format requirements. " +
-              "Treat template rules as authoring instructions only, not as output content. " +
-              "Do not copy template comments, contract schema names, generator internals, or validation internals into the document unless the architecture explicitly defines them. " +
-              "Return plain markdown only.",
+          "You generate an item design document that follows the provided template structure. " +
+          "Use the template as the document skeleton. " +
+          "Use the contract rules as the chapter content and format requirements. " +
+          "Treat template rules as authoring instructions only, not as output content. " +
+          "Do not copy template comments, contract schema names, generator internals, or validation internals into the document unless the architecture explicitly defines them. " +
+          "Return plain markdown only.",
         userPrompt: {
           target: executionUnit,
           architectureDocument: inputDocument.architectureDocument,
           itemDescriptor: inputDocument.itemDescriptor,
-          ...(isUpdate && inputDocument.currentItemDocument
-            ? { currentItemDocument: inputDocument.currentItemDocument }
-            : {}),
           templateContract: promptMaterials.contractSpec,
           template: promptMaterials.template,
         },
@@ -143,28 +124,16 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
     if (!itemName) {
       throw new Error('Item design generation result must include metadata.itemName.');
     }
-    const executionUnit = this.readRequestedExecutionUnit("item_design_generate");
-    const isUpdate = executionUnit === "item_design_update";
     return {
       executionUnitId: "item_design",
       success: true,
-      summary: isUpdate
-        ? `Item design update prompt generated for "${itemName}".`
-        : `Item design document generated for "${itemName}".`,
-      artifacts: isUpdate
-        ? {
-          artifactKey: "item_design_update",
-          moduleName: itemName,
-          documentPath: result.metadata?.documentPath ?? "",
-          prompt: result.content,
-          targetPath: result.metadata?.documentPath ?? "",
-        }
-        : {
-          artifactKey: "item_design_document",
-          moduleName: itemName,
-          documentPath: result.metadata?.documentPath ?? "",
-          content: result.content,
-        },
+      summary: `Item design document generated for "${itemName}".`,
+      artifacts: {
+        artifactKey: "item_design_document",
+        moduleName: itemName,
+        documentPath: result.metadata?.documentPath ?? "",
+        content: result.content,
+      },
     };
   }
 

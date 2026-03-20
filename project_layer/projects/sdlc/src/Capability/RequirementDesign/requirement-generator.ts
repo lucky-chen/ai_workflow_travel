@@ -8,14 +8,9 @@ import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
 import type { IArtifactStore } from "../../Data/artifact-store.js";
 
 export type RequirementArtifacts =
-  | {
+  {
     artifactKey: "requirement_design";
     content: string;
-  }
-  | {
-    artifactKey: "requirement_design_update";
-    prompt: string;
-    targetPath: string;
   };
 
 export interface RequirementGeneratorDependencies {
@@ -26,7 +21,6 @@ export interface RequirementGeneratorDependencies {
 export const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 
 interface RequirementGeneratorInput {
-  existingRequirement?: string;
   userComment: string;
 }
 
@@ -36,9 +30,7 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
   }
 
   protected async loadInputDocument(inputArtifacts: ArtifactMap): Promise<RequirementGeneratorInput> {
-    const existingRequirement = getArtifactValue(inputArtifacts, "requirement_design");
     return {
-      ...(existingRequirement ? { existingRequirement } : {}),
       userComment: this.readUserComment(this.getCurrentContext()),
     };
   }
@@ -48,34 +40,21 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
   }
 
   protected buildPrompt(inputDocument: RequirementGeneratorInput, promptMaterials: DocumentPromptMaterials): LlmExecutionRequest {
-    const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
-    const includeExistingRequirement = executionUnit === "requirement_design_update";
-    const systemPrompt = includeExistingRequirement
-      ? [
-        "You are a senior product and technical planning expert.",
-        "You produce one markdown update instruction for an external plugin to update the current requirement document.",
-        "Use the current requirement as the base document.",
-        "Use the contract rules to decide what should change and what structure must stay aligned.",
-        "Do not output the final updated requirement document.",
-        "Return only the update instruction text.",
-      ]
-      : [
-        "You are a senior product and technical planning expert.",
-        "You generate a requirement document that follows the provided template structure.",
-        "Use the template as the document skeleton.",
-        "Use the contract rules as the chapter content and format requirements.",
-        "Treat template comments and contract schema as authoring instructions only, not output content.",
-        "Return plain markdown only.",
-      ];
+    const executionUnit = "requirement_design_generate";
+    const systemPrompt = [
+      "You are a senior product and technical planning expert.",
+      "You generate a requirement document that follows the provided template structure.",
+      "Use the template as the document skeleton.",
+      "Use the contract rules as the chapter content and format requirements.",
+      "Treat template comments and contract schema as authoring instructions only, not output content.",
+      "Return plain markdown only.",
+    ];
     return {
       prompt: {
         systemPrompt,
         userPrompt: {
           target: executionUnit,
           userComment: inputDocument.userComment,
-          ...(includeExistingRequirement && inputDocument.existingRequirement
-            ? { existingRequirement: inputDocument.existingRequirement }
-            : {}),
           template: promptMaterials.template,
           templateContract: promptMaterials.contractSpec,
         },
@@ -97,22 +76,14 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
   }
 
   protected async buildExecutionUnitResult(result: LlmExecutionResult): Promise<ExecutionUnitResult<RequirementArtifacts>> {
-    const executionUnit = this.readRequestedExecutionUnit("requirement_design_generate");
-    const isUpdate = executionUnit === "requirement_design_update";
     return {
       executionUnitId: "requirement_design",
       success: true,
-      summary: isUpdate ? "Requirement update prompt generated." : "Requirement document generated.",
-      artifacts: isUpdate
-        ? {
-          artifactKey: "requirement_design_update",
-          prompt: result.content,
-          targetPath: "sdlc/docs/Requirement.md",
-        }
-        : {
-          artifactKey: "requirement_design",
-          content: result.content,
-        },
+      summary: "Requirement document generated.",
+      artifacts: {
+        artifactKey: "requirement_design",
+        content: result.content,
+      },
     };
   }
 }

@@ -7,7 +7,7 @@ import {
   ItemDesignGenerator,
   ItemDesignGenerateRuntimeUnit,
 } from "../../../src/Capability/ItemDesign/item-design-generator.js";
-import { ItemDesignUpdateRuntimeUnit } from "../../../src/Capability/ItemDesign/item-design-update-runtime-unit.js";
+import { ItemDesignUpdateRuntimeUnit } from "../../../src/Capability/ItemDesign/item-design-update.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
