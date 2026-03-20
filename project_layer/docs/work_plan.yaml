@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: work execute design alignment usable
     batch_id: batch_11_2_work_execute_design_alignment_verification
-    task_name: verify work-execute prompt-action mock
+    task_name: verify work-execute contract command validation
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -920,10 +920,13 @@ milestones:
             tasks:
               - task_name: verify work-execute prompt-action mock
                 summary: verify hello-service work_execute returns prompt plus externalAction under mock execution with the single-runId layout
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - verified hello-service work_execute generator success under the prompt-plus-action mock model with single-runId storage
+                  - reverified the hello-service unit-flow success path after the work_execute prompt-action boundary change
               - task_name: verify work-execute contract command validation
                 summary: verify hello-service work_execute_contract remains command-based validation without llm execution
                 status: pending
