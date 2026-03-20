@@ -1,8 +1,0 @@
-{
-  "artifactKey": "validation_result",
-  "projectPath": "/Users/chen/Documents/workspace/ai/mvp/user_projects/hello-service",
-  "command": "cd \"/Users/chen/Documents/workspace/ai/mvp/user_projects/hello-service\" && npm test",
-  "exitCode": 0,
-  "logs": "> test\n> node ./scripts/run-workspace-shell-check.mjs\n\nhello-service mock shell check passed.",
-  "passed": true
-}
