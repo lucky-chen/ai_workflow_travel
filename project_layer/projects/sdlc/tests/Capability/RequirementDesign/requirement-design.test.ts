@@ -228,6 +228,7 @@ async function testRequirementUpdateRuntimeUnitLoadsCurrentDocument(): Promise<v
       operation: "update_markdown",
       targetPath: "sdlc/docs/Requirement.md",
       payload: {
+        handoffType: "document_update",
         prompt: [
           "Update the existing requirement markdown document.",
           "",
@@ -241,6 +242,10 @@ async function testRequirementUpdateRuntimeUnitLoadsCurrentDocument(): Promise<v
           "Keep the document aligned with the existing template structure and contract requirements.",
           "Do not apply the change directly.",
         ].join("\n"),
+        targetArtifact: {
+          artifactKey: "requirement_design",
+          filePath: "sdlc/docs/Requirement.md",
+        },
       },
     });
     assert.equal(

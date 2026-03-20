@@ -95,7 +95,12 @@ export class ItemDesignUpdateRuntimeUnit extends RuntimeUnitBase {
       operation: "update_markdown",
       targetPath,
       payload: {
+        handoffType: "document_update" as const,
         prompt,
+        targetArtifact: {
+          artifactKey: `${descriptor.name}_design`,
+          filePath: targetPath,
+        },
       },
     };
     await this.writeArtifact(

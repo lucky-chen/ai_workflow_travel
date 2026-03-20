@@ -224,6 +224,7 @@ async function testItemDesignUpdateRuntimeUnitReturnsExternalAction(): Promise<v
       operation: "update_markdown",
       targetPath: "sdlc/docs/item_design/Workflow.md",
       payload: {
+        handoffType: "document_update",
         prompt: [
           'Update the existing item design markdown document for "Workflow".',
           "",
@@ -245,6 +246,10 @@ async function testItemDesignUpdateRuntimeUnitReturnsExternalAction(): Promise<v
           "Keep the item design aligned with the architecture document, item descriptor, template structure, and contract requirements.",
           "Do not apply the change directly.",
         ].join("\n"),
+        targetArtifact: {
+          artifactKey: "Workflow_design",
+          filePath: "sdlc/docs/item_design/Workflow.md",
+        },
       },
     });
     assert.equal(

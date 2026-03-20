@@ -45,11 +45,22 @@ export interface RuntimeInput {
   context: RuntimeContext;
 }
 
+export interface ExternalActionTargetArtifact {
+  artifactKey: string;
+  filePath: string;
+}
+
+export interface DocumentUpdateActionPayload {
+  handoffType: "document_update";
+  prompt: string;
+  targetArtifact: ExternalActionTargetArtifact;
+}
+
 export interface ExternalAction {
   tool: "external_plugin" | "external_execution";
   operation: string;
   targetPath: string;
-  payload?: Record<string, unknown>;
+  payload?: DocumentUpdateActionPayload | Record<string, unknown>;
 }
 
 export interface RuntimeResult {

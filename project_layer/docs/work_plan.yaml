@@ -18,8 +18,8 @@ workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     stage_id: update prompt mcp handoff usable
-    batch_id: batch_12_1_update_prompt_mcp_handoff
-    task_name: define mcp update action payload
+    batch_id: batch_12_2_update_prompt_mcp_handoff_verification
+    task_name: verify update prompt handoff payloads
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -962,7 +962,7 @@ milestones:
             batch_type: implementation
             name: implementation
             goal: align update externalAction payloads with an mcp-consumable handoff contract
-            status: pending
+            status: completed
             progress_notes:
               - keep this batch limited to action-shape unification and do not introduce continuation logic here
               - the runtime schema is the single source of truth for the handoff payload shape
@@ -974,20 +974,20 @@ milestones:
             tasks:
               - task_name: define mcp update action payload
                 summary: define one stable mcp-oriented action payload for requirement architecture item-design and work-plan update prompts
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/projects/sdlc/src/Capability
                   - project_layer/docs/breakdown_docs/runtime_design.md
                 progress_notes:
-                  - expand ExternalAction from a thin tool operation targetPath payload shape into a stable mcp-oriented update handoff contract
-                  - include prompt payload and target artifact binding in one shared shape instead of per-unit ad hoc payload assembly
-                  - update runtime and breakdown docs in the same batch so terminology and boundary rules stay aligned
+                  - expanded the runtime schema so update-style actions now share one payload with handoffType prompt and targetArtifact binding
+                  - aligned requirement architecture item-design and work-plan update units to emit the same payload field names and semantics
+                  - updated runtime design documentation and capability tests so the new handoff contract stays explicit and checked
           - batch_id: batch_12_2_update_prompt_mcp_handoff_verification
             batch_type: verification
             name: verification
             goal: verify that document update outputs can be handed to external mcp capabilities without extra shape translation
-            status: pending
+            status: in_progress
             covers:
               - mcp_action_shape
               - update_prompt_payload

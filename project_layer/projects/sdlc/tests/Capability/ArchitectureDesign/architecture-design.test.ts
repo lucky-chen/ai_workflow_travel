@@ -392,6 +392,7 @@ async function testArchitectureUpdateRuntimeUnitLoadsCurrentDocument(): Promise<
       operation: "update_markdown",
       targetPath: "sdlc/docs/TechnicalArchitecture.md",
       payload: {
+        handoffType: "document_update",
         prompt: [
           "Update the existing technical architecture markdown document.",
           "",
@@ -405,6 +406,10 @@ async function testArchitectureUpdateRuntimeUnitLoadsCurrentDocument(): Promise<
           "Keep the architecture aligned with the requirement document, template structure, and contract requirements.",
           "Do not apply the change directly.",
         ].join("\n"),
+        targetArtifact: {
+          artifactKey: "architecture_design",
+          filePath: "sdlc/docs/TechnicalArchitecture.md",
+        },
       },
     });
     assert.equal(

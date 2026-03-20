@@ -313,6 +313,7 @@ async function testWorkPlanUpdateRuntimeUnitReturnsExternalAction(): Promise<voi
       operation: "update_markdown",
       targetPath: "sdlc/docs/work_plan.yaml",
       payload: {
+        handoffType: "document_update",
         prompt: [
           "Update the existing work plan yaml document.",
           "",
@@ -332,6 +333,10 @@ async function testWorkPlanUpdateRuntimeUnitReturnsExternalAction(): Promise<voi
           "Keep the work plan aligned with the requirement document, architecture document, item design documents, template structure, and contract requirements.",
           "Do not apply the change directly.",
         ].join("\n"),
+        targetArtifact: {
+          artifactKey: "work_plan",
+          filePath: "sdlc/docs/work_plan.yaml",
+        },
       },
     });
     assert.equal(

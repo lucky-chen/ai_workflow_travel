@@ -63,7 +63,12 @@ export class RequirementDesignUpdateRuntimeUnit extends RuntimeUnitBase {
       operation: "update_markdown",
       targetPath,
       payload: {
+        handoffType: "document_update" as const,
         prompt,
+        targetArtifact: {
+          artifactKey: "requirement_design",
+          filePath: targetPath,
+        },
       },
     };
     await this.writeArtifact(

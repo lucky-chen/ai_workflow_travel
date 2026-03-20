@@ -220,6 +220,7 @@ interface RuntimeResult {
 - Continuation must be evaluated only after the unit-side `ArtifactStore` write is finished.
 - Update-style units and `WorkExecute` must use one shared `ExternalAction` boundary instead of defining incompatible action shapes.
 - `ExternalAction` must carry at least `tool`, `operation`, and `targetPath`.
+- Update-style units must expose one stable payload with `handoffType`, `prompt`, and `targetArtifact` so external mcp consumers can bind the handoff without per-unit field translation.
 - External execution feedback must return through one shared `ExternalActionResult` shape before any follow-up contract, gate, or persistence step is evaluated.
 
 ### 4.2 Internal Runtime Skeleton
@@ -314,6 +315,11 @@ Processing:
 - pass one stable `ExternalAction` to the external caller or adapter boundary
 - expect the external side to execute against `targetPath` and return one `ExternalActionResult`
 - resume follow-up contract, gate, or next-step evaluation only after the external result is available
+- require update-style actions to keep one stable payload contract:
+  - `handoffType`: current handoff category such as `document_update`
+  - `prompt`: external update instruction content
+  - `targetArtifact.artifactKey`: logical artifact binding name
+  - `targetArtifact.filePath`: workspace-relative artifact path
 
 Output emission:
 
