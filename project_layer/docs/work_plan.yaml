@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: hello-service real-llm usable
     batch_id: batch_10_2_remaining_real_llm_matrix
-    task_name: verify work-plan generator real-llm
+    task_name: verify work-execute generator real-llm
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -803,10 +803,13 @@ milestones:
                   - verified item design generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5500-item-generator-real-llm/trace.json
               - task_name: verify work-plan generator real-llm
                 summary: implement and verify the work-plan generator real-llm entry
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - added a dedicated work-plan generator real-llm success entry in the hello-service generator registry
+                  - verified work-plan generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5600-work-plan-generator-real-llm/trace.json
               - task_name: verify work-execute generator real-llm
                 summary: implement and verify the work-execute generator real-llm entry
                 status: pending

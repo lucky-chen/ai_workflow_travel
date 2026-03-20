@@ -139,7 +139,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-work-plan-generator-failure.test.mjs",
       "runHelloServiceWorkPlanGeneratorFailureTest",
     ),
-    unimplementedEntry("generator:work-plan:real-llm:success", "Work plan generator real LLM success cases."),
+    implementedEntry(
+      "generator:work-plan:real-llm:success",
+      "Work plan generator real LLM success cases.",
+      "hello-service-work-plan-generator-real-llm.test.mjs",
+      "runHelloServiceWorkPlanGeneratorRealLlmTest",
+    ),
     unimplementedEntry("generator:work-plan:real-llm:failure", "Work plan generator real LLM failure cases."),
     implementedEntry(
       "generator:work-execute:success",
