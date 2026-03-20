@@ -158,7 +158,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-work-execute-generator-failure.test.mjs",
       "runHelloServiceWorkExecuteGeneratorFailureTest",
     ),
-    unimplementedEntry("generator:work-execute:real-llm:success", "Work execute generator real LLM success cases."),
+    implementedEntry(
+      "generator:work-execute:real-llm:success",
+      "Work execute generator real LLM success cases.",
+      "hello-service-work-execute-generator-real-llm.test.mjs",
+      "runHelloServiceWorkExecuteGeneratorRealLlmTest",
+    ),
     unimplementedEntry("generator:work-execute:real-llm:failure", "Work execute generator real LLM failure cases."),
   ],
   contract: [

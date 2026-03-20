@@ -194,10 +194,7 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
   }
 
   private parseGeneratedChanges(result: LlmExecutionResult): ApplyResult {
-    const parsed = this.tryParseJsonText<{
-      summary?: string;
-      changed_files?: Array<{ path: string; operation: ChangedFile["operation"]; content?: string }>;
-    }>(result.content);
+    const parsed = this.parseGeneratedChangesPayload(result.content);
 
     if (!parsed) {
       return {
@@ -207,13 +204,84 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
     }
 
     return {
-      summary: parsed.summary ?? "Implementation changes generated.",
-      changedFiles: (parsed.changed_files ?? []).map((file) => ({
+      summary: this.readStringValue(parsed.summary, parsed.message, parsed.description) ?? "Implementation changes generated.",
+      changedFiles: this.readChangedFiles(parsed).map((file) => ({
         path: file.path,
         operation: file.operation,
         content: file.content,
       })),
     };
+  }
+
+  private parseGeneratedChangesPayload(content: string): Record<string, unknown> | undefined {
+    const direct = this.tryParseJsonText<Record<string, unknown>>(content);
+    if (direct) {
+      return direct;
+    }
+
+    const fencedMatch = content.match(/```json\s*([\s\S]*?)\s*```/i) ?? content.match(/```\s*([\s\S]*?)\s*```/);
+    if (fencedMatch?.[1]) {
+      return this.tryParseJsonText<Record<string, unknown>>(fencedMatch[1]);
+    }
+
+    const objectMatch = content.match(/\{[\s\S]*\}/);
+    if (objectMatch?.[0]) {
+      return this.tryParseJsonText<Record<string, unknown>>(objectMatch[0]);
+    }
+
+    return undefined;
+  }
+
+  private readChangedFiles(parsed: Record<string, unknown>): ChangedFile[] {
+    const rawChangedFiles = this.readArrayValue(
+      parsed.changed_files,
+      parsed.changedFiles,
+      parsed.files,
+      parsed.changes,
+    );
+
+    return rawChangedFiles.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return [];
+      }
+
+      const candidate = entry as Record<string, unknown>;
+      const pathValue = this.readStringValue(candidate.path, candidate.filePath, candidate.file);
+      const operationValue = this.readStringValue(candidate.operation, candidate.action, candidate.type);
+      if (!pathValue || !operationValue || !this.isChangedFileOperation(operationValue)) {
+        return [];
+      }
+
+      return [{
+        path: pathValue,
+        operation: operationValue,
+        content: this.readStringValue(candidate.content, candidate.body, candidate.text),
+      }];
+    });
+  }
+
+  private readArrayValue(...values: unknown[]): unknown[] {
+    for (const value of values) {
+      if (Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return [];
+  }
+
+  private readStringValue(...values: unknown[]): string | undefined {
+    for (const value of values) {
+      if (typeof value === "string" && value.length > 0) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  private isChangedFileOperation(value: string): value is ChangedFile["operation"] {
+    return value === "create" || value === "update" || value === "delete";
   }
 
   private buildExecutionUnitResult(
