@@ -10,6 +10,7 @@ import {
   runCli,
 } from "./hello-service-test-helpers.mjs";
 import { continueDocumentUpdateLoop } from "../../../project_layer/projects/sdlc/dist/src/Runtime/external-update-loop.js";
+import { ExternalMcpAdapterService } from "../../../project_layer/projects/sdlc/dist/src/SDK/ExternalMcp/external-mcp-adapter.js";
 import { InMemoryChangeGate } from "../../../project_layer/projects/sdlc/dist/src/sdk/QualityControl/Gate/change-gate.js";
 
 const successTaskId = "hello-service-external-update-loop-success-task";
@@ -40,12 +41,6 @@ export async function runHelloServiceExternalUpdateLoopSuccessTest() {
     assert.equal(typeof updateResult.prompt, "string");
     assert.equal(updateResult.prompt.includes("deployment checks"), true);
 
-    const gate = new InMemoryChangeGate({
-      decision: {
-        action: "apply",
-        summary: "Approved requirement update loop.",
-      },
-    });
     const refreshedRequirement = [
       "# 1. Background",
       "- hello-service needs deployment validation coverage.",
@@ -53,6 +48,23 @@ export async function runHelloServiceExternalUpdateLoopSuccessTest() {
       "# 2. Operational Scenarios",
       "- verify deployment checks before release",
     ].join("\n");
+    const adapter = new ExternalMcpAdapterService({
+      async execute() {
+        return {
+          content: refreshedRequirement,
+          responseFormat: "text",
+        };
+      },
+    });
+    const adapterResult = await adapter.execute(updateResult.action, {
+      workspaceRoot: targetWorkspaceRoot,
+    });
+    const gate = new InMemoryChangeGate({
+      decision: {
+        action: "apply",
+        summary: "Approved requirement update loop.",
+      },
+    });
 
     const loopResult = await continueDocumentUpdateLoop(gate, {
       taskId: successTaskId,
@@ -62,24 +74,7 @@ export async function runHelloServiceExternalUpdateLoopSuccessTest() {
         summary: "Requirement update prompt generated.",
         externalAction: updateResult.action,
       },
-      externalActionResult: {
-        status: "success",
-        targetPath: targetWorkspaceRoot,
-        changedFiles: [
-          {
-            path: "sdlc/docs/Requirement.md",
-            operation: "update",
-            content: refreshedRequirement,
-          },
-        ],
-        updatedArtifacts: [
-          {
-            artifactKey: "requirement_design",
-            filePath: "sdlc/docs/Requirement.md",
-            content: refreshedRequirement,
-          },
-        ],
-      },
+      externalActionResult: adapterResult,
     });
 
     assert.deepEqual(gate.getLastRequest(), {

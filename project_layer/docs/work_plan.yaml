@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: in_progress
+status: completed
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -52,12 +52,12 @@ milestones:
   - milestone_id: milestone_1_v1_current_delivery
     name: v1 current delivery
     goal: deliver the current-version usable SDLC capability set defined by the active requirement and architecture documents
-    status: in_progress
+    status: completed
     stages:
       - stage_id: runtime foundation usable
         goal: make runtime entry artifact persistence directory structure schema
           naming and runtime-unit orchestration usable for all later features
-        status: in_progress
+        status: completed
         delivered_feature: usable run-unit runtime foundation
         feature_scope:
           - runtime_entry
@@ -1225,20 +1225,21 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify the concrete external mcp adapter through unit and hello-service black-box tests
-            status: pending
+            status: completed
             covers:
               - external_mcp_adapter
               - adapter_return_contract
             tasks:
               - task_name: verify external mcp document adapter
                 summary: verify the concrete document update adapter returns shared runtime payloads and works on the hello-service update loop path
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json
                 progress_notes:
                   - added sdk-level adapter tests that assert document update execution writes the target file and returns changedFiles updatedArtifacts and resumeInput
+                  - updated the hello-service external update loop test to use the real adapter code path instead of a hand-built ExternalActionResult fixture
                   - kept verification scope limited to document update actions and did not expand it to work_execute external_execution
         validation:
           - one concrete external mcp adapter executes document_update handoff and returns the shared ExternalActionResult payload
