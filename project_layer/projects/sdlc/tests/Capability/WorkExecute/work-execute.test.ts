@@ -166,6 +166,14 @@ async function testWorkExecuteRuntimeUnitPersistsGeneratedResult(): Promise<void
 
     assert.equal(result.accepted, true);
     assert.match(result.summary, /Generated Workflow execution prompt/);
+    assert.deepEqual(result.externalAction, {
+      tool: "external_execution",
+      operation: "apply_workspace_change",
+      targetPath: workspaceRoot,
+      payload: {
+        prompt: "Update src/index.ts so it returns hello-service.",
+      },
+    });
     assert.deepEqual(
       JSON.parse(await readFile(path.join(storageRoot, "work-execute-runtime-run", "work_execute.json"), "utf8")),
       {

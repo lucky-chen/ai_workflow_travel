@@ -60,6 +60,7 @@ export class WorkExecuteRuntimeUnit extends RuntimeUnitBase {
     return {
       accepted: true,
       summary: `${output.summary} Persisted to ${WORK_EXECUTE_RESULT_PATH}.`,
+      externalAction: output.artifacts.action,
     };
   }
 }
