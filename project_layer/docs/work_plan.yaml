@@ -17,9 +17,9 @@ context:
 workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
-    stage_id: gate-driven external continuation usable
-    batch_id: batch_14_2_gate_driven_external_continuation_verification
-    task_name: verify gate continuation paths
+    stage_id: mcp-assisted artifact update loop usable
+    batch_id: batch_15_1_mcp_assisted_update_loop
+    task_name: implement end-to-end update loop
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1069,7 +1069,7 @@ milestones:
 
       - stage_id: gate-driven external continuation usable
         goal: make gate decisions participate in external continuation so accepted and rejected changes follow explicit next-step rules
-        status: pending
+        status: completed
         delivered_feature: gate-driven external continuation
         feature_scope:
           - gate_decision_input
@@ -1107,7 +1107,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify gate-driven branching on external continuation paths
-            status: pending
+            status: completed
             covers:
               - gate_decision_input
               - continuation_branching
@@ -1115,12 +1115,14 @@ milestones:
             tasks:
               - task_name: verify gate continuation paths
                 summary: verify pass and reject gate paths for external mcp continuation without collapsing back into manual ad hoc handling
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
                 progress_notes:
                   - cover at least apply reject and wait branch behavior in automated tests
+                  - verified apply reject and wait gate branches through the runtime gate continuation test suite
+                  - confirmed rejected external changes return a stop result while wait preserves resumable continuation input
         validation:
           - gate decisions drive explicit continuation or return paths for external results
           - rejected external changes do not silently continue downstream
