@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: hello-service real-llm usable
     batch_id: batch_10_2_remaining_real_llm_matrix
-    task_name: verify runtime baseline real-llm
+    task_name: verify requirement generator real-llm
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -746,6 +746,10 @@ milestones:
             name: verification
             goal: complete the remaining real-llm runtime generator and contract validation matrix
             status: in_progress
+            progress_notes:
+              - batch_10_2 starts only after batch_10_1 has a repeatable pass record instead of one ad hoc clean-workspace pass
+              - prioritize runtime entries first then generator entries then contract entries so failures remain easy to localize
+              - every completed task in this batch must leave one executable hello-service test entry and one recorded passing run
             covers:
               - remaining_runtime_real_llm
               - remaining_generator_real_llm
@@ -770,12 +774,6 @@ milestones:
                 progress_notes:
                   - connected the existing dedicated hello-service real-llm unit-flow test into the runtime registry as the maintained runtime unit-flow real-llm entry
                   - verified the full requirement architecture item and work-plan real-llm unit-flow through the dedicated copied-workspace test path
-              - task_name: verify runtime baseline real-llm
-                summary: implement and verify the runtime real-llm entry for baseline
-                status: pending
-                involved_files:
-                  - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
               - task_name: verify requirement generator real-llm
                 summary: implement and verify the requirement generator real-llm entry
                 status: pending
@@ -865,6 +863,10 @@ milestones:
             name: implementation
             goal: align update externalAction payloads with an mcp-consumable handoff contract
             status: pending
+            progress_notes:
+              - keep this batch limited to action-shape unification and do not introduce continuation logic here
+              - the runtime schema is the single source of truth for the handoff payload shape
+              - requirement architecture item-design and work-plan update units must emit the same payload field names and semantics
             covers:
               - mcp_action_shape
               - update_prompt_payload
@@ -877,6 +879,10 @@ milestones:
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/projects/sdlc/src/Capability
                   - project_layer/docs/breakdown_docs/runtime_design.md
+                progress_notes:
+                  - expand ExternalAction from a thin tool operation targetPath payload shape into a stable mcp-oriented update handoff contract
+                  - include prompt payload and target artifact binding in one shared shape instead of per-unit ad hoc payload assembly
+                  - update runtime and breakdown docs in the same batch so terminology and boundary rules stay aligned
           - batch_id: batch_12_2_update_prompt_mcp_handoff_verification
             batch_type: verification
             name: verification
@@ -897,6 +903,9 @@ milestones:
                   - project_layer/docs/breakdown_docs/architecture_design.md
                   - project_layer/docs/breakdown_docs/item_design.md
                   - project_layer/docs/breakdown_docs/work_design.md
+                progress_notes:
+                  - add shape-level tests for all update-style runtime units instead of validating only one sample unit
+                  - verification passes only when external mcp consumers can read the payload without per-unit translation logic
         validation:
           - update-style units expose one stable mcp-consumable handoff payload
           - target path and prompt payload remain stable across requirement architecture item-design and work-plan
@@ -915,6 +924,10 @@ milestones:
             name: implementation
             goal: define the runtime-facing change payload contract returned by external mcp execution
             status: pending
+            progress_notes:
+              - keep this batch focused on external result ingestion and artifact rebinding, not gate branching
+              - runtime must be able to read external changes without reopening the old update boundary
+              - changed files and refreshed artifacts need one stable mapping rule before any continuation logic is added
             covers:
               - changes_payload_shape
               - changed_artifact_binding
@@ -926,6 +939,9 @@ milestones:
                 involved_files:
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/docs/breakdown_docs/runtime_design.md
+                progress_notes:
+                  - add a shared external action result contract for changed files updated artifacts and continuation-ready metadata
+                  - bind refreshed artifacts back to runtime input using one explicit mapping rule instead of implicit file scanning
           - batch_id: batch_13_2_change_payload_integration_verification
             batch_type: verification
             name: verification
@@ -942,6 +958,8 @@ milestones:
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
+                progress_notes:
+                  - use tests that simulate one external changes payload round-trip instead of relying on manual replay
         validation:
           - external mcp change payloads are readable by runtime continuation logic
           - changed artifacts can be rebound to downstream continuation input
@@ -960,6 +978,9 @@ milestones:
             name: implementation
             goal: connect gate decisions to external continuation input and branching behavior
             status: pending
+            progress_notes:
+              - do not mix gate branching with payload-shape definition work from batch_12 or batch_13
+              - continuation behavior must be owned by runtime-level branching rules instead of per-capability special cases
             covers:
               - gate_decision_input
               - continuation_branching
@@ -973,6 +994,10 @@ milestones:
                   - project_layer/projects/sdlc/src/Capability
                   - project_layer/docs/breakdown_docs/quality_control_design.md
                   - project_layer/docs/breakdown_docs/runtime_design.md
+                progress_notes:
+                  - map apply reject and wait decisions to explicit continuation branches
+                  - rejected external changes must stop downstream continuation and return a clear runtime result
+                  - if wait requires resumable state, define the minimum runtime-owned state boundary instead of implementing full compose-run
           - batch_id: batch_14_2_gate_driven_external_continuation_verification
             batch_type: verification
             name: verification
@@ -989,6 +1014,8 @@ milestones:
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
+                progress_notes:
+                  - cover at least apply reject and wait branch behavior in automated tests
         validation:
           - gate decisions drive explicit continuation or return paths for external results
           - rejected external changes do not silently continue downstream
@@ -1007,6 +1034,10 @@ milestones:
             name: implementation
             goal: connect update prompt handoff changes payloads and gate continuation into one artifact update loop
             status: pending
+            progress_notes:
+              - first implementation slice should use one document update path only instead of all update units at once
+              - prefer requirement_design_update or work_plan_update as the first closed-loop path because both have stable target artifacts
+              - do not expand this batch into full compose-run implementation; keep it as one external update continuation loop
             covers:
               - update_loop
               - artifact_refresh
@@ -1020,6 +1051,9 @@ milestones:
                   - project_layer/projects/sdlc/src/Capability
                   - project_layer/projects/sdlc/src/Data
                   - user_projects/hello-service/tests
+                progress_notes:
+                  - wire update handoff external changes return gate review and artifact refresh as one runtime-controlled loop
+                  - keep compose-run as a reserved boundary and avoid coupling this batch to full multi-step orchestration
           - batch_id: batch_15_2_mcp_assisted_update_loop_verification
             batch_type: verification
             name: verification
@@ -1036,6 +1070,8 @@ milestones:
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - verification completes only when one document path finishes with refreshed artifacts that can be consumed downstream without reopening the old update boundary
         validation:
           - at least one document update path completes through mcp handoff changes return gate and artifact refresh
           - the refreshed artifact becomes valid downstream input without reopening the old update boundary
