@@ -120,7 +120,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-item-design-generator-failure.test.mjs",
       "runHelloServiceItemDesignGeneratorFailureTest",
     ),
-    unimplementedEntry("generator:item-design:real-llm:success", "Item design generator real LLM success cases."),
+    implementedEntry(
+      "generator:item-design:real-llm:success",
+      "Item design generator real LLM success cases.",
+      "hello-service-item-design-generator-real-llm.test.mjs",
+      "runHelloServiceItemDesignGeneratorRealLlmTest",
+    ),
     unimplementedEntry("generator:item-design:real-llm:failure", "Item design generator real LLM failure cases."),
     implementedEntry(
       "generator:work-plan:success",
