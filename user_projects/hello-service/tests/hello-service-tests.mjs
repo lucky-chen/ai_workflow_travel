@@ -41,9 +41,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-unit-flow-failure.test.mjs",
       "runHelloServiceUnitFlowFailureTest",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:unit-flow:real-llm:success",
       "Real LLM success path for full unit flow.",
+      "hello-service-real-llm-unit-flow.test.mjs",
+      "runHelloServiceRealLlmTest",
     ),
     unimplementedEntry(
       "runtime:unit-flow:real-llm:failure",

@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: hello-service real-llm usable
     batch_id: batch_10_2_remaining_real_llm_matrix
-    task_name: verify runtime unit-flow real-llm
+    task_name: verify runtime baseline real-llm
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -763,10 +763,13 @@ milestones:
                   - verified requirement architecture item and work-plan generation under real-llm execution through the dedicated copied-workspace test entry
               - task_name: verify runtime unit-flow real-llm
                 summary: implement and verify the runtime real-llm entry for unit-flow
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - connected the existing dedicated hello-service real-llm unit-flow test into the runtime registry as the maintained runtime unit-flow real-llm entry
+                  - verified the full requirement architecture item and work-plan real-llm unit-flow through the dedicated copied-workspace test path
               - task_name: verify runtime baseline real-llm
                 summary: implement and verify the runtime real-llm entry for baseline
                 status: pending
