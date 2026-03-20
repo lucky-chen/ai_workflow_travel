@@ -1,4 +1,4 @@
-import type { ChangedFile, ProjectFile } from "../../Runtime/Schema/runtime.js";
+import type { ExternalAction, ProjectFile } from "../../Runtime/Schema/runtime.js";
 import type { WorkPlan, WorkPlanBatch } from "../../Runtime/Schema/work-plan.js";
 
 export interface ItemDesignDoc {
@@ -30,11 +30,12 @@ export interface PromptBuildInput {
 }
 
 export interface ApplyResult {
-  changedFiles: ChangedFile[];
+  prompt: string;
+  action: ExternalAction;
   summary: string;
 }
 
 export interface ParsedGenerationResult {
-  changedFiles: ChangedFile[];
+  prompt: string;
   summary: string;
 }

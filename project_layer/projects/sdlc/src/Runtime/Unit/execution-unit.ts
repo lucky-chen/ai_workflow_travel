@@ -1,6 +1,6 @@
 import type {
   ArtifactMap,
-  ChangedFile,
+  ExternalAction,
   ExecutionUnitId,
   IssueSeverity,
   StringMap,
@@ -79,6 +79,7 @@ export interface IContractChecker {
 }
 
 export interface WorkExecuteArtifacts {
-  changedFiles: ChangedFile[];
+  prompt: string;
+  action: ExternalAction;
   summary: string;
 }

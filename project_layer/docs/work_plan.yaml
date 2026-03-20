@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: work execute design alignment usable
     batch_id: batch_11_1_work_execute_design_alignment
-    task_name: align work-execute output with technical design
+    task_name: align work-execute artifact and runtime result shape
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -887,12 +887,16 @@ milestones:
             tasks:
               - task_name: align work-execute output with technical design
                 summary: replace changedFiles-style work_execute output with prompt plus externalAction according to the technical work_execute design
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Capability/WorkExecute
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/docs/TechnicalArchitecture.md
                   - project_layer/docs/breakdown_docs/work_execute.md
+                progress_notes:
+                  - replaced changedFiles-style work_execute artifacts with prompt plus action output under the current technical design boundary
+                  - updated mock scenario runtime and work_execute capability tests to use prompt-style generation output
+                  - verified hello-service work_execute generator success plus failure paths and the hello-service unit-flow success path under the updated output model
               - task_name: align work-execute artifact and runtime result shape
                 summary: make work_execute artifact persistence and runtime result boundaries match the technical runtime and work_execute docs
                 status: pending

@@ -189,7 +189,7 @@ async function testCustomMockExecutor(): Promise<void> {
     mode: "mock",
     mockContent: JSON.stringify({
       summary: "Custom mock result",
-      changed_files: [{ path: "a.ts", operation: "create", content: "export {};\n" }],
+      prompt: "Apply the scripted workspace update.",
     }),
   });
   const customMockResult = await customMockExecutor.execute({
@@ -204,7 +204,7 @@ async function testCustomMockExecutor(): Promise<void> {
     customMockResult.content,
     JSON.stringify({
       summary: "Custom mock result",
-      changed_files: [{ path: "a.ts", operation: "create", content: "export {};\n" }],
+      prompt: "Apply the scripted workspace update.",
     }),
   );
 }
@@ -214,7 +214,7 @@ async function testMockExecutorUsesRequestAwareHandler(): Promise<void> {
     mode: "mock",
     mockExecute: async (request) => ({
       content: request.metadata?.executionUnit === "work_execute"
-        ? "{\"summary\":\"scripted\",\"changed_files\":[]}"
+        ? "{\"summary\":\"scripted\",\"prompt\":\"Apply scripted workspace update.\"}"
         : "scripted-text",
       responseFormat: request.responseFormat,
       metadata: request.metadata,
@@ -232,7 +232,7 @@ async function testMockExecutorUsesRequestAwareHandler(): Promise<void> {
     },
   });
 
-  assert.equal(result.content, "{\"summary\":\"scripted\",\"changed_files\":[]}");
+  assert.equal(result.content, "{\"summary\":\"scripted\",\"prompt\":\"Apply scripted workspace update.\"}");
   assert.equal(result.responseFormat, "json");
 }
 

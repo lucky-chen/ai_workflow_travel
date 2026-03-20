@@ -58,16 +58,15 @@ export async function runHelloServiceWorkExecuteGeneratorRealLlmTest() {
     );
 
     const result = await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "work_execute.json"));
-    assert.equal(Array.isArray(result.changedFiles), true);
+    assert.equal(typeof result.prompt, "string");
+    assert.equal(result.prompt.length > 0, true);
     assert.equal(
-      result.changedFiles.some(
-        (changedFile) =>
-          changedFile.path === "src/index.ts"
-          && changedFile.operation === "create"
-          && String(changedFile.content).includes("hello-service"),
-      ),
+      result.prompt.includes("hello-service"),
       true,
     );
+    assert.deepEqual(result.action.tool, "external_execution");
+    assert.deepEqual(result.action.operation, "apply_workspace_change");
+    assert.deepEqual(result.action.targetPath, targetWorkspaceRoot);
   } finally {
     await removeWorkspace(targetWorkspaceRoot);
   }

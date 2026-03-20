@@ -1,4 +1,3 @@
-// Work-execute contract module: prepares a test environment and converts test results into contract checks.
 import path from "node:path";
 import type {
   ContractCheckResult,
@@ -7,14 +6,13 @@ import type {
   ExecutionUnitResult,
   ExecutionContext,
 } from "../../Runtime/Unit/execution-unit.js";
-import type { ChangedFile } from "../../Runtime/Schema/runtime.js";
 import { ShellRunner } from "../../Runtime/shell-runner.js";
 import type { ContractSpec } from "../Shared/document-unit-contract.js";
 import { findDocumentContract, loadContractSpecFromJson } from "../Shared/contract-spec-loader.js";
 
 export interface ExecutionEnvironment {
   generatedResult: {
-    changedFiles: ChangedFile[];
+    prompt: string;
     summary: string;
   };
   testCommand: string;
@@ -46,7 +44,7 @@ export class ShellExecutionEnvironmentPreparer implements ExecutionEnvironmentPr
 
     return {
       generatedResult: {
-        changedFiles: output.artifacts.changedFiles,
+        prompt: output.artifacts.prompt,
         summary: output.artifacts.summary,
       },
       testCommand,

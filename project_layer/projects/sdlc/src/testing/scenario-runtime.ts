@@ -79,14 +79,8 @@ function createScenarioMockExecute(
       case "work_execute":
         return {
           content: JSON.stringify({
-            summary: `Generated ${dependencies.serviceName} work execute baseline.`,
-            changed_files: [
-              {
-                path: "src/index.ts",
-                operation: "create",
-                content: `export function hello(): string {\n  return "${dependencies.serviceName}";\n}\n`,
-              },
-            ],
+            summary: `Generated ${dependencies.serviceName} work execute prompt.`,
+            prompt: `Apply the approved changes for ${dependencies.serviceName} in the target workspace and create or update src/index.ts so it returns the service name.`,
           }),
           responseFormat: "json",
           metadata: {

@@ -157,15 +157,11 @@ export async function runHelloServiceSuccessTest() {
     const workPlanDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8");
 
     assert.match(workPlanDocument, /deliver the hello-service implementation baseline/i);
-    assert.equal(
-      workExecuteResult.changedFiles.some(
-        (changedFile) =>
-          changedFile.path === "src/index.ts"
-          && changedFile.operation === "create"
-          && String(changedFile.content).includes("hello-service"),
-      ),
-      true,
-    );
+    assert.equal(typeof workExecuteResult.prompt, "string");
+    assert.equal(workExecuteResult.prompt.includes("hello-service"), true);
+    assert.equal(workExecuteResult.action.tool, "external_execution");
+    assert.equal(workExecuteResult.action.operation, "apply_workspace_change");
+    assert.equal(workExecuteResult.action.targetPath, targetWorkspaceRoot);
   } finally {
     await removeWorkspace(targetWorkspaceRoot);
   }

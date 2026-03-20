@@ -8,7 +8,7 @@ import type {
   ExecutionUnitResult,
   ExecutionContext,
 } from "../../Runtime/Unit/execution-unit.js";
-import type { ArtifactMap, ChangedFile, ProjectFile } from "../../Runtime/Schema/runtime.js";
+import type { ArtifactMap, ExternalAction, ProjectFile } from "../../Runtime/Schema/runtime.js";
 import type { ApplyResult, ParsedGenerationResult, PreparedStepContext, ProjectContext, PromptBuildInput } from "./types.js";
 
 export interface WorkExecuteGeneratorDependencies {
@@ -27,7 +27,7 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
     const projectContext = await this.loadProjectContext(context);
     const request = this.buildPrompt({ preparedStepContext, projectContext });
     const llmResult = await this.llmExecutor.execute(request);
-    const generatedChanges = this.parseGeneratedChanges(llmResult);
+    const generatedChanges = this.parseGeneratedChanges(context.workspaceRoot, llmResult);
     return this.buildExecutionUnitResult(context.executionUnitId, generatedChanges);
   }
 
@@ -162,8 +162,8 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
     return {
       prompt: {
         systemPrompt:
-          "You generate concrete project file changes. Return JSON with summary and changed_files only. " +
-          "Each changed_files item must include path, operation, and content for create or update operations.",
+          "You generate one external execution prompt for workspace changes. " +
+          "Return JSON with summary and prompt only.",
         userPrompt: {
           target: "work_execute",
           workplanRef: input.preparedStepContext.workplanRef,
@@ -176,13 +176,7 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
           },
           requiredOutputShape: {
             summary: "string",
-            changed_files: [
-              {
-                path: "relative/file/path",
-                operation: "create | update | delete",
-                content: "required for create and update",
-              },
-            ],
+            prompt: "string",
           },
         },
       },
@@ -193,23 +187,34 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
     };
   }
 
-  private parseGeneratedChanges(result: LlmExecutionResult): ApplyResult {
+  private parseGeneratedChanges(workspaceRoot: string, result: LlmExecutionResult): ApplyResult {
     const parsed = this.parseGeneratedChangesPayload(result.content);
+    const prompt = this.readStringValue(
+      parsed?.prompt,
+      parsed?.execution_prompt,
+      parsed?.instruction,
+      parsed?.message,
+    );
 
-    if (!parsed) {
-      return {
-        summary: "Implementation changes generated.",
-        changedFiles: [],
-      };
+    if (!prompt) {
+      throw new Error("Work execute result must include a prompt string.");
     }
 
     return {
-      summary: this.readStringValue(parsed.summary, parsed.message, parsed.description) ?? "Implementation changes generated.",
-      changedFiles: this.readChangedFiles(parsed).map((file) => ({
-        path: file.path,
-        operation: file.operation,
-        content: file.content,
-      })),
+      summary: this.readStringValue(parsed?.summary, parsed?.description) ?? "Work execute prompt generated.",
+      prompt,
+      action: this.buildExternalAction(workspaceRoot, prompt),
+    };
+  }
+
+  private buildExternalAction(workspaceRoot: string, prompt: string): ExternalAction {
+    return {
+      tool: "external_execution",
+      operation: "apply_workspace_change",
+      targetPath: workspaceRoot,
+      payload: {
+        prompt,
+      },
     };
   }
 
@@ -232,44 +237,6 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
     return undefined;
   }
 
-  private readChangedFiles(parsed: Record<string, unknown>): ChangedFile[] {
-    const rawChangedFiles = this.readArrayValue(
-      parsed.changed_files,
-      parsed.changedFiles,
-      parsed.files,
-      parsed.changes,
-    );
-
-    return rawChangedFiles.flatMap((entry) => {
-      if (!entry || typeof entry !== "object") {
-        return [];
-      }
-
-      const candidate = entry as Record<string, unknown>;
-      const pathValue = this.readStringValue(candidate.path, candidate.filePath, candidate.file);
-      const operationValue = this.readStringValue(candidate.operation, candidate.action, candidate.type);
-      if (!pathValue || !operationValue || !this.isChangedFileOperation(operationValue)) {
-        return [];
-      }
-
-      return [{
-        path: pathValue,
-        operation: operationValue,
-        content: this.readStringValue(candidate.content, candidate.body, candidate.text),
-      }];
-    });
-  }
-
-  private readArrayValue(...values: unknown[]): unknown[] {
-    for (const value of values) {
-      if (Array.isArray(value)) {
-        return value;
-      }
-    }
-
-    return [];
-  }
-
   private readStringValue(...values: unknown[]): string | undefined {
     for (const value of values) {
       if (typeof value === "string" && value.length > 0) {
@@ -278,10 +245,6 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
     }
 
     return undefined;
-  }
-
-  private isChangedFileOperation(value: string): value is ChangedFile["operation"] {
-    return value === "create" || value === "update" || value === "delete";
   }
 
   private buildExecutionUnitResult(
@@ -293,7 +256,8 @@ export class WorkExecuteGenerator implements IExecutionUnitGenerator<ExecutionUn
       success: true,
       summary: result.summary,
       artifacts: {
-        changedFiles: result.changedFiles,
+        prompt: result.prompt,
+        action: result.action,
         summary: result.summary,
       },
     };

@@ -11,12 +11,12 @@ import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/tra
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
 
 export async function runWorkExecuteCapabilityTests(): Promise<void> {
-  await testWorkExecuteGeneratorReturnsChangedFiles();
+  await testWorkExecuteGeneratorReturnsPromptAndAction();
   await testWorkExecuteContractUsesPreparedEnvironmentAndRunner();
   await testWorkExecuteRuntimeUnitPersistsGeneratedResult();
 }
 
-async function testWorkExecuteGeneratorReturnsChangedFiles(): Promise<void> {
+async function testWorkExecuteGeneratorReturnsPromptAndAction(): Promise<void> {
   const workspaceRoot = await createTempDir("work-execute-generator-");
 
   try {
@@ -26,14 +26,8 @@ async function testWorkExecuteGeneratorReturnsChangedFiles(): Promise<void> {
     const generator = new WorkExecuteGenerator(
       createMockLlmExecutor(async () => ({
         content: JSON.stringify({
-          summary: "Generated Workflow implementation.",
-          changed_files: [
-            {
-              path: "src/index.ts",
-              operation: "update",
-              content: "export function hello(): string {\n  return \"hello-service\";\n}\n",
-            },
-          ],
+          summary: "Generated Workflow execution prompt.",
+          prompt: "Update src/index.ts so it returns hello-service.",
         }),
         responseFormat: "json",
       })),
@@ -47,16 +41,18 @@ async function testWorkExecuteGeneratorReturnsChangedFiles(): Promise<void> {
 
     assert.equal(result.executionUnitId, "work_execute");
     assert.equal(result.success, true);
-    assert.equal(result.summary, "Generated Workflow implementation.");
+    assert.equal(result.summary, "Generated Workflow execution prompt.");
     assert.deepEqual(result.artifacts, {
-      changedFiles: [
-        {
-          path: "src/index.ts",
-          operation: "update",
-          content: "export function hello(): string {\n  return \"hello-service\";\n}\n",
+      prompt: "Update src/index.ts so it returns hello-service.",
+      action: {
+        tool: "external_execution",
+        operation: "apply_workspace_change",
+        targetPath: workspaceRoot,
+        payload: {
+          prompt: "Update src/index.ts so it returns hello-service.",
         },
-      ],
-      summary: "Generated Workflow implementation.",
+      },
+      summary: "Generated Workflow execution prompt.",
     });
   } finally {
     await removeTempDir(workspaceRoot);
@@ -102,16 +98,18 @@ async function testWorkExecuteContractUsesPreparedEnvironmentAndRunner(): Promis
     {
       executionUnitId: "work_execute",
       success: true,
-      summary: "Generated Workflow implementation.",
+      summary: "Generated Workflow execution prompt.",
       artifacts: {
-        changedFiles: [
-          {
-            path: "src/index.ts",
-            operation: "update",
-            content: "export const value = true;\n",
+        prompt: "Update src/index.ts so it returns hello-service.",
+        action: {
+          tool: "external_execution",
+          operation: "apply_workspace_change",
+          targetPath: "/tmp/workspace",
+          payload: {
+            prompt: "Update src/index.ts so it returns hello-service.",
           },
-        ],
-        summary: "Generated Workflow implementation.",
+        },
+        summary: "Generated Workflow execution prompt.",
       },
     },
   );
@@ -145,14 +143,8 @@ async function testWorkExecuteRuntimeUnitPersistsGeneratedResult(): Promise<void
       traceRecorder,
       createMockLlmExecutor(async () => ({
         content: JSON.stringify({
-          summary: "Generated Workflow implementation.",
-          changed_files: [
-            {
-              path: "src/index.ts",
-              operation: "update",
-              content: "export function hello(): string {\n  return \"hello-service\";\n}\n",
-            },
-          ],
+          summary: "Generated Workflow execution prompt.",
+          prompt: "Update src/index.ts so it returns hello-service.",
         }),
         responseFormat: "json",
       })),
@@ -173,18 +165,20 @@ async function testWorkExecuteRuntimeUnitPersistsGeneratedResult(): Promise<void
     );
 
     assert.equal(result.accepted, true);
-    assert.match(result.summary, /Generated Workflow implementation/);
+    assert.match(result.summary, /Generated Workflow execution prompt/);
     assert.deepEqual(
       JSON.parse(await readFile(path.join(storageRoot, "work-execute-runtime-run", "work_execute.json"), "utf8")),
       {
-        changedFiles: [
-          {
-            path: "src/index.ts",
-            operation: "update",
-            content: "export function hello(): string {\n  return \"hello-service\";\n}\n",
+        prompt: "Update src/index.ts so it returns hello-service.",
+        action: {
+          tool: "external_execution",
+          operation: "apply_workspace_change",
+          targetPath: workspaceRoot,
+          payload: {
+            prompt: "Update src/index.ts so it returns hello-service.",
           },
-        ],
-        summary: "Generated Workflow implementation.",
+        },
+        summary: "Generated Workflow execution prompt.",
       },
     );
   } finally {
