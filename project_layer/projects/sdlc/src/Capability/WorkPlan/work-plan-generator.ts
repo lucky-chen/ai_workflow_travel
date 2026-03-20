@@ -5,6 +5,7 @@ import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../.
 import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
 import type { IArtifactStore } from "../../Data/artifact-store.js";
+import { ARCHITECTURE_BREAKDOWN_PATH } from "../ArchitectureDesign/architecture-design-generator.js";
 
 export type WorkPlanArtifacts =
   {
@@ -21,6 +22,10 @@ export const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 export const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
 export const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
 export const WORK_PLAN_PATH = "sdlc/docs/work_plan.yaml";
+
+interface DesignDocumentBreakdownEntry {
+  documentPath?: string;
+}
 
 interface WorkPlanGeneratorInputPayload {
   requirementDocument: string;
@@ -130,15 +135,70 @@ export class WorkPlanGenerateRuntimeUnit extends RuntimeUnitBase {
   private async loadItemDesignDocuments(workspaceRoot: string): Promise<string[]> {
     const { readdir, readFile } = await import("node:fs/promises");
     const path = await import("node:path");
+    const breakdownDocumentPaths = await this.loadBreakdownDocumentPaths(workspaceRoot);
+    if (breakdownDocumentPaths.length > 0) {
+      const existingBreakdownDocuments = await this.loadExistingWorkspaceFiles(workspaceRoot, breakdownDocumentPaths);
+      if (existingBreakdownDocuments.length > 0) {
+        return existingBreakdownDocuments;
+      }
+    }
+
     const directoryPath = path.join(workspaceRoot, ITEM_DESIGN_DIRECTORY);
     const fileNames = await readdir(directoryPath);
     const markdownFiles = fileNames.filter((entry) => entry.endsWith(".md")).sort();
-
     if (markdownFiles.length === 0) {
       throw new Error(`Missing required item design documents under "${ITEM_DESIGN_DIRECTORY}".`);
     }
 
     return Promise.all(markdownFiles.map(async (fileName) => readFile(path.join(directoryPath, fileName), "utf8")));
+  }
+
+  private async loadBreakdownDocumentPaths(workspaceRoot: string): Promise<string[]> {
+    let rawBreakdown: string;
+    try {
+      rawBreakdown = await this.readRequiredWorkspaceFile(workspaceRoot, ARCHITECTURE_BREAKDOWN_PATH);
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === "ENOENT") {
+        return [];
+      }
+
+      throw error;
+    }
+
+    let parsedBreakdown: unknown;
+    try {
+      parsedBreakdown = JSON.parse(rawBreakdown) as unknown;
+    } catch {
+      return [];
+    }
+
+    if (!Array.isArray(parsedBreakdown)) {
+      return [];
+    }
+
+    return parsedBreakdown
+      .map((entry) => (entry && typeof entry === "object" ? (entry as DesignDocumentBreakdownEntry).documentPath : undefined))
+      .filter((documentPath): documentPath is string => typeof documentPath === "string" && documentPath.trim().length > 0);
+  }
+
+  private async loadExistingWorkspaceFiles(workspaceRoot: string, relativePaths: string[]): Promise<string[]> {
+    const documents = await Promise.all(
+      relativePaths.map(async (relativePath) => {
+        try {
+          return await this.readRequiredWorkspaceFile(workspaceRoot, relativePath);
+        } catch (error) {
+          const nodeError = error as NodeJS.ErrnoException;
+          if (nodeError.code === "ENOENT") {
+            return null;
+          }
+
+          throw error;
+        }
+      }),
+    );
+
+    return documents.filter((document): document is string => typeof document === "string" && document.length > 0);
   }
 
   private async loadWorkPlanInputArtifacts(workspaceRoot: string): Promise<Record<string, string>> {

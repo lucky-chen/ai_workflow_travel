@@ -10,8 +10,8 @@ const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const DEFAULT_ITEM_NAME = "EchoService";
-const DEFAULT_REAL_LLM_CLI_TIMEOUT_MS = 180000;
-const DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS = 120000;
+const DEFAULT_REAL_LLM_CLI_TIMEOUT_MS = 300000;
+const DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS = 240000;
 
 export async function createWorkspaceCopy() {
   const copiedWorkspaceRoot = await mkdtemp(path.join(os.tmpdir(), "hello-service-sdlc-"));

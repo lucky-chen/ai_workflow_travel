@@ -19,9 +19,11 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-document-generation-flow-failure.test.mjs",
       "runHelloServiceDocumentGenerationFailureTest",
     ),
-    unimplementedEntry(
+    implementedEntry(
       "runtime:document-generation:real-llm:success",
       "Real LLM success path for document generation flow.",
+      "hello-service-document-generation-real-llm.test.mjs",
+      "runHelloServiceDocumentGenerationRealLlmTest",
     ),
     unimplementedEntry(
       "runtime:document-generation:real-llm:failure",

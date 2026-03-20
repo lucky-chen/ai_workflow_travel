@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_1_v1_current_delivery
     stage_id: hello-service real-llm usable
     batch_id: batch_10_2_remaining_real_llm_matrix
-    task_name: verify runtime document-generation real-llm
+    task_name: verify runtime unit-flow real-llm
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -745,7 +745,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: complete the remaining real-llm runtime generator and contract validation matrix
-            status: pending
+            status: in_progress
             covers:
               - remaining_runtime_real_llm
               - remaining_generator_real_llm
@@ -753,10 +753,14 @@ milestones:
             tasks:
               - task_name: verify runtime document-generation real-llm
                 summary: implement and verify the runtime real-llm entry for document-generation
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - added a dedicated runtime document-generation real-llm success entry in the hello-service test registry
+                  - widened work-plan downstream item-document loading to accept real-llm architecture breakdown paths and partial existing item outputs
+                  - verified requirement architecture item and work-plan generation under real-llm execution through the dedicated copied-workspace test entry
               - task_name: verify runtime unit-flow real-llm
                 summary: implement and verify the runtime real-llm entry for unit-flow
                 status: pending

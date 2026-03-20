@@ -16,6 +16,7 @@ export async function runWorkPlanCapabilityTests(): Promise<void> {
   await testWorkPlanGeneratorReturnsGeneratedPlan();
   await testWorkPlanContractReportsMissingStructure();
   await testWorkPlanGenerateRuntimeUnitPersistsGeneratedPlan();
+  await testWorkPlanGenerateRuntimeUnitReadsBreakdownDocumentPaths();
   await testWorkPlanUpdateRuntimeUnitReturnsExternalAction();
 }
 
@@ -213,6 +214,61 @@ async function testWorkPlanGenerateRuntimeUnitPersistsGeneratedPlan(): Promise<v
         "utf8",
       ),
       (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT",
+    );
+  } finally {
+    await removeTempDir(workspaceRoot);
+    await removeTempDir(storageRoot);
+  }
+}
+
+async function testWorkPlanGenerateRuntimeUnitReadsBreakdownDocumentPaths(): Promise<void> {
+  const workspaceRoot = await createTempDir("work-plan-runtime-breakdown-");
+  const storageRoot = await createTempDir("work-plan-breakdown-artifacts-");
+
+  try {
+    await mkdir(path.join(workspaceRoot, "sdlc", "docs"), { recursive: true });
+    await mkdir(path.join(workspaceRoot, "design_docs"), { recursive: true });
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "# Requirement Input\n", "utf8");
+    await writeFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "# Architecture Input\n", "utf8");
+    await writeFile(
+      path.join(workspaceRoot, "sdlc", "docs", "architecture_design_breakdown.json"),
+      JSON.stringify([
+        { documentPath: "./design_docs/api_layer.md" },
+        { documentPath: "./design_docs/missing_layer.md" },
+      ], null, 2),
+      "utf8",
+    );
+    await writeFile(path.join(workspaceRoot, "design_docs", "api_layer.md"), "# API Layer Design\n", "utf8");
+
+    const observedPrompts: string[] = [];
+    const runtimeUnit = new WorkPlanGenerateRuntimeUnit(
+      new ArtifactStoreService(storageRoot, new InMemoryTraceRecorder()),
+      new InMemoryTraceRecorder(),
+      createMockLlmExecutor(async (request) => {
+        observedPrompts.push(String((request.prompt.userPrompt as { itemDesignDocuments?: unknown }).itemDesignDocuments));
+        return {
+          content: "version: 1\nplan_name: generated_from_breakdown\nmilestones: []\n",
+          responseFormat: "text",
+        };
+      }),
+    );
+
+    const result = await runtimeUnit.run(
+      {
+        mode: "unit",
+        executionUnitId: "work_plan_generate",
+      },
+      {
+        workspaceRoot,
+        runId: "work-plan-breakdown-run",
+      },
+    );
+
+    assert.equal(result.accepted, true);
+    assert.equal(observedPrompts.some((prompt) => prompt.includes("# API Layer Design")), true);
+    assert.equal(
+      await readFile(path.join(workspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8"),
+      "version: 1\nplan_name: generated_from_breakdown\nmilestones: []\n",
     );
   } finally {
     await removeTempDir(workspaceRoot);
