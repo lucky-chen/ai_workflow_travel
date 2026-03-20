@@ -250,7 +250,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-work-plan-contract-failure.test.mjs",
       "runHelloServiceWorkPlanContractFailureTest",
     ),
-    unimplementedEntry("contract:work-plan:real-llm:success", "Work plan contract real LLM success cases."),
+    implementedEntry(
+      "contract:work-plan:real-llm:success",
+      "Work plan contract real LLM success cases.",
+      "hello-service-work-plan-contract-real-llm.test.mjs",
+      "runHelloServiceWorkPlanContractRealLlmTest",
+    ),
     unimplementedEntry("contract:work-plan:real-llm:failure", "Work plan contract real LLM failure cases."),
     implementedEntry(
       "contract:work-execute:success",

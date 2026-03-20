@@ -16,10 +16,10 @@ context:
     and real-llm verification
 workflow:
   current_focus:
-    milestone_id: milestone_1_v1_current_delivery
-    stage_id: hello-service real-llm usable
-    batch_id: batch_10_2_remaining_real_llm_matrix
-    task_name: verify work-plan contract real-llm
+    milestone_id: milestone_2_v2_mcp_change_and_gate_integration
+    stage_id: update prompt mcp handoff usable
+    batch_id: batch_12_1_update_prompt_mcp_handoff
+    task_name: define mcp update action payload
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -52,7 +52,7 @@ milestones:
   - milestone_id: milestone_1_v1_current_delivery
     name: v1 current delivery
     goal: deliver the current-version usable SDLC capability set defined by the active requirement and architecture documents
-    status: in_progress
+    status: completed
     stages:
       - stage_id: runtime foundation usable
         goal: make runtime entry artifact persistence directory structure schema
@@ -710,7 +710,7 @@ milestones:
       - stage_id: hello-service real-llm usable
         goal: make hello-service real-llm verification usable and stable for the
           documented feature chain
-        status: in_progress
+        status: completed
         delivered_feature: hello-service real-llm verification
         feature_scope:
           - architecture_real_llm
@@ -747,7 +747,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: complete the remaining real-llm runtime generator and contract validation matrix
-            status: in_progress
+            status: completed
             progress_notes:
               - batch_10_2 starts only after batch_10_1 has a repeatable pass record instead of one ad hoc clean-workspace pass
               - prioritize runtime entries first then generator entries then contract entries so failures remain easy to localize
@@ -855,10 +855,13 @@ milestones:
                   - verified item-design contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/6000-item-design-contract-real-llm/
               - task_name: verify work-plan contract real-llm
                 summary: implement and verify the work-plan contract real-llm entry
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - added a dedicated work-plan contract real-llm success entry in the hello-service contract registry
+                  - verified work-plan contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/6100-work-plan-contract-real-llm/
         validation:
           - real-llm coverage is executable from hello-service tests
           - each completed real-llm entry has an actual passing record, not only a mock equivalent
