@@ -18,8 +18,8 @@ workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     stage_id: mcp-assisted artifact update loop usable
-    batch_id: batch_15_1_mcp_assisted_update_loop
-    task_name: implement end-to-end update loop
+    batch_id: batch_15_2_mcp_assisted_update_loop_verification
+    task_name: verify external mcp update loop
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1140,7 +1140,7 @@ milestones:
             batch_type: implementation
             name: implementation
             goal: connect update prompt handoff changes payloads and gate continuation into one artifact update loop
-            status: pending
+            status: completed
             progress_notes:
               - first implementation slice should use one document update path only instead of all update units at once
               - prefer requirement_design_update or work_plan_update as the first closed-loop path because both have stable target artifacts
@@ -1152,7 +1152,7 @@ milestones:
             tasks:
               - task_name: implement end-to-end update loop
                 summary: implement one end-to-end update loop that starts from update prompt handoff reaches external mcp execution receives changes and refreshes artifacts for downstream continuation
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/projects/sdlc/src/Capability
@@ -1161,6 +1161,8 @@ milestones:
                 progress_notes:
                   - wire update handoff external changes return gate review and artifact refresh as one runtime-controlled loop
                   - keep compose-run as a reserved boundary and avoid coupling this batch to full multi-step orchestration
+                  - implemented the first closed loop on requirement_design_update so one document update handoff can ingest external results and return continuation-ready artifacts
+                  - require the refreshed artifact map to include the targetArtifact binding before runtime continues the external update path
           - batch_id: batch_15_2_mcp_assisted_update_loop_verification
             batch_type: verification
             name: verification

@@ -322,6 +322,7 @@ Processing:
 - expect the external side to execute against `targetPath` and return one `ExternalActionResult`
 - resume follow-up contract, gate, or next-step evaluation only after the external result is available
 - treat `updatedArtifacts` as the explicit artifact refresh source of truth and `resumeInput` as the continuation-ready artifact binding map
+- require the refreshed artifact map to contain the update payload `targetArtifact.artifactKey` before runtime continues the document update loop
 - map gate decision `apply` to one runtime `continue` branch with continuation-ready artifact bindings
 - map gate decision `reject` to one runtime stop result without downstream continuation input
 - map gate decision `wait` to one runtime `wait` branch with the minimum resumable state boundary of `targetPath` plus continuation-ready artifact bindings
@@ -335,6 +336,7 @@ Output emission:
 
 - emit one stable external-action handoff payload
 - emit one stable `ExternalActionResult` for downstream contract, gate, or continuation logic
+- emit one runtime continuation result whose refreshed artifact bindings are directly reusable by the next runtime step
 
 ### 4.4 Error Handling Skeleton
 

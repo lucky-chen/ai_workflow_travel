@@ -12,6 +12,7 @@ import { runHistoryStoreTests } from "./shared/history-store.test.js";
 import { runOrchestratorTests } from "./runtime/orchestrator.test.js";
 import { runExternalActionResultTests } from "./runtime/external-action-result.test.js";
 import { runGateContinuationTests } from "./runtime/gate-continuation.test.js";
+import { runExternalUpdateLoopTests } from "./runtime/external-update-loop.test.js";
 import { runLlmExecutorTests } from "./shared/llm-executor.test.js";
 import { runTraceTests } from "./shared/trace.test.js";
 import { runWorkspaceLocalEnvTests } from "./shared/workspace-local-env.test.js";
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
   await runOrchestratorTests();
   await runExternalActionResultTests();
   await runGateContinuationTests();
+  await runExternalUpdateLoopTests();
   await runRequirementDesignCapabilityTests();
   await runArchitectureDesignCapabilityTests();
   await runOverallDesignContractCapabilityTests();
