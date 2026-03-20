@@ -101,7 +101,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-architecture-generator-failure.test.mjs",
       "runHelloServiceArchitectureGeneratorFailureTest",
     ),
-    unimplementedEntry("generator:architecture-design:real-llm:success", "Architecture design generator real LLM success cases."),
+    implementedEntry(
+      "generator:architecture-design:real-llm:success",
+      "Architecture design generator real LLM success cases.",
+      "hello-service-architecture-generator-real-llm.test.mjs",
+      "runHelloServiceArchitectureGeneratorRealLlmTest",
+    ),
     unimplementedEntry("generator:architecture-design:real-llm:failure", "Architecture design generator real LLM failure cases."),
     implementedEntry(
       "generator:item-design:success",
