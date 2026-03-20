@@ -63,6 +63,12 @@ const HELLO_SERVICE_TEST_REGISTRY = {
       "hello-service-baseline-failure.test.mjs",
       "runHelloServiceBaselineFailureTest",
     ),
+    implementedEntry(
+      "runtime:external-update-loop:success",
+      "Requirement update external mcp loop success path.",
+      "hello-service-external-update-loop-success.test.mjs",
+      "runHelloServiceExternalUpdateLoopSuccessTest",
+    ),
     unimplementedEntry(
       "runtime:baseline:real-llm:success",
       "Baseline aggregation with real LLM success path.",

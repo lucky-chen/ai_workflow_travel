@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: in_progress
+status: completed
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -947,7 +947,7 @@ milestones:
   - milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     name: v2 mcp change and gate integration
     goal: integrate external mcp capabilities so update prompts gate decisions and change payloads can form one usable continuation loop
-    status: in_progress
+    status: completed
     stages:
       - stage_id: update prompt mcp handoff usable
         goal: make document update prompt outputs consumable by external mcp capabilities through one stable handoff shape
@@ -1129,7 +1129,7 @@ milestones:
 
       - stage_id: mcp-assisted artifact update loop usable
         goal: make update prompt generation external mcp execution changes return gate review and artifact refresh work as one usable loop
-        status: pending
+        status: completed
         delivered_feature: mcp-assisted artifact update loop
         feature_scope:
           - update_loop
@@ -1167,7 +1167,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify the full mcp-assisted update loop on at least one document capability path
-            status: pending
+            status: completed
             covers:
               - update_loop
               - artifact_refresh
@@ -1175,12 +1175,14 @@ milestones:
             tasks:
               - task_name: verify external mcp update loop
                 summary: verify one full external mcp update loop through hello-service including prompt handoff changes return gate decision and refreshed artifact state
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
                 progress_notes:
                   - verification completes only when one document path finishes with refreshed artifacts that can be consumed downstream without reopening the old update boundary
+                  - verified the requirement_design_update external loop through hello-service from update handoff to external changes return gate approval and refreshed artifact binding
+                  - added a dedicated hello-service runtime entry and npm script so the external update loop remains executable as one black-box verification path
         validation:
           - at least one document update path completes through mcp handoff changes return gate and artifact refresh
           - the refreshed artifact becomes valid downstream input without reopening the old update boundary
