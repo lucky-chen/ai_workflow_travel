@@ -17,9 +17,9 @@ context:
 workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
-    stage_id: change payload integration usable
-    batch_id: batch_13_2_change_payload_integration_verification
-    task_name: verify external change payload ingestion
+    stage_id: gate-driven external continuation usable
+    batch_id: batch_14_1_gate_driven_external_continuation
+    task_name: define gate continuation rules
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1012,7 +1012,7 @@ milestones:
 
       - stage_id: change payload integration usable
         goal: make external mcp changes payloads readable by runtime continuation logic and bind them back to artifact refresh
-        status: pending
+        status: completed
         delivered_feature: mcp change payload integration
         feature_scope:
           - changes_payload_shape
@@ -1046,7 +1046,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify that runtime can consume external change payloads without reopening document update boundaries
-            status: in_progress
+            status: completed
             covers:
               - changes_payload_shape
               - changed_artifact_binding
@@ -1054,10 +1054,13 @@ milestones:
             tasks:
               - task_name: verify external change payload ingestion
                 summary: verify runtime can map external mcp change payloads back to artifact refresh and continuation input
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
+                progress_notes:
+                  - added a dedicated runtime ingestion helper that maps ExternalActionResult into explicit refreshedArtifacts without implicit file scanning
+                  - verified the runtime ingestion rules for resumeInput precedence and updatedArtifacts fallback through the runtime test suite
                 progress_notes:
                   - use tests that simulate one external changes payload round-trip instead of relying on manual replay
         validation:

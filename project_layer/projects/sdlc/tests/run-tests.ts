@@ -10,6 +10,7 @@ import { runChangeGateTests } from "./shared/change-gate.test.js";
 import { runCliTests } from "./cli.test.js";
 import { runHistoryStoreTests } from "./shared/history-store.test.js";
 import { runOrchestratorTests } from "./runtime/orchestrator.test.js";
+import { runExternalActionResultTests } from "./runtime/external-action-result.test.js";
 import { runLlmExecutorTests } from "./shared/llm-executor.test.js";
 import { runTraceTests } from "./shared/trace.test.js";
 import { runWorkspaceLocalEnvTests } from "./shared/workspace-local-env.test.js";
@@ -20,6 +21,7 @@ async function main(): Promise<void> {
   await runCliTests();
   await runApplicationTests();
   await runOrchestratorTests();
+  await runExternalActionResultTests();
   await runRequirementDesignCapabilityTests();
   await runArchitectureDesignCapabilityTests();
   await runOverallDesignContractCapabilityTests();
