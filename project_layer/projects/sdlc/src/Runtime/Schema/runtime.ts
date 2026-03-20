@@ -79,8 +79,16 @@ export interface ExternalActionResult {
   diagnostics?: Array<Record<string, unknown>>;
 }
 
+export interface RuntimeContinuation {
+  branch: "continue" | "reject" | "wait";
+  targetPath: string;
+  resumeInput?: ArtifactMap;
+  comment?: string;
+}
+
 export interface RuntimeResult {
   accepted: boolean;
   summary: string;
   externalAction?: ExternalAction;
+  continuation?: RuntimeContinuation;
 }

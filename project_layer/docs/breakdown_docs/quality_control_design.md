@@ -157,6 +157,7 @@ interface GateResult {
 - `Gate` returns decisions only.
 - `Trace` records visibility events only.
 - Artifact usage after review is owned by the caller.
+- Runtime owns continuation branching after `Gate` returns `apply`, `reject`, or `wait`.
 - `Gate` should consume one explicit review subject that represents a contract result, validation result, or checked change set.
 - `reviewSubject.entries` is the shared review-content shape for contract issues, validation diagnostics, and checked changes.
 - `checked_change_set` entries should prefer `diff` for direct review and use `old`/`new` as supplementary context when available.
@@ -204,6 +205,7 @@ Processing:
 - for `contract_result` and `validation_result`, interpret entries as issue or diagnostic items through `summary` and optional structured `payload`
 - for `checked_change_set`, interpret entries as file-level changes and prefer `diff` for direct review while using `old`/`new` as supplementary context when needed
 - produce one allow / reject decision
+- allow `wait` as the stable decision for caller-owned resumable continuation
 - trigger one traceable decision-point event
 
 Output emission:

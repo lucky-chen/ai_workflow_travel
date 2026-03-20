@@ -224,6 +224,10 @@ interface RuntimeResult {
 - Update-style units must expose one stable payload with `handoffType`, `prompt`, and `targetArtifact` so external mcp consumers can bind the handoff without per-unit field translation.
 - External execution feedback must return through one shared `ExternalActionResult` shape before any follow-up contract, gate, or persistence step is evaluated.
 - `ExternalActionResult` must carry stable fields for `changedFiles`, `updatedArtifacts`, and `resumeInput` so later runtime ingestion does not need implicit file scanning.
+- Gate continuation must be resolved by runtime-owned rules after `ExternalActionResult` ingestion instead of per-capability branching.
+- Gate action `apply` must map to one explicit `continue` branch with continuation-ready artifact bindings.
+- Gate action `reject` must map to one explicit stop path and must not expose downstream continuation input.
+- Gate action `wait` must map to one explicit resumable return path with the minimum runtime-owned state boundary: `targetPath` plus continuation-ready artifact bindings.
 
 ### 4.2 Internal Runtime Skeleton
 
@@ -318,6 +322,9 @@ Processing:
 - expect the external side to execute against `targetPath` and return one `ExternalActionResult`
 - resume follow-up contract, gate, or next-step evaluation only after the external result is available
 - treat `updatedArtifacts` as the explicit artifact refresh source of truth and `resumeInput` as the continuation-ready artifact binding map
+- map gate decision `apply` to one runtime `continue` branch with continuation-ready artifact bindings
+- map gate decision `reject` to one runtime stop result without downstream continuation input
+- map gate decision `wait` to one runtime `wait` branch with the minimum resumable state boundary of `targetPath` plus continuation-ready artifact bindings
 - require update-style actions to keep one stable payload contract:
   - `handoffType`: current handoff category such as `document_update`
   - `prompt`: external update instruction content

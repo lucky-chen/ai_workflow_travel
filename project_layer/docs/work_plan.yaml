@@ -18,8 +18,8 @@ workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     stage_id: gate-driven external continuation usable
-    batch_id: batch_14_1_gate_driven_external_continuation
-    task_name: define gate continuation rules
+    batch_id: batch_14_2_gate_driven_external_continuation_verification
+    task_name: verify gate continuation paths
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1080,7 +1080,7 @@ milestones:
             batch_type: implementation
             name: implementation
             goal: connect gate decisions to external continuation input and branching behavior
-            status: pending
+            status: completed
             progress_notes:
               - do not mix gate branching with payload-shape definition work from batch_12 or batch_13
               - continuation behavior must be owned by runtime-level branching rules instead of per-capability special cases
@@ -1091,7 +1091,7 @@ milestones:
             tasks:
               - task_name: define gate continuation rules
                 summary: define how gate decisions accept reject or return external mcp update and change results to the next runtime step
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/projects/sdlc/src/Capability
@@ -1101,6 +1101,8 @@ milestones:
                   - map apply reject and wait decisions to explicit continuation branches
                   - rejected external changes must stop downstream continuation and return a clear runtime result
                   - if wait requires resumable state, define the minimum runtime-owned state boundary instead of implementing full compose-run
+                  - added a runtime gate continuation helper that maps external change review decisions into continue reject and wait runtime branches
+                  - covered apply reject and wait branch rules in the runtime test suite before wiring them into a later external update loop
           - batch_id: batch_14_2_gate_driven_external_continuation_verification
             batch_type: verification
             name: verification
