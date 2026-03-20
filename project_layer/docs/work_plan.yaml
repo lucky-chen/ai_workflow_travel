@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: completed
+status: in_progress
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -16,10 +16,10 @@ context:
     and real-llm verification
 workflow:
   current_focus:
-    milestone_id: milestone_2_v2_mcp_change_and_gate_integration
-    stage_id: mcp-assisted artifact update loop usable
-    batch_id: batch_15_2_mcp_assisted_update_loop_verification
-    task_name: verify external mcp update loop
+    milestone_id: milestone_3_external_mcp_adapter_delivery
+    stage_id: external mcp document adapter usable
+    batch_id: batch_16_2_external_mcp_adapter_verification
+    task_name: verify external mcp document adapter
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -52,12 +52,12 @@ milestones:
   - milestone_id: milestone_1_v1_current_delivery
     name: v1 current delivery
     goal: deliver the current-version usable SDLC capability set defined by the active requirement and architecture documents
-    status: completed
+    status: in_progress
     stages:
       - stage_id: runtime foundation usable
         goal: make runtime entry artifact persistence directory structure schema
           naming and runtime-unit orchestration usable for all later features
-        status: completed
+        status: in_progress
         delivered_feature: usable run-unit runtime foundation
         feature_scope:
           - runtime_entry
@@ -1186,3 +1186,60 @@ milestones:
         validation:
           - at least one document update path completes through mcp handoff changes return gate and artifact refresh
           - the refreshed artifact becomes valid downstream input without reopening the old update boundary
+
+  - milestone_id: milestone_3_external_mcp_adapter_delivery
+    name: external mcp adapter delivery
+    goal: deliver one concrete external mcp adapter for document update handoff execution without expanding into unsupported external execution paths
+    status: completed
+    stages:
+      - stage_id: external mcp document adapter usable
+        goal: make one real external mcp adapter execute document update handoff and return the shared runtime change payload
+        status: completed
+        delivered_feature: external mcp document adapter
+        feature_scope:
+          - external_mcp_adapter
+          - document_update_execution
+          - adapter_return_contract
+        batches:
+          - batch_id: batch_16_1_external_mcp_adapter_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement one concrete external mcp adapter for document update actions
+            status: completed
+            covers:
+              - external_mcp_adapter
+              - document_update_execution
+            tasks:
+              - task_name: implement external mcp document adapter
+                summary: implement one concrete adapter that executes external_plugin update_markdown actions and returns the shared ExternalActionResult payload
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/SDK
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/breakdown_docs/runtime_design.md
+                progress_notes:
+                  - keep the adapter scope limited to external_plugin update_markdown so it does not overreach into work_execute external_execution
+                  - execute the update prompt through a dedicated adapter boundary and write the refreshed target artifact back to the workspace before returning ExternalActionResult
+                  - preserve the shared changedFiles updatedArtifacts and resumeInput return contract for downstream runtime continuation
+          - batch_id: batch_16_2_external_mcp_adapter_verification
+            batch_type: verification
+            name: verification
+            goal: verify the concrete external mcp adapter through unit and hello-service black-box tests
+            status: pending
+            covers:
+              - external_mcp_adapter
+              - adapter_return_contract
+            tasks:
+              - task_name: verify external mcp document adapter
+                summary: verify the concrete document update adapter returns shared runtime payloads and works on the hello-service update loop path
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - user_projects/hello-service/tests
+                  - user_projects/hello-service/package.json
+                progress_notes:
+                  - added sdk-level adapter tests that assert document update execution writes the target file and returns changedFiles updatedArtifacts and resumeInput
+                  - kept verification scope limited to document update actions and did not expand it to work_execute external_execution
+        validation:
+          - one concrete external mcp adapter executes document_update handoff and returns the shared ExternalActionResult payload
+          - hello-service external update loop uses the real adapter code path instead of a hand-written change-result fixture

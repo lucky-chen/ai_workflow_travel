@@ -224,6 +224,7 @@ interface RuntimeResult {
 - Update-style units must expose one stable payload with `handoffType`, `prompt`, and `targetArtifact` so external mcp consumers can bind the handoff without per-unit field translation.
 - External execution feedback must return through one shared `ExternalActionResult` shape before any follow-up contract, gate, or persistence step is evaluated.
 - `ExternalActionResult` must carry stable fields for `changedFiles`, `updatedArtifacts`, and `resumeInput` so later runtime ingestion does not need implicit file scanning.
+- A concrete external mcp adapter may implement one supported action family at a time, but it must still return the shared `ExternalActionResult` contract.
 - Gate continuation must be resolved by runtime-owned rules after `ExternalActionResult` ingestion instead of per-capability branching.
 - Gate action `apply` must map to one explicit `continue` branch with continuation-ready artifact bindings.
 - Gate action `reject` must map to one explicit stop path and must not expose downstream continuation input.
@@ -320,6 +321,7 @@ Processing:
 - treat the returned action as one runtime-owned shared handoff protocol
 - pass one stable `ExternalAction` to the external caller or adapter boundary
 - expect the external side to execute against `targetPath` and return one `ExternalActionResult`
+- allow one concrete document-update mcp adapter to execute `external_plugin/update_markdown` against the workspace target path while keeping the shared runtime handoff contract unchanged
 - resume follow-up contract, gate, or next-step evaluation only after the external result is available
 - treat `updatedArtifacts` as the explicit artifact refresh source of truth and `resumeInput` as the continuation-ready artifact binding map
 - require the refreshed artifact map to contain the update payload `targetArtifact.artifactKey` before runtime continues the document update loop
