@@ -17,9 +17,9 @@ context:
 workflow:
   current_focus:
     milestone_id: milestone_1_v1_current_delivery
-    stage_id: hello-service real-llm usable
-    batch_id: batch_10_2_remaining_real_llm_matrix
-    task_name: verify overall contract real-llm
+    stage_id: work execute design alignment usable
+    batch_id: batch_11_1_work_execute_design_alignment
+    task_name: align work-execute output with technical design
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -39,6 +39,8 @@ governance:
   decisions:
     resolved:
       - work_plan.yaml is the only active execution baseline for implementation tracking
+      - technical design documents remain the design authority; when work_plan code or tests conflict with TechnicalArchitecture and breakdown docs, fix plan and implementation to match the technical docs
+      - technical-design alignment tasks take precedence over pending verification cleanup when an existing implementation or test boundary is found to conflict with the technical docs
       - batch_type is restricted to implementation or verification
       - feature semantics are defined by stage feature_scope, while verification only provides evidence
       - document generate units create artifacts, while document update units return external-update handoff payloads instead of rewriting artifacts directly
@@ -750,6 +752,9 @@ milestones:
               - batch_10_2 starts only after batch_10_1 has a repeatable pass record instead of one ad hoc clean-workspace pass
               - prioritize runtime entries first then generator entries then contract entries so failures remain easy to localize
               - every completed task in this batch must leave one executable hello-service test entry and one recorded passing run
+              - this batch only covers units that have an actual llm execution path under the current technical design and implementation boundary
+              - overall_design_contract stays outside mandatory real-llm coverage because the current technical design is local-rule-first and the current implementation does not provide a required llm path
+              - work_execute_contract stays outside real-llm coverage because its technical design is command-based validation rather than model execution
             covers:
               - remaining_runtime_real_llm
               - remaining_generator_real_llm
@@ -820,6 +825,7 @@ milestones:
                   - added a dedicated work-execute generator real-llm success entry in the hello-service generator registry
                   - tightened work_execute real-llm parsing to accept common JSON aliases and fenced JSON so changed file outputs survive provider formatting variance
                   - verified work_execute generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5700-work-execute-generator-real-llm/trace.json
+                  - this pass record was produced under the older changedFiles model and must be superseded by stage_11 work_execute design alignment before work_execute is considered technically aligned
               - task_name: verify requirement contract real-llm
                 summary: implement and verify the requirement contract real-llm entry
                 status: completed
@@ -847,20 +853,8 @@ milestones:
                 progress_notes:
                   - added a dedicated item-design contract real-llm success entry in the hello-service contract registry
                   - verified item-design contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/6000-item-design-contract-real-llm/
-              - task_name: verify overall contract real-llm
-                summary: implement and verify the overall-design contract real-llm entry
-                status: pending
-                involved_files:
-                  - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
               - task_name: verify work-plan contract real-llm
                 summary: implement and verify the work-plan contract real-llm entry
-                status: pending
-                involved_files:
-                  - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
-              - task_name: verify work-execute contract real-llm
-                summary: implement and verify the work-execute contract real-llm entry
                 status: pending
                 involved_files:
                   - user_projects/hello-service/tests
@@ -868,6 +862,71 @@ milestones:
         validation:
           - real-llm coverage is executable from hello-service tests
           - each completed real-llm entry has an actual passing record, not only a mock equivalent
+
+      - stage_id: work execute design alignment usable
+        goal: realign work_execute runtime behavior and hello-service verification with the technical-doc external-action model
+        status: in_progress
+        delivered_feature: work_execute external-action alignment
+        feature_scope:
+          - work_execute_external_action
+          - work_execute_contract_boundary
+          - hello_service_work_execute_alignment
+        batches:
+          - batch_id: batch_11_1_work_execute_design_alignment
+            batch_type: implementation
+            name: implementation
+            goal: restore work_execute output and runtime behavior to the technical-doc prompt-plus-external-action model
+            status: in_progress
+            progress_notes:
+              - current work_execute code and hello-service tests still use changedFiles output, which conflicts with the technical work_execute design
+              - keep work_execute_contract as command-based validation and do not add llm semantics to that contract boundary
+              - update work_execute capability runtime schema usage and related tests in one focused batch so the boundary changes stay consistent
+            covers:
+              - work_execute_external_action
+              - work_execute_contract_boundary
+            tasks:
+              - task_name: align work-execute output with technical design
+                summary: replace changedFiles-style work_execute output with prompt plus externalAction according to the technical work_execute design
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkExecute
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/TechnicalArchitecture.md
+                  - project_layer/docs/breakdown_docs/work_execute.md
+              - task_name: align work-execute artifact and runtime result shape
+                summary: make work_execute artifact persistence and runtime result boundaries match the technical runtime and work_execute docs
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Capability/WorkExecute
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/breakdown_docs/runtime_design.md
+                  - project_layer/docs/breakdown_docs/work_execute.md
+          - batch_id: batch_11_2_work_execute_design_alignment_verification
+            batch_type: verification
+            name: verification
+            goal: verify hello-service work_execute behavior against the technical-doc execution and contract boundaries
+            status: pending
+            covers:
+              - work_execute_external_action
+              - work_execute_contract_boundary
+              - hello_service_work_execute_alignment
+            tasks:
+              - task_name: verify work-execute prompt-action mock
+                summary: verify hello-service work_execute returns prompt plus externalAction under mock execution with the single-runId layout
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify work-execute contract command validation
+                summary: verify hello-service work_execute_contract remains command-based validation without llm execution
+                status: pending
+                involved_files:
+                  - user_projects/hello-service/tests
+                  - project_layer/projects/sdlc/package.json
+        validation:
+          - work_execute returns prompt plus externalAction instead of direct changedFiles output
+          - work_execute_contract remains a non-llm command validation boundary
+          - hello-service verification matches the single-runId trace layout and the technical work_execute design
 
   - milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     name: v2 mcp change and gate integration
