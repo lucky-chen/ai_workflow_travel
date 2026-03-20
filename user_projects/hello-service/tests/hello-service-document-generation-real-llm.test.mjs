@@ -14,15 +14,10 @@ import {
 } from "./hello-service-test-helpers.mjs";
 
 const realLlmTaskId = "hello-service-document-generation-real-llm-task";
-const runIds = {
-  requirementGenerate: "5201-requirement-generate",
-  architectureGenerate: "5202-architecture-generate",
-  itemGenerate: "5203-item-generate",
-  workPlanGenerate: "5204-work-plan-generate",
-};
+const runId = "5200-document-generation-real-llm";
 
 export async function runHelloServiceDocumentGenerationRealLlmTest() {
-  const workspaceRoot = await createWorkspaceCopy();
+  const workspaceRoot = await createWorkspaceCopy(runId);
 
   try {
     await resetWorkspace(workspaceRoot);
@@ -30,20 +25,20 @@ export async function runHelloServiceDocumentGenerationRealLlmTest() {
     await runCli(
       workspaceRoot,
       ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
-      { taskId: realLlmTaskId, runId: runIds.requirementGenerate, runtimeMode: "real" },
+      { taskId: realLlmTaskId, runId, runtimeMode: "real" },
     );
     assertUnitLlmTrace(
-      await loadTraceRecords(workspaceRoot, runIds.requirementGenerate),
+      await loadTraceRecords(workspaceRoot, runId),
       { executionUnitId: "requirement_design_generate", runtimeMode: "real" },
     );
 
     await runCli(workspaceRoot, ["run", "unit", "architecture_design_generate"], {
       taskId: realLlmTaskId,
-      runId: runIds.architectureGenerate,
+      runId,
       runtimeMode: "real",
     });
     assertUnitLlmTrace(
-      await loadTraceRecords(workspaceRoot, runIds.architectureGenerate),
+      await loadTraceRecords(workspaceRoot, runId),
       { executionUnitId: "architecture_design_generate", runtimeMode: "real" },
     );
 
@@ -51,20 +46,20 @@ export async function runHelloServiceDocumentGenerationRealLlmTest() {
     await runCli(
       workspaceRoot,
       ["run", "unit", "item_design_generate", "--item-descriptor-path", itemDescriptorPath],
-      { taskId: realLlmTaskId, runId: runIds.itemGenerate, runtimeMode: "real" },
+      { taskId: realLlmTaskId, runId, runtimeMode: "real" },
     );
     assertUnitLlmTrace(
-      await loadTraceRecords(workspaceRoot, runIds.itemGenerate),
+      await loadTraceRecords(workspaceRoot, runId),
       { executionUnitId: "item_design_generate", runtimeMode: "real" },
     );
 
     await runCli(workspaceRoot, ["run", "unit", "work_plan_generate"], {
       taskId: realLlmTaskId,
-      runId: runIds.workPlanGenerate,
+      runId,
       runtimeMode: "real",
     });
     assertUnitLlmTrace(
-      await loadTraceRecords(workspaceRoot, runIds.workPlanGenerate),
+      await loadTraceRecords(workspaceRoot, runId),
       { executionUnitId: "work_plan_generate", runtimeMode: "real" },
     );
 
@@ -75,12 +70,15 @@ export async function runHelloServiceDocumentGenerationRealLlmTest() {
       "utf8",
     );
     const workPlanDocument = await readFile(path.join(workspaceRoot, "sdlc", "docs", "work_plan.yaml"), "utf8");
+    const normalizedWorkPlanDocument = workPlanDocument
+      .replace(/^```ya?ml\s*/i, "")
+      .replace(/\s*```$/, "");
 
     assert.match(requirementDocument, /^# 1\. Background/m);
     assert.match(architectureDocument, /^# Technical Architecture/m);
     assert.match(itemDesignDocument, /^# /m);
-    assert.match(workPlanDocument, /^plan_name:/m);
-    assert.match(workPlanDocument, /^milestones:/m);
+    assert.match(normalizedWorkPlanDocument, /^plan_name:/m);
+    assert.match(normalizedWorkPlanDocument, /^current_focus:/m);
   } finally {
     await removeWorkspace(workspaceRoot);
   }

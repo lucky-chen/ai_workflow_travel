@@ -18,22 +18,10 @@ import {
 } from "./hello-service-test-helpers.mjs";
 
 const baselineTaskId = "hello-service-task";
-const runIds = {
-  requirementGenerate: "1001-requirement-generate",
-  requirementContract: "1002-requirement-contract",
-  architectureGenerate: "1003-architecture-generate",
-  architectureContract: "1004-architecture-contract",
-  itemGenerate: "1005-item-generate",
-  itemContract: "1006-item-contract",
-  overallDesignContract: "1007-overall-design-contract",
-  workPlanGenerate: "1008-work-plan-generate",
-  workPlanContract: "1009-work-plan-contract",
-  workExecute: "1010-work-execute",
-  workExecuteContract: "1010-work-execute",
-};
+const runId = "1000-unit-flow-success";
 
 export async function runHelloServiceSuccessTest() {
-  const targetWorkspaceRoot = await createWorkspaceCopy();
+  const targetWorkspaceRoot = await createWorkspaceCopy(runId);
 
   try {
     await resetWorkspace(targetWorkspaceRoot);
@@ -41,10 +29,10 @@ export async function runHelloServiceSuccessTest() {
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
-      { taskId: baselineTaskId, runId: runIds.requirementGenerate },
+      { taskId: baselineTaskId, runId },
     );
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.requirementGenerate),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "requirement_design_generate", runtimeMode: "mock" },
     );
     assert.match(
@@ -55,19 +43,19 @@ export async function runHelloServiceSuccessTest() {
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "requirement_design_contract"], {
       taskId: baselineTaskId,
-      runId: runIds.requirementContract,
+      runId,
     });
     assert.equal(
-      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.requirementContract, "requirement_design_contract_result.json"))).passed,
+      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "requirement_design_contract_result.json"))).passed,
       true,
     );
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "architecture_design_generate"], {
       taskId: baselineTaskId,
-      runId: runIds.architectureGenerate,
+      runId,
     });
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.architectureGenerate),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "architecture_design_generate", runtimeMode: "mock" },
     );
     assert.match(
@@ -78,10 +66,10 @@ export async function runHelloServiceSuccessTest() {
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "architecture_design_contract"], {
       taskId: baselineTaskId,
-      runId: runIds.architectureContract,
+      runId,
     });
     assert.equal(
-      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.architectureContract, "architecture_design_contract_result.json"))).passed,
+      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "architecture_design_contract_result.json"))).passed,
       true,
     );
 
@@ -89,10 +77,10 @@ export async function runHelloServiceSuccessTest() {
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "item_design_generate", "--item-descriptor-path", itemDescriptorPath],
-      { taskId: baselineTaskId, runId: runIds.itemGenerate },
+      { taskId: baselineTaskId, runId },
     );
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.itemGenerate),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "item_design_generate", runtimeMode: "mock" },
     );
     assert.match(
@@ -104,37 +92,37 @@ export async function runHelloServiceSuccessTest() {
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "item_design_contract", "--document-path", await getPrimaryItemDesignDocumentPath(targetWorkspaceRoot)],
-      { taskId: baselineTaskId, runId: runIds.itemContract },
+      { taskId: baselineTaskId, runId },
     );
     assert.equal(
-      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.itemContract, "item_design_contract_result.json"))).passed,
+      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "item_design_contract_result.json"))).passed,
       true,
     );
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "overall_design_contract"], {
       taskId: baselineTaskId,
-      runId: runIds.overallDesignContract,
+      runId,
     });
     assert.equal(
-      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.overallDesignContract, "overall_design_contract_result.json"))).passed,
+      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "overall_design_contract_result.json"))).passed,
       true,
     );
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "work_plan_generate"], {
       taskId: baselineTaskId,
-      runId: runIds.workPlanGenerate,
+      runId,
     });
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.workPlanGenerate),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "work_plan_generate", runtimeMode: "mock" },
     );
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "work_plan_contract"], {
       taskId: baselineTaskId,
-      runId: runIds.workPlanContract,
+      runId,
     });
     assert.equal(
-      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.workPlanContract, "work_plan_contract_result.json"))).passed,
+      (await readJsonFile(path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "work_plan_contract_result.json"))).passed,
       true,
     );
 
@@ -142,10 +130,10 @@ export async function runHelloServiceSuccessTest() {
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "work_execute", "--prepared-step-context-path", preparedStepContextPath],
-      { taskId: baselineTaskId, runId: runIds.workExecute },
+      { taskId: baselineTaskId, runId },
     );
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.workExecute),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "work_execute", runtimeMode: "mock" },
     );
 
@@ -153,15 +141,15 @@ export async function runHelloServiceSuccessTest() {
       targetWorkspaceRoot,
       ["run", "unit", "work_execute_contract", "--test-command", "node -e \"process.exit(0)\""],
       {
-      taskId: baselineTaskId,
-      runId: runIds.workExecuteContract,
+        taskId: baselineTaskId,
+        runId,
       },
     );
     const workExecuteContractResult = await readJsonFile(
-      path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.workExecuteContract, "work_execute_contract_result.json"),
+      path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "work_execute_contract_result.json"),
     );
     const workExecuteResult = await readJsonFile(
-      path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.workExecute, "work_execute.json"),
+      path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "work_execute.json"),
     );
     assert.equal(workExecuteContractResult.passed, true);
     assert.equal(String(workExecuteContractResult.summary).includes("Test command passed"), true);

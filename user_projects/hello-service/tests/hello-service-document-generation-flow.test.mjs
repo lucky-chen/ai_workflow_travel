@@ -12,23 +12,24 @@ import {
 } from "./hello-service-test-helpers.mjs";
 
 export async function runHelloServiceFunctionalTest() {
-  const workspaceRoot = await createWorkspaceCopy();
+  const runId = "hello-service-document-generation-flow";
+  const workspaceRoot = await createWorkspaceCopy(runId);
 
   try {
     await resetWorkspace(workspaceRoot);
 
     await runCli(workspaceRoot, ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"], {
-      runId: "hello-service-req",
+      runId,
     });
-    await runCli(workspaceRoot, ["run", "unit", "architecture_design_generate"], { runId: "hello-service-arch" });
+    await runCli(workspaceRoot, ["run", "unit", "architecture_design_generate"], { runId });
 
     const itemDescriptorPath = await createItemDescriptor(workspaceRoot);
     await runCli(
       workspaceRoot,
       ["run", "unit", "item_design_generate", "--item-descriptor-path", itemDescriptorPath],
-      { runId: "hello-service-item" },
+      { runId },
     );
-    await runCli(workspaceRoot, ["run", "unit", "work_plan_generate"], { runId: "hello-service-plan" });
+    await runCli(workspaceRoot, ["run", "unit", "work_plan_generate"], { runId });
 
     const requirementDocument = await readFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8");
     const architectureDocument = await readFile(path.join(workspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8");

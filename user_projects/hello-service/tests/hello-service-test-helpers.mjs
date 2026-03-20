@@ -1,43 +1,57 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { cp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 
 export const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const helloServiceDistRoot = path.join(workspaceRoot, "dist");
 const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const DEFAULT_ITEM_NAME = "EchoService";
 const DEFAULT_REAL_LLM_CLI_TIMEOUT_MS = 300000;
 const DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS = 240000;
+const WORKSPACE_COPY_ROOT = path.join(workspaceRoot, "dist", "sdlc");
+const EXCLUDED_TOP_LEVEL_NAMES = new Set(["node_modules", "dist", ".artifact-store", "reports"]);
 
-export async function createWorkspaceCopy() {
-  const copiedWorkspaceRoot = await mkdtemp(path.join(os.tmpdir(), "hello-service-sdlc-"));
-  await cp(workspaceRoot, copiedWorkspaceRoot, {
-    recursive: true,
-    filter(sourcePath) {
-      const relativePath = path.relative(workspaceRoot, sourcePath);
-      if (!relativePath) {
-        return true;
-      }
+export async function createWorkspaceCopy(runId = createWorkspaceCopyRunId()) {
+  const copiedWorkspaceRoot = path.join(WORKSPACE_COPY_ROOT, runId, "test", "workspace");
+  await rm(copiedWorkspaceRoot, { recursive: true, force: true });
+  await mkdir(copiedWorkspaceRoot, { recursive: true });
 
-      const topLevelName = relativePath.split(path.sep)[0];
-      return !["node_modules", "dist", ".artifact-store", "reports"].includes(topLevelName);
-    },
-  });
+  for (const entry of await readdir(workspaceRoot, { withFileTypes: true })) {
+    if (EXCLUDED_TOP_LEVEL_NAMES.has(entry.name)) {
+      continue;
+    }
+
+    await cp(path.join(workspaceRoot, entry.name), path.join(copiedWorkspaceRoot, entry.name), {
+      recursive: true,
+    });
+  }
+
+  await symlink(helloServiceDistRoot, path.join(copiedWorkspaceRoot, "dist"), "dir");
+  await resetGeneratedDocs(copiedWorkspaceRoot);
   await normalizeLocalEnvForCurrentCli(copiedWorkspaceRoot);
   return copiedWorkspaceRoot;
 }
 
 export async function removeWorkspace(targetWorkspaceRoot) {
-  await rm(targetWorkspaceRoot, { recursive: true, force: true });
+  await rm(path.join(resolveTestRunRoot(targetWorkspaceRoot), "test"), { recursive: true, force: true });
 }
 
 export async function resetWorkspace(targetWorkspaceRoot) {
-  await rm(path.join(targetWorkspaceRoot, "dist"), { recursive: true, force: true });
+  await rm(path.join(resolveTestRunRoot(targetWorkspaceRoot), "trace.json"), { force: true });
+  await rm(path.join(resolveTestRunRoot(targetWorkspaceRoot), "test", "commands.json"), { force: true });
   await rm(path.join(targetWorkspaceRoot, "src"), { recursive: true, force: true });
+  await resetGeneratedDocs(targetWorkspaceRoot);
+}
+
+function createWorkspaceCopyRunId() {
+  return `test-workspace-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function resetGeneratedDocs(targetWorkspaceRoot) {
   await rm(path.join(targetWorkspaceRoot, "sdlc", "docs", "item_design"), { recursive: true, force: true });
   await rm(path.join(targetWorkspaceRoot, "sdlc", "docs", "architecture_design_breakdown.json"), { force: true });
   await rm(path.join(targetWorkspaceRoot, "sdlc", "docs", "work_plan.yaml"), { force: true });
@@ -45,11 +59,13 @@ export async function resetWorkspace(targetWorkspaceRoot) {
 
 export async function runCli(targetWorkspaceRoot, args, options = {}) {
   const result = await executeCli(targetWorkspaceRoot, args, options);
+  await persistTestArtifacts(targetWorkspaceRoot, args, options, result);
   assert.equal(result.exitCode, 0, `CLI failed.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
 }
 
 export async function runCliExpectFailure(targetWorkspaceRoot, args, options = {}) {
   const result = await executeCli(targetWorkspaceRoot, args, options);
+  await persistTestArtifacts(targetWorkspaceRoot, args, options, result);
   assert.notEqual(result.exitCode, 0, `CLI unexpectedly succeeded.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
   return result;
 }
@@ -57,7 +73,7 @@ export async function runCliExpectFailure(targetWorkspaceRoot, args, options = {
 async function executeCli(targetWorkspaceRoot, args, options = {}) {
   const {
     taskId = "hello-service-task",
-    runId,
+    runId = resolveTestRunId(targetWorkspaceRoot),
     extraEnv = {},
     runtimeMode = "mock",
     timeoutMs = runtimeMode === "real" ? DEFAULT_REAL_LLM_CLI_TIMEOUT_MS : undefined,
@@ -128,6 +144,57 @@ async function executeCli(targetWorkspaceRoot, args, options = {}) {
       ? `${stderr}\nCLI timed out after ${timeoutMs}ms.`
       : stderr,
   };
+}
+
+async function persistTestArtifacts(targetWorkspaceRoot, args, options, result) {
+  const runId = options.runId ?? resolveTestRunId(targetWorkspaceRoot);
+  if (!runId?.trim()) {
+    return;
+  }
+
+  const persistedRunRoot = resolveTestRunRoot(targetWorkspaceRoot);
+  const commandLogPath = path.join(persistedRunRoot, "test", "commands.json");
+  const commandLog = await readJsonArrayFile(commandLogPath);
+
+  commandLog.push({
+    args,
+    options: {
+      taskId: options.taskId ?? "hello-service-task",
+      runId,
+      runtimeMode: options.runtimeMode ?? "mock",
+    },
+    result: {
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    },
+  });
+  await writeFile(
+    commandLogPath,
+    JSON.stringify(commandLog, null, 2),
+    "utf8",
+  );
+}
+
+function resolveTestRunRoot(targetWorkspaceRoot) {
+  return path.resolve(targetWorkspaceRoot, "..", "..");
+}
+
+function resolveTestRunId(targetWorkspaceRoot) {
+  return path.basename(resolveTestRunRoot(targetWorkspaceRoot));
+}
+
+async function readJsonArrayFile(filePath) {
+  try {
+    const parsed = JSON.parse(await readFile(filePath, "utf8"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export function getTraceFilePath(targetWorkspaceRoot, runId) {

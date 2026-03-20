@@ -12,14 +12,10 @@ import {
 } from "./hello-service-test-helpers.mjs";
 
 const realLlmTaskId = "hello-service-architecture-real-llm-task";
-const runIds = {
-  requirementGenerate: "5101-requirement-generate",
-  architectureGenerate: "5102-architecture-generate",
-  architectureContract: "5103-architecture-contract",
-};
+const runId = "5100-architecture-real-llm";
 
 export async function runHelloServiceArchitectureRealLlmTest() {
-  const targetWorkspaceRoot = await createWorkspaceCopy();
+  const targetWorkspaceRoot = await createWorkspaceCopy(runId);
 
   try {
     await resetWorkspace(targetWorkspaceRoot);
@@ -27,31 +23,31 @@ export async function runHelloServiceArchitectureRealLlmTest() {
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
-      { taskId: realLlmTaskId, runId: runIds.requirementGenerate, runtimeMode: "real" },
+      { taskId: realLlmTaskId, runId, runtimeMode: "real" },
     );
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "architecture_design_generate"], {
       taskId: realLlmTaskId,
-      runId: runIds.architectureGenerate,
+      runId,
       runtimeMode: "real",
     });
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.architectureGenerate),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "architecture_design_generate", runtimeMode: "real" },
     );
 
     await runCli(targetWorkspaceRoot, ["run", "unit", "architecture_design_contract"], {
       taskId: realLlmTaskId,
-      runId: runIds.architectureContract,
+      runId,
       runtimeMode: "real",
     });
     assertUnitLlmTrace(
-      await loadTraceRecords(targetWorkspaceRoot, runIds.architectureContract),
+      await loadTraceRecords(targetWorkspaceRoot, runId),
       { executionUnitId: "architecture_design_contract", runtimeMode: "real" },
     );
 
     const contractResult = await readJsonFile(
-      path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.architectureContract, "architecture_design_contract_result.json"),
+      path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "architecture_design_contract_result.json"),
     );
     assert.equal(contractResult.passed, true);
   } finally {
