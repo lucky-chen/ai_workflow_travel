@@ -17,9 +17,9 @@ context:
 workflow:
   current_focus:
     milestone_id: milestone_1_v1_current_delivery
-    stage_id: work execute design alignment usable
-    batch_id: batch_11_2_work_execute_design_alignment_verification
-    task_name: verify work-execute contract command validation
+    stage_id: hello-service real-llm usable
+    batch_id: batch_10_2_remaining_real_llm_matrix
+    task_name: verify work-plan contract real-llm
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -865,7 +865,7 @@ milestones:
 
       - stage_id: work execute design alignment usable
         goal: realign work_execute runtime behavior and hello-service verification with the technical-doc external-action model
-        status: in_progress
+        status: completed
         delivered_feature: work_execute external-action alignment
         feature_scope:
           - work_execute_external_action
@@ -912,7 +912,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify hello-service work_execute behavior against the technical-doc execution and contract boundaries
-            status: in_progress
+            status: completed
             covers:
               - work_execute_external_action
               - work_execute_contract_boundary
@@ -929,10 +929,13 @@ milestones:
                   - reverified the hello-service unit-flow success path after the work_execute prompt-action boundary change
               - task_name: verify work-execute contract command validation
                 summary: verify hello-service work_execute_contract remains command-based validation without llm execution
-                status: pending
+                status: completed
                 involved_files:
                   - user_projects/hello-service/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - verified hello-service work_execute_contract success and failure paths under single-runId execution
+                  - confirmed work_execute_contract emits contract artifacts without work_execute_contract llm trace events and remains command-based validation
         validation:
           - work_execute returns prompt plus externalAction instead of direct changedFiles output
           - work_execute_contract remains a non-llm command validation boundary

@@ -13,16 +13,10 @@ import {
 } from "./hello-service-test-helpers.mjs";
 
 const failureTaskId = "hello-service-work-execute-contract-failure-task";
-const runIds = {
-  requirementGenerate: "3801-requirement-generate",
-  architectureGenerate: "3802-architecture-generate",
-  itemGenerate: "3803-item-generate",
-  workPlanGenerate: "3804-work-plan-generate",
-  workExecute: "3805-work-execute",
-};
+const runId = "3805-work-execute-contract-failure";
 
 export async function runHelloServiceWorkExecuteContractFailureTest() {
-  const targetWorkspaceRoot = await createWorkspaceCopy();
+  const targetWorkspaceRoot = await createWorkspaceCopy(runId);
 
   try {
     await resetWorkspace(targetWorkspaceRoot);
@@ -30,37 +24,37 @@ export async function runHelloServiceWorkExecuteContractFailureTest() {
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "requirement_design_generate", "--user-comment", "Generate requirement for hello-service"],
-      { taskId: failureTaskId, runId: runIds.requirementGenerate },
+      { taskId: failureTaskId, runId },
     );
     await runCli(targetWorkspaceRoot, ["run", "unit", "architecture_design_generate"], {
       taskId: failureTaskId,
-      runId: runIds.architectureGenerate,
+      runId,
     });
     const itemDescriptorPath = await createItemDescriptor(targetWorkspaceRoot);
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "item_design_generate", "--item-descriptor-path", itemDescriptorPath],
-      { taskId: failureTaskId, runId: runIds.itemGenerate },
+      { taskId: failureTaskId, runId },
     );
     await runCli(targetWorkspaceRoot, ["run", "unit", "work_plan_generate"], {
       taskId: failureTaskId,
-      runId: runIds.workPlanGenerate,
+      runId,
     });
     const preparedStepContextPath = await createPreparedStepContext(targetWorkspaceRoot);
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "work_execute", "--prepared-step-context-path", preparedStepContextPath],
-      { taskId: failureTaskId, runId: runIds.workExecute },
+      { taskId: failureTaskId, runId },
     );
     await runCli(
       targetWorkspaceRoot,
       ["run", "unit", "work_execute_contract", "--test-command", "node -e \"process.exit(1)\""],
-      { taskId: failureTaskId, runId: runIds.workExecute },
+      { taskId: failureTaskId, runId },
     );
 
-    const traceRecords = await loadTraceRecords(targetWorkspaceRoot, runIds.workExecute);
+    const traceRecords = await loadTraceRecords(targetWorkspaceRoot, runId);
     const contractResult = await readJsonFile(
-      path.join(targetWorkspaceRoot, "dist", "sdlc", runIds.workExecute, "work_execute_contract_result.json"),
+      path.join(targetWorkspaceRoot, "dist", "sdlc", runId, "work_execute_contract_result.json"),
     );
 
     assert.equal(contractResult.passed, false);
@@ -76,6 +70,14 @@ export async function runHelloServiceWorkExecuteContractFailureTest() {
           && entry.payload?.filePath === "work_execute_contract_result.json",
       ),
       true,
+    );
+    assert.equal(
+      traceRecords.some(
+        (entry) =>
+          entry.scope?.executionUnitId === "work_execute_contract"
+          && entry.payload?.eventType === "llm_execution_started",
+      ),
+      false,
     );
   } finally {
     await removeWorkspace(targetWorkspaceRoot);
