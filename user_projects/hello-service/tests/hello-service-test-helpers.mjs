@@ -10,6 +10,8 @@ const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const DEFAULT_ITEM_NAME = "EchoService";
+const DEFAULT_REAL_LLM_CLI_TIMEOUT_MS = 180000;
+const DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS = 120000;
 
 export async function createWorkspaceCopy() {
   const copiedWorkspaceRoot = await mkdtemp(path.join(os.tmpdir(), "hello-service-sdlc-"));
@@ -53,7 +55,16 @@ export async function runCliExpectFailure(targetWorkspaceRoot, args, options = {
 }
 
 async function executeCli(targetWorkspaceRoot, args, options = {}) {
-  const { taskId = "hello-service-task", runId, extraEnv = {}, runtimeMode = "mock" } = options;
+  const {
+    taskId = "hello-service-task",
+    runId,
+    extraEnv = {},
+    runtimeMode = "mock",
+    timeoutMs = runtimeMode === "real" ? DEFAULT_REAL_LLM_CLI_TIMEOUT_MS : undefined,
+  } = options;
+  if (runtimeMode === "real") {
+    await prepareRealLlmWorkspace(targetWorkspaceRoot);
+  }
   const commandArgs = [...args, "--workdir", targetWorkspaceRoot];
   if (runId) {
     commandArgs.push("--run-id", runId);
@@ -79,6 +90,9 @@ async function executeCli(targetWorkspaceRoot, args, options = {}) {
 
   let stdout = "";
   let stderr = "";
+  let timeoutId;
+  let killId;
+  let timedOut = false;
   child.stdout.on("data", (chunk) => {
     stdout += String(chunk);
   });
@@ -86,15 +100,33 @@ async function executeCli(targetWorkspaceRoot, args, options = {}) {
     stderr += String(chunk);
   });
 
+  if (typeof timeoutMs === "number" && Number.isFinite(timeoutMs) && timeoutMs > 0) {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+      killId = setTimeout(() => {
+        child.kill("SIGKILL");
+      }, 5000);
+    }, timeoutMs);
+  }
+
   const exitCode = await new Promise((resolve, reject) => {
     child.on("error", reject);
     child.on("close", resolve);
   });
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+  }
+  if (killId) {
+    clearTimeout(killId);
+  }
 
   return {
     exitCode,
     stdout,
-    stderr,
+    stderr: timedOut
+      ? `${stderr}\nCLI timed out after ${timeoutMs}ms.`
+      : stderr,
   };
 }
 
@@ -267,6 +299,25 @@ export async function getPrimaryBreakdownEntry(targetWorkspaceRoot) {
 
 export async function getPrimaryItemDesignDocumentPath(targetWorkspaceRoot) {
   return (await getPrimaryBreakdownEntry(targetWorkspaceRoot)).documentPath;
+}
+
+export async function prepareRealLlmWorkspace(targetWorkspaceRoot) {
+  const localEnvPath = path.join(targetWorkspaceRoot, "sdlc", "local_env.json");
+  const localEnv = JSON.parse(await readFile(localEnvPath, "utf8"));
+  if (!localEnv.llm || typeof localEnv.llm !== "object") {
+    return;
+  }
+
+  if (localEnv.llm.provider === "deepseek" && localEnv.llm.model === "deepseek-reasoner") {
+    localEnv.llm.model = "deepseek-chat";
+  }
+
+  const timeoutMs = Number(localEnv.llm.timeout_ms);
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS) {
+    localEnv.llm.timeout_ms = DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS;
+  }
+
+  await writeFile(localEnvPath, `${JSON.stringify(localEnv, null, 2)}\n`, "utf8");
 }
 
 async function writeMarkdownFixtureFromContractSpec(targetWorkspaceRoot, contractFileName, relativePath, title = "") {
