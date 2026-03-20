@@ -736,6 +736,9 @@ milestones:
                 progress_notes:
                   - architecture real-llm generate plus contract has passed once after hint cleanup
                   - the path still needs to be stabilized as a maintained test entry instead of an ad hoc rerun
+                  - added hello-service-architecture-real-llm.test.mjs as a copied-workspace dedicated real-llm entry
+                  - sandbox run failed with Request aborted before a stable pass record was produced
+                  - escalated rerun stayed in external wait for more than 180 seconds without a completed pass record
           - batch_id: batch_10_2_remaining_real_llm_matrix
             batch_type: verification
             name: verification
@@ -834,33 +837,6 @@ milestones:
           - real-llm coverage is executable from hello-service tests
           - each completed real-llm entry has an actual passing record, not only a mock equivalent
 
-      - stage_id: compose-run reserved boundary
-        goal: keep compose-run aligned with the current design docs as a reserved but
-          not-yet-usable boundary until the docs define a complete deliverable
-        status: pending
-        delivered_feature: explicit compose-run boundary placeholder
-        feature_scope:
-          - placeholder_boundary
-        batches:
-          - batch_id: batch_11_1_placeholder_consistency
-            batch_type: verification
-            name: verification
-            goal: keep compose-run exposed only as a documented placeholder and prevent it
-              from silently regressing into legacy stage orchestration
-            status: pending
-            covers:
-              - placeholder_boundary
-            tasks:
-              - task_name: preserve compose-run placeholder boundary
-                summary: preserve compose-run as an explicit interface-only placeholder until the design docs define a full usable feature
-                status: pending
-                involved_files:
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/Requirement.md
-                  - project_layer/docs/TechnicalArchitecture.md
-        validation:
-          - compose-run remains explicit and non-misleading
-          - no active path treats legacy multi-stage orchestration as the delivered compose-run feature
   - milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     name: v2 mcp change and gate integration
     goal: integrate external mcp capabilities so update prompts gate decisions and change payloads can form one usable continuation loop
