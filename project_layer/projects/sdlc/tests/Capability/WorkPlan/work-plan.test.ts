@@ -3,11 +3,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { WorkPlanContract } from "../../../src/Capability/WorkPlan/work-plan-contract.js";
-import { WorkPlanGenerator } from "../../../src/Capability/WorkPlan/work-plan-generator.js";
 import {
+  WorkPlanGenerator,
   WorkPlanGenerateRuntimeUnit,
-  WorkPlanUpdateRuntimeUnit,
-} from "../../../src/Capability/WorkPlan/work-plan-runtime-unit.js";
+} from "../../../src/Capability/WorkPlan/work-plan-generator.js";
+import { WorkPlanUpdateRuntimeUnit } from "../../../src/Capability/WorkPlan/work-plan-update-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";

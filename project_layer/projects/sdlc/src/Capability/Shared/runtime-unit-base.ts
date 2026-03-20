@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
 import type { ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
-import type { RuntimeContext, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
+import type { RuntimeContext, RuntimeResult, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
 import type { IArtifactStore } from "../../Data/artifact-store.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 
@@ -13,6 +13,8 @@ export abstract class RuntimeUnitBase {
     protected readonly traceRecorder: ITraceRecorder,
     protected readonly resourceRoot?: string,
   ) {}
+
+  abstract run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult>;
 
   protected buildExecutionContext(
     request: UnitRuntimeRequest,

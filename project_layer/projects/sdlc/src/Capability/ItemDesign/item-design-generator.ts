@@ -1,11 +1,13 @@
 import type { ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
 import { getArtifactValue, type ExecutionContext } from "../../Runtime/Unit/execution-unit.js";
-import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
+import type { ArtifactMap, RuntimeContext, RuntimeResult, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 import { loadContractSpecFromJson } from "../Shared/contract-spec-loader.js";
 import { loadItemDesignTemplateSpec } from "./item-design-template-spec.js";
+import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import type { IArtifactStore } from "../../Data/artifact-store.js";
 
 export interface ItemDescriptor {
   name: string;
@@ -33,6 +35,9 @@ export interface ItemDesignGeneratorDependencies {
   llmExecutor: ILlmExecutor;
   traceRecorder?: ITraceRecorder;
 }
+
+export const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
+export const ITEM_DESIGN_DIRECTORY = "sdlc/docs/item_design";
 
 interface ItemDesignGeneratorInputPayload {
   architectureDocument: string;
@@ -175,5 +180,58 @@ export class ItemDesignGenerator extends DocumentUnitGenerator<ItemDesignGenerat
       && candidate.responsibilities.every((item) => typeof item === "string")
       && (candidate.documentPath === undefined || typeof candidate.documentPath === "string")
       && (candidate.description === undefined || typeof candidate.description === "string");
+  }
+}
+
+export class ItemDesignGenerateRuntimeUnit extends RuntimeUnitBase {
+  constructor(
+    artifactStore: IArtifactStore,
+    traceRecorder: ITraceRecorder,
+    protected readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
+  ) {
+    super(artifactStore, traceRecorder, resourceRoot);
+  }
+
+  private async loadItemDescriptor(workspaceRoot: string, request: UnitRuntimeRequest): Promise<ItemDescriptor> {
+    if (request.params?.itemDescriptor) {
+      return this.parseJsonText<ItemDescriptor>(
+        request.params.itemDescriptor,
+        'Option "--item-descriptor" must be valid JSON.',
+      );
+    }
+
+    if (request.params?.itemDescriptorPath) {
+      return this.parseJsonText<ItemDescriptor>(
+        await this.readUserFile(workspaceRoot, request.params.itemDescriptorPath),
+        'Option "--item-descriptor-path" must point to valid JSON.',
+      );
+    }
+
+    throw new Error('Missing required option: --item-descriptor or --item-descriptor-path');
+  }
+
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const descriptor = await this.loadItemDescriptor(context.workspaceRoot, request);
+    const executionContext = this.buildExecutionContext(request, context, {
+      architecture_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
+      item_descriptors: JSON.stringify(descriptor),
+    });
+    const output = await new ItemDesignGenerator({
+      llmExecutor: this.llmExecutor,
+      traceRecorder: this.traceRecorder,
+    }).run(executionContext);
+    const artifacts = output.artifacts as Record<string, unknown>;
+    const documentPath = this.readOptionalStringField(artifacts, "documentPath")
+      ?? `${ITEM_DESIGN_DIRECTORY}/${this.readStringField(artifacts, "moduleName")}.md`;
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
+      documentPath,
+      this.readStringField(artifacts, "content"),
+    );
+    return {
+      accepted: true,
+      summary: `${output.summary} Persisted to ${documentPath}.`,
+    };
   }
 }

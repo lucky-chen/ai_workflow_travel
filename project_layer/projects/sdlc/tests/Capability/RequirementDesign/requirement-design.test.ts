@@ -3,11 +3,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { RequirementContract } from "../../../src/Capability/RequirementDesign/requirement-contract.js";
-import { RequirementGenerator } from "../../../src/Capability/RequirementDesign/requirement-generator.js";
-import {
-  RequirementDesignGenerateRuntimeUnit,
-  RequirementDesignUpdateRuntimeUnit,
-} from "../../../src/Capability/RequirementDesign/requirement-runtime-unit.js";
+import { RequirementGenerator, RequirementDesignGenerateRuntimeUnit } from "../../../src/Capability/RequirementDesign/requirement-generator.js";
+import { RequirementDesignUpdateRuntimeUnit } from "../../../src/Capability/RequirementDesign/requirement-update-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";

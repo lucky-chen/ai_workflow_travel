@@ -6,11 +6,16 @@ import type {
   ExecutionUnitResult,
   ExecutionContext,
 } from "../../Runtime/Unit/execution-unit.js";
+import type { RuntimeContext, RuntimeResult, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
+import type { IArtifactStore } from "../../Data/artifact-store.js";
+import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import type { ContractExecutionResult, ContractSpec } from "../../Capability/Shared/document-unit-contract.js";
 import { DocumentUnitContract } from "../../Capability/Shared/document-unit-contract.js";
+import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
 import { runMarkdownDocumentStaticChecks } from "../../Capability/Shared/document-contract-static-checker.js";
 import { parseDesignDocumentBreakdown } from "../Shared/design-document-breakdown.js";
+import { ARCHITECTURE_DOCUMENT_PATH } from "./architecture-design-generator.js";
 
 interface ArchitectureArtifacts {
   artifactKey: "architecture_design";
@@ -176,6 +181,38 @@ export class ArchitectureDesignContract extends DocumentUnitContract {
       checkItem: contract?.check_item ?? "cross_section_alignment",
       message,
       severity: contract?.severity ?? "high",
+    };
+  }
+}
+
+const ARCHITECTURE_CONTRACT_RESULT_PATH = "architecture_design_contract_result.json";
+
+export class ArchitectureDesignContractRuntimeUnit extends RuntimeUnitBase {
+  constructor(
+    artifactStore: IArtifactStore,
+    traceRecorder: ITraceRecorder,
+    protected readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
+  ) {
+    super(artifactStore, traceRecorder, resourceRoot);
+  }
+
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const output = {
+      executionUnitId: "architecture_design",
+      success: true,
+      summary: "Loaded architecture design artifact for contract check.",
+      artifacts: {
+        artifactKey: "architecture_design",
+        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, ARCHITECTURE_DOCUMENT_PATH),
+      },
+    };
+    const executionContext = this.buildExecutionContext(request, context, {});
+    const result = await new ArchitectureDesignContract(this.llmExecutor).check(executionContext, output);
+    await this.writeArtifact(executionContext, ARCHITECTURE_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
+    return {
+      accepted: true,
+      summary: `${result.summary} Persisted to ${ARCHITECTURE_CONTRACT_RESULT_PATH}.`,
     };
   }
 }

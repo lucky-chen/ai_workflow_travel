@@ -3,8 +3,12 @@ import type {
   ExecutionUnitResult,
   ExecutionContext,
 } from "../../Runtime/Unit/execution-unit.js";
+import type { RuntimeContext, RuntimeResult, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
-import type { RequirementArtifacts } from "./requirement-generator.js";
+import type { IArtifactStore } from "../../Data/artifact-store.js";
+import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
+import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import { REQUIREMENT_DOCUMENT_PATH, type RequirementArtifacts } from "./requirement-generator.js";
 import {
   DocumentUnitContract,
   type ContractSpec,
@@ -90,5 +94,37 @@ export class RequirementContract extends DocumentUnitContract {
     }
 
     return artifacts;
+  }
+}
+
+const REQUIREMENT_CONTRACT_RESULT_PATH = "requirement_design_contract_result.json";
+
+export class RequirementDesignContractRuntimeUnit extends RuntimeUnitBase {
+  constructor(
+    artifactStore: IArtifactStore,
+    traceRecorder: ITraceRecorder,
+    protected readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
+  ) {
+    super(artifactStore, traceRecorder, resourceRoot);
+  }
+
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const output = {
+      executionUnitId: "requirement_design",
+      success: true,
+      summary: "Loaded requirement design artifact for contract check.",
+      artifacts: {
+        artifactKey: "requirement_design",
+        content: await this.readRequiredWorkspaceFile(context.workspaceRoot, REQUIREMENT_DOCUMENT_PATH),
+      },
+    };
+    const executionContext = this.buildExecutionContext(request, context, {});
+    const result = await new RequirementContract(this.llmExecutor).check(executionContext, output);
+    await this.writeArtifact(executionContext, REQUIREMENT_CONTRACT_RESULT_PATH, JSON.stringify(result, null, 2));
+    return {
+      accepted: true,
+      summary: `${result.summary} Persisted to ${REQUIREMENT_CONTRACT_RESULT_PATH}.`,
+    };
   }
 }

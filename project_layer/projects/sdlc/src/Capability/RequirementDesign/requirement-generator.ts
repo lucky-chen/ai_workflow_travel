@@ -1,9 +1,11 @@
 import type { ExecutionContext, ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
 import { getArtifactValue } from "../../Runtime/Unit/execution-unit.js";
-import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
+import type { ArtifactMap, RuntimeContext, RuntimeResult, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
+import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import type { IArtifactStore } from "../../Data/artifact-store.js";
 
 export type RequirementArtifacts =
   | {
@@ -20,6 +22,8 @@ export interface RequirementGeneratorDependencies {
   llmExecutor: ILlmExecutor;
   traceRecorder?: ITraceRecorder;
 }
+
+export const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
 
 interface RequirementGeneratorInput {
   existingRequirement?: string;
@@ -109,6 +113,40 @@ export class RequirementGenerator extends DocumentUnitGenerator<RequirementGener
           artifactKey: "requirement_design",
           content: result.content,
         },
+    };
+  }
+}
+
+export class RequirementDesignGenerateRuntimeUnit extends RuntimeUnitBase {
+  constructor(
+    artifactStore: IArtifactStore,
+    traceRecorder: ITraceRecorder,
+    protected readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
+  ) {
+    super(artifactStore, traceRecorder, resourceRoot);
+  }
+
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const userComment = request.params?.userComment?.trim();
+    if (!userComment) {
+      throw new Error('Missing required option: --user-comment');
+    }
+
+    const executionContext = this.buildExecutionContext(request, context, {});
+    const output = await new RequirementGenerator({
+      llmExecutor: this.llmExecutor,
+      traceRecorder: this.traceRecorder,
+    }).run(executionContext);
+    const artifacts = output.artifacts as Record<string, unknown>;
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
+      REQUIREMENT_DOCUMENT_PATH,
+      this.readStringField(artifacts, "content"),
+    );
+    return {
+      accepted: true,
+      summary: `${output.summary} Persisted to ${REQUIREMENT_DOCUMENT_PATH}.`,
     };
   }
 }

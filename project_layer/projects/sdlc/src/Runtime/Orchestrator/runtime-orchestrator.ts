@@ -1,25 +1,33 @@
 import {
   ArchitectureDesignContractRuntimeUnit,
+} from "../../Capability/ArchitectureDesign/architecture-design-contract.js";
+import {
   ArchitectureDesignGenerateRuntimeUnit,
-  ArchitectureDesignUpdateRuntimeUnit,
-} from "../../Capability/ArchitectureDesign/architecture-design-runtime-unit.js";
+} from "../../Capability/ArchitectureDesign/architecture-design-generator.js";
+import { ArchitectureDesignUpdateRuntimeUnit } from "../../Capability/ArchitectureDesign/architecture-design-update-runtime-unit.js";
 import {
   ItemDesignContractRuntimeUnit,
+} from "../../Capability/ItemDesign/item-design-contract.js";
+import {
   ItemDesignGenerateRuntimeUnit,
-  ItemDesignUpdateRuntimeUnit,
-} from "../../Capability/ItemDesign/item-design-runtime-unit.js";
+} from "../../Capability/ItemDesign/item-design-generator.js";
+import { ItemDesignUpdateRuntimeUnit } from "../../Capability/ItemDesign/item-design-update-runtime-unit.js";
 import { OverallDesignContractRuntimeUnit } from "../../Capability/OverallDesignContract/overall-design-contract-runtime-unit.js";
 import {
   RequirementDesignContractRuntimeUnit,
+} from "../../Capability/RequirementDesign/requirement-contract.js";
+import {
   RequirementDesignGenerateRuntimeUnit,
-  RequirementDesignUpdateRuntimeUnit,
-} from "../../Capability/RequirementDesign/requirement-runtime-unit.js";
+} from "../../Capability/RequirementDesign/requirement-generator.js";
+import { RequirementDesignUpdateRuntimeUnit } from "../../Capability/RequirementDesign/requirement-update-runtime-unit.js";
 import { WorkExecuteRuntimeUnit } from "../../Capability/WorkExecute/work-execute-runtime-unit.js";
 import {
   WorkPlanContractRuntimeUnit,
+} from "../../Capability/WorkPlan/work-plan-contract.js";
+import {
   WorkPlanGenerateRuntimeUnit,
-  WorkPlanUpdateRuntimeUnit,
-} from "../../Capability/WorkPlan/work-plan-runtime-unit.js";
+} from "../../Capability/WorkPlan/work-plan-generator.js";
+import { WorkPlanUpdateRuntimeUnit } from "../../Capability/WorkPlan/work-plan-update-runtime-unit.js";
 import type { RuntimeInput, RuntimeResult } from "../Schema/runtime.js";
 import type { Orchestrator, RuntimeOrchestratorDependencies, RuntimeUnit } from "./types.js";
 

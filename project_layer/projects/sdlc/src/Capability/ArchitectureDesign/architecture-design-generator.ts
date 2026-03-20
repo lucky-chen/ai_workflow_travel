@@ -1,9 +1,11 @@
 import { getArtifactValue, type ExecutionUnitResult } from "../../Runtime/Unit/execution-unit.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
-import type { ArtifactMap } from "../../Runtime/Schema/runtime.js";
+import type { ArtifactMap, RuntimeContext, RuntimeResult, UnitRuntimeRequest } from "../../Runtime/Schema/runtime.js";
 import type { ILlmExecutor, LlmExecutionRequest, LlmExecutionResult } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { DocumentUnitGenerator, type DocumentPromptMaterials } from "../../Capability/Shared/document-unit-generator.js";
 import { parseDesignDocumentBreakdown } from "../Shared/design-document-breakdown.js";
+import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import type { IArtifactStore } from "../../Data/artifact-store.js";
 
 export type ArchitectureDesignArtifacts =
   | {
@@ -21,6 +23,10 @@ export interface ArchitectureDesignGeneratorDependencies {
   llmExecutor: ILlmExecutor;
   traceRecorder?: ITraceRecorder;
 }
+
+export const REQUIREMENT_DOCUMENT_PATH = "sdlc/docs/Requirement.md";
+export const ARCHITECTURE_DOCUMENT_PATH = "sdlc/docs/TechnicalArchitecture.md";
+export const ARCHITECTURE_BREAKDOWN_PATH = "sdlc/docs/architecture_design_breakdown.json";
 
 interface ArchitectureDesignGeneratorInputPayload {
   requirementDocument: string;
@@ -124,6 +130,41 @@ export class ArchitectureDesignGenerator extends DocumentUnitGenerator<Architect
 
     return {
       designDocumentBreakdown: JSON.parse(artifacts.design_document_breakdown) as unknown,
+    };
+  }
+}
+
+export class ArchitectureDesignGenerateRuntimeUnit extends RuntimeUnitBase {
+  constructor(
+    artifactStore: IArtifactStore,
+    traceRecorder: ITraceRecorder,
+    protected readonly llmExecutor: ILlmExecutor,
+    resourceRoot?: string,
+  ) {
+    super(artifactStore, traceRecorder, resourceRoot);
+  }
+
+  async run(request: UnitRuntimeRequest, context: RuntimeContext): Promise<RuntimeResult> {
+    const executionContext = this.buildExecutionContext(request, context, {
+      requirement_design: await this.readRequiredWorkspaceFile(context.workspaceRoot, REQUIREMENT_DOCUMENT_PATH),
+    });
+    const output = await new ArchitectureDesignGenerator({
+      llmExecutor: this.llmExecutor,
+      traceRecorder: this.traceRecorder,
+    }).run(executionContext);
+    const artifacts = output.artifacts as Record<string, unknown>;
+    await this.writeWorkspaceFile(
+      context.workspaceRoot,
+      ARCHITECTURE_DOCUMENT_PATH,
+      this.readStringField(artifacts, "content"),
+    );
+    const designDocumentBreakdown = this.readOptionalStringField(artifacts, "design_document_breakdown");
+    if (designDocumentBreakdown) {
+      await this.writeWorkspaceFile(context.workspaceRoot, ARCHITECTURE_BREAKDOWN_PATH, designDocumentBreakdown);
+    }
+    return {
+      accepted: true,
+      summary: `${output.summary} Persisted to ${ARCHITECTURE_DOCUMENT_PATH}.`,
     };
   }
 }

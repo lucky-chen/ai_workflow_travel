@@ -3,11 +3,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ArchitectureDesignContract } from "../../../src/Capability/ArchitectureDesign/architecture-design-contract.js";
-import { ArchitectureDesignGenerator } from "../../../src/Capability/ArchitectureDesign/architecture-design-generator.js";
 import {
+  ArchitectureDesignGenerator,
   ArchitectureDesignGenerateRuntimeUnit,
-  ArchitectureDesignUpdateRuntimeUnit,
-} from "../../../src/Capability/ArchitectureDesign/architecture-design-runtime-unit.js";
+} from "../../../src/Capability/ArchitectureDesign/architecture-design-generator.js";
+import { ArchitectureDesignUpdateRuntimeUnit } from "../../../src/Capability/ArchitectureDesign/architecture-design-update-runtime-unit.js";
 import { ArtifactStoreService } from "../../../src/Data/artifact-store.js";
 import { InMemoryTraceRecorder } from "../../../src/SDK/QualityControl/Trace/trace-recorder.js";
 import { createExecutionContext, createMockLlmExecutor, createTempDir, removeTempDir } from "../test-helpers.js";
