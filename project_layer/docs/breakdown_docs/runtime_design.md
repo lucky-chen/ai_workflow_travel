@@ -187,8 +187,9 @@ interface ExternalAction {
 interface ExternalActionResult {
   status: "success" | "failed"
   targetPath: string
-  outputArtifacts?: string[]
-  changedFiles?: string[]
+  changedFiles?: ChangedFile[]
+  updatedArtifacts?: ExternalActionUpdatedArtifact[]
+  resumeInput?: ArtifactMap
   payload?: Record<string, unknown>
   diagnostics?: Array<Record<string, unknown>>
 }
@@ -222,6 +223,7 @@ interface RuntimeResult {
 - `ExternalAction` must carry at least `tool`, `operation`, and `targetPath`.
 - Update-style units must expose one stable payload with `handoffType`, `prompt`, and `targetArtifact` so external mcp consumers can bind the handoff without per-unit field translation.
 - External execution feedback must return through one shared `ExternalActionResult` shape before any follow-up contract, gate, or persistence step is evaluated.
+- `ExternalActionResult` must carry stable fields for `changedFiles`, `updatedArtifacts`, and `resumeInput` so later runtime ingestion does not need implicit file scanning.
 
 ### 4.2 Internal Runtime Skeleton
 
@@ -315,6 +317,7 @@ Processing:
 - pass one stable `ExternalAction` to the external caller or adapter boundary
 - expect the external side to execute against `targetPath` and return one `ExternalActionResult`
 - resume follow-up contract, gate, or next-step evaluation only after the external result is available
+- treat `updatedArtifacts` as the explicit artifact refresh source of truth and `resumeInput` as the continuation-ready artifact binding map
 - require update-style actions to keep one stable payload contract:
   - `handoffType`: current handoff category such as `document_update`
   - `prompt`: external update instruction content

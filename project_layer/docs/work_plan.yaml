@@ -18,8 +18,8 @@ workflow:
   current_focus:
     milestone_id: milestone_2_v2_mcp_change_and_gate_integration
     stage_id: change payload integration usable
-    batch_id: batch_13_1_change_payload_integration
-    task_name: define external changes payload
+    batch_id: batch_13_2_change_payload_integration_verification
+    task_name: verify external change payload ingestion
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1023,7 +1023,7 @@ milestones:
             batch_type: implementation
             name: implementation
             goal: define the runtime-facing change payload contract returned by external mcp execution
-            status: pending
+            status: completed
             progress_notes:
               - keep this batch focused on external result ingestion and artifact rebinding, not gate branching
               - runtime must be able to read external changes without reopening the old update boundary
@@ -1035,18 +1035,18 @@ milestones:
             tasks:
               - task_name: define external changes payload
                 summary: add one stable changes payload shape so runtime can read changed files updated artifacts and continuation-ready outputs from external mcp execution
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Runtime
                   - project_layer/docs/breakdown_docs/runtime_design.md
                 progress_notes:
-                  - add a shared external action result contract for changed files updated artifacts and continuation-ready metadata
-                  - bind refreshed artifacts back to runtime input using one explicit mapping rule instead of implicit file scanning
+                  - added a shared ExternalActionResult contract with changedFiles updatedArtifacts and resumeInput fields in the runtime schema
+                  - updated runtime design documentation so explicit artifact refresh and continuation-ready input binding are now part of the external result contract
           - batch_id: batch_13_2_change_payload_integration_verification
             batch_type: verification
             name: verification
             goal: verify that runtime can consume external change payloads without reopening document update boundaries
-            status: pending
+            status: in_progress
             covers:
               - changes_payload_shape
               - changed_artifact_binding

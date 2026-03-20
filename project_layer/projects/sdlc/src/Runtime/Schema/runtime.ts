@@ -56,11 +56,27 @@ export interface DocumentUpdateActionPayload {
   targetArtifact: ExternalActionTargetArtifact;
 }
 
+export interface ExternalActionUpdatedArtifact {
+  artifactKey: string;
+  filePath: string;
+  content?: string;
+}
+
 export interface ExternalAction {
   tool: "external_plugin" | "external_execution";
   operation: string;
   targetPath: string;
   payload?: DocumentUpdateActionPayload | Record<string, unknown>;
+}
+
+export interface ExternalActionResult {
+  status: "success" | "failed";
+  targetPath: string;
+  changedFiles?: ChangedFile[];
+  updatedArtifacts?: ExternalActionUpdatedArtifact[];
+  resumeInput?: ArtifactMap;
+  payload?: Record<string, unknown>;
+  diagnostics?: Array<Record<string, unknown>>;
 }
 
 export interface RuntimeResult {
