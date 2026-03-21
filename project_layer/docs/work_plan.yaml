@@ -18,8 +18,8 @@ workflow:
   current_focus:
     milestone_id: milestone_4_mcp_capability_exposure_delivery
     stage_id: mcp capability exposure usable
-    batch_id: batch_17_1_mcp_capability_exposure_implementation
-    task_name: implement codex-facing result projection
+    batch_id: batch_17_2_mcp_capability_exposure_verification
+    task_name: verify mcp project registry resolution
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1265,7 +1265,7 @@ milestones:
             batch_type: implementation
             name: implementation
             goal: implement MCP server exposure according to mcp_adapter_design.md
-            status: in_progress
+            status: completed
             progress_notes:
               - mcp server only exposes atomic capability tools and must not add adapter-tool or continuation-tool APIs
               - mcp input must support optional project_name with fallback to default_project from /project_layer/config/mcp_projects.json
@@ -1303,7 +1303,7 @@ milestones:
                   - added schema validation that rejects non-mapped fields and enforces item_descriptor_path and test_command only on documented tools
               - task_name: implement codex-facing result projection
                 summary: project internal runtime results into top-level MCP results with status message files issues and optional agentAction
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Interface
                   - project_layer/projects/sdlc/src/Runtime
@@ -1312,6 +1312,8 @@ milestones:
                   - do not expose internal externalAction in MCP responses
                   - map ExternalAction.operation to agentAction.actionType targetPath to targetPath and payload.prompt to instructions
                   - map artifact kinds to stable files.role values defined in mcp_adapter_design.md
+                  - added one MCP server boundary that validates tool input resolves the target project and invokes atomic runtime units
+                  - added one Codex-facing result projector that emits top-level status message files issues and optional agentAction without exposing internal externalAction
           - batch_id: batch_17_2_mcp_capability_exposure_verification
             batch_type: verification
             name: verification
