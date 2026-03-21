@@ -17,3 +17,7 @@ export {
 export {
   McpServerService,
 } from "./server.js";
+
+export {
+  McpStdioServer,
+} from "./stdio-server.js";
