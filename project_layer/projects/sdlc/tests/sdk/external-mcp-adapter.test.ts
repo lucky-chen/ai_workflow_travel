@@ -53,23 +53,23 @@ async function testExternalMcpAdapterExecutesDocumentUpdate(): Promise<void> {
         {
           path: "sdlc/docs/Requirement.md",
           operation: "update",
-          content: "# Updated Requirement\n\n- updated by external mcp adapter\n",
+          content: "# Updated Requirement\n\n- updated by external mcp adapter",
         },
       ],
       updatedArtifacts: [
         {
           artifactKey: "requirement_design",
           filePath: "sdlc/docs/Requirement.md",
-          content: "# Updated Requirement\n\n- updated by external mcp adapter\n",
+          content: "# Updated Requirement\n\n- updated by external mcp adapter",
         },
       ],
       resumeInput: {
-        requirement_design: "# Updated Requirement\n\n- updated by external mcp adapter\n",
+        requirement_design: "# Updated Requirement\n\n- updated by external mcp adapter",
       },
     });
     assert.equal(
       await readFile(path.join(workspaceRoot, "sdlc", "docs", "Requirement.md"), "utf8"),
-      "# Updated Requirement\n\n- updated by external mcp adapter\n",
+      "# Updated Requirement\n\n- updated by external mcp adapter",
     );
   } finally {
     await removeTempDir(workspaceRoot);

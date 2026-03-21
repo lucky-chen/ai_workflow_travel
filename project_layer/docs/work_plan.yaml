@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: in_progress
+status: completed
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -1388,11 +1388,11 @@ milestones:
   - milestone_id: milestone_5_mcp_server_startup_delivery
     name: mcp server startup delivery
     goal: make the documented MCP capability boundary directly startable through one stdio MCP server transport
-    status: in_progress
+    status: completed
     stages:
       - stage_id: mcp stdio server usable
         goal: make the documented MCP capability boundary directly startable as one stdio MCP server
-        status: in_progress
+        status: completed
         delivered_feature: mcp stdio server startup
         feature_scope:
           - mcp_stdio_server_entry
@@ -1430,7 +1430,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify the MCP server can start directly and serve documented tools over stdio transport
-            status: in_progress
+            status: completed
             covers:
               - mcp_stdio_server_entry
               - mcp_transport_request_handling
@@ -1455,11 +1455,13 @@ milestones:
                   - verified tools/list over one directly started stdio MCP process and confirmed the documented 15 atomic capability tools are returned
               - task_name: verify codex-facing tool invocation over mcp transport
                 summary: verify tools/call over stdio returns one top-level Codex-facing MCP payload for one update capability
-                status: in_progress
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
                   - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - verified tools/call over one directly started stdio MCP process for requirement_design_update and confirmed the returned payload keeps top-level status message files and agentAction without exposing internal externalAction
         validation:
           - one stdio MCP server process can be started directly from project_layer/projects/sdlc
           - initialize tools/list and tools/call work over stdio transport
