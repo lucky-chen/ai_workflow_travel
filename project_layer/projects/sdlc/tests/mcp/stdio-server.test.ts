@@ -13,12 +13,12 @@ interface JsonRpcResponse {
 }
 
 export async function runMcpStdioServerTests(): Promise<void> {
-  await testInitializeOverStdio();
-  await testListToolsOverStdio();
-  await testCallUpdateToolOverStdio();
+  await runMcpStdioServerStartupTests();
+  await runMcpStdioServerToolListTests();
+  await runMcpStdioServerToolCallTests();
 }
 
-async function testInitializeOverStdio(): Promise<void> {
+export async function runMcpStdioServerStartupTests(): Promise<void> {
   const harness = await startServer();
 
   try {
@@ -44,7 +44,7 @@ async function testInitializeOverStdio(): Promise<void> {
   }
 }
 
-async function testListToolsOverStdio(): Promise<void> {
+export async function runMcpStdioServerToolListTests(): Promise<void> {
   const harness = await startServer();
 
   try {
@@ -79,7 +79,7 @@ async function testListToolsOverStdio(): Promise<void> {
   }
 }
 
-async function testCallUpdateToolOverStdio(): Promise<void> {
+export async function runMcpStdioServerToolCallTests(): Promise<void> {
   const harness = await startServer();
 
   try {

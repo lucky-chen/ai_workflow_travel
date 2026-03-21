@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_5_mcp_server_startup_delivery
     stage_id: mcp stdio server usable
     batch_id: batch_18_2_mcp_stdio_server_verification
-    task_name: verify direct mcp server startup
+    task_name: verify tool listing over mcp transport
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1439,13 +1439,15 @@ milestones:
             tasks:
               - task_name: verify direct mcp server startup
                 summary: verify one stdio MCP process starts and completes initialize without transport errors
-                status: in_progress
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - project_layer/projects/sdlc/package.json
+                progress_notes:
+                  - verified one directly started sdlc-mcp stdio process completes initialize and returns serverInfo without transport errors
               - task_name: verify tool listing over mcp transport
                 summary: verify tools/list over stdio returns the documented atomic capability tool set
-                status: pending
+                status: in_progress
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - project_layer/docs/breakdown_docs/mcp_adapter_design.md
