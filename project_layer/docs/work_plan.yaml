@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_4_mcp_capability_exposure_delivery
     stage_id: mcp capability exposure usable
     batch_id: batch_17_2_mcp_capability_exposure_verification
-    task_name: verify codex-facing result projection
+    task_name: verify hello-service mcp atomic generate and contract path
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1347,7 +1347,7 @@ milestones:
                   - verified schema rejection behavior through MCP tool registry tests for non-mapped fields and documented field boundaries
               - task_name: verify codex-facing result projection
                 summary: verify MCP returns top-level status message files issues and optional agentAction without leaking internal externalAction
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - project_layer/projects/sdlc/src/Runtime
@@ -1356,6 +1356,7 @@ milestones:
                   - verify update and work_execute results project to agentAction
                   - verify generate and contract results project to stable files.role values
                   - verify MCP responses do not expose internal externalAction fields
+                  - verified update action projection and contract failure projection through dedicated MCP result projection tests
               - task_name: verify hello-service mcp atomic generate and contract path
                 summary: verify hello-service can execute one atomic generate path and one atomic contract path through MCP with Codex-facing responses
                 status: pending
