@@ -48,6 +48,7 @@ This design document collaborates with:
 Its core functions are:
 
 - Expose selected SDLC atomic capabilities as stable MCP tools.
+- Expose one directly startable stdio MCP server process on top of the documented atomic capability set.
 - Map MCP tool arguments into normalized runtime requests.
 - Return stable MCP-facing results without leaking internal runtime classes.
 - Project one internally returned `ExternalAction` into one agent-facing `agentAction` for direct external execution.
@@ -87,6 +88,7 @@ Role:
 
 Responsibilities:
 
+- Serve one stdio MCP transport entry for direct external startup.
 - Publish tool definitions.
 - Accept tool invocations from external agents.
 - Return stable MCP tool results.
@@ -551,6 +553,7 @@ Codex must not treat `work_execute` itself as permission to mutate the workspace
 For one atomic interaction path, the interaction sequence is:
 
 1. external agent lists MCP tools
+   - through one directly started stdio MCP server process
 2. external agent invokes one capability tool
 3. MCP entry resolves `project_name` into the target project directory
 4. MCP entry uses the resolved `project_dir` directly as `workdir` and generates `run_id`

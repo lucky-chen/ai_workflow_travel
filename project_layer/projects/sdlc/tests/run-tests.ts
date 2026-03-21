@@ -20,6 +20,7 @@ import { runWorkspaceLocalEnvTests } from "./shared/workspace-local-env.test.js"
 import { runMcpProjectRegistryTests } from "./mcp/project-registry.test.js";
 import { runMcpToolRegistryTests } from "./mcp/tool-registry.test.js";
 import { runMcpResultProjectionTests } from "./mcp/result-projection.test.js";
+import { runMcpStdioServerTests } from "./mcp/stdio-server.test.js";
 
 async function main(): Promise<void> {
   await runArtifactStoreTests();
@@ -44,6 +45,7 @@ async function main(): Promise<void> {
   await runMcpProjectRegistryTests();
   await runMcpToolRegistryTests();
   await runMcpResultProjectionTests();
+  await runMcpStdioServerTests();
   process.stdout.write("All tests passed.\n");
 }
 

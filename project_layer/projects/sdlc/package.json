@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "sdlc": "bin/sdlc.js"
+    "sdlc": "bin/sdlc.js",
+    "sdlc-mcp": "bin/sdlc-mcp.js"
   },
   "scripts": {
     "build": "npm --prefix ../agent_runtime run build && tsc -p tsconfig.json && sh ./scripts/copy-resources.sh",
@@ -14,7 +15,8 @@
     "test:functional:runtime": "npm run build && node ../../../user_projects/hello-service/tests/hello-service-tests.mjs runtime",
     "test:functional:generator": "npm run build && node ../../../user_projects/hello-service/tests/hello-service-tests.mjs generator",
     "test:functional:contract": "npm run build && node ../../../user_projects/hello-service/tests/hello-service-tests.mjs contract",
-    "test:llm:integration": "npm run build && node dist/tests/llm-executor.integration.js"
+    "test:llm:integration": "npm run build && node dist/tests/llm-executor.integration.js",
+    "mcp:stdio": "node bin/sdlc-mcp.js"
   },
   "dependencies": {
     "ai-meta-agent-agent-runtime": "file:../agent_runtime",

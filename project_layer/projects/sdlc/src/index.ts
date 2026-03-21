@@ -2,6 +2,7 @@ export { createApplication } from "./Runtime/application.js";
 export {
   McpProjectRegistryService,
   McpServerService,
+  McpStdioServer,
 } from "./Interface/Mcp/index.js";
 
 export type {

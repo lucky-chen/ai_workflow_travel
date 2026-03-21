@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: completed
+status: in_progress
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -16,10 +16,10 @@ context:
     and real-llm verification
 workflow:
   current_focus:
-    milestone_id: milestone_4_mcp_capability_exposure_delivery
-    stage_id: mcp capability exposure usable
-    batch_id: batch_17_2_mcp_capability_exposure_verification
-    task_name: verify hello-service mcp atomic update and work-execute path
+    milestone_id: milestone_5_mcp_server_startup_delivery
+    stage_id: mcp stdio server usable
+    batch_id: batch_18_2_mcp_stdio_server_verification
+    task_name: verify direct mcp server startup
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1384,3 +1384,79 @@ milestones:
           - mcp capability exposure follows mcp_adapter_design.md as the design authority
           - project_name and default_project resolution behave according to /project_layer/config/mcp_projects.json
           - mcp responses expose top-level Codex-facing fields and do not leak internal externalAction payloads
+
+  - milestone_id: milestone_5_mcp_server_startup_delivery
+    name: mcp server startup delivery
+    goal: make the documented MCP capability boundary directly startable through one stdio MCP server transport
+    status: in_progress
+    stages:
+      - stage_id: mcp stdio server usable
+        goal: make the documented MCP capability boundary directly startable as one stdio MCP server
+        status: in_progress
+        delivered_feature: mcp stdio server startup
+        feature_scope:
+          - mcp_stdio_server_entry
+          - mcp_transport_request_handling
+          - mcp_transport_tool_listing
+          - mcp_transport_tool_invocation
+        batches:
+          - batch_id: batch_18_1_mcp_stdio_server_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement one directly startable stdio MCP server entry on top of the existing MCP capability boundary
+            status: completed
+            progress_notes:
+              - the new delivery target is a directly startable MCP server process rather than only one in-process service class
+              - keep the existing atomic capability boundary and Codex-facing result projection unchanged
+              - add only one stdio transport layer and do not introduce http transport or compose-run orchestration
+              - added one stdio MCP transport server that serves initialize tools/list tools/call and a directly startable sdlc-mcp bin entry
+            covers:
+              - mcp_stdio_server_entry
+              - mcp_transport_request_handling
+            tasks:
+              - task_name: implement mcp stdio server entry
+                summary: add one directly startable stdio MCP server process that exposes initialize tools/list and tools/call on top of McpServerService
+                status: completed
+                involved_files:
+                  - project_layer/projects/sdlc/src/Interface/Mcp
+                  - project_layer/projects/sdlc/src/Interface/bin
+                  - project_layer/projects/sdlc/bin
+                  - project_layer/projects/sdlc/package.json
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - added one stdio MCP transport implementation on top of McpServerService with initialize tools/list tools/call and ping handling
+                  - added one directly startable bin entry and package script for sdlc-mcp startup without changing the existing atomic capability boundary
+          - batch_id: batch_18_2_mcp_stdio_server_verification
+            batch_type: verification
+            name: verification
+            goal: verify the MCP server can start directly and serve documented tools over stdio transport
+            status: in_progress
+            covers:
+              - mcp_stdio_server_entry
+              - mcp_transport_request_handling
+              - mcp_transport_tool_listing
+              - mcp_transport_tool_invocation
+            tasks:
+              - task_name: verify direct mcp server startup
+                summary: verify one stdio MCP process starts and completes initialize without transport errors
+                status: in_progress
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - project_layer/projects/sdlc/package.json
+              - task_name: verify tool listing over mcp transport
+                summary: verify tools/list over stdio returns the documented atomic capability tool set
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+              - task_name: verify codex-facing tool invocation over mcp transport
+                summary: verify tools/call over stdio returns one top-level Codex-facing MCP payload for one update capability
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - user_projects/hello-service/tests
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+        validation:
+          - one stdio MCP server process can be started directly from project_layer/projects/sdlc
+          - initialize tools/list and tools/call work over stdio transport
+          - tools/call keeps the documented Codex-facing top-level result shape
