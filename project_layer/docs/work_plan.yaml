@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_4_mcp_capability_exposure_delivery
     stage_id: mcp capability exposure usable
     batch_id: batch_17_2_mcp_capability_exposure_verification
-    task_name: verify mcp tool input schema rejection
+    task_name: verify codex-facing result projection
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1337,13 +1337,14 @@ milestones:
                   - verified explicit project_name override default_project fallback and unresolved-project failure through dedicated MCP project registry tests
               - task_name: verify mcp tool input schema rejection
                 summary: verify each MCP tool rejects non-mapped fields and enforces item_descriptor_path and test_command only on documented tools
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - project_layer/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - cover field-rejection behavior for non-mapped MCP arguments
                   - cover item_descriptor_path-only and test_command-only tool boundaries
+                  - verified schema rejection behavior through MCP tool registry tests for non-mapped fields and documented field boundaries
               - task_name: verify codex-facing result projection
                 summary: verify MCP returns top-level status message files issues and optional agentAction without leaking internal externalAction
                 status: pending
