@@ -1,5 +1,8 @@
 export { createApplication } from "./Runtime/application.js";
-export { McpServerService } from "./Interface/Mcp/index.js";
+export {
+  McpProjectRegistryService,
+  McpServerService,
+} from "./Interface/Mcp/index.js";
 
 export type {
   Application,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 
 export const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -9,6 +9,8 @@ const helloServiceDistRoot = path.join(workspaceRoot, "dist");
 const projectRoot = path.resolve(workspaceRoot, "..", "..");
 const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
+const sdlcDistEntry = path.join(sdlcProjectRoot, "dist", "src", "index.js");
+const scenarioRuntimeEntry = path.join(sdlcProjectRoot, "dist", "src", "testing", "scenario-runtime.js");
 const DEFAULT_ITEM_NAME = "EchoService";
 const DEFAULT_REAL_LLM_CLI_TIMEOUT_MS = 300000;
 const DEFAULT_REAL_LLM_PROVIDER_TIMEOUT_MS = 240000;
@@ -236,6 +238,60 @@ export function assertUnitLlmTrace(records, { executionUnitId, runtimeMode }) {
 
 export async function readJsonFile(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
+}
+
+export async function invokeMcpTool(targetWorkspaceRoot, request, options = {}) {
+  const {
+    runId = resolveTestRunId(targetWorkspaceRoot),
+    defaultProject = "hello-service",
+  } = options;
+  const [{ McpProjectRegistryService, McpServerService, createApplication }, { createCliBaselineRuntimeOptions }] = await Promise.all([
+    import(pathToFileURL(sdlcDistEntry).href),
+    import(pathToFileURL(scenarioRuntimeEntry).href),
+  ]);
+  const registryConfigPath = path.join(projectRoot, "project_layer", "config", "mcp_projects.json");
+  const registryJson = JSON.stringify({
+    default_project: defaultProject,
+    projects: [
+      {
+        project_name: defaultProject,
+        project_dir: targetWorkspaceRoot,
+      },
+    ],
+  }, null, 2);
+
+  const projectRegistry = new McpProjectRegistryService({
+    repositoryRoot: projectRoot,
+    configPath: registryConfigPath,
+    cwd: () => targetWorkspaceRoot,
+    readFile: async (filePath, encoding) => {
+      if (path.resolve(filePath) === registryConfigPath) {
+        return registryJson;
+      }
+
+      return readFile(filePath, encoding);
+    },
+    fileExists: async (filePath) => {
+      if (path.resolve(filePath) === registryConfigPath) {
+        return true;
+      }
+
+      try {
+        await access(filePath);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  });
+
+  const configuredServer = new McpServerService({
+    projectRegistry,
+    applicationFactory: async () => createApplication(createCliBaselineRuntimeOptions()),
+    runIdFactory: () => runId,
+  });
+
+  return configuredServer.invokeTool(request);
 }
 
 export async function createItemDescriptor(targetWorkspaceRoot) {
