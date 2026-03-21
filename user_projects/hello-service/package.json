@@ -6,6 +6,8 @@
     "start": "node ./src/index.js",
     "test:workspace-shell": "node ./tests/run-workspace-shell-check.mjs",
     "test:runtime": "node ./tests/hello-service-tests.mjs runtime",
+    "test:mcp:generate-contract": "node ./tests/hello-service-mcp-generate-contract-success.test.mjs",
+    "test:mcp:update-work-execute": "node ./tests/hello-service-mcp-update-work-execute-success.test.mjs",
     "test:update-loop": "node ./tests/hello-service-external-update-loop-success.test.mjs",
     "test:generator": "node ./tests/hello-service-tests.mjs generator",
     "test:contract": "node ./tests/hello-service-tests.mjs contract"

@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: in_progress
+status: completed
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -1248,11 +1248,11 @@ milestones:
   - milestone_id: milestone_4_mcp_capability_exposure_delivery
     name: mcp capability exposure delivery
     goal: expose documented atomic SDLC capabilities through one MCP server boundary with registered-project resolution and Codex-facing result projection
-    status: in_progress
+    status: completed
     stages:
       - stage_id: mcp capability exposure usable
         goal: make one MCP server boundary expose documented atomic capability tools with stable input schemas and Codex-facing outputs
-        status: in_progress
+        status: completed
         delivered_feature: mcp capability exposure
         feature_scope:
           - mcp_server_boundary
@@ -1318,7 +1318,7 @@ milestones:
             batch_type: verification
             name: verification
             goal: verify MCP capability exposure against the documented project-resolution and Codex-facing response contract
-            status: pending
+            status: completed
             covers:
               - project_registry_resolution
               - capability_tool_registry
@@ -1370,7 +1370,7 @@ milestones:
                   - verified requirement_design_generate and requirement_design_contract through the real MCP boundary on hello-service with Codex-facing result payloads
               - task_name: verify hello-service mcp atomic update and work-execute path
                 summary: verify hello-service can execute one atomic update path and one atomic work_execute path through MCP and return agentAction only
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/tests
                   - user_projects/hello-service/tests
@@ -1379,6 +1379,7 @@ milestones:
                   - verify update tools return agentAction without exposing externalAction
                   - verify work_execute returns agentAction without introducing adapter-tool or continuation-tool behavior
                   - keep verification atomic and do not expand into compose-run or stateful continuation control
+                  - verified requirement_design_update and work_execute through the real MCP boundary on hello-service with top-level agentAction-only results
         validation:
           - mcp capability exposure follows mcp_adapter_design.md as the design authority
           - project_name and default_project resolution behave according to /project_layer/config/mcp_projects.json
