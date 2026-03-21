@@ -13,3 +13,7 @@ export {
 export {
   McpToolRegistryService,
 } from "./tool-registry.js";
+
+export {
+  McpServerService,
+} from "./server.js";

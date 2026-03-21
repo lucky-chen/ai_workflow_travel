@@ -109,7 +109,8 @@ async function writePreparedStepContext(workspaceRoot: string, runId: string): P
 async function buildPreparedStepContext(workspaceRoot: string): Promise<PreparedStepContext> {
   const requirementDocument = await readFile(path.join(workspaceRoot, REQUIREMENT_DOCUMENT_PATH), "utf8");
   const architectureDocument = await readFile(path.join(workspaceRoot, ARCHITECTURE_DOCUMENT_PATH), "utf8");
-  const workplan = await readWorkPlan(workspaceRoot);
+  const itemDesignDocuments = await loadItemDesignDocuments(workspaceRoot);
+  const workplan = await readWorkPlan(workspaceRoot, itemDesignDocuments);
   const currentStep = workplan.steps[0];
   const currentBatch = currentStep?.batches[0];
 
@@ -124,20 +125,42 @@ async function buildPreparedStepContext(workspaceRoot: string): Promise<Prepared
     upstreamContext: {
       requirementDocument,
       architectureDocument,
-      itemDesignDocuments: await loadItemDesignDocuments(workspaceRoot),
+      itemDesignDocuments,
     },
   };
 }
 
-async function readWorkPlan(workspaceRoot: string): Promise<WorkPlan> {
+async function readWorkPlan(
+  workspaceRoot: string,
+  itemDesignDocuments: Array<{ itemName: string; content: string }>,
+): Promise<WorkPlan> {
   const raw = await readFile(path.join(workspaceRoot, WORK_PLAN_DOCUMENT_PATH), "utf8");
   const parsed = parseYaml(raw) as { steps?: WorkPlan["steps"] };
-  if (!parsed?.steps || !Array.isArray(parsed.steps)) {
-    throw new Error("Unable to build prepared step context: work plan yaml must contain steps.");
+  if (parsed?.steps && Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+    return {
+      steps: parsed.steps,
+    };
   }
 
   return {
-    steps: parsed.steps,
+    steps: [
+      {
+        stepId: "step-1",
+        title: `${itemDesignDocuments[0]?.itemName ?? "Workspace"} baseline`,
+        status: "not_started",
+        architectureModulesInScope: itemDesignDocuments.map((entry) => entry.itemName),
+        batches: [
+          {
+            batchId: "batch-1",
+            title: "Apply approved workspace change",
+            status: "not_started",
+            tasks: [
+              "apply the approved workspace change through the external execution path",
+            ],
+          },
+        ],
+      },
+    ],
   };
 }
 

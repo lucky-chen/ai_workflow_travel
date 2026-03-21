@@ -21,6 +21,8 @@ export interface McpProjectRegistryDependencies {
   cwd?: () => string;
   readFile?: typeof readFile;
   fileExists?: (targetPath: string) => Promise<boolean>;
+  configPath?: string;
+  repositoryRoot?: string;
 }
 
 export class McpProjectRegistryService {
@@ -30,10 +32,16 @@ export class McpProjectRegistryService {
 
   private readonly fileExistsImpl: (targetPath: string) => Promise<boolean>;
 
+  private readonly configPath?: string;
+
+  private readonly repositoryRoot?: string;
+
   constructor(dependencies: McpProjectRegistryDependencies = {}) {
     this.cwd = dependencies.cwd ?? (() => process.cwd());
     this.readFileImpl = dependencies.readFile ?? readFile;
     this.fileExistsImpl = dependencies.fileExists ?? fileExists;
+    this.configPath = dependencies.configPath;
+    this.repositoryRoot = dependencies.repositoryRoot;
   }
 
   async resolveProject(projectName?: string): Promise<ResolvedMcpProject> {
@@ -62,12 +70,16 @@ export class McpProjectRegistryService {
   }
 
   async resolveConfigPath(startDir?: string): Promise<string> {
+    if (this.configPath) {
+      return this.configPath;
+    }
+
     const repositoryRoot = await this.resolveRepositoryRoot(startDir);
     return path.join(repositoryRoot, "project_layer", "config", "mcp_projects.json");
   }
 
   private async loadConfig(repositoryRoot: string): Promise<RegisteredProjectConfig> {
-    const configPath = path.join(repositoryRoot, "project_layer", "config", "mcp_projects.json");
+    const configPath = await this.resolveConfigPath(repositoryRoot);
     let raw: string;
     try {
       raw = await this.readFileImpl(configPath, "utf8");
@@ -96,6 +108,10 @@ export class McpProjectRegistryService {
   }
 
   private async resolveRepositoryRoot(startDir = this.cwd()): Promise<string> {
+    if (this.repositoryRoot) {
+      return this.repositoryRoot;
+    }
+
     let currentDir = path.resolve(startDir);
 
     while (true) {
