@@ -17,6 +17,7 @@ import { runExternalMcpAdapterTests } from "./sdk/external-mcp-adapter.test.js";
 import { runLlmExecutorTests } from "./shared/llm-executor.test.js";
 import { runTraceTests } from "./shared/trace.test.js";
 import { runWorkspaceLocalEnvTests } from "./shared/workspace-local-env.test.js";
+import { runMcpProjectRegistryTests } from "./mcp/project-registry.test.js";
 
 async function main(): Promise<void> {
   await runArtifactStoreTests();
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
   await runLlmExecutorTests();
   await runTraceTests();
   await runWorkspaceLocalEnvTests();
+  await runMcpProjectRegistryTests();
   process.stdout.write("All tests passed.\n");
 }
 

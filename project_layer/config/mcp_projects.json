@@ -1,0 +1,9 @@
+{
+  "default_project": "hello-service",
+  "projects": [
+    {
+      "project_name": "hello-service",
+      "project_dir": "user_projects/hello-service"
+    }
+  ]
+}

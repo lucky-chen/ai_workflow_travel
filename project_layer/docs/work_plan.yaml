@@ -19,7 +19,7 @@ workflow:
     milestone_id: milestone_4_mcp_capability_exposure_delivery
     stage_id: mcp capability exposure usable
     batch_id: batch_17_1_mcp_capability_exposure_implementation
-    task_name: implement mcp project registry and target-project resolution
+    task_name: implement mcp capability tool registry and schemas
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1280,7 +1280,7 @@ milestones:
             tasks:
               - task_name: implement mcp project registry and target-project resolution
                 summary: load /project_layer/config/mcp_projects.json resolve explicit project_name or default_project and use the resolved project_dir directly as workspace root
-                status: pending
+                status: completed
                 involved_files:
                   - project_layer/projects/sdlc/src/Interface
                   - project_layer/config
@@ -1288,6 +1288,8 @@ milestones:
                 progress_notes:
                   - support explicit project_name override and default_project fallback
                   - fail the invocation when neither explicit project_name nor default_project resolves to one registered project_dir
+                  - added one MCP project registry service and default config file under /project_layer/config/mcp_projects.json
+                  - verified explicit project_name override default_project fallback and unresolved-project failure through dedicated unit tests
               - task_name: implement mcp capability tool registry and schemas
                 summary: expose the documented first-version capability tools with one explicit schema per tool and reject non-mapped fields
                 status: pending
