@@ -1,6 +1,6 @@
 version: 2
 plan_name: project_layer_feature_delivery_work_plan
-status: completed
+status: in_progress
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
@@ -16,10 +16,10 @@ context:
     and real-llm verification
 workflow:
   current_focus:
-    milestone_id: milestone_3_external_mcp_adapter_delivery
-    stage_id: external mcp document adapter usable
-    batch_id: batch_16_2_external_mcp_adapter_verification
-    task_name: verify external mcp document adapter
+    milestone_id: milestone_4_mcp_capability_exposure_delivery
+    stage_id: mcp capability exposure usable
+    batch_id: batch_17_1_mcp_capability_exposure_implementation
+    task_name: implement mcp project registry and target-project resolution
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -1244,3 +1244,132 @@ milestones:
         validation:
           - one concrete external mcp adapter executes document_update handoff and returns the shared ExternalActionResult payload
           - hello-service external update loop uses the real adapter code path instead of a hand-written change-result fixture
+
+  - milestone_id: milestone_4_mcp_capability_exposure_delivery
+    name: mcp capability exposure delivery
+    goal: expose documented atomic SDLC capabilities through one MCP server boundary with registered-project resolution and Codex-facing result projection
+    status: in_progress
+    stages:
+      - stage_id: mcp capability exposure usable
+        goal: make one MCP server boundary expose documented atomic capability tools with stable input schemas and Codex-facing outputs
+        status: in_progress
+        delivered_feature: mcp capability exposure
+        feature_scope:
+          - mcp_server_boundary
+          - project_registry_resolution
+          - capability_tool_registry
+          - codex_facing_result_projection
+          - atomic_tool_exposure
+        batches:
+          - batch_id: batch_17_1_mcp_capability_exposure_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement MCP server exposure according to mcp_adapter_design.md
+            status: in_progress
+            progress_notes:
+              - mcp server only exposes atomic capability tools and must not add adapter-tool or continuation-tool APIs
+              - mcp input must support optional project_name with fallback to default_project from /project_layer/config/mcp_projects.json
+              - resolved project_dir is used directly as workspace root; do not reintroduce package.json.sdlc workdir translation
+              - returned MCP payloads must use Codex-facing top-level fields status message files issues and optional agentAction
+            covers:
+              - mcp_server_boundary
+              - project_registry_resolution
+              - capability_tool_registry
+              - codex_facing_result_projection
+              - atomic_tool_exposure
+            tasks:
+              - task_name: implement mcp project registry and target-project resolution
+                summary: load /project_layer/config/mcp_projects.json resolve explicit project_name or default_project and use the resolved project_dir directly as workspace root
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Interface
+                  - project_layer/config
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - support explicit project_name override and default_project fallback
+                  - fail the invocation when neither explicit project_name nor default_project resolves to one registered project_dir
+              - task_name: implement mcp capability tool registry and schemas
+                summary: expose the documented first-version capability tools with one explicit schema per tool and reject non-mapped fields
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Interface
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - implement the tool set documented in mcp_adapter_design.md
+                  - keep item_descriptor_path limited to item-design tools and test_command limited to work_execute_contract
+              - task_name: implement codex-facing result projection
+                summary: project internal runtime results into top-level MCP results with status message files issues and optional agentAction
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/src/Interface
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - do not expose internal externalAction in MCP responses
+                  - map ExternalAction.operation to agentAction.actionType targetPath to targetPath and payload.prompt to instructions
+                  - map artifact kinds to stable files.role values defined in mcp_adapter_design.md
+          - batch_id: batch_17_2_mcp_capability_exposure_verification
+            batch_type: verification
+            name: verification
+            goal: verify MCP capability exposure against the documented project-resolution and Codex-facing response contract
+            status: pending
+            covers:
+              - project_registry_resolution
+              - capability_tool_registry
+              - codex_facing_result_projection
+              - atomic_tool_exposure
+            tasks:
+              - task_name: verify mcp project registry resolution
+                summary: verify MCP resolves explicit project_name and default_project correctly and fails when no registered project can be resolved
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - project_layer/config
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - cover explicit project_name override default_project fallback and unresolved-project failure
+              - task_name: verify mcp tool input schema rejection
+                summary: verify each MCP tool rejects non-mapped fields and enforces item_descriptor_path and test_command only on documented tools
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - cover field-rejection behavior for non-mapped MCP arguments
+                  - cover item_descriptor_path-only and test_command-only tool boundaries
+              - task_name: verify codex-facing result projection
+                summary: verify MCP returns top-level status message files issues and optional agentAction without leaking internal externalAction
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - project_layer/projects/sdlc/src/Runtime
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - verify update and work_execute results project to agentAction
+                  - verify generate and contract results project to stable files.role values
+                  - verify MCP responses do not expose internal externalAction fields
+              - task_name: verify hello-service mcp atomic generate and contract path
+                summary: verify hello-service can execute one atomic generate path and one atomic contract path through MCP with Codex-facing responses
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - user_projects/hello-service/tests
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - verify one generate tool and one contract tool through the real MCP boundary on hello-service
+                  - verify returned files use stable role values documented in mcp_adapter_design.md
+              - task_name: verify hello-service mcp atomic update and work-execute path
+                summary: verify hello-service can execute one atomic update path and one atomic work_execute path through MCP and return agentAction only
+                status: pending
+                involved_files:
+                  - project_layer/projects/sdlc/tests
+                  - user_projects/hello-service/tests
+                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                progress_notes:
+                  - verify update tools return agentAction without exposing externalAction
+                  - verify work_execute returns agentAction without introducing adapter-tool or continuation-tool behavior
+                  - keep verification atomic and do not expand into compose-run or stateful continuation control
+        validation:
+          - mcp capability exposure follows mcp_adapter_design.md as the design authority
+          - project_name and default_project resolution behave according to /project_layer/config/mcp_projects.json
+          - mcp responses expose top-level Codex-facing fields and do not leak internal externalAction payloads

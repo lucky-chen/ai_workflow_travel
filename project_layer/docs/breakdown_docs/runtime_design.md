@@ -23,6 +23,7 @@ This design document directly covers:
 This design document collaborates with:
 
 - `CliEntry`
+- `McpAdapter`
 - `RequirementDesignGenerate`
 - `ArchitectureDesignGenerate`
 - `ItemDesignGenerate`
