@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 
-interface JsonRpcResponse {
-  jsonrpc: "2.0";
-  id: string | number | null;
-  result?: unknown;
-  error?: {
-    code: number;
-    message: string;
-  };
-}
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export async function runMcpStdioServerTests(): Promise<void> {
   await runMcpStdioServerStartupTests();
@@ -19,25 +11,13 @@ export async function runMcpStdioServerTests(): Promise<void> {
 }
 
 export async function runMcpStdioServerStartupTests(): Promise<void> {
-  const harness = await startServer();
+  const harness = await startClient();
 
   try {
-    const response = await harness.request("initialize", {
-      protocolVersion: "2024-11-05",
-      capabilities: {},
-      clientInfo: { name: "test-client", version: "0.1.0" },
-    });
-
-    assert.equal(response.error, undefined);
-    assert.deepEqual(response.result, {
-      protocolVersion: "2024-11-05",
-      capabilities: {
-        tools: {},
-      },
-      serverInfo: {
-        name: "sdlc-mcp",
-        version: "0.1.0",
-      },
+    const version = harness.client.getServerVersion();
+    assert.deepEqual(version, {
+      name: "sdlc-mcp",
+      version: "0.1.0",
     });
   } finally {
     await harness.close();
@@ -45,17 +25,13 @@ export async function runMcpStdioServerStartupTests(): Promise<void> {
 }
 
 export async function runMcpStdioServerToolListTests(): Promise<void> {
-  const harness = await startServer();
+  const harness = await startClient();
 
   try {
-    await initializeHarness(harness);
-    const response = await harness.request("tools/list", {});
-
-    assert.equal(response.error, undefined);
-    const tools = (response.result as { tools: Array<{ name: string }> }).tools;
-    assert.equal(tools.length, 15);
+    const response = await harness.client.listTools();
+    assert.equal(response.tools.length, 15);
     assert.deepEqual(
-      tools.map((entry) => entry.name),
+      response.tools.map((entry) => entry.name),
       [
         "requirement_design_generate",
         "architecture_design_generate",
@@ -80,172 +56,66 @@ export async function runMcpStdioServerToolListTests(): Promise<void> {
 }
 
 export async function runMcpStdioServerToolCallTests(): Promise<void> {
-  const harness = await startServer();
+  const harness = await startClient();
 
   try {
-    await initializeHarness(harness);
-    const response = await harness.request("tools/call", {
+    const response = await harness.client.callTool({
       name: "requirement_design_update",
       arguments: {
         project_name: "hello-service",
         user_comment: "Add one operational note.",
       },
-    });
-
-    assert.equal(response.error, undefined);
-    const result = response.result as {
-      content: Array<{ type: string; text: string }>;
-      structuredContent: {
-        status: string;
-        message: string;
-        files?: Array<{ path: string; role: string }>;
-        issues?: Array<{ message: string }>;
-        agentAction?: {
-          actionType: string;
-          targetPath: string;
-          instructions: string;
-        };
-        externalAction?: unknown;
-      };
-      isError: boolean;
+    }) as {
+      content: Array<{ type: string; text?: string }>;
+      structuredContent?: unknown;
+      isError?: boolean;
     };
-    assert.equal(result.isError, false);
-    assert.equal(result.content[0]?.type, "text");
-    assert.equal(result.structuredContent.status, "success");
-    assert.equal(result.structuredContent.files?.[0]?.path, "sdlc/docs/Requirement.md");
-    assert.equal(result.structuredContent.files?.[0]?.role, "requirement_design");
-    assert.equal(result.structuredContent.agentAction?.actionType, "update_markdown");
-    assert.equal(result.structuredContent.agentAction?.targetPath, "sdlc/docs/Requirement.md");
-    assert.match(result.structuredContent.agentAction?.instructions ?? "", /Add one operational note\./);
-    assert.equal("externalAction" in result.structuredContent, false);
+
+    assert.equal(response.isError, false);
+    assert.equal(response.content[0]?.type, "text");
+    const structured = response.structuredContent as {
+      status: string;
+      message: string;
+      files?: Array<{ path: string; role: string }>;
+      agentAction?: {
+        actionType: string;
+        targetPath: string;
+        instructions: string;
+      };
+      externalAction?: unknown;
+    };
+    assert.equal(structured.status, "success");
+    assert.equal(structured.files?.[0]?.path, "sdlc/docs/Requirement.md");
+    assert.equal(structured.files?.[0]?.role, "requirement_design");
+    assert.equal(structured.agentAction?.actionType, "update_markdown");
+    assert.equal(structured.agentAction?.targetPath, "sdlc/docs/Requirement.md");
+    assert.match(structured.agentAction?.instructions ?? "", /Add one operational note\./);
+    assert.equal("externalAction" in structured, false);
   } finally {
     await harness.close();
   }
 }
 
-async function initializeHarness(harness: StdioHarness): Promise<void> {
-  const response = await harness.request("initialize", {
-    protocolVersion: "2024-11-05",
-    capabilities: {},
-    clientInfo: { name: "test-client", version: "0.1.0" },
+async function startClient(): Promise<{
+  client: Client;
+  close: () => Promise<void>;
+}> {
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.join(process.cwd(), "bin", "sdlc-mcp.js")],
+    cwd: process.cwd(),
+    env: process.env as Record<string, string>,
+    stderr: "pipe",
   });
-  assert.equal(response.error, undefined);
-  harness.notify("notifications/initialized", {});
-}
-
-class StdioHarness {
-  private readonly process: ChildProcessWithoutNullStreams;
-
-  private buffer = Buffer.alloc(0);
-
-  private nextId = 1;
-
-  private readonly pending = new Map<number, {
-    resolve: (response: JsonRpcResponse) => void;
-    reject: (error: Error) => void;
-  }>();
-
-  constructor(processHandle: ChildProcessWithoutNullStreams) {
-    this.process = processHandle;
-    this.process.stdout.on("data", (chunk: Buffer | string) => {
-      this.consume(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk);
-    });
-    this.process.stderr.on("data", () => {
-      return;
-    });
-    this.process.on("exit", () => {
-      for (const pending of this.pending.values()) {
-        pending.reject(new Error("MCP stdio server exited before responding."));
-      }
-      this.pending.clear();
-    });
-  }
-
-  request(method: string, params: unknown): Promise<JsonRpcResponse> {
-    const id = this.nextId++;
-    const body = JSON.stringify({
-      jsonrpc: "2.0",
-      id,
-      method,
-      params,
-    });
-    const header = `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n`;
-    this.process.stdin.write(header);
-    this.process.stdin.write(body);
-    return new Promise<JsonRpcResponse>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-    });
-  }
-
-  notify(method: string, params: unknown): void {
-    const body = JSON.stringify({
-      jsonrpc: "2.0",
-      method,
-      params,
-    });
-    const header = `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n`;
-    this.process.stdin.write(header);
-    this.process.stdin.write(body);
-  }
-
-  async close(): Promise<void> {
-    if (this.process.exitCode !== null) {
-      return;
-    }
-
-    this.process.kill();
-    await new Promise<void>((resolve) => {
-      this.process.once("exit", () => resolve());
-    });
-  }
-
-  private consume(chunk: Buffer): void {
-    this.buffer = Buffer.concat([this.buffer, chunk]);
-
-    while (true) {
-      const headerEnd = this.buffer.indexOf("\r\n\r\n");
-      if (headerEnd < 0) {
-        return;
-      }
-
-      const headerText = this.buffer.subarray(0, headerEnd).toString("utf8");
-      const contentLengthLine = headerText
-        .split("\r\n")
-        .find((line) => line.toLowerCase().startsWith("content-length:"));
-      if (!contentLengthLine) {
-        throw new Error("Missing Content-Length in MCP stdio response.");
-      }
-
-      const contentLength = Number.parseInt(contentLengthLine.slice("content-length:".length).trim(), 10);
-      const totalLength = headerEnd + 4 + contentLength;
-      if (this.buffer.length < totalLength) {
-        return;
-      }
-
-      const body = this.buffer.subarray(headerEnd + 4, totalLength).toString("utf8");
-      this.buffer = this.buffer.subarray(totalLength);
-      const response = JSON.parse(body) as JsonRpcResponse;
-      const id = typeof response.id === "number" ? response.id : undefined;
-      if (id !== undefined) {
-        const pending = this.pending.get(id);
-        if (pending) {
-          this.pending.delete(id);
-          pending.resolve(response);
-        }
-      }
-    }
-  }
-}
-
-async function startServer(): Promise<StdioHarness> {
-  const processHandle = spawn(
-    process.execPath,
-    [path.join(process.cwd(), "bin", "sdlc-mcp.js")],
-    {
-      cwd: process.cwd(),
-      stdio: ["pipe", "pipe", "pipe"],
-      env: process.env,
+  const client = new Client({
+    name: "sdlc-mcp-test-client",
+    version: "0.1.0",
+  });
+  await client.connect(transport);
+  return {
+    client,
+    close: async () => {
+      await client.close();
     },
-  );
-  return new StdioHarness(processHandle);
+  };
 }
