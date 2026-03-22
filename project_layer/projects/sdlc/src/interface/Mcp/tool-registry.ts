@@ -40,6 +40,8 @@ const TOOL_CONFIGS: readonly RegisteredToolConfig[] = [
   registerTool("work_execute_contract", "Validate workspace state with one test command.", "work_execute_contract", ["test_command"], ["project_name", "user_comment"]),
 ] as const;
 
+export const DOCUMENTED_MCP_TOOL_NAMES = TOOL_CONFIGS.map((tool) => tool.name);
+
 export class McpToolRegistryService {
   listTools(): McpToolDefinition[] {
     return TOOL_CONFIGS.map((tool) => this.toToolDefinition(tool));

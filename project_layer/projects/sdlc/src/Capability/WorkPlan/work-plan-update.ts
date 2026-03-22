@@ -9,6 +9,7 @@ import {
   REQUIREMENT_DOCUMENT_PATH,
   WORK_PLAN_PATH,
 } from "./work-plan-generator.js";
+import { createDocumentUpdateExternalAction, persistDocumentUpdateResult } from "../Shared/document-update-runtime-helper.js";
 
 const WORK_PLAN_UPDATE_RESULT_PATH = "work_plan_update_result.json";
 
@@ -56,7 +57,7 @@ export class WorkPlanUpdateRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
-    protected readonly llmExecutor: ILlmExecutor,
+    _llmExecutor: ILlmExecutor,
     resourceRoot?: string,
   ) {
     super(artifactStore, traceRecorder, resourceRoot);
@@ -98,28 +99,20 @@ export class WorkPlanUpdateRuntimeUnit extends RuntimeUnitBase {
       inputArtifacts.work_plan,
     );
     const targetPath = WORK_PLAN_PATH;
-    const externalAction = {
-      tool: "external_plugin" as const,
-      operation: "update_markdown",
+    const externalAction = createDocumentUpdateExternalAction(
       targetPath,
-      payload: {
-        handoffType: "document_update" as const,
-        prompt,
-        targetArtifact: {
-          artifactKey: "work_plan",
-          filePath: targetPath,
-        },
-      },
-    };
-    await this.writeArtifact(
-      executionContext,
-      WORK_PLAN_UPDATE_RESULT_PATH,
-      JSON.stringify({ prompt, action: externalAction }, null, 2),
+      "work_plan",
+      prompt,
     );
-    return {
-      accepted: true,
-      summary: `Work plan update prompt generated. Persisted to ${WORK_PLAN_UPDATE_RESULT_PATH}.`,
+    return persistDocumentUpdateResult(
+      (resultPath, content) => this.writeArtifact(
+        executionContext,
+        resultPath,
+        content,
+      ),
+      WORK_PLAN_UPDATE_RESULT_PATH,
+      "Work plan update prompt generated.",
       externalAction,
-    };
+    );
   }
 }

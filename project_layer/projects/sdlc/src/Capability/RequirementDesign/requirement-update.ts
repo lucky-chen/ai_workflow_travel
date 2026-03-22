@@ -3,6 +3,7 @@ import type { IArtifactStore } from "../../Data/artifact-store.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ILlmExecutor } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import { createDocumentUpdateExternalAction, persistDocumentUpdateResult } from "../Shared/document-update-runtime-helper.js";
 import { REQUIREMENT_DOCUMENT_PATH } from "./requirement-generator.js";
 
 const REQUIREMENT_UPDATE_RESULT_PATH = "requirement_design_update_result.json";
@@ -38,7 +39,7 @@ export class RequirementDesignUpdateRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
-    protected readonly llmExecutor: ILlmExecutor,
+    _llmExecutor: ILlmExecutor,
     resourceRoot?: string,
   ) {
     super(artifactStore, traceRecorder, resourceRoot);
@@ -58,28 +59,20 @@ export class RequirementDesignUpdateRuntimeUnit extends RuntimeUnitBase {
     const executionContext = this.buildExecutionContext(request, context, inputArtifacts);
     const prompt = buildRequirementUpdatePrompt(userComment, inputArtifacts.requirement_design);
     const targetPath = REQUIREMENT_DOCUMENT_PATH;
-    const externalAction = {
-      tool: "external_plugin" as const,
-      operation: "update_markdown",
+    const externalAction = createDocumentUpdateExternalAction(
       targetPath,
-      payload: {
-        handoffType: "document_update" as const,
-        prompt,
-        targetArtifact: {
-          artifactKey: "requirement_design",
-          filePath: targetPath,
-        },
-      },
-    };
-    await this.writeArtifact(
-      executionContext,
-      REQUIREMENT_UPDATE_RESULT_PATH,
-      JSON.stringify({ prompt, action: externalAction }, null, 2),
+      "requirement_design",
+      prompt,
     );
-    return {
-      accepted: true,
-      summary: `Requirement update prompt generated. Persisted to ${REQUIREMENT_UPDATE_RESULT_PATH}.`,
+    return persistDocumentUpdateResult(
+      (resultPath, content) => this.writeArtifact(
+        executionContext,
+        resultPath,
+        content,
+      ),
+      REQUIREMENT_UPDATE_RESULT_PATH,
+      "Requirement update prompt generated.",
       externalAction,
-    };
+    );
   }
 }

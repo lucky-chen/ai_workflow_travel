@@ -7,6 +7,7 @@ import {
   ARCHITECTURE_DOCUMENT_PATH,
 } from "./item-design-generator.js";
 import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import { createDocumentUpdateExternalAction, persistDocumentUpdateResult } from "../Shared/document-update-runtime-helper.js";
 
 const ITEM_DESIGN_UPDATE_RESULT_PATH = "item_design_update_result.json";
 
@@ -49,7 +50,7 @@ export class ItemDesignUpdateRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
-    protected readonly llmExecutor: ILlmExecutor,
+    _llmExecutor: ILlmExecutor,
     resourceRoot?: string,
   ) {
     super(artifactStore, traceRecorder, resourceRoot);
@@ -90,28 +91,20 @@ export class ItemDesignUpdateRuntimeUnit extends RuntimeUnitBase {
       inputArtifacts.item_design_document,
     );
     const targetPath = descriptor.documentPath ?? "";
-    const externalAction = {
-      tool: "external_plugin" as const,
-      operation: "update_markdown",
+    const externalAction = createDocumentUpdateExternalAction(
       targetPath,
-      payload: {
-        handoffType: "document_update" as const,
-        prompt,
-        targetArtifact: {
-          artifactKey: `${descriptor.name}_design`,
-          filePath: targetPath,
-        },
-      },
-    };
-    await this.writeArtifact(
-      executionContext,
-      ITEM_DESIGN_UPDATE_RESULT_PATH,
-      JSON.stringify({ prompt, action: externalAction }, null, 2),
+      `${descriptor.name}_design`,
+      prompt,
     );
-    return {
-      accepted: true,
-      summary: `Item design update prompt generated for "${descriptor.name}". Persisted to ${ITEM_DESIGN_UPDATE_RESULT_PATH}.`,
+    return persistDocumentUpdateResult(
+      (resultPath, content) => this.writeArtifact(
+        executionContext,
+        resultPath,
+        content,
+      ),
+      ITEM_DESIGN_UPDATE_RESULT_PATH,
+      `Item design update prompt generated for "${descriptor.name}".`,
       externalAction,
-    };
+    );
   }
 }

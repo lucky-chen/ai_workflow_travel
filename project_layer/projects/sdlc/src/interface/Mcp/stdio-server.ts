@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import * as z from "zod";
 
 import type { McpServerApi } from "./server.js";
-import type { McpToolDefinition } from "./types.js";
+import type { McpAgentResult, McpToolDefinition } from "./types.js";
 
 interface StdioServerOptions {
   serverInfo?: {
@@ -41,10 +41,9 @@ export class McpStdioServer {
             name: tool.name,
             arguments: args,
           });
-          const structuredContent = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
           return {
             content: [{ type: "text", text: result.message }],
-            structuredContent,
+            structuredContent: toStructuredContent(result),
             isError: result.status === "failed",
           };
         },
@@ -54,6 +53,16 @@ export class McpStdioServer {
     const transport = new StdioServerTransport();
     await mcpServer.connect(transport);
   }
+}
+
+function toStructuredContent(result: McpAgentResult): Record<string, unknown> {
+  return {
+    status: result.status,
+    message: result.message,
+    ...(result.files ? { files: result.files } : {}),
+    ...(result.issues ? { issues: result.issues } : {}),
+    ...(result.agentAction ? { agentAction: result.agentAction } : {}),
+  };
 }
 
 function buildZodSchema(tool: McpToolDefinition): z.ZodObject<z.ZodRawShape> {

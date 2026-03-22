@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { McpToolRegistryService } from "../../src/Interface/Mcp/tool-registry.js";
+import { DOCUMENTED_MCP_TOOL_NAMES, McpToolRegistryService } from "../../src/Interface/Mcp/tool-registry.js";
 
 export async function runMcpToolRegistryTests(): Promise<void> {
   await testListToolsContainsDocumentedToolSet();
@@ -13,26 +13,10 @@ async function testListToolsContainsDocumentedToolSet(): Promise<void> {
   const registry = new McpToolRegistryService();
   const tools = registry.listTools();
 
-  assert.equal(tools.length, 15);
+  assert.equal(tools.length, DOCUMENTED_MCP_TOOL_NAMES.length);
   assert.deepEqual(
     tools.map((entry) => entry.name),
-    [
-      "requirement_design_generate",
-      "architecture_design_generate",
-      "item_design_generate",
-      "work_plan_generate",
-      "requirement_design_update",
-      "architecture_design_update",
-      "item_design_update",
-      "work_plan_update",
-      "requirement_design_contract",
-      "architecture_design_contract",
-      "item_design_contract",
-      "work_plan_contract",
-      "overall_design_contract",
-      "work_execute",
-      "work_execute_contract",
-    ],
+    DOCUMENTED_MCP_TOOL_NAMES,
   );
   assert.deepEqual(
     registry.getTool("work_execute_contract").inputSchema.required,

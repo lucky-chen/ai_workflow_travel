@@ -11,6 +11,7 @@ export {
 } from "./project-registry.js";
 
 export {
+  DOCUMENTED_MCP_TOOL_NAMES,
   McpToolRegistryService,
 } from "./tool-registry.js";
 

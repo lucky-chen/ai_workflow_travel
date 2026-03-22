@@ -3,6 +3,7 @@ import type { IArtifactStore } from "../../Data/artifact-store.js";
 import type { ITraceRecorder } from "../../SDK/QualityControl/Trace/trace-recorder.js";
 import type { ILlmExecutor } from "../../SDK/AgentRuntime/LlmExecutor/llm-executor.js";
 import { RuntimeUnitBase } from "../Shared/runtime-unit-base.js";
+import { createDocumentUpdateExternalAction, persistDocumentUpdateResult } from "../Shared/document-update-runtime-helper.js";
 import {
   ARCHITECTURE_DOCUMENT_PATH,
   REQUIREMENT_DOCUMENT_PATH,
@@ -45,7 +46,7 @@ export class ArchitectureDesignUpdateRuntimeUnit extends RuntimeUnitBase {
   constructor(
     artifactStore: IArtifactStore,
     traceRecorder: ITraceRecorder,
-    protected readonly llmExecutor: ILlmExecutor,
+    _llmExecutor: ILlmExecutor,
     resourceRoot?: string,
   ) {
     super(artifactStore, traceRecorder, resourceRoot);
@@ -62,28 +63,20 @@ export class ArchitectureDesignUpdateRuntimeUnit extends RuntimeUnitBase {
       inputArtifacts.architecture_design,
     );
     const targetPath = ARCHITECTURE_DOCUMENT_PATH;
-    const externalAction = {
-      tool: "external_plugin" as const,
-      operation: "update_markdown",
+    const externalAction = createDocumentUpdateExternalAction(
       targetPath,
-      payload: {
-        handoffType: "document_update" as const,
-        prompt,
-        targetArtifact: {
-          artifactKey: "architecture_design",
-          filePath: targetPath,
-        },
-      },
-    };
-    await this.writeArtifact(
-      executionContext,
-      ARCHITECTURE_UPDATE_RESULT_PATH,
-      JSON.stringify({ prompt, action: externalAction }, null, 2),
+      "architecture_design",
+      prompt,
     );
-    return {
-      accepted: true,
-      summary: `Architecture update prompt generated. Persisted to ${ARCHITECTURE_UPDATE_RESULT_PATH}.`,
+    return persistDocumentUpdateResult(
+      (resultPath, content) => this.writeArtifact(
+        executionContext,
+        resultPath,
+        content,
+      ),
+      ARCHITECTURE_UPDATE_RESULT_PATH,
+      "Architecture update prompt generated.",
       externalAction,
-    };
+    );
   }
 }

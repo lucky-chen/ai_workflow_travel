@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
-import path from "node:path";
-
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { DOCUMENTED_MCP_TOOL_NAMES } from "../../src/Interface/Mcp/tool-registry.js";
+import { createMcpStdioClientHarness } from "./test-helpers.js";
 
 export async function runMcpStdioServerTests(): Promise<void> {
   await runMcpStdioServerStartupTests();
@@ -29,26 +27,10 @@ export async function runMcpStdioServerToolListTests(): Promise<void> {
 
   try {
     const response = await harness.client.listTools();
-    assert.equal(response.tools.length, 15);
+    assert.equal(response.tools.length, DOCUMENTED_MCP_TOOL_NAMES.length);
     assert.deepEqual(
       response.tools.map((entry) => entry.name),
-      [
-        "requirement_design_generate",
-        "architecture_design_generate",
-        "item_design_generate",
-        "work_plan_generate",
-        "requirement_design_update",
-        "architecture_design_update",
-        "item_design_update",
-        "work_plan_update",
-        "requirement_design_contract",
-        "architecture_design_contract",
-        "item_design_contract",
-        "work_plan_contract",
-        "overall_design_contract",
-        "work_execute",
-        "work_execute_contract",
-      ],
+      DOCUMENTED_MCP_TOOL_NAMES,
     );
   } finally {
     await harness.close();
@@ -96,26 +78,6 @@ export async function runMcpStdioServerToolCallTests(): Promise<void> {
   }
 }
 
-async function startClient(): Promise<{
-  client: Client;
-  close: () => Promise<void>;
-}> {
-  const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: [path.join(process.cwd(), "bin", "sdlc-mcp.js")],
-    cwd: process.cwd(),
-    env: process.env as Record<string, string>,
-    stderr: "pipe",
-  });
-  const client = new Client({
-    name: "sdlc-mcp-test-client",
-    version: "0.1.0",
-  });
-  await client.connect(transport);
-  return {
-    client,
-    close: async () => {
-      await client.close();
-    },
-  };
+async function startClient() {
+  return createMcpStdioClientHarness();
 }
