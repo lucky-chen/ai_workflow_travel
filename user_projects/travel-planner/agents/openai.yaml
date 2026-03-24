@@ -1,0 +1,4 @@
+interface:
+  display_name: "Travel Planner"
+  short_description: "Plan trips from user constraints via MCP"
+  default_prompt: "Use $travel-planner to build a personalized trip plan from user constraints and MCP data."

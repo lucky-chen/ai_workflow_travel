@@ -1,0 +1,10 @@
+{
+  "name": "travel-planner-local-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../../project_layer/projects/sdlc/node_modules/typescript/bin/tsc -p tsconfig.json",
+    "start": "node dist/server.js"
+  }
+}
