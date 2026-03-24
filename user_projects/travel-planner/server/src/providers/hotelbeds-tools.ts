@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { requireEnv } from "./env-loader.js";
+import { requireEnv } from "../runtime/env-loader.js";
 import { providerJsonRequest } from "./provider-http.js";
 
-export async function searchHotelbedsHotels(input: Record<string, unknown>) {
+export async function hotelbedsSearchHotels(input: Record<string, unknown>) {
   try {
     const maxHotels = readPositiveInt(input.maxHotels, 5);
     const sortBy = readHotelSort(input.sortBy);
@@ -20,7 +20,7 @@ export async function searchHotelbedsHotels(input: Record<string, unknown>) {
       return {
         status: "error",
         provider: "hotelbedsHotels",
-        tool: "travel.search_hotels",
+        tool: "hotelbeds.search_hotels",
         arguments: input,
         message: "One of destinationCode, hotelCodes, or cityName+countryCode is required.",
       };
@@ -51,7 +51,7 @@ export async function searchHotelbedsHotels(input: Record<string, unknown>) {
       method: "POST",
       url: `${getHotelbedsBaseUrl()}/hotel-api/1.0/hotels`,
       provider: "hotelbedsHotels",
-      tool: "travel.search_hotels",
+      tool: "hotelbeds.search_hotels",
       argumentsPayload: input,
       headers: buildHotelbedsHeaders(),
       body,
@@ -69,7 +69,7 @@ export async function searchHotelbedsHotels(input: Record<string, unknown>) {
     return {
       status: "ok",
       provider: "hotelbedsHotels",
-      tool: "travel.search_hotels",
+      tool: "hotelbeds.search_hotels",
       arguments: {
         ...input,
         maxHotels,
@@ -83,12 +83,14 @@ export async function searchHotelbedsHotels(input: Record<string, unknown>) {
       }),
     };
   } catch (error) {
+    const providerError = asProviderErrorDetails(error);
     return {
       status: "error",
       provider: "hotelbedsHotels",
-      tool: "travel.search_hotels",
+      tool: "hotelbeds.search_hotels",
       arguments: input,
-      message: error instanceof Error ? error.message : String(error),
+      message: providerError.message,
+      ...(providerError.result ? { result: providerError.result } : {}),
     };
   }
 }
@@ -98,7 +100,7 @@ async function resolveHotelbedsDestinationCode(input: Record<string, unknown>): 
     return undefined;
   }
 
-  const language = typeof input.language === "string" && input.language ? input.language : "ENG";
+  const language = normalizeHotelbedsLanguage(input.language);
   const countryCode = String(input.countryCode).toUpperCase();
   const cityName = normalizeText(String(input.cityName));
   const query = new URLSearchParams({
@@ -122,10 +124,9 @@ async function resolveHotelbedsDestinationCode(input: Record<string, unknown>): 
   });
 
   if (result.status === "error") {
-    throw new Error(
-      typeof result.message === "string"
-        ? result.message
-        : `Destination resolution failed with status ${(result.result as { status_code?: unknown } | undefined)?.status_code ?? "unknown"}`,
+    throw createProviderError(
+      formatHotelbedsErrorMessage("Destination resolution failed", result),
+      result.result,
     );
   }
 
@@ -148,7 +149,7 @@ async function resolveLimitedHotelCodes(
     return [];
   }
 
-  const language = typeof input.language === "string" && input.language ? input.language : "ENG";
+  const language = normalizeHotelbedsLanguage(input.language);
   const query = new URLSearchParams({
     fields: "ALL",
     language,
@@ -237,6 +238,47 @@ function getHotelbedsBaseUrl(): string {
 
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function normalizeHotelbedsLanguage(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return "ENG";
+  }
+
+  const normalized = value.trim().toLowerCase();
+  const aliasMap: Record<string, string> = {
+    en: "ENG",
+    "en-us": "ENG",
+    "en-gb": "ENG",
+    zh: "CHI",
+    "zh-cn": "CHI",
+    "zh-hans": "CHI",
+    "zh-hant": "CHI",
+    "zh-tw": "CHI",
+    ja: "JPN",
+    "ja-jp": "JPN",
+    ko: "KOR",
+    "ko-kr": "KOR",
+    th: "THA",
+    "th-th": "THA",
+    fr: "FRE",
+    de: "GER",
+    es: "SPA",
+    it: "ITA",
+    pt: "POR",
+    ru: "RUS",
+  };
+
+  const mapped = aliasMap[normalized];
+  if (mapped) {
+    return mapped;
+  }
+
+  if (/^[a-z]{3}$/i.test(normalized)) {
+    return normalized.toUpperCase();
+  }
+
+  return "ENG";
 }
 
 function readPositiveInt(value: unknown, fallback: number): number {
@@ -413,11 +455,15 @@ function summarizeHotelbedsError(
     provider: result.provider,
     tool: result.tool,
     arguments: input,
-    message: result.message ?? "Hotelbeds request failed.",
+    message: formatHotelbedsErrorMessage("Hotelbeds request failed", result),
     result: {
       status_code:
         result.result && typeof result.result === "object"
           ? (result.result as { status_code?: unknown }).status_code ?? null
+          : null,
+      body:
+        result.result && typeof result.result === "object"
+          ? (result.result as { body?: unknown }).body ?? null
           : null,
     },
   };
@@ -428,4 +474,62 @@ function extractBody(result: unknown): unknown {
     return undefined;
   }
   return (result as { body?: unknown }).body;
+}
+
+function formatHotelbedsErrorMessage(
+  prefix: string,
+  result: { message?: string; result?: unknown },
+): string {
+  if (typeof result.message === "string" && result.message.trim().length > 0) {
+    return result.message;
+  }
+
+  const statusCode =
+    result.result && typeof result.result === "object"
+      ? (result.result as { status_code?: unknown }).status_code ?? "unknown"
+      : "unknown";
+  const body = extractBody(result.result);
+  const bodyPreview = stringifyBodyPreview(body);
+
+  return bodyPreview ? `${prefix} with status ${statusCode}: ${bodyPreview}` : `${prefix} with status ${statusCode}`;
+}
+
+function stringifyBodyPreview(value: unknown): string {
+  if (typeof value === "string") {
+    return value.slice(0, 300);
+  }
+
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  try {
+    return JSON.stringify(value).slice(0, 300);
+  } catch {
+    return String(value).slice(0, 300);
+  }
+}
+
+function createProviderError(message: string, result: unknown): Error & { providerResult?: unknown } {
+  const error = new Error(message) as Error & { providerResult?: unknown };
+  error.providerResult = result;
+  return error;
+}
+
+function asProviderErrorDetails(error: unknown): {
+  message: string;
+  result?: Record<string, unknown>;
+} {
+  if (error instanceof Error) {
+    const providerResult = (error as Error & { providerResult?: unknown }).providerResult;
+    if (providerResult && typeof providerResult === "object") {
+      return {
+        message: error.message,
+        result: providerResult as Record<string, unknown>,
+      };
+    }
+    return { message: error.message };
+  }
+
+  return { message: String(error) };
 }

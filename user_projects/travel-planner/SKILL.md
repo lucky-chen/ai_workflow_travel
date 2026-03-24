@@ -78,7 +78,7 @@ Select providers by destination geography:
 - flights:
   - use the flight search MCP tool
 - lodging:
-  - use the hotel search MCP tool
+  - use `hotelbeds_search_hotels`
 - weather:
   - use OpenWeather
 - budget reconciliation:
@@ -146,6 +146,7 @@ Include alternatives when there is a meaningful tradeoff.
 - Do not mix AMap and Google Maps in the same destination plan unless one provider is unavailable for a required query.
 - Prefer AMap place names, route estimates, and local area terminology for mainland China plans.
 - Prefer Google Maps place names, route estimates, and local area terminology for destinations outside mainland China.
+- For lodging, default to `hotelbeds_search_hotels`. Do not switch to `duffel_search_stays` unless the user explicitly requests it.
 - if mcp is not avaiblilty,just output the error and exit. do not use other abilities.
 
 ## Output Discipline

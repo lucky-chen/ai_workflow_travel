@@ -22,7 +22,7 @@ export async function appendRecord(baseUrl: string, result: Record<string, unkno
           generated_at: existing.generated_at ?? new Date().toISOString(),
           last_updated_at: new Date().toISOString(),
           file_name: `record_${RUN_ID}.json`,
-          purpose: existing.purpose ?? "MCP call input/output records captured during local travel-planner testing.",
+          purpose: existing.purpose ?? "Provider MCP call input/output records captured during local provider MCP execution.",
           records,
         },
         null,

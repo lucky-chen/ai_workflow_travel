@@ -1,11 +1,6 @@
 import process from "node:process";
-
-const { Client } = (await import(
-  resolveWorkspaceModule("../../../../../project_layer/projects/sdlc/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js")
-)) as any;
-const { StdioClientTransport } = (await import(
-  resolveWorkspaceModule("../../../../../project_layer/projects/sdlc/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js")
-)) as any;
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 type ProviderDefinition =
   | {
@@ -139,8 +134,4 @@ function buildStringEnv(extraEnv: Record<string, string> | undefined): Record<st
     env[key] = value;
   }
   return env;
-}
-
-function resolveWorkspaceModule(relativePathFromDistSrc: string): string {
-  return new URL(relativePathFromDistSrc, import.meta.url).href;
 }
