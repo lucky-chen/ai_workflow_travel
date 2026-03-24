@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "travel-planner/plan.schema.json",
+  "title": "Travel Planner Input Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trip_request"
+  ],
+  "properties": {
+    "trip_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trip_type",
+        "origin",
+        "destinations",
+        "travel_dates",
+        "travelers",
+        "budget",
+        "pace",
+        "interests",
+        "search_preferences",
+        "trip_preferences",
+        "lodging_preferences",
+        "activity_preferences",
+        "daily_schedule_preferences",
+        "special_requirements",
+        "output_preferences"
+      ],
+      "properties": {
+        "trip_type": {
+          "type": "string",
+          "enum": ["leisure", "business", "family", "mixed"]
+        },
+        "origin": {
+          "$ref": "#/$defs/location"
+        },
+        "destinations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/location"
+          }
+        },
+        "travel_dates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start_date", "end_date", "flexible_dates"],
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "format": "date"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date"
+            },
+            "flexible_dates": {
+              "type": "boolean"
+            }
+          }
+        },
+        "travelers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["adults", "children", "child_ages", "rooms"],
+          "properties": {
+            "adults": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "children": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "child_ages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 17
+              }
+            },
+            "rooms": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["currency", "max_total"],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_total": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "pace": {
+          "type": "string",
+          "enum": ["relaxed", "balanced", "packed"]
+        },
+        "interests": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "search_preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flights",
+            "hotels",
+            "attractions"
+          ],
+          "properties": {
+            "flights": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sort_by", "limit", "max_connections"],
+              "properties": {
+                "sort_by": {
+                  "type": "string",
+                  "enum": ["price", "duration", "departure_time"]
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 20
+                },
+                "max_connections": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4
+                }
+              }
+            },
+            "hotels": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sort_by", "limit", "preferred_areas"],
+              "properties": {
+                "sort_by": {
+                  "type": "string",
+                  "enum": ["price", "star_rating", "distance_to_center", "area"]
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 20
+                },
+                "preferred_areas": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "attractions": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sort_by", "limit"],
+              "properties": {
+                "sort_by": {
+                  "type": "string",
+                  "enum": ["relevance", "distance", "rating"]
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 20
+                }
+              }
+            }
+          }
+        },
+        "trip_preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "first_time_visit",
+            "want_multi_city",
+            "preferred_transport",
+            "avoid"
+          ],
+          "properties": {
+            "first_time_visit": {
+              "type": "boolean"
+            },
+            "want_multi_city": {
+              "type": "boolean"
+            },
+            "preferred_transport": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "avoid": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "lodging_preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "property_types",
+            "min_star_rating",
+            "breakfast_required",
+            "free_cancellation_preferred",
+            "near_transit_preferred"
+          ],
+          "properties": {
+            "property_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "min_star_rating": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "breakfast_required": {
+              "type": "boolean"
+            },
+            "free_cancellation_preferred": {
+              "type": "boolean"
+            },
+            "near_transit_preferred": {
+              "type": "boolean"
+            }
+          }
+        },
+        "activity_preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shopping",
+            "food_exploration",
+            "cultural_sites",
+            "nature",
+            "nightlife",
+            "family_friendly"
+          ],
+          "properties": {
+            "shopping": {
+              "type": "boolean"
+            },
+            "food_exploration": {
+              "type": "boolean"
+            },
+            "cultural_sites": {
+              "type": "boolean"
+            },
+            "nature": {
+              "type": "boolean"
+            },
+            "nightlife": {
+              "type": "boolean"
+            },
+            "family_friendly": {
+              "type": "boolean"
+            }
+          }
+        },
+        "daily_schedule_preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start_time",
+            "end_time",
+            "midday_break_preferred",
+            "max_major_activities_per_day"
+          ],
+          "properties": {
+            "start_time": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "end_time": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "midday_break_preferred": {
+              "type": "boolean"
+            },
+            "max_major_activities_per_day": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "special_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "visa_check_required",
+            "travel_insurance_considered",
+            "accessibility_needs",
+            "dietary_requirements"
+          ],
+          "properties": {
+            "visa_check_required": {
+              "type": "boolean"
+            },
+            "travel_insurance_considered": {
+              "type": "boolean"
+            },
+            "accessibility_needs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "dietary_requirements": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "output_preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "language",
+            "include_budget_breakdown",
+            "include_alternatives",
+            "include_risks"
+          ],
+          "properties": {
+            "language": {
+              "type": "string",
+              "minLength": 1
+            },
+            "include_budget_breakdown": {
+              "type": "boolean"
+            },
+            "include_alternatives": {
+              "type": "boolean"
+            },
+            "include_risks": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["city_name", "country_code"],
+      "properties": {
+        "city_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "country_code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2
+        }
+      }
+    }
+  }
+}

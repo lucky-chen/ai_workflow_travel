@@ -9,28 +9,37 @@ description: Plan personalized leisure trips from user constraints by querying M
 
 Build a personal travel plan from explicit user constraints and MCP data.
 Prefer feasible, explainable plans over speculative or overly dense itineraries.
+Read the request from `references/plan.json` before planning.
+
+## Input Source
+
+Read [plan.json](./references/plan.json) as the primary request source.
+Use [plan.schema.json](./references/plan.schema.json) as the input contract.
+
+If `plan.json` is missing, invalid, or lacks decision-critical fields, output an error and exit.
 
 ## Required Inputs
 
-Collect or infer these fields before finalizing a plan:
+Read these fields from `plan.json` before finalizing a plan:
 
 - origin
-- destination
-- date range or trip length
+- destinations
+- travel dates
 - traveler count
-- total budget or budget range
-- purpose or preference tags
-- pace preference
-- transport preference
-- lodging constraints
-
-If a field is missing, ask only when it materially changes the result.
-If the user does not provide a non-critical field, state the assumption explicitly.
+- total budget
+- pace
+- interests
+- trip preferences
+- lodging preferences
+- activity preferences
+- daily schedule preferences
+- output preferences
 
 ## Workflow
 
 ### 1. Normalize Request
 
+- Read `trip_request` from `plan.json`.
 - Extract hard constraints:
   - departure city
   - target destination
@@ -49,14 +58,12 @@ If the user does not provide a non-critical field, state the assumption explicit
 
 ### 2. Check Missing Decision-Critical Data
 
-Ask follow-up questions only if one of these is unknown:
+If one of these is missing in `plan.json`, output an error:
 
 - destination or candidate destinations
 - date range
 - budget ceiling
 - traveler count when pricing is required
-
-Do not ask for optional detail if a reasonable default is enough to continue.
 
 ### 3. Query MCP Data
 
@@ -67,7 +74,7 @@ Select providers by destination geography:
 - mainland China destinations:
   - use AMap for place search, attraction lookup, routing, and local transport estimation
 - destinations outside mainland China:
-  - use AMap for place search, attraction lookup, routing, and local transport estimation
+  - use Google Maps for place search, attraction lookup, routing, and local transport estimation
 - flights:
   - use the flight search MCP tool
 - lodging:
@@ -137,7 +144,8 @@ Include alternatives when there is a meaningful tradeoff.
 - When budget is tight, reduce optional activities before violating transport or lodging hard constraints.
 - When weather is unfavorable, downgrade outdoor-heavy plans unless the user explicitly prefers them.
 - Do not mix AMap and Google Maps in the same destination plan unless one provider is unavailable for a required query.
-- Prefer AMap place names, route estimates, and local area terminology for all destination plans.
+- Prefer AMap place names, route estimates, and local area terminology for mainland China plans.
+- Prefer Google Maps place names, route estimates, and local area terminology for destinations outside mainland China.
 - if mcp is not avaiblilty,just output the error and exit. do not use other abilities.
 
 ## Output Discipline
@@ -151,6 +159,8 @@ Include alternatives when there is a meaningful tradeoff.
 ## References
 
 - Use [mcp-tools.md](./references/mcp-tools.md) for MCP tool contracts and provider boundaries.
+- Use [plan.schema.json](./references/plan.schema.json) for the input file contract.
+- Use [plan.json](./references/plan.json) as the planning input file.
 - Use [output-format.md](./references/output-format.md) for the final response shape.
 
 ## Example Requests

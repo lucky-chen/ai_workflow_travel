@@ -32,6 +32,7 @@ Current runtime-exposed tools:
 - `openWeather.getweatherdata`
 - `travel.search_flights`
 - `travel.search_hotels`
+- `travel.search_attractions`
 - `travel.estimate_budget`
 
 ## Runtime Notes
@@ -39,6 +40,7 @@ Current runtime-exposed tools:
 - `destination viability` is not a dedicated MCP tool
 - `travel.search_flights` is the generic flight-search capability
 - `travel.search_hotels` is the generic hotel-search capability
+- `travel.search_attractions` is the generic attraction-search capability
 - `travel.estimate_budget` is the local budget utility tool
 - map and weather tools remain provider-facing tools
 
@@ -107,7 +109,9 @@ Input:
   "adults": 1,
   "childrenAges": [8],
   "cabinClass": "economy",
-  "maxConnections": 1
+  "maxConnections": 1,
+  "limit": 5,
+  "sortBy": "price"
 }
 ```
 
@@ -124,6 +128,8 @@ Optional fields:
 - `childrenAges`
 - `cabinClass`
 - `maxConnections`
+- `limit`
+- `sortBy`
 
 Output:
 
@@ -138,6 +144,15 @@ Notes:
 
 - The current implementation uses Duffel internally.
 - The server sends `Authorization: Bearer <DUFFEL_ACCESS_TOKEN>` and `Duffel-Version: v2`.
+- The server uses provider-side offer listing with a request limit and returns summarized top offers only.
+- Supported `sortBy` values:
+  - `price`
+  - `duration`
+  - `departure_time`
+- Current execution mapping:
+  - `price` -> provider sort by total price
+  - `duration` -> provider sort by total duration
+  - `departure_time` -> currently falls back to provider price sort
 
 Source:
 
@@ -162,7 +177,9 @@ Input:
   "cityName": "Osaka",
   "countryCode": "JP",
   "language": "ENG",
-  "maxHotels": 10
+  "maxHotels": 10,
+  "sortBy": "price",
+  "preferredAreas": ["Namba", "Umeda"]
 }
 ```
 
@@ -183,6 +200,8 @@ Optional fields:
 - `rooms`
 - `language`
 - `maxHotels`
+- `sortBy`
+- `preferredAreas`
 
 Output:
 
@@ -198,10 +217,81 @@ Notes:
 - The current implementation uses Hotelbeds internally.
 - The server sends `Api-key` and `X-Signature` headers to Hotelbeds Booking API.
 - If `destinationCode` is missing, the server can resolve it from `cityName + countryCode` before querying hotel availability.
+- `maxHotels` is used to limit hotel code selection before availability lookup.
+- The server returns summarized hotel candidates only.
+- Supported `sortBy` values:
+  - `price`
+  - `star_rating`
+  - `distance_to_center`
+  - `area`
+- `preferredAreas` is applied as a result-side area preference filter before final sorting.
+- Current execution mapping:
+  - `price` -> sort by minimum rate
+  - `star_rating` -> sort by parsed star level
+  - `area` -> sort by zone name
+  - `distance_to_center` -> currently falls back to zone-name ordering because provider responses do not expose center-distance fields
 
 Source:
 
 - https://developer.hotelbeds.com/documentation/hotels/booking-api/workflow/
+
+### `travel.search_attractions`
+
+Purpose:
+Search attraction candidates through the configured map provider.
+
+Input:
+
+```json
+{
+  "cityName": "Bangkok",
+  "countryCode": "TH",
+  "keyword": "temples",
+  "interests": ["street_food", "night_markets"],
+  "limit": 5,
+  "radius": 5000,
+  "language": "en",
+  "sortBy": "relevance"
+}
+```
+
+Required fields:
+
+- `cityName`
+- `countryCode`
+
+Optional fields:
+
+- `keyword`
+- `interests`
+- `limit`
+- `radius`
+- `language`
+- `sortBy`
+
+Output:
+
+- wrapped as:
+  - `status`
+  - `provider`
+  - `tool`
+  - `arguments`
+  - `result` or `message`
+
+Notes:
+
+- Mainland China destinations use AMap internally.
+- Destinations outside mainland China use Google Maps internally.
+- The tool returns summarized attraction candidates instead of full raw provider payloads.
+- If `limit` is omitted, the tool defaults to a small candidate set.
+- Supported `sortBy` values:
+  - `relevance`
+  - `distance`
+  - `rating`
+- Current execution mapping:
+  - `rating` -> Google results sorted by rating when available
+  - `relevance` -> keep provider-native order
+  - `distance` -> currently keeps provider-native order because no stable cross-provider distance field is available
 
 ### `googleMaps.geocode`
 

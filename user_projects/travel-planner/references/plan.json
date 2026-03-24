@@ -1,0 +1,109 @@
+{
+  "trip_request": {
+    "trip_type": "leisure",
+    "origin": {
+      "city_name": "杭州",
+      "country_code": "CN"
+    },
+    "destinations": [
+      {
+        "city_name": "曼谷",
+        "country_code": "TH"
+      },
+      {
+        "city_name": "芭提雅",
+        "country_code": "TH"
+      }
+    ],
+    "travel_dates": {
+      "start_date": "2026-05-10",
+      "end_date": "2026-05-16",
+      "flexible_dates": false
+    },
+    "travelers": {
+      "adults": 1,
+      "children": 0,
+      "child_ages": [],
+      "rooms": 1
+    },
+    "budget": {
+      "currency": "CNY",
+      "max_total": 10000
+    },
+    "pace": "relaxed",
+    "interests": [
+      "street_food",
+      "night_markets",
+      "temples",
+      "seaside"
+    ],
+    "search_preferences": {
+      "flights": {
+        "sort_by": "price",
+        "limit": 3,
+        "max_connections": 1
+      },
+      "hotels": {
+        "sort_by": "price",
+        "limit": 3,
+        "preferred_areas": [
+          "Sukhumvit",
+          "Riverside",
+          "Pattaya Beach"
+        ]
+      },
+      "attractions": {
+        "sort_by": "relevance",
+        "limit": 5
+      }
+    },
+    "trip_preferences": {
+      "first_time_visit": true,
+      "want_multi_city": true,
+      "preferred_transport": [
+        "flight",
+        "taxi"
+      ],
+      "avoid": [
+        "red_eye_flight",
+        "overpacked_schedule"
+      ]
+    },
+    "lodging_preferences": {
+      "property_types": [
+        "hotel",
+        "guesthouse"
+      ],
+      "min_star_rating": 3,
+      "breakfast_required": false,
+      "free_cancellation_preferred": true,
+      "near_transit_preferred": true
+    },
+    "activity_preferences": {
+      "shopping": true,
+      "food_exploration": true,
+      "cultural_sites": true,
+      "nature": false,
+      "nightlife": true,
+      "family_friendly": false
+    },
+    "daily_schedule_preferences": {
+      "start_time": "09:00",
+      "end_time": "21:00",
+      "midday_break_preferred": true,
+      "max_major_activities_per_day": 2
+    },
+    "special_requirements": {
+      "visa_check_required": false,
+      "travel_insurance_considered": false,
+      "accessibility_needs": [],
+      "dietary_requirements": []
+    },
+    "output_preferences": {
+      "language": "zh-CN",
+      "include_budget_breakdown": true,
+      "include_alternatives": true,
+      "include_risks": true
+    }
+  }
+}

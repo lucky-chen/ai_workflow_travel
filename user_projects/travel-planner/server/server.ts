@@ -2,6 +2,7 @@ import { ProviderMcpRegistry } from "./src/provider-mcp-registry.js";
 import { RUN_ID } from "./src/run-context.js";
 import { loadLocalEnv } from "./src/env-loader.js";
 import { appendRecord } from "./src/record-store.js";
+import { appendTraceEvent, initializeTrace } from "./src/trace-store.js";
 import { estimateBudget } from "./src/budget.js";
 import {
   googleDirections,
@@ -11,6 +12,7 @@ import {
 } from "./src/google-maps-tools.js";
 import { searchDuffelFlightOffers } from "./src/duffel-tools.js";
 import { searchHotelbedsHotels } from "./src/hotelbeds-tools.js";
+import { searchAttractions } from "./src/travel-attractions.js";
 
 const { McpServer } = (await import(
   resolveWorkspaceModule("../../../../project_layer/projects/sdlc/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js")
@@ -23,6 +25,7 @@ const { default: z } = (await import(resolveWorkspaceModule("../../../../project
 const BASE_URL = import.meta.url;
 
 await loadLocalEnv(BASE_URL);
+await initializeTrace(BASE_URL);
 
 const providerRegistry = new ProviderMcpRegistry();
 const server = new McpServer({
@@ -191,6 +194,8 @@ function registerTools(): void {
       childrenAges: z.array(z.number().int().min(0).max(17)).optional(),
       cabinClass: z.string().min(1).optional(),
       maxConnections: z.number().int().min(0).max(4).optional(),
+      limit: z.number().int().min(1).max(20).optional(),
+      sortBy: z.enum(["price", "duration", "departure_time"]).optional(),
     },
     async (input: unknown) => await toToolResult(await searchDuffelFlightOffers(input as Record<string, unknown>)),
   );
@@ -210,8 +215,27 @@ function registerTools(): void {
       rooms: z.number().int().min(1).optional(),
       language: z.string().min(1).optional(),
       maxHotels: z.number().int().min(1).max(20).optional(),
+      sortBy: z.enum(["price", "star_rating", "distance_to_center", "area"]).optional(),
+      preferredAreas: z.array(z.string().min(1)).optional(),
     },
     async (input: unknown) => await toToolResult(await searchHotelbedsHotels(input as Record<string, unknown>)),
+  );
+
+  server.tool(
+    "travel.search_attractions",
+    "Search attraction candidates for a destination through the configured map provider.",
+    {
+      cityName: z.string().min(1),
+      countryCode: z.string().min(2).max(2),
+      keyword: z.string().min(1).optional(),
+      interests: z.array(z.string().min(1)).optional(),
+      limit: z.number().int().min(1).max(20).optional(),
+      radius: z.number().int().min(1).max(50000).optional(),
+      language: z.string().min(1).optional(),
+      sortBy: z.enum(["relevance", "distance", "rating"]).optional(),
+    },
+    async (input: unknown) =>
+      await toToolResult(await searchAttractions(input as Record<string, unknown>, providerRegistry)),
   );
 }
 
@@ -238,16 +262,65 @@ function registerProxyTool(
 }
 
 async function toToolResult(result: Record<string, unknown> & { status?: string }) {
-  const resultWithRunId = {
+  const resultWithRunId: Record<string, unknown> & { status?: string; run_id: string } = {
     run_id: RUN_ID,
     ...result,
   };
   await appendRecord(BASE_URL, resultWithRunId);
+  await appendTraceEvent(BASE_URL, {
+    event_type: "tool_result_recorded",
+    tool: typeof resultWithRunId.tool === "string" ? resultWithRunId.tool : undefined,
+    provider: typeof resultWithRunId.provider === "string" ? resultWithRunId.provider : undefined,
+    status: typeof resultWithRunId.status === "string" ? resultWithRunId.status : undefined,
+    input: resultWithRunId.arguments,
+    summary: buildTraceSummary(resultWithRunId),
+    observation: buildTraceObservation(resultWithRunId),
+  });
   return {
     content: [{ type: "text" as const, text: JSON.stringify(resultWithRunId, null, 2) }],
     structuredContent: resultWithRunId,
     isError: resultWithRunId.status === "error",
   };
+}
+
+function buildTraceSummary(result: Record<string, unknown>): string {
+  const tool = typeof result.tool === "string" ? result.tool : "unknown";
+  const status = typeof result.status === "string" ? result.status : "unknown";
+  const provider = typeof result.provider === "string" ? result.provider : "unknown";
+  return `${tool} completed with status=${status} via provider=${provider}.`;
+}
+
+function buildTraceObservation(result: Record<string, unknown>): Record<string, unknown> {
+  const observation: Record<string, unknown> = {};
+  const rawResult = result.result;
+  if (rawResult && typeof rawResult === "object") {
+    const statusCode = (rawResult as { status_code?: unknown }).status_code;
+    if (statusCode !== undefined) {
+      observation.status_code = statusCode;
+    }
+
+    const body = (rawResult as { body?: unknown }).body;
+    if (body && typeof body === "object") {
+      if (Array.isArray((body as { offers?: unknown[] }).offers)) {
+        observation.offer_count = (body as { offers: unknown[] }).offers.length;
+      }
+      if (typeof (body as { total?: unknown }).total === "number") {
+        observation.total = (body as { total: number }).total;
+      }
+      if (Array.isArray((body as { results?: unknown[] }).results)) {
+        observation.result_count = (body as { results: unknown[] }).results.length;
+      }
+      if (typeof (body as { status?: unknown }).status === "string") {
+        observation.provider_status = (body as { status: string }).status;
+      }
+    }
+  }
+
+  if (typeof result.message === "string") {
+    observation.message = result.message;
+  }
+
+  return observation;
 }
 
 function moneySchema() {
