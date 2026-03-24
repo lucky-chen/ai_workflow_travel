@@ -12,7 +12,7 @@ type ProviderDefinition =
       type: "stdio";
       command: string;
       args?: string[];
-      env?: Record<string, string>;
+      env?: Record<string, string> | (() => Record<string, string>);
     };
 
 const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
@@ -20,17 +20,17 @@ const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
     type: "stdio",
     command: "npx",
     args: ["-y", "@open-mcp/google-maps"],
-    env: {
+    env: () => ({
       KEY: envOrEmpty("GOOGLE_MAPS_API_KEY"),
-    },
+    }),
   },
   amapMaps: {
     type: "stdio",
     command: "npx",
     args: ["-y", "@amap/amap-maps-mcp-server"],
-    env: {
+    env: () => ({
       AMAP_MAPS_API_KEY: envOrEmpty("AMAP_MAPS_API_KEY"),
-    },
+    }),
   },
   openWeather: {
     type: "stdio",
@@ -114,11 +114,12 @@ async function createClient(name: string, definition: ProviderDefinition): Promi
 }
 
 function createTransport(definition: ProviderDefinition): InstanceType<typeof StdioClientTransport> {
+  const resolvedEnv = typeof definition.env === "function" ? definition.env() : definition.env;
   return new StdioClientTransport({
     command: definition.command,
     args: definition.args ?? [],
     cwd: process.cwd(),
-    env: buildStringEnv(definition.env),
+    env: buildStringEnv(resolvedEnv),
     stderr: "pipe",
   });
 }

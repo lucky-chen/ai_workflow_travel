@@ -67,7 +67,7 @@ Select providers by destination geography:
 - mainland China destinations:
   - use AMap for place search, attraction lookup, routing, and local transport estimation
 - destinations outside mainland China:
-  - use Google Maps for place search, attraction lookup, routing, and local transport estimation
+  - use AMap for place search, attraction lookup, routing, and local transport estimation
 - flights:
   - use the flight search MCP tool
 - lodging:
@@ -137,8 +137,7 @@ Include alternatives when there is a meaningful tradeoff.
 - When budget is tight, reduce optional activities before violating transport or lodging hard constraints.
 - When weather is unfavorable, downgrade outdoor-heavy plans unless the user explicitly prefers them.
 - Do not mix AMap and Google Maps in the same destination plan unless one provider is unavailable for a required query.
-- For mainland China destinations, prefer AMap place names, route estimates, and local area terminology.
-- For destinations outside mainland China, prefer Google Maps place names, route estimates, and local area terminology.
+- Prefer AMap place names, route estimates, and local area terminology for all destination plans.
 - if mcp is not avaiblilty,just output the error and exit. do not use other abilities.
 
 ## Output Discipline
