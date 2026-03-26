@@ -4,6 +4,7 @@ import { runContextAssemblerTests } from "./context-assembler.test.js";
 import { runExecutionFlowTests } from "./execution-flow.test.js";
 import { runExecutionStrategySelectorTests } from "./execution-strategy-selector.test.js";
 import { runPlanningFlowTests } from "./planning-flow.test.js";
+import { runObservabilityBoundaryTests } from "./observability-boundaries.test.js";
 import { runResultNormalizerAndMetricsTests } from "./result-normalizer-and-metrics.test.js";
 import { runRuntimeApiLifecycleTests } from "./runtime-api-lifecycle.test.js";
 import { runRuntimeMemoryAndRetrievalTests } from "./runtime-memory-and-retrieval.test.js";
@@ -16,6 +17,7 @@ async function main(): Promise<void> {
   await runContextAssemblerTests();
   await runExecutionFlowTests();
   await runExecutionStrategySelectorTests();
+  await runObservabilityBoundaryTests();
   await runPlanningFlowTests();
   await runResultNormalizerAndMetricsTests();
   await runRuntimeApiLifecycleTests();
