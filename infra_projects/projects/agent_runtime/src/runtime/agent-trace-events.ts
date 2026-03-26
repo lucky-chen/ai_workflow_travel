@@ -106,3 +106,19 @@ export function buildRunFinishedEvent(
     completed: observation.completed ?? false,
   });
 }
+
+export function buildValidationFailedEvent(
+  sessionId: string,
+  runId: string,
+  diagnostics: ValidationIssue[],
+): AgentTraceEvent {
+  return createSessionEvent(
+    sessionId,
+    runId,
+    "validation_failed",
+    "DefaultAgent.run",
+    "Validation failed.",
+    undefined,
+    diagnostics,
+  );
+}

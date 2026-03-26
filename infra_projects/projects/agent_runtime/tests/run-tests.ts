@@ -1,4 +1,5 @@
 import { runAgentRuntimeTests } from "./agent-runtime.test.js";
+import { runAgentLoopTests } from "./agent-loop.test.js";
 import { runContextAssemblerTests } from "./context-assembler.test.js";
 import { runExecutionFlowTests } from "./execution-flow.test.js";
 import { runExecutionStrategySelectorTests } from "./execution-strategy-selector.test.js";
@@ -8,6 +9,7 @@ import { runSessionHistoryStoreTests } from "./session-history-store.test.js";
 
 async function main(): Promise<void> {
   await runAgentRuntimeTests();
+  await runAgentLoopTests();
   await runContextAssemblerTests();
   await runExecutionFlowTests();
   await runExecutionStrategySelectorTests();

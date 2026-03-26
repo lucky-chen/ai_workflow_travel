@@ -47,6 +47,23 @@ export class MockModelExecutionBackend implements IModelBackend {
       return this.mockExecute(request);
     }
 
+    if (request.mode === "planning") {
+      return {
+        content: JSON.stringify({
+          mode:
+            Array.isArray((request.prompt.userPrompt as { toolResults?: unknown }).toolResults) &&
+            ((request.prompt.userPrompt as { toolResults?: unknown[] }).toolResults?.length ?? 0) > 0
+              ? "tool_augmented_generation"
+              : "direct_generation",
+          summary: "Mock planning result.",
+          stepIndex: 1,
+          nextStepGoal: "Generate runtime output.",
+        }),
+        responseFormat: "json",
+        metadata: request.metadata,
+      };
+    }
+
     return {
       content:
         this.mockContent ??

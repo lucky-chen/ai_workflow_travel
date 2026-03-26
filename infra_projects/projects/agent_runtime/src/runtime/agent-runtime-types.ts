@@ -120,6 +120,7 @@ export interface PlanningPromptBuilderInput {
   context: AgentContext;
   priorStepResults?: ExecutionResult[];
   priorObservation?: ObservationResult;
+  stepIndex?: number;
 }
 
 export interface ExecutionPromptBuilderInput {
@@ -279,7 +280,7 @@ export interface IAgent {
 }
 
 export interface IPlanner {
-  plan(context: AgentContext): Promise<ExecutionPlan>;
+  plan(context: AgentContext, loopState?: PlannerLoopState): Promise<ExecutionPlan>;
 }
 
 export interface IExecutor {
@@ -312,4 +313,10 @@ export interface RuntimeSafetyPolicy {
 
 export interface MultiAgentCoordinator {
   handoff(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+}
+
+export interface PlannerLoopState {
+  stepIndex: number;
+  priorStepResults?: ExecutionResult[];
+  priorObservation?: ObservationResult;
 }

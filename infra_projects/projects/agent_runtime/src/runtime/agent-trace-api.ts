@@ -7,8 +7,15 @@ import {
   buildRunStartedEvent,
   buildToolCalledEvent,
   buildToolResultRecordedEvent,
+  buildValidationFailedEvent,
 } from "./agent-trace-events.js";
-import type { ExecutionPlan, ExecutionResult, McpToolResult, ObservationResult } from "./agent-runtime-types.js";
+import type {
+  ExecutionPlan,
+  ExecutionResult,
+  McpToolResult,
+  ObservationResult,
+  ValidationIssue,
+} from "./agent-runtime-types.js";
 
 export class AgentTraceApi {
   constructor(private readonly traceRecorder?: IAgentTraceRecorder) {}
@@ -38,6 +45,10 @@ export class AgentTraceApi {
 
   async recordRunFinished(sessionId: string, runId: string, observation: ObservationResult): Promise<void> {
     await this.record(buildRunFinishedEvent(sessionId, runId, observation));
+  }
+
+  async recordValidationFailed(sessionId: string, runId: string, diagnostics: ValidationIssue[]): Promise<void> {
+    await this.record(buildValidationFailedEvent(sessionId, runId, diagnostics));
   }
 
   private async record(event: AgentTraceEvent): Promise<void> {

@@ -4,6 +4,7 @@ import type {
   ExecutionPlan,
   IModelBackend,
   IPlanner,
+  PlannerLoopState,
 } from "./agent-runtime-types.js";
 
 export class DefaultPlanner implements IPlanner {
@@ -12,22 +13,25 @@ export class DefaultPlanner implements IPlanner {
     private readonly promptBuilder: PlanningPromptBuilder = new PlanningPromptBuilder(),
   ) {}
 
-  async plan(context: AgentContext): Promise<ExecutionPlan> {
+  async plan(context: AgentContext, loopState?: PlannerLoopState): Promise<ExecutionPlan> {
     const request = this.promptBuilder.build({
       context,
+      priorStepResults: loopState?.priorStepResults,
+      priorObservation: loopState?.priorObservation,
+      stepIndex: loopState?.stepIndex,
     });
     const result = await this.backend.execute(request);
-    return parseExecutionPlan(result.content);
+    return parseExecutionPlan(result.content, loopState?.stepIndex ?? 1);
   }
 }
 
-function parseExecutionPlan(content: string): ExecutionPlan {
+function parseExecutionPlan(content: string, stepIndex: number): ExecutionPlan {
   const parsed = JSON.parse(content) as Partial<ExecutionPlan>;
 
   return {
     mode: parsed.mode ?? "direct_generation",
     summary: parsed.summary ?? "",
-    stepIndex: parsed.stepIndex ?? 1,
+    stepIndex: parsed.stepIndex ?? stepIndex,
     nextStepGoal: parsed.nextStepGoal ?? "",
     ...(parsed.completed !== undefined ? { completed: parsed.completed } : {}),
     ...(parsed.stopReason ? { stopReason: parsed.stopReason } : {}),

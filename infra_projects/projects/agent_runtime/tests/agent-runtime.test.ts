@@ -67,8 +67,8 @@ async function testSessionHandleExecutesAgainstBoundSession(): Promise<void> {
   });
   const state = await session.read();
 
-  assert.equal(result.status, "failed");
-  assert.equal(result.diagnostics?.[0]?.code, "session_execution_not_implemented");
+  assert.equal(result.status, "success");
+  assert.equal(result.payload.responseFormat, "json");
   assert.equal(state.initialRequest?.payload.responseFormat, "json");
   assert.equal(state.transcript.at(-2)?.role, "user");
   assert.equal(state.transcript.at(-1)?.role, "assistant");

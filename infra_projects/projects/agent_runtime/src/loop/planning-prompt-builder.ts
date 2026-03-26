@@ -22,6 +22,7 @@ export class PlanningPromptBuilder {
           retrievalContext: input.context.runtimeContext.retrievalContext,
           priorStepResults: input.priorStepResults ?? [],
           priorObservation: input.priorObservation,
+          stepIndex: input.stepIndex ?? 1,
           expectedSchema: "ExecutionPlan",
         },
       },
