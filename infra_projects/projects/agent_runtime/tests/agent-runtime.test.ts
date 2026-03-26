@@ -11,6 +11,8 @@ export async function runAgentRuntimeTests(): Promise<void> {
   await testCreateAgentRuntimeExposesRootApi();
   await testCreateSessionReturnsSessionHandle();
   await testSessionHandleExecutesAgainstBoundSession();
+  await testOpenSessionReturnsExistingSessionHandle();
+  await testCloseSessionLifecycleSemantics();
 }
 
 async function testCreateAgentRuntimeExposesRootApi(): Promise<void> {
@@ -70,4 +72,52 @@ async function testSessionHandleExecutesAgainstBoundSession(): Promise<void> {
   assert.equal(state.initialRequest?.payload.responseFormat, "json");
   assert.equal(state.transcript.at(-2)?.role, "user");
   assert.equal(state.transcript.at(-1)?.role, "assistant");
+}
+
+async function testOpenSessionReturnsExistingSessionHandle(): Promise<void> {
+  const runtime = createAgentRuntime({
+    workdir: "/tmp/agent-runtime",
+  });
+  const created = await runtime.createSession({
+    title: "openable-session",
+  });
+  const createdState = await created.read();
+
+  const reopened = await runtime.openSession({
+    sessionId: createdState.sessionId,
+  });
+  const reopenedState = await reopened.read();
+
+  assert.equal(reopenedState.sessionId, createdState.sessionId);
+  assert.equal(reopenedState.title, "openable-session");
+}
+
+async function testCloseSessionLifecycleSemantics(): Promise<void> {
+  const runtime = createAgentRuntime({
+    workdir: "/tmp/agent-runtime",
+  });
+  const session = await runtime.createSession({
+    title: "closable-session",
+  });
+  const state = await session.read();
+
+  assert.equal(await runtime.closeSession(state.sessionId), true);
+  assert.equal(await runtime.closeSession(state.sessionId), false);
+  assert.equal(await runtime.closeSession("missing-session"), false);
+
+  await assert.rejects(
+    () =>
+      session.execute({
+        payload: {
+          prompt: {
+            systemPrompt: ["system"],
+            userPrompt: {
+              task: "should fail",
+            },
+          },
+          responseFormat: "text",
+        },
+      }),
+    /Session is closed/,
+  );
 }

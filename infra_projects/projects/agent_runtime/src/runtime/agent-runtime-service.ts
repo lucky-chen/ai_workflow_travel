@@ -36,7 +36,7 @@ export class AgentRuntimeService implements AgentRuntime {
 
   async execute(sessionId: string, request: AgentSessionRequest): Promise<AgentRuntimeResult> {
     const session = await this.sessionManager.readSession(sessionId);
-    if (session.status === "closed") {
+    if (this.sessionManager.isClosed(sessionId)) {
       throw new Error(`Session is closed: ${sessionId}`);
     }
 

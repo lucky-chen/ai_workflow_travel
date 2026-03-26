@@ -34,22 +34,14 @@ export class AgentSessionManager {
   async openSession(input: AgentSessionOpenInput, metadata?: RequestMetadata): Promise<AgentSessionState> {
     await this.recordRequestedEvent("session_open_requested", metadata, input.sessionId);
 
-    const session = this.sessions.get(input.sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${input.sessionId}`);
-    }
+    const session = this.getSessionOrThrow(input.sessionId);
 
     await this.recordLifecycleEvent("session_opened", session.sessionId, metadata ?? session.metadata);
     return cloneSessionState(session);
   }
 
   async readSession(sessionId: string): Promise<AgentSessionState> {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-
-    return cloneSessionState(session);
+    return cloneSessionState(this.getSessionOrThrow(sessionId));
   }
 
   async closeSession(sessionId: string): Promise<boolean> {
@@ -64,10 +56,7 @@ export class AgentSessionManager {
   }
 
   async attachRequest(sessionId: string, request: AgentSessionRequest): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
+    const session = this.getSessionOrThrow(sessionId);
 
     if (!session.initialRequest) {
       session.initialRequest = cloneRequest(request);
@@ -75,16 +64,18 @@ export class AgentSessionManager {
   }
 
   async appendTranscript(sessionId: string, turns: MessageTurn[]): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
+    const session = this.getSessionOrThrow(sessionId);
 
     session.transcript.push(...turns.map((turn) => ({ ...turn })));
   }
 
   hasSession(sessionId: string): boolean {
     return this.sessions.has(sessionId);
+  }
+
+  isClosed(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    return session?.status === "closed";
   }
 
   private async recordRequestedEvent(
@@ -118,6 +109,14 @@ export class AgentSessionManager {
       summary: `${eventType.replaceAll("_", " ")}.`,
     };
     await this.traceRecorder?.record(event);
+  }
+
+  private getSessionOrThrow(sessionId: string): AgentSessionState {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+    return session;
   }
 }
 
