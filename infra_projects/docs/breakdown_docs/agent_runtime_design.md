@@ -3,31 +3,33 @@
 ## 0. Document Type
 
 - type: `functional_group_design`
-- scope: define the external `AgentRuntimeApi` boundary and the P0 runtime internals for context assembly, multi-step planning loop, provider adaptation, result stabilization, and runtime observability, while keeping P1 and P2 capabilities at reuse-boundary or interface level
-- includes: `AgentRuntimeApi`, `AgentTerminalEntryApi`, `AgentRuntimeService`, `AgentTerminalEntry`, `ContextAssembler`, `SessionHistoryStore`, `RuntimeMemoryStore`, `RetrievalProvider`, `DefaultAgent`, `DefaultPlanner`, `PlanValidator`, `DefaultExecutor`, `ExecutionResultValidator`, `DefaultObserver`, `ObservationValidator`, `ExecutionStrategySelector`, `ResultNormalizer`, `RuntimeMetricsCollector`, `DefaultMcpGateway`
+- scope: define the external `AgentRuntime` boundary and the P0 runtime internals for session lifecycle management, context assembly, multi-step planning loop, provider adaptation, result stabilization, and runtime observability, while keeping P1 and P2 capabilities at reuse-boundary or interface level
+- includes: `AgentRuntime`, session lifecycle management, session-bound execution, context assembly, multi-step runtime loop, model backend adaptation, result normalization, runtime trace, runtime metrics, MCP tool gateway
 - downstream usage: guide follow-up implementation and integration for a standalone agent runtime SDK with context-aware prompting, stable runtime result contracts, trace and metric alignment, and later P1 extension work
 
 ## 1. Goal
 
 ### 1.1 Purpose
 
-Define the module-level design of `AgentRuntime` as a standalone SDK runtime boundary that accepts normalized execution requests, assembles runtime context from session and memory sources, runs one controlled multi-step planning loop, and returns stable runtime results to external callers.
+Define the module-level design of `AgentRuntime` as a standalone SDK runtime boundary that manages session lifecycle, accepts normalized execution requests, assembles runtime context from session and memory sources, runs one controlled multi-step planning loop, and returns stable runtime results to external callers.
 
 ### 1.2 Involved Items
 
 This design document directly covers:
 
-- `AgentRuntimeApi`
-- `AgentTerminalEntryApi`
+- `AgentRuntime`
 - `AgentRuntimeService`
-- `AgentTerminalEntry`
+- `AgentSessionManager`
+- `RuntimeAgentSession`
 - `ContextAssembler`
 - `SessionHistoryStore`
 - `RuntimeMemoryStore`
 - `RetrievalProvider`
 - `DefaultAgent`
 - `DefaultPlanner`
+- `PlanningPromptBuilder`
 - `DefaultExecutor`
+- `ExecutionPromptBuilder`
 - `DefaultObserver`
 - `ExecutionStrategySelector`
 - `ResultNormalizer`
@@ -47,7 +49,8 @@ This design document collaborates with:
 
 Its core functions are:
 
-- Accept normalized runtime requests from callers through one stable `execute` boundary.
+- Create, close, and route runtime sessions through one stable SDK boundary.
+- Accept normalized runtime requests through session-bound operations instead of exposing runtime execution as a root-level public entry.
 - Load session history, short-term memory, and retrieval-backed context before execution begins.
 - Normalize each request into one internal agent context for planning, repeated execution, observation, metrics, and trace emission.
 - Run one controlled `plan -> execute -> observe -> re-plan` loop until completion or runtime stop conditions are reached.
@@ -63,26 +66,26 @@ Its core functions are:
 
 ```plantuml
 @startuml
-interface AgentRuntimeApi {
-  +execute(request: AgentRuntimeRequest): Promise<AgentRuntimeResult>
+interface AgentRuntime {
+  +createSession(input: AgentSessionCreateInput): Promise<AgentSession>
+  +openSession(input: AgentSessionOpenInput): Promise<AgentSession>
+  +closeSession(sessionId: string): Promise<boolean>
 }
 
-interface AgentTerminalEntryApi {
-  +createSession(input: AgentTerminalSessionCreateInput): Promise<AgentTerminalSession>
-  +submit(input: AgentTerminalSessionSubmitInput): Promise<AgentTerminalTurnResult>
-  +readSession(sessionId: string): Promise<AgentTerminalSession>
-}
-
-class AgentTerminalEntry
 class AgentRuntimeService
+class AgentSessionManager
+class RuntimeAgentSession
+interface AgentSession
 class ContextAssembler
 class SessionHistoryStore
 class RuntimeMemoryStore
 interface RetrievalProvider
 class DefaultAgent
 class DefaultPlanner
+class PlanningPromptBuilder
 class PlanValidator
 class DefaultExecutor
+class ExecutionPromptBuilder
 class ExecutionResultValidator
 class DefaultObserver
 class ObservationValidator
@@ -90,8 +93,7 @@ class ExecutionStrategySelector
 class ResultNormalizer
 class RuntimeMetricsCollector
 class DefaultMcpGateway
-interface IModelExecutionBackend
-interface IPlanningBackend
+interface IModelBackend
 interface IMcpGateway
 interface IAgentTraceRecorder
 interface CancellationController
@@ -100,10 +102,9 @@ interface StreamingEventSink
 interface RuntimeSafetyPolicy
 interface MultiAgentCoordinator
 
-AgentRuntimeApi <|.. AgentRuntimeService
-AgentTerminalEntryApi <|.. AgentTerminalEntry
-AgentTerminalEntry --> AgentRuntimeApi
-AgentTerminalEntry --> SessionHistoryStore
+AgentRuntime <|.. AgentRuntimeService
+AgentSession <|.. RuntimeAgentSession
+AgentRuntimeService --> AgentSessionManager
 AgentRuntimeService --> ContextAssembler
 AgentRuntimeService --> DefaultAgent
 AgentRuntimeService --> ExecutionStrategySelector
@@ -119,17 +120,23 @@ AgentRuntimeService ..> MultiAgentCoordinator
 ContextAssembler --> SessionHistoryStore
 ContextAssembler --> RuntimeMemoryStore
 ContextAssembler --> RetrievalProvider
+AgentSessionManager --> SessionHistoryStore
+AgentSessionManager --> RuntimeAgentSession
+RuntimeAgentSession --> AgentRuntimeService
+AgentSession --> AgentRuntime
 DefaultAgent --> DefaultPlanner
 DefaultAgent --> PlanValidator
 DefaultAgent --> DefaultExecutor
 DefaultAgent --> ExecutionResultValidator
 DefaultAgent --> DefaultObserver
 DefaultAgent --> ObservationValidator
-DefaultExecutor --> IModelExecutionBackend
-DefaultPlanner --> IPlanningBackend
+DefaultPlanner --> PlanningPromptBuilder
+DefaultExecutor --> IModelBackend
+DefaultPlanner --> IModelBackend
+DefaultExecutor --> ExecutionPromptBuilder
 DefaultExecutor ..> IMcpGateway
 DefaultMcpGateway --> IMcpGateway
-ExecutionStrategySelector --> IModelExecutionBackend
+ExecutionStrategySelector --> IModelBackend
 ResultNormalizer --> RuntimeMetricsCollector
 @enduml
 ```
@@ -144,27 +151,54 @@ Role:
 
 Responsibilities:
 
-- Accept one normalized `AgentRuntimeRequest`.
+- Accept one normalized `AgentSessionRequest` through a bound session handle.
 - Validate request shape and runtime-level execution limits.
+- Resolve the target session through `AgentSessionManager`.
 - Load execution context through `ContextAssembler`.
 - Assemble runtime dependencies for loop execution, normalization, metrics, and trace.
 - Control loop entry, continuation, and stop conditions.
 - Convert internal execution output into stable `AgentRuntimeResult`.
 
-#### 2.2.2 `AgentTerminalEntry`
+#### 2.2.2 `AgentSessionManager`
 
 Role:
 
-- Terminal-facing entry adapter for standalone interactive runtime usage and terminal-driven tests.
+- Runtime-owned session lifecycle manager.
 
 Responsibilities:
 
-- Create terminal sessions with stable `sessionId`.
-- Map terminal turn input into `AgentRuntimeRequest`.
-- Submit terminal turns through `AgentRuntimeApi`.
-- Read and return terminal session transcript and latest runtime result.
+- Create runtime sessions with stable `sessionId`.
+- Open existing runtime sessions through one stable SDK boundary.
+- Return session-bound runtime handles for external use.
+- Support session close requests issued through `AgentRuntime`.
+- Route runtime requests to the correct session and transcript context.
+- Write updated session transcript state after each completed session run.
 
-#### 2.2.3 `ContextAssembler`
+#### 2.2.3 `RuntimeAgentSession`
+
+Role:
+
+- Concrete session-bound handle implementation for external callers.
+
+Responsibilities:
+
+- Bind one stable `sessionId` to runtime execution operations.
+- Delegate `execute(...)` and `read()` to `AgentRuntimeService` with the bound session identity.
+- Keep caller-facing session operations independent from internal session storage details.
+
+#### 2.2.4 `AgentSession`
+
+Role:
+
+- Session-bound external runtime handle.
+
+Responsibilities:
+
+- Accept per-session execution requests without exposing raw `sessionId` as the primary external operation key.
+- Expose session read and execution operations through the session handle.
+- Keep session lifecycle stable for callers while allowing SDK-internal session routing.
+
+#### 2.2.5 `ContextAssembler`
 
 Role:
 
@@ -175,9 +209,10 @@ Responsibilities:
 - Read session history from `SessionHistoryStore`.
 - Read short-term runtime memory from `RuntimeMemoryStore`.
 - Load optional retrieval-backed context through `RetrievalProvider`.
+- Load SDK-level `workdir` into runtime context.
 - Merge caller payload and loaded context into one stable `AgentContext`.
 
-#### 2.2.3 `SessionHistoryStore`
+#### 2.2.6 `SessionHistoryStore`
 
 Role:
 
@@ -186,10 +221,11 @@ Role:
 Responsibilities:
 
 - Load ordered message history by session identity.
-- Return empty history when the caller does not provide session state.
+- Append normalized user, assistant, and tool turns to the bound session transcript after run completion.
+- Return empty history when the bound session has no prior transcript.
 - Keep persistence details outside `AgentRuntimeService`.
 
-#### 2.2.4 `RuntimeMemoryStore`
+#### 2.2.7 `RuntimeMemoryStore`
 
 Role:
 
@@ -201,7 +237,7 @@ Responsibilities:
 - Save updated memory summary after successful execution when configured.
 - Keep memory lifecycle separate from model execution logic.
 
-#### 2.2.5 `RetrievalProvider`
+#### 2.2.8 `RetrievalProvider`
 
 Role:
 
@@ -213,7 +249,7 @@ Responsibilities:
 - Return retrieval-backed context items in one normalized shape.
 - Keep retrieval implementation replaceable without changing runtime control flow.
 
-#### 2.2.6 `DefaultAgent`
+#### 2.2.9 `DefaultAgent`
 
 Role:
 
@@ -226,7 +262,7 @@ Responsibilities:
 - Record trace checkpoints for plan, execution, tool use, and observation.
 - Return one aggregated runtime output.
 
-#### 2.2.7 `DefaultPlanner`
+#### 2.2.10 `DefaultPlanner`
 
 Role:
 
@@ -237,10 +273,10 @@ Responsibilities:
 - Read normalized runtime context, loaded memory, and retrieval fragments.
 - Decide the current execution step and completion state.
 - Generate the next-step execution plan from the current runtime context and prior step outputs.
-- Call `IPlanningBackend` to produce structured planning output.
+- Call `IModelBackend` in planning mode to produce structured planning output.
 - Emit ordered tool steps only when the runtime plan requires external tool use.
 
-#### 2.2.8 `PlanValidator`
+#### 2.2.11 `PlanValidator`
 
 Role:
 
@@ -252,7 +288,19 @@ Responsibilities:
 - Reject invalid plan shape, invalid tool-step shape, and inconsistent stop-state combinations.
 - Return normalized plan-validation diagnostics for runtime handling.
 
-#### 2.2.9 `DefaultExecutor`
+#### 2.2.12 `PlanningPromptBuilder`
+
+Role:
+
+- Build backend-ready planning prompts from runtime context.
+
+Responsibilities:
+
+- Implement `build(input: PlanningPromptBuilderInput): ModelBackendRequest`.
+- Keep planning-specific prompt shaping separate from planner loop control logic.
+- Produce one `ModelBackendRequest` with `mode="planning"`.
+
+#### 2.2.13 `DefaultExecutor`
 
 Role:
 
@@ -264,7 +312,19 @@ Responsibilities:
 - Build one backend-ready request from normalized prompt data, runtime context, and tool results.
 - Return one step result together with execution metadata for the next planning round.
 
-#### 2.2.10 `ExecutionResultValidator`
+#### 2.2.14 `ExecutionPromptBuilder`
+
+Role:
+
+- Build backend-ready execution prompts from runtime context and validated plan state.
+
+Responsibilities:
+
+- Implement `build(input: ExecutionPromptBuilderInput): ModelBackendRequest`.
+- Keep execution-specific prompt shaping separate from executor control and tool dispatch logic.
+- Produce one `ModelBackendRequest` with `mode="execution"`.
+
+#### 2.2.15 `ExecutionResultValidator`
 
 Role:
 
@@ -276,7 +336,7 @@ Responsibilities:
 - Validate structured JSON outputs when `responseFormat` is `json`.
 - Return normalized result-validation diagnostics for runtime handling.
 
-#### 2.2.11 `DefaultObserver`
+#### 2.2.16 `DefaultObserver`
 
 Role:
 
@@ -290,7 +350,7 @@ Responsibilities:
 - Apply rule-based observation logic in P0 without requiring an additional LLM call.
 - Keep acceptance policy replaceable without changing the runtime API.
 
-#### 2.2.12 `ObservationValidator`
+#### 2.2.17 `ObservationValidator`
 
 Role:
 
@@ -302,7 +362,7 @@ Responsibilities:
 - Reject invalid observation output shape before loop continuation.
 - Return normalized observation diagnostics for runtime handling.
 
-#### 2.2.13 `ExecutionStrategySelector`
+#### 2.2.18 `ExecutionStrategySelector`
 
 Role:
 
@@ -312,9 +372,9 @@ Responsibilities:
 
 - Select mock execution for local and deterministic usage.
 - Select real-provider execution for provider-backed execution.
-- Hide provider transport details behind one backend interface.
+- Hide provider transport details behind one `IModelBackend` interface.
 
-#### 2.2.14 `ResultNormalizer`
+#### 2.2.19 `ResultNormalizer`
 
 Role:
 
@@ -326,7 +386,7 @@ Responsibilities:
 - Build failure results with stable diagnostics instead of leaking raw runtime exceptions.
 - Keep caller-facing contract stable across provider and runtime changes.
 
-#### 2.2.15 `RuntimeMetricsCollector`
+#### 2.2.20 `RuntimeMetricsCollector`
 
 Role:
 
@@ -338,7 +398,7 @@ Responsibilities:
 - Emit one normalized metrics summary for result normalization and trace correlation.
 - Keep metric collection decoupled from planner and executor logic.
 
-#### 2.2.16 `DefaultMcpGateway`
+#### 2.2.21 `DefaultMcpGateway`
 
 Role:
 
@@ -373,8 +433,10 @@ participant ObservationValidator
 participant RuntimeMetricsCollector
 participant ResultNormalizer
 
-Caller -> AgentTerminalEntry: createSession / submit
-AgentTerminalEntry -> AgentRuntime: execute(request)
+Caller -> AgentRuntime: createSession(...) / openSession(...)
+AgentRuntime --> Caller: AgentSession
+Caller -> AgentSession: execute(request)
+AgentSession -> AgentRuntime: execute(request)
 AgentRuntime -> ContextAssembler: assemble(request)
 ContextAssembler -> SessionHistoryStore: load history
 SessionHistoryStore --> ContextAssembler: history
@@ -406,8 +468,10 @@ AgentRuntime -> RuntimeMetricsCollector: summarize(run)
 RuntimeMetricsCollector --> AgentRuntime: metrics
 AgentRuntime -> ResultNormalizer: normalize(agent result, metrics)
 ResultNormalizer --> AgentRuntime: AgentRuntimeResult
-AgentRuntime --> AgentTerminalEntry: runtime result
-AgentTerminalEntry --> Caller: terminal turn result
+AgentRuntime --> AgentSession: runtime result
+AgentSession --> Caller: runtime result
+Caller -> AgentRuntime: closeSession(sessionId)
+AgentRuntime --> Caller: boolean
 @enduml
 ```
 
@@ -418,22 +482,21 @@ AgentTerminalEntry --> Caller: terminal turn result
 #### 4.1.1 Public API
 
 ```typescript
-interface AgentRuntimeApi {
-  execute(request: AgentRuntimeRequest): Promise<AgentRuntimeResult>
+interface AgentRuntime {
+  createSession(input: AgentSessionCreateInput): Promise<AgentSession>
+  openSession(input: AgentSessionOpenInput): Promise<AgentSession>
+  closeSession(sessionId: string): Promise<boolean>
 }
 
-function createAgentRuntime(dependencies?: AgentRuntimeDependencies): AgentRuntimeApi
+function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntime
 
-interface AgentTerminalEntryApi {
-  createSession(input: AgentTerminalSessionCreateInput): Promise<AgentTerminalSession>
-  submit(input: AgentTerminalSessionSubmitInput): Promise<AgentTerminalTurnResult>
-  readSession(sessionId: string): Promise<AgentTerminalSession>
+interface AgentSession {
+  execute(request: AgentSessionRequest): Promise<AgentRuntimeResult>
+  read(): Promise<AgentSessionState>
 }
-
-function createAgentTerminalEntry(runtime: AgentRuntimeApi): AgentTerminalEntryApi
 
 interface AgentRuntimeDependencies {
-  planningBackend?: IPlanningBackend
+  workdir: string
   traceRecorder?: IAgentTraceRecorder
 }
 ```
@@ -441,22 +504,20 @@ interface AgentRuntimeDependencies {
 #### 4.1.2 Input Types
 
 ```typescript
-interface AgentRuntimeRequest {
+interface AgentSessionRequest {
   payload: AgentPromptPayload
   metadata?: RequestMetadata
 }
 
-interface AgentTerminalSessionCreateInput {
+interface AgentSessionCreateInput {
   title?: string
   initialSystemPrompt?: string[]
   initialUserPrompt?: Record<string, unknown>
   metadata?: RequestMetadata
 }
 
-interface AgentTerminalSessionSubmitInput {
+interface AgentSessionOpenInput {
   sessionId: string
-  userPrompt: Record<string, unknown>
-  metadata?: RequestMetadata
 }
 
 interface AgentPromptPayload {
@@ -465,7 +526,6 @@ interface AgentPromptPayload {
     userPrompt: Record<string, unknown>
   }
   responseFormat: "text" | "json"
-  sessionId?: string
   memoryScope?: string
   retrievalQuery?: string
   mcpToolCalls?: McpToolRequest[]
@@ -473,7 +533,6 @@ interface AgentPromptPayload {
 
 interface RequestMetadata {
   requestId?: string
-  runId?: string
   caller?: string
   traceId?: string
   labels?: Record<string, string>
@@ -493,7 +552,8 @@ interface AgentContext {
     metadata?: RequestMetadata
   }
   runtimeContext: {
-    sessionId?: string
+    sessionId: string
+    workdir: string
     history?: MessageTurn[]
     memory?: MemoryEntry[]
     retrievalContext?: RetrievalItem[]
@@ -501,19 +561,14 @@ interface AgentContext {
   }
 }
 
-interface AgentTerminalSession {
+interface AgentSessionState {
   sessionId: string
   title?: string
   createdAt: string
-  status: "active" | "completed" | "failed"
-  initialRequest?: AgentRuntimeRequest
+  status: "active" | "completed" | "failed" | "closed"
+  initialRequest?: AgentSessionRequest
   transcript: MessageTurn[]
   metadata?: RequestMetadata
-}
-
-interface AgentTerminalTurnResult {
-  session: AgentTerminalSession
-  runtimeResult: AgentRuntimeResult
 }
 
 interface MessageTurn {
@@ -549,10 +604,38 @@ interface ExecutionPlan {
 }
 
 interface ExecutionResult {
+  content: ModelBackendResult["content"]
+  responseFormat: ModelBackendResult["responseFormat"]
+  toolResults?: McpToolResult[]
+  metadata?: ModelBackendResult["metadata"]
+}
+
+interface ModelBackendRequest {
+  mode: "planning" | "execution"
+  prompt: {
+    systemPrompt: string[]
+    userPrompt: Record<string, unknown>
+  }
+  responseFormat: "text" | "json"
+  metadata?: RequestMetadata
+}
+
+interface ModelBackendResult {
   content: string
   responseFormat: "text" | "json"
-  toolResults?: McpToolResult[]
   metadata?: RequestMetadata
+}
+
+interface PlanningPromptBuilderInput {
+  context: AgentContext
+  priorStepResults?: ExecutionResult[]
+  priorObservation?: ObservationResult
+}
+
+interface ExecutionPromptBuilderInput {
+  context: AgentContext
+  plan: ExecutionPlan
+  toolResults?: McpToolResult[]
 }
 
 interface ValidationIssue {
@@ -597,25 +680,78 @@ interface RuntimeMetrics {
   outputTokens?: number
 }
 
-interface AgentTraceEvent {
+type AgentTraceEventType =
+  | "session_create_requested"
+  | "session_created"
+  | "session_open_requested"
+  | "session_opened"
+  | "session_closed"
+  | "run_started"
+  | "plan_generated"
+  | "tool_called"
+  | "tool_result_recorded"
+  | "execution_finished"
+  | "observation_finished"
+  | "validation_failed"
+  | "run_finished"
+
+type AgentTraceScope = "sdk" | "session"
+
+interface AgentTraceEventBase {
   traceId: string
-  runId: string
-  sessionId?: string
   stepIndex?: number
-  eventType: string
   timestamp: string
   caller: string
   summary: string
   payload?: Record<string, unknown>
-  diagnostics?: Array<Record<string, unknown>>
 }
+
+interface SdkTraceEvent extends AgentTraceEventBase {
+  scope: "sdk"
+  eventType:
+    | "session_create_requested"
+    | "session_created"
+    | "session_open_requested"
+    | "session_opened"
+    | "session_closed"
+  runId?: never
+  sessionId?: string
+  diagnostics?: never
+}
+
+interface SessionRunTraceEvent extends AgentTraceEventBase {
+  scope: "session"
+  eventType:
+    | "run_started"
+    | "plan_generated"
+    | "tool_called"
+    | "tool_result_recorded"
+    | "execution_finished"
+    | "observation_finished"
+    | "validation_failed"
+    | "run_finished"
+  sessionId: string
+  runId: string
+  diagnostics?: ValidationIssue[]
+}
+
+type AgentTraceEvent =
+  | SdkTraceEvent
+  | SessionRunTraceEvent
+
+Trace constraints:
+
+- `session_created`, `session_opened`, and `session_closed` must use `scope="sdk"` and must carry `sessionId`.
+- runtime execution events must use `scope="session"`.
+- runtime execution events must carry both `sessionId` and `runId`.
+- `validation_failed` events should carry structured `diagnostics`.
 
 interface IAgentTraceRecorder {
   record(event: AgentTraceEvent): Promise<void>
 }
 
-interface IPlanningBackend {
-  plan(context: AgentContext): Promise<ExecutionPlan>
+interface IModelBackend {
+  execute(request: ModelBackendRequest): Promise<ModelBackendResult>
 }
 
 interface CancellationController {
@@ -658,30 +794,30 @@ interface AgentRuntimeResult {
     lastStepIndex?: number
     metrics?: RuntimeMetrics
   }
-  diagnostics?: Array<Record<string, unknown>>
+  diagnostics?: ValidationIssue[]
 }
 ```
 
 #### 4.1.5 Item-Specific Boundary Rules
 
-- Upstream callers must use `AgentRuntimeApi.execute` instead of calling planner, executor, observer, or provider backends directly.
+- Upstream callers must use `AgentRuntime.createSession(...)` first and then call `AgentSession.execute(...)` through the returned session handle.
+- Existing sessions may be reattached through `AgentRuntime.openSession(...)` before session-bound execution continues.
+- `AgentRuntime.closeSession(...)` must accept `sessionId` instead of a session handle and return close success as `boolean`.
+- `AgentRuntime.closeSession(...)` should return `false` when the target session does not exist or is already closed.
+- `workdir` is SDK-scoped runtime configuration and must be provided through `createAgentRuntime(...)`.
 - `AgentRuntime` keeps `payload` and `metadata` as the stable caller-facing boundary even when internal prompt or provider handling changes.
-- Session history, memory, and retrieval loading belong to runtime-owned context assembly and must complete before planning begins.
-- P0 retrieval source selection must be rule-driven from request fields and explicit runtime conventions instead of delegating source selection to LLM reasoning.
-- P0 planning output must pass `ExecutionPlan` validation before execution begins.
-- P0 execution output must pass response-contract validation before observation begins.
-- P0 observation output must pass observation validation before loop continuation logic consumes it.
-- Tool execution is runtime-internal behavior selected by planning output and remains a reusable P2 capability rather than the primary P0 design center.
+- SDK-scoped `workdir` must be loaded from runtime dependencies instead of being passed per request or per session.
 - Real-provider selection, HTTP transport, and model-specific payload formatting must remain behind the execution-strategy boundary.
-- Result normalization, diagnostics, and metrics belong to runtime-owned output stabilization and must not leak provider-specific result shapes.
-- Trace emission belongs to the runtime pipeline and must not change the caller-facing request or result contract.
+- Session transcript write-back belongs to session/history boundaries and must not be mixed into trace or metrics persistence.
+- Runtime metrics are run-scoped output data and are not written back into session transcript by default.
+- Trace events are recorder-scoped runtime diagnostics and are not written back into session transcript by default.
 
 ### 4.2 Internal Runtime Skeleton
 
 ```plantuml
 @startuml
 start
-:receive AgentRuntimeRequest;
+:receive AgentSessionRequest;
 if (request shape invalid?) then (yes)
   :return failed AgentRuntimeResult;
   stop
@@ -710,16 +846,18 @@ stop
 
 Input loading:
 
-- read one `AgentRuntimeRequest`
+- read one `AgentSessionRequest`
 - read optional request metadata for trace and provider execution
 
 Processing:
 
 - validate the stable request shape
+- resolve the target session through `AgentSessionManager`
 - assemble history, memory, and retrieval context through `ContextAssembler`
 - select mock or real backend through `ExecutionStrategySelector`
 - assemble runtime dependencies and delegate to `DefaultAgent`
 - enforce loop stop conditions such as completion, cancellation, failure, and step limits
+- write normalized transcript updates back through session/history boundaries after run completion
 - collect run metrics and normalize internal execution output into one stable runtime result
 
 Output emission:
@@ -727,31 +865,41 @@ Output emission:
 - emit one `AgentRuntimeResult`
 - preserve diagnostics when validation or provider execution fails
 
-#### 4.3.2 `AgentTerminalEntry`
+#### 4.3.2 `AgentSessionManager`
 
 Input loading:
 
-- read terminal session creation input or terminal turn input
-- read optional existing `sessionId`
+- read session creation input, session open input, `sessionId`, or close request
 
 Processing:
 
-- create a new terminal session when the caller starts a session
-- map terminal input into one `AgentRuntimeRequest`
-- submit the mapped request through `AgentRuntimeApi`
-- append terminal user and assistant turns into session transcript
+- emit SDK-scoped `session_create_requested` trace before session allocation when recorder exists
+- create a new runtime session with stable `sessionId`
+- emit SDK-scoped session create trace when recorder exists
+- emit SDK-scoped `session_open_requested` trace before existing-session lookup when recorder exists
+- open an existing runtime session by `sessionId` and return a bound session handle
+- emit SDK-scoped session open trace when recorder exists
+- read current session state and transcript by `sessionId`
+- close an active session and mark it unavailable for future writes
+- emit SDK-scoped session close trace when close succeeds
+- return `false` when close is requested for a missing or already closed session
+- route each runtime request to the corresponding session object
+- persist session transcript updates after successful run completion
 
 Output emission:
 
-- emit one `AgentTerminalSession` for create or read operations
-- emit one `AgentTerminalTurnResult` for submitted terminal turns
+- emit one bound `AgentSession` for create/open operations
+- emit one `AgentSessionState` for session read operations
+- emit one `boolean` for close operations
 
 #### 4.3.3 `ContextAssembler.assemble`
 
 Input loading:
 
-- read one normalized `AgentRuntimeRequest`
-- read optional `sessionId`, `memoryScope`, and `retrievalQuery`
+- read one normalized `AgentSessionRequest`
+- read the bound session from `AgentSessionManager`
+- read SDK-level `workdir`
+- read optional `memoryScope` and `retrievalQuery`
 
 Processing:
 
@@ -760,6 +908,7 @@ Processing:
 - build one rule-driven retrieval request when `retrievalQuery` is provided
 - choose candidate retrieval sources from runtime conventions, configured source policy, and explicit target scope
 - load retrieval-backed context through `RetrievalProvider` without letting LLM choose retrieval sources in P0
+- place SDK-level `workdir` into `AgentContext.runtimeContext`
 - merge loaded context with caller prompt payload into one stable `AgentContext`
 
 Output emission:
@@ -777,7 +926,8 @@ Input loading:
 
 Processing:
 
-- call `IPlanningBackend` to generate the next-step plan from current context, prior step outputs, and completion state
+- build one planning-mode `ModelBackendRequest` through `PlanningPromptBuilder`
+- call `IModelBackend` in planning mode to generate the next-step plan from current context, prior step outputs, and completion state
 - choose the current execution mode based on available context and request shape
 - decide whether the current step can complete directly or needs another controlled step
 - preserve tool-call order for downstream executor use when the reusable P2 tool path is enabled
@@ -789,7 +939,37 @@ Output emission:
 - include `completed` when the planner can determine early completion
 - include `toolSteps` only when tool-augmented execution is required
 
-#### 4.3.5 `PlanValidator.validate`
+#### 4.3.5 `PlanningPromptBuilder.build`
+
+```typescript
+build(input: PlanningPromptBuilderInput): ModelBackendRequest
+```
+
+Input fields:
+
+- `input.context.request.prompt.systemPrompt`
+- `input.context.request.prompt.userPrompt`
+- `input.context.runtimeContext.history`
+- `input.context.runtimeContext.memory`
+- `input.context.runtimeContext.retrievalContext`
+- `input.priorStepResults`
+- `input.priorObservation`
+
+Output constraints:
+
+- `mode` must be `"planning"`.
+- `responseFormat` must be `"json"`.
+- `systemPrompt` must place runtime planning rules before caller-provided prompt fragments.
+- `userPrompt` must include current task input, bounded history context, stable memory, retrieval context, prior step results, and prior observation when present.
+- planning request must describe the expected `ExecutionPlan` contract.
+- `history` should be recent-context or summarized-context data, not unbounded full transcript append.
+- `retrievalContext` should contain only runtime-selected bounded reference items.
+
+Output emission:
+
+- emit one `ModelBackendRequest` for planning
+
+#### 4.3.6 `PlanValidator.validate`
 
 Input loading:
 
@@ -802,11 +982,22 @@ Processing:
 - validate `toolSteps` shape and consistency with `mode`
 - reject invalid loop-state combinations such as `completed=true` together with unresolved required tool steps
 
+Schema rules:
+
+- `stepIndex` must be an integer greater than or equal to `1`.
+- `summary` must be non-empty.
+- `nextStepGoal` must be non-empty.
+- `toolSteps` may appear only when `mode` is `tool_augmented_generation`.
+- each `toolSteps` item must provide non-empty `toolName`.
+- `completed=true` must not be combined with unresolved required `toolSteps`.
+- `stopReason` may appear only when the current plan indicates stop or completion intent.
+- `stopReason="completed"` requires `completed=true`.
+
 Output emission:
 
 - emit one `ValidationResult<ExecutionPlan>`
 
-#### 4.3.6 `DefaultExecutor.execute`
+#### 4.3.7 `DefaultExecutor.execute`
 
 Input loading:
 
@@ -816,7 +1007,7 @@ Input loading:
 Processing:
 
 - invoke MCP tools through reusable `IMcpGateway` only when the current plan contains tool steps
-- append normalized history, memory, retrieval context, and tool results to the model-facing request context
+- build one execution-mode `ModelBackendRequest` through `ExecutionPromptBuilder`
 - send one execution request to the selected model backend
 - return output in a form that can be fed back into the next planning round
 
@@ -825,7 +1016,38 @@ Output emission:
 - emit one execution result with model output
 - include tool results when tool execution happened
 
-#### 4.3.7 `ExecutionResultValidator.validate`
+#### 4.3.8 `ExecutionPromptBuilder.build`
+
+```typescript
+build(input: ExecutionPromptBuilderInput): ModelBackendRequest
+```
+
+Input fields:
+
+- `input.context.request.prompt.systemPrompt`
+- `input.context.request.prompt.userPrompt`
+- `input.plan.nextStepGoal`
+- `input.context.runtimeContext.history`
+- `input.context.runtimeContext.memory`
+- `input.context.runtimeContext.retrievalContext`
+- `input.toolResults`
+
+Output constraints:
+
+- `mode` must be `"execution"`.
+- `responseFormat` must equal `input.context.request.responseFormat`.
+- `systemPrompt` must place runtime execution rules before caller-provided prompt fragments.
+- `userPrompt` must include current task input, validated `nextStepGoal`, bounded history context, stable memory, retrieval context, and tool results when present.
+- execution request must describe the expected output format from the current request.
+- `history` should be recent-context or summarized-context data, not unbounded full transcript append.
+- `toolResults` should be injected only when the current execution step used tools.
+- `retrievalContext` should contain only runtime-selected bounded reference items.
+
+Output emission:
+
+- emit one `ModelBackendRequest` for execution
+
+#### 4.3.9 `ExecutionResultValidator.validate`
 
 Input loading:
 
@@ -838,11 +1060,21 @@ Processing:
 - parse and validate JSON output when `responseFormat` is `json`
 - reject invalid result structure before observation begins
 
+Schema rules:
+
+- `content` must be present and non-empty.
+- `responseFormat` must equal the expected response format from the current request.
+- when `responseFormat` is `text`, `content` must be handled as plain text output.
+- when `responseFormat` is `json`, `content` must be parseable JSON.
+- when `responseFormat` is `json`, parse failure must produce `validation_failed` diagnostics instead of continuing to observation.
+- `toolResults`, when present, must conform to `McpToolResult[]`.
+- each `toolResults` item must include `toolName`, `success`, and `content`.
+
 Output emission:
 
 - emit one `ValidationResult<ExecutionResult>`
 
-#### 4.3.8 `DefaultObserver.observe`
+#### 4.3.10 `DefaultObserver.observe`
 
 Input loading:
 
@@ -860,7 +1092,7 @@ Output emission:
 
 - emit one `ObservationResult`
 
-#### 4.3.9 `ObservationValidator.validate`
+#### 4.3.11 `ObservationValidator.validate`
 
 Input loading:
 
@@ -872,11 +1104,21 @@ Processing:
 - validate `issues` structure
 - reject invalid continuation state before loop continuation logic consumes the result
 
+Schema rules:
+
+- `summary` must be non-empty.
+- `accepted` must be present.
+- `accepted=false` should include at least one `issues` entry.
+- each `issues` item must include `code` and `message`.
+- `completed=true` must not be combined with non-empty `continueReason`.
+- `accepted=true` and `completed=false` is valid and indicates loop continuation.
+- `accepted=false` does not automatically imply terminal failure; the runtime may still stop or continue according to normalized observation handling.
+
 Output emission:
 
 - emit one `ValidationResult<ObservationResult>`
 
-#### 4.3.10 `ResultNormalizer.normalize`
+#### 4.3.12 `ResultNormalizer.normalize`
 
 Input loading:
 
@@ -890,12 +1132,14 @@ Processing:
 - preserve observation issues as structured diagnostics input when observation does not accept the result
 - preserve final loop state and stop reason in stable caller-facing fields when available
 - attach normalized metrics, context echoes, and tool results only in stable caller-facing fields
+- keep metrics in run-scoped result output instead of session transcript state
+- keep trace outside result payload except for optional diagnostics already normalized into the result
 
 Output emission:
 
 - emit one normalized `AgentRuntimeResult`
 
-#### 4.3.11 `P1 And P2 Extension Capabilities`
+#### 4.3.13 `P1 And P2 Extension Capabilities`
 
 Input loading:
 
@@ -957,8 +1201,11 @@ stop
 ### 4.5 Extension Points
 
 - Extension point: `execution strategy selector`
-  - support additional providers without changing `AgentRuntimeApi`
+  - support additional providers without changing `AgentRuntime`
   - replace mock or real backend policy without changing planner or observer boundaries
+- Extension point: `model backend`
+  - keep planning and execution on the same `IModelBackend` abstraction
+  - allow planning-mode and execution-mode request shaping without splitting backend abstractions
 - Extension point: `context assembly`
   - replace history, memory, or retrieval loading implementation without changing caller request shape
   - keep context-source composition separate from planner and executor logic
@@ -980,7 +1227,7 @@ stop
 
 - `AgentRuntime` belongs to the SDK layer and must remain independent from caller-specific workflow or domain logic.
 - `AgentRuntime` must not own external artifact storage, business gating, or domain-specific continuation control.
-- Public caller integration must remain stable at the `AgentRuntimeApi.execute` boundary even when internal agent composition changes.
+- Public caller integration must remain stable at the `AgentRuntime.createSession(...)`, `AgentRuntime.openSession(...)`, `AgentRuntime.closeSession(...)`, and `AgentSession.execute(...)` boundaries even when internal agent composition changes.
 - Provider-specific request formatting and HTTP details must stay behind adapter-style runtime internals.
 - P0 design must provide concrete runtime behavior for execution control, context loading, result stabilization, and observability.
 - P1 and P2 capabilities must not change the P0 runtime contract before their dedicated runtime behavior is introduced.
@@ -992,18 +1239,22 @@ infra_projects/projects/agent_runtime/
   package.json
   tsconfig.json
 
+  examples/
+    terminal-session-demo.ts
+
   src/
     index.ts
 
     api/
       agent-runtime-api.ts
-      agent-terminal-entry-api.ts
       request-types.ts
       result-types.ts
       session-types.ts
 
     runtime/
       agent-runtime-service.ts
+      agent-session-manager.ts
+      runtime-agent-session.ts
       agent-context.ts
       execution-plan.ts
       execution-result.ts
@@ -1014,8 +1265,10 @@ infra_projects/projects/agent_runtime/
     loop/
       default-agent.ts
       default-planner.ts
+      planning-prompt-builder.ts
       plan-validator.ts
       default-executor.ts
+      execution-prompt-builder.ts
       execution-result-validator.ts
       default-observer.ts
       observation-validator.ts
@@ -1039,9 +1292,6 @@ infra_projects/projects/agent_runtime/
       file-read-mcp-tool-handler.ts
       file-write-mcp-tool-handler.ts
 
-    terminal/
-      agent-terminal-entry.ts
-
     trace/
       agent-trace-api.ts
       agent-trace-events.ts
@@ -1059,6 +1309,7 @@ infra_projects/projects/agent_runtime/
 
     runtime/
       agent-runtime-service.test.ts
+      runtime-agent-session.test.ts
 
     loop/
       default-planner.test.ts
@@ -1081,22 +1332,19 @@ infra_projects/projects/agent_runtime/
     mcp/
       default-mcp-gateway.test.ts
 
-    terminal/
-      agent-terminal-entry.test.ts
-
     trace/
       agent-trace-api.test.ts
 ```
 
 Directory intent:
 
+- `examples/terminal-session-demo.ts`: manual terminal usage example that creates a session, loops over user input, calls `AgentSession.execute(...)`, prints runtime output, and closes the session when finished.
 - `api/`: stable caller-facing APIs and DTO contracts.
-- `runtime/`: runtime core service and shared runtime data structures.
+- `runtime/`: runtime core service, session manager, and shared runtime data structures.
 - `loop/`: multi-step loop execution components and validators.
 - `context/`: context assembly, history, memory, and retrieval boundaries.
 - `model/`: provider strategy selection and transport adaptation.
 - `mcp/`: tool gateway, registry, and built-in MCP tool handlers.
-- `terminal/`: minimal terminal entry that depends on `AgentRuntimeApi` for standalone terminal execution.
 - `trace/`: trace contract, event builders, and trace recorder abstraction.
 - `extensions/`: P1 and P2 extension interfaces that remain outside the P0 loop core.
 
@@ -1107,7 +1355,7 @@ This section groups common Agent SDK capabilities by functional dimension and ma
 ### 5.1 Runtime Entry And Execution Control
 
 - `P0` ☑️ core multi-step runtime loop through `DefaultAgent`, `DefaultPlanner`, `DefaultExecutor`, and `DefaultObserver`
-- `P0` stable public `AgentRuntimeApi.execute` implementation as the primary exported SDK boundary
+- `P0` stable public session lifecycle API through `AgentRuntime` and stable per-session execution through `AgentSession`
 - `P0` controlled multi-step runtime loop with repeated plan, execute, observe, and re-plan control
 - `P2` cancellation support
 - `P2` run-state persistence
