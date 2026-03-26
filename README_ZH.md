@@ -31,23 +31,20 @@
 这些项目不应被理解为彼此无关的孤立产品。它们是围绕 `Purpose 3` 从不同角度展开验证的实践载体，当前目录结构与项目职责如下：
 
 - `infra_projects/`：共享基础设施与工作流工程。
-  - `sdlc`：主工作流项目，用来验证 AI 是否能支持从需求到设计、实现、验证的阶段化交付工作流。
-    - 优先阅读：
-      [需求文档](./infra_projects/docs/Requirement.md)、
-      [架构文档](./infra_projects/docs/TechnicalArchitecture.md)、
-      [模块设计目录](./infra_projects/docs/breakdown_docs/)、
-      [代码生成计划文档](./infra_projects/docs/CodeGenerationExecutionPlan.md)
-  - `agent_runtime`：共享运行时基础项目，用来验证 agent 类项目所需的可复用运行时能力。
-    - 优先阅读：
-      [agent_runtime_design](./infra_projects/docs/breakdown_docs/agent_runtime_design.md)
+  - `sdlc`
+    - 功能说明：主工作流项目，用来验证 AI 是否能支持从需求到设计、实现、验证的阶段化交付工作流。
+    - 相关文档：[需求文档](./infra_projects/docs/Requirement.md)、[架构文档](./infra_projects/docs/TechnicalArchitecture.md)、[模块设计目录](./infra_projects/docs/breakdown_docs/)、[代码生成计划文档](./infra_projects/docs/CodeGenerationExecutionPlan.md)
+  - `agent_runtime`
+    - 功能说明：共享运行时基础项目，用来验证 agent 类项目所需的可复用运行时能力。
+    - 相关文档：[agent_runtime_design](./infra_projects/docs/breakdown_docs/agent_runtime_design.md)
 - `user_projects/`：面向用户或具体场景的项目。
-  - `TravelAi`：主真实产品探索项目，用来验证这套协作方式和工程方法是否能在真实产品场景中成立。
-    - 优先阅读：
-      [需求文档](./user_projects/TravelAi/sdlc/docs/Requirement.md)、
-      [架构文档](./user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md)、
-      [模块设计目录](./user_projects/TravelAi/sdlc/docs/module_design/)
-  - `travel-planner`：基于 skill 执行的轻量版 AI Travel 能力探索项目，用来验证旅行数据查询、行程拼装和约束校验。
-  - `hello-service`：轻量验证项目，用来检查这套工作流是否能在更小、更容易定位问题的样例项目上跑通。
+  - `TravelAi`
+    - 功能说明：主真实产品探索项目，用来验证这套协作方式和工程方法是否能在真实产品场景中成立。
+    - 相关文档：[需求文档](./user_projects/TravelAi/sdlc/docs/Requirement.md)、[架构文档](./user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md)、[模块设计目录](./user_projects/TravelAi/sdlc/docs/module_design/)
+  - `travel-planner`
+    - 功能说明：基于 skill 执行的轻量版 AI Travel 能力探索项目，用来验证旅行数据查询、行程拼装和约束校验。
+  - `hello-service`
+    - 功能说明：轻量验证项目，用来检查这套工作流是否能在更小、更容易定位问题的样例项目上跑通。
 - `meta_layer/`：仓库级需求、架构和协作规范文档。
 
 下面会继续展开各项目的具体说明。
