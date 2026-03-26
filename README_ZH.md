@@ -28,44 +28,54 @@
 
 这个仓库用于围绕上述三个目的持续探索和验证。
 
-- `sdlc`：主工作流项目，用来验证 AI 是否能支持从需求到设计、实现、验证的阶段化交付工作流。
-- `AI Travel`：主真实产品探索项目，用来验证这套协作方式和工程方法是否能在真实产品场景中成立。
-- `AgentRuntime`：共享运行时基础项目，用来验证 agent 类项目所需的可复用运行时能力。
-- `hello-service`：轻量验证项目，用来检查这套工作流是否能在更小、更容易定位问题的样例项目上跑通。
+这些项目不应被理解为彼此无关的孤立产品。它们是围绕 `Purpose 3` 从不同角度展开验证的实践载体，当前目录结构与项目职责如下：
+
+- `infra_projects/`：共享基础设施与工作流工程。
+  - `sdlc`：主工作流项目，用来验证 AI 是否能支持从需求到设计、实现、验证的阶段化交付工作流。
+  - `agent_runtime`：共享运行时基础项目，用来验证 agent 类项目所需的可复用运行时能力。
+- `user_projects/`：面向用户或具体场景的项目。
+  - `TravelAi`：主真实产品探索项目，用来验证这套协作方式和工程方法是否能在真实产品场景中成立。
+  - `travel-planner`：基于 skill 执行的轻量版 AI Travel 能力探索项目，用来验证旅行数据查询、行程拼装和约束校验。
+  - `hello-service`：轻量验证项目，用来检查这套工作流是否能在更小、更容易定位问题的样例项目上跑通。
+- `meta_layer/`：仓库级需求、架构和协作规范文档。
 
 下面会继续展开各项目的具体说明。
 
 ## 从这里开始看
 
-按关注点选择入口：
+直接从以下文档入口开始阅读：
 
-- 如果你想先理解工作流和工程方法，从 `sdlc` 开始看。
-- 如果你想先理解这套方法如何落到真实业务场景，从 `AI Travel` 开始看。
-
-如果你想按推荐顺序阅读，建议依次看：
-
-1. 当前 `README_ZH.md`：先了解仓库目的，以及各项目分别承担什么角色。
-2. [需求文档](./meta_layer/docs/Requirement.md)：了解目标问题、工作流和能力边界。
-3. [架构文档](./meta_layer/docs/TechnicalArchitecture.md)：了解整体技术结构和阶段流转。
-4. [代码生成计划](./infra_projects/docs/CodeGenerationExecutionPlan.md)：了解当前实现范围和执行进度。
+- `sdlc`
+  - 需求文档：[infra_projects/docs/Requirement.md](./infra_projects/docs/Requirement.md)
+  - 架构文档：[infra_projects/docs/TechnicalArchitecture.md](./infra_projects/docs/TechnicalArchitecture.md)
+  - 模块设计目录：[infra_projects/docs/breakdown_docs/](./infra_projects/docs/breakdown_docs/)
+  - 代码生成计划文档：[infra_projects/docs/CodeGenerationExecutionPlan.md](./infra_projects/docs/CodeGenerationExecutionPlan.md)
+- `AI Travel`
+  - 需求文档：[user_projects/TravelAi/sdlc/docs/Requirement.md](./user_projects/TravelAi/sdlc/docs/Requirement.md)
+  - 架构文档：[user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md](./user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md)
+  - 模块设计目录：[user_projects/TravelAi/sdlc/docs/module_design/](./user_projects/TravelAi/sdlc/docs/module_design/)
 
 # 里程碑
 
 - `infra_projects/projects/sdlc`
-  - [x] Workflow 主线阶段流转
-  - [x] 基于 CLI 的阶段启动与任务执行
-  - [x] Requirement、Architecture、Module Design、Implementation Plan、Implementation Execution、Validation 阶段
-  - [x] 更丰富的 CLI 交互流程
+  - [x] 输出 PRD，并支持基于已有 PRD 做增量更新
+  - [x] 输出系统设计与模块设计文档，并维护文档一致性
+  - [x] 生成可执行代码、脚本与工程改动，并落到目标工作区
+  - [x] 执行测试、校验结果并生成验证结论
 - `infra_projects/projects/agent_runtime`
   - [x] AgentRuntime V1 单轮执行基础能力
   - [x] Agent 抽象、runtime 执行循环与 trace 集成
   - [ ] AgentRuntime V2 memory support
   - [ ] AgentRuntime-managed multi-turn continuation
-- `hello-service`
+- `user_projects/hello-service`
   - [x] 基线能力黑盒测试
   - [x] LLM 调用链路黑盒测试
   - [ ] 用 hello-service 验证完备的 SDLC 能力
-- `AI Travel`
+- `user_projects/travel-planner`
+  - [x] skill 编写
+  - [x] MCP 接入
+  - [x] 能力验证
+- `user_projects/TravelAi`
   - [x] 文档编写、生成与 review
   - [ ] 代码生成
   - [ ] 功能验证
@@ -195,14 +205,57 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 ### 核心文档
 
 - 需求文档：[user_projects/TravelAi/sdlc/docs/Requirement.md](./user_projects/TravelAi/sdlc/docs/Requirement.md)
-- 主工作区：[user_projects/TravelAi/](./user_projects/TravelAi/)、[user_projects/ai_travel/](./user_projects/ai_travel/)
-- 当前可见的主要项目文件集中在 TravelAi 的 `sdlc/` 工作区下。
+- 主工作区：[user_projects/TravelAi/](./user_projects/TravelAi/)、[user_projects/ai_travel/](./user_projects/ai_travel/)、[user_projects/travel-planner/](./user_projects/travel-planner/)
+- 当前可见的产品设计和文档产物主要集中在 TravelAi 的 `sdlc/` 工作区下。
+- 面向 provider 的 MCP 规划与外部旅行数据集成当前放在 `user_projects/travel-planner/`。
 
 ### 使用入口
 
-- 工作区：`user_projects/TravelAi/`、`user_projects/ai_travel/`
+- 工作区：`user_projects/TravelAi/`、`user_projects/ai_travel/`、`user_projects/travel-planner/`
 - 当前主要使用方式：围绕 TravelAi 的 `sdlc/` 工作区进行需求、架构和模块设计工作
+- 基于 MCP 的 provider 查询、旅行规划和行程拼装实验位于 `user_projects/travel-planner/`
 - 暂无统一的可运行入口
+
+## travel-planner
+
+### Overview
+
+- 角色：仓库中基于 skill 执行的轻量版 AI Travel 能力探索项目。
+- 目标：通过 skill 与 MCP 暴露的 provider 数据，完成围绕航班、住宿、天气、路线、景点和行程拼装的轻量版 AI Travel 能力探索。
+- 主要用户：
+  - 验证基于 skill 的旅行规划执行方式的开发者。
+  - 需要轻量可执行 AI Travel 能力验证而不是纯文档输出的产品探索工作。
+  - 关注 provider 可用性、错误处理和行程构造约束的工程研发者。
+- 仓库定位：`AI Travel` 产品方向下的支撑型实践载体，重点验证如何通过 skill 执行探索一个轻量但可运行的 AI Travel 能力子集。
+
+### Problems and Capabilities
+
+- [旅行数据分散在多个 provider]
+  - Problem：航班、酒店、天气和地图数据来自不同 provider，需要统一编排。
+  - Capability：暴露 provider-facing MCP tools，并把它们组织进一个受约束的规划流程。
+
+- [旅行方案需要事实校验]
+  - Problem：如果不对交通、住宿和本地移动做实时校验，行程推荐的可信度不足。
+  - Capability：在选定方案前，通过 MCP 查询校验目的地可行性、航班、住宿、天气和本地交通。
+
+- [Provider 失败本身就是产品现实]
+  - Problem：旅行 provider 经常因为权限、配额、覆盖范围或接口不匹配失败，这会直接影响规划是否可行。
+  - Capability：记录 provider 错误，保留结构化响应，并在硬约束无法验证时停止规划。
+
+### 核心文档
+
+- Skill 入口：[user_projects/travel-planner/SKILL.md](./user_projects/travel-planner/SKILL.md)
+- MCP 能力说明：[user_projects/travel-planner/references/mcp-tools.md](./user_projects/travel-planner/references/mcp-tools.md)
+- 规划输入契约：[user_projects/travel-planner/references/plan.schema.json](./user_projects/travel-planner/references/plan.schema.json)
+- 示例规划输入：[user_projects/travel-planner/references/plan.json](./user_projects/travel-planner/references/plan.json)
+- Provider MCP server 入口：[user_projects/travel-planner/server/server.ts](./user_projects/travel-planner/server/server.ts)
+
+### 使用入口
+
+- 工作区：`user_projects/travel-planner/`
+- Skill 驱动入口：`user_projects/travel-planner/SKILL.md`
+- Provider MCP server 工作区：`user_projects/travel-planner/server/`
+- 当前主要用途：基于 MCP 的 provider 查询和结构化旅行方案生成实验
 
 ## hello-service
 

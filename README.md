@@ -28,46 +28,54 @@
 
 This repository is the working space used to explore and validate the three purposes above.
 
-The projects in this repository should not be read as isolated products with unrelated goals. They are practical carriers used to validate Purpose 3 from different angles:
+The projects in this repository should not be read as isolated products with unrelated goals. They are practical carriers used to validate Purpose 3 from different angles, and the current structure is organized as follows:
 
-- `sdlc`: the main workflow project used to validate whether AI can support a staged delivery workflow from requirement to design, implementation, and validation.
-- `AI Travel`: the main real product exploration project used to validate whether the collaboration model and engineering approach can work in a real product scenario.
-- `AgentRuntime`: the shared runtime foundation used to validate the reusable runtime capabilities needed by agent-style projects.
-- `hello-service`: the lightweight validation project used to check whether the workflow can run end to end on a smaller and easier-to-debug sample.
+- `infra_projects/`: shared infrastructure and workflow projects.
+  - `sdlc`: the main workflow project used to validate whether AI can support a staged delivery workflow from requirement to design, implementation, and validation.
+  - `agent_runtime`: the shared runtime foundation used to validate the reusable runtime capabilities needed by agent-style projects.
+- `user_projects/`: user-facing or scenario-specific projects.
+  - `TravelAi`: the main real product exploration project used to validate whether the collaboration model and engineering approach can work in a real product scenario.
+  - `travel-planner`: the lightweight AI Travel capability exploration project used to validate skill-driven planning, real travel-data querying, and itinerary assembly constraints.
+  - `hello-service`: the lightweight validation project used to check whether the workflow can run end to end on a smaller and easier-to-debug sample.
+- `meta_layer/`: repository-level requirement, architecture, and collaboration documents.
 
 The detailed project descriptions below keep the current structure as a working reference while making the repository easier to understand for new readers.
 
 ## Start Here
 
-Choose your entry point based on what you want to understand first:
+Read the project documents directly from these entry points:
 
-- If you want to understand the workflow and engineering method first, start with `sdlc`.
-- If you want to understand how the method is applied in a real product scenario, start with `AI Travel`.
-
-If you prefer a recommended reading order, read:
-
-1. This `README.md`: understand the purpose of the repository and the role of each project.
-2. [Requirement document](./meta_layer/docs/Requirement.md): understand the target problem, workflow, and expected capability boundary.
-3. [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): understand the technical structure and stage flow.
-4. [Code generation execution plan](./infra_projects/docs/CodeGenerationExecutionPlan.md): understand the current implementation scope and progress.
+- `sdlc`
+  - Requirement document: [infra_projects/docs/Requirement.md](./infra_projects/docs/Requirement.md)
+  - Architecture document: [infra_projects/docs/TechnicalArchitecture.md](./infra_projects/docs/TechnicalArchitecture.md)
+  - Module design directory: [infra_projects/docs/breakdown_docs/](./infra_projects/docs/breakdown_docs/)
+  - Code generation execution plan: [infra_projects/docs/CodeGenerationExecutionPlan.md](./infra_projects/docs/CodeGenerationExecutionPlan.md)
+- `AI Travel`
+  - Requirement document: [user_projects/TravelAi/sdlc/docs/Requirement.md](./user_projects/TravelAi/sdlc/docs/Requirement.md)
+  - Architecture document: [user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md](./user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md)
+  - Module design directory: [user_projects/TravelAi/sdlc/docs/module_design/](./user_projects/TravelAi/sdlc/docs/module_design/)
 
 # Roadmap
 
 - `infra_projects/projects/sdlc`
-  - [x] Workflow stage flow
-  - [x] CLI-based stage launch and task execution
-  - [x] Requirement, architecture, module design, implementation plan, implementation execution, and validation stages
-  - [x] richer CLI interaction flow
+  - [x] output PRD and support incremental updates based on an existing PRD
+  - [x] output system design and module design documents and maintain document consistency
+  - [x] generate executable code, scripts, and project changes and place them into the target workspace
+  - [x] run tests, validate results, and generate verification conclusions
 - `infra_projects/projects/agent_runtime`
   - [x] AgentRuntime V1 single-turn execution foundation
   - [x] Agent abstraction, runtime execution loop, and trace integration
   - [ ] AgentRuntime V2 memory support
   - [ ] AgentRuntime-managed multi-turn continuation
-- `hello-service`
+- `user_projects/hello-service`
   - [x] baseline capability black-box test
   - [x] llm call chain black-box test
   - [ ] validate complete SDLC capability with hello-service
-- `AI Travel`
+- `user_projects/travel-planner`
+  - [x] skill authoring
+  - [x] MCP integration
+  - [x] capability validation
+- `user_projects/TravelAi`
   - [x] document authoring, generation, and review
   - [ ] code generation
   - [ ] functionality verification
@@ -198,14 +206,57 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 ### Core Docs
 
 - Requirement document: [user_projects/TravelAi/sdlc/docs/Requirement.md](./user_projects/TravelAi/sdlc/docs/Requirement.md)
-- Primary workspaces: [user_projects/TravelAi/](./user_projects/TravelAi/), [user_projects/ai_travel/](./user_projects/ai_travel/)
-- Current visible project files are mainly under the TravelAi `sdlc/` workspace.
+- Primary workspaces: [user_projects/TravelAi/](./user_projects/TravelAi/), [user_projects/ai_travel/](./user_projects/ai_travel/), [user_projects/travel-planner/](./user_projects/travel-planner/)
+- Current visible product and design files are mainly under the TravelAi `sdlc/` workspace.
+- Provider-facing MCP planning and external travel-data integration currently live under `user_projects/travel-planner/`.
 
 ### Usage Entry
 
-- Workspaces: `user_projects/TravelAi/`, `user_projects/ai_travel/`
+- Workspaces: `user_projects/TravelAi/`, `user_projects/ai_travel/`, `user_projects/travel-planner/`
 - Current usage is requirement, architecture, and module design work under the TravelAi `sdlc/` workspace
+- Runtime provider MCP planning, provider querying, and itinerary assembly experiments are under `user_projects/travel-planner/`
 - No unified runnable entry is defined yet
+
+## travel-planner
+
+### Overview
+
+- Role: the lightweight AI Travel capability exploration project driven by skill execution.
+- Purpose: use skills and MCP-exposed provider data to complete lightweight AI Travel capability exploration around flights, lodging, weather, routing, attractions, and itinerary assembly.
+- Primary users:
+  - Developers validating skill-based travel-planning execution.
+  - Product exploration work that needs lightweight executable AI Travel capability validation instead of document-only outputs.
+  - Engineers checking provider feasibility, error handling, and itinerary-construction constraints.
+- Repository context: a supporting practice carrier for the AI Travel product direction, focused on using skill execution to explore a lightweight but runnable subset of AI Travel capabilities.
+
+### Problems and Capabilities
+
+- [Travel data is scattered across providers]
+  - Problem: flight, hotel, weather, and map data come from different providers and require unified orchestration.
+  - Capability: expose provider-facing MCP tools and assemble them into one constrained planning workflow.
+
+- [Planning outputs need verified facts]
+  - Problem: itinerary recommendations are weak if transport, lodging, and local movement are not checked against live provider data.
+  - Capability: use MCP-backed queries to verify destination viability, flights, lodging, weather, and local transport before selecting a plan.
+
+- [Provider failure handling is part of product reality]
+  - Problem: travel providers often fail because of permission, quota, missing coverage, or API mismatch, and those failures affect planning feasibility directly.
+  - Capability: record provider errors, preserve structured responses, and stop planning when hard constraints cannot be verified.
+
+### Core Docs
+
+- Skill entry: [user_projects/travel-planner/SKILL.md](./user_projects/travel-planner/SKILL.md)
+- MCP capability reference: [user_projects/travel-planner/references/mcp-tools.md](./user_projects/travel-planner/references/mcp-tools.md)
+- Planning input contract: [user_projects/travel-planner/references/plan.schema.json](./user_projects/travel-planner/references/plan.schema.json)
+- Sample planning input: [user_projects/travel-planner/references/plan.json](./user_projects/travel-planner/references/plan.json)
+- Provider MCP server entry: [user_projects/travel-planner/server/server.ts](./user_projects/travel-planner/server/server.ts)
+
+### Usage Entry
+
+- Workspace: `user_projects/travel-planner/`
+- Skill-driven planning entry: `user_projects/travel-planner/SKILL.md`
+- Provider MCP server workspace: `user_projects/travel-planner/server/`
+- Current usage is MCP-based provider querying and structured trip-plan generation experiments
 
 ## hello-service
 
