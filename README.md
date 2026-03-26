@@ -32,28 +32,25 @@ The projects in this repository should not be read as isolated products with unr
 
 - `infra_projects/`: shared infrastructure and workflow projects.
   - `sdlc`: the main workflow project used to validate whether AI can support a staged delivery workflow from requirement to design, implementation, and validation.
+    - Read first:
+      [Requirement](./infra_projects/docs/Requirement.md),
+      [TechnicalArchitecture](./infra_projects/docs/TechnicalArchitecture.md),
+      [breakdown_docs](./infra_projects/docs/breakdown_docs/),
+      [CodeGenerationExecutionPlan](./infra_projects/docs/CodeGenerationExecutionPlan.md)
   - `agent_runtime`: the shared runtime foundation used to validate the reusable runtime capabilities needed by agent-style projects.
+    - Read first:
+      [agent_runtime_design](./infra_projects/docs/breakdown_docs/agent_runtime_design.md)
 - `user_projects/`: user-facing or scenario-specific projects.
   - `TravelAi`: the main real product exploration project used to validate whether the collaboration model and engineering approach can work in a real product scenario.
+    - Read first:
+      [Requirement](./user_projects/TravelAi/sdlc/docs/Requirement.md),
+      [TechnicalArchitecture](./user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md),
+      [module_design](./user_projects/TravelAi/sdlc/docs/module_design/)
   - `travel-planner`: the lightweight AI Travel capability exploration project used to validate skill-driven planning, real travel-data querying, and itinerary assembly constraints.
   - `hello-service`: the lightweight validation project used to check whether the workflow can run end to end on a smaller and easier-to-debug sample.
 - `meta_layer/`: repository-level requirement, architecture, and collaboration documents.
 
 The detailed project descriptions below keep the current structure as a working reference while making the repository easier to understand for new readers.
-
-## Start Here
-
-Read the project documents directly from these entry points:
-
-- `sdlc`
-  - Requirement document: [infra_projects/docs/Requirement.md](./infra_projects/docs/Requirement.md)
-  - Architecture document: [infra_projects/docs/TechnicalArchitecture.md](./infra_projects/docs/TechnicalArchitecture.md)
-  - Module design directory: [infra_projects/docs/breakdown_docs/](./infra_projects/docs/breakdown_docs/)
-  - Code generation execution plan: [infra_projects/docs/CodeGenerationExecutionPlan.md](./infra_projects/docs/CodeGenerationExecutionPlan.md)
-- `AI Travel`
-  - Requirement document: [user_projects/TravelAi/sdlc/docs/Requirement.md](./user_projects/TravelAi/sdlc/docs/Requirement.md)
-  - Architecture document: [user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md](./user_projects/TravelAi/sdlc/docs/TechnicalArchitecture.md)
-  - Module design directory: [user_projects/TravelAi/sdlc/docs/module_design/](./user_projects/TravelAi/sdlc/docs/module_design/)
 
 # Roadmap
 
