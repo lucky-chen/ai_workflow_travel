@@ -40,11 +40,13 @@ export async function createWorkspaceCopy(runId = createWorkspaceCopyRunId()) {
 
 export async function removeWorkspace(targetWorkspaceRoot) {
   await rm(path.join(resolveTestRunRoot(targetWorkspaceRoot), "test"), { recursive: true, force: true });
+  await rm(resolveTestArtifactDirectory(targetWorkspaceRoot), { recursive: true, force: true });
 }
 
 export async function resetWorkspace(targetWorkspaceRoot) {
   await rm(path.join(resolveTestRunRoot(targetWorkspaceRoot), "trace.json"), { force: true });
   await rm(path.join(resolveTestRunRoot(targetWorkspaceRoot), "test", "commands.json"), { force: true });
+  await rm(resolveTestArtifactDirectory(targetWorkspaceRoot), { recursive: true, force: true });
   await rm(path.join(targetWorkspaceRoot, "src"), { recursive: true, force: true });
   await resetGeneratedDocs(targetWorkspaceRoot);
 }
@@ -296,7 +298,7 @@ export async function invokeMcpTool(targetWorkspaceRoot, request, options = {}) 
 
 export async function createItemDescriptor(targetWorkspaceRoot) {
   const breakdownEntry = await getPrimaryBreakdownEntry(targetWorkspaceRoot);
-  const descriptorDirectory = path.join(targetWorkspaceRoot, "tmp");
+  const descriptorDirectory = resolveTestArtifactDirectory(targetWorkspaceRoot);
   await mkdir(descriptorDirectory, { recursive: true });
   const descriptorPath = path.join(descriptorDirectory, `${breakdownEntry.targetName}.json`);
   await writeFile(
@@ -318,7 +320,7 @@ export async function createPreparedStepContext(targetWorkspaceRoot) {
   const architectureDocument = await readFile(path.join(targetWorkspaceRoot, "sdlc", "docs", "TechnicalArchitecture.md"), "utf8");
   const itemDesignDocument = await readFile(path.join(targetWorkspaceRoot, breakdownEntry.documentPath), "utf8");
 
-  const contextDirectory = path.join(targetWorkspaceRoot, "tmp");
+  const contextDirectory = resolveTestArtifactDirectory(targetWorkspaceRoot);
   await mkdir(contextDirectory, { recursive: true });
   const preparedStepContextPath = path.join(contextDirectory, "prepared-step-context.json");
   await writeFile(
@@ -363,6 +365,15 @@ export async function createPreparedStepContext(targetWorkspaceRoot) {
     "utf8",
   );
   return path.relative(targetWorkspaceRoot, preparedStepContextPath);
+}
+
+function resolveTestArtifactDirectory(targetWorkspaceRoot) {
+  const normalizedTargetWorkspaceRoot = path.resolve(targetWorkspaceRoot);
+  if (normalizedTargetWorkspaceRoot === workspaceRoot) {
+    return path.join(normalizedTargetWorkspaceRoot, "dist", "test");
+  }
+
+  return path.join(resolveTestRunRoot(normalizedTargetWorkspaceRoot), "dist", "test");
 }
 
 export async function writeRequirementContractSuccessFixture(targetWorkspaceRoot) {
