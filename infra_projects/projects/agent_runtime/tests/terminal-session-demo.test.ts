@@ -6,6 +6,7 @@ import { runTerminalSessionDemo } from "../examples/terminal-session-demo.js";
 export async function runTerminalSessionDemoTests(): Promise<void> {
   await testTerminalSessionDemoRunsInteractionFlow();
   await testTerminalSessionDemoClosesSessionOnExit();
+  await testTerminalSessionDemoReopensExistingSessionBeforeClose();
 }
 
 async function testTerminalSessionDemoRunsInteractionFlow(): Promise<void> {
@@ -40,4 +41,24 @@ async function testTerminalSessionDemoClosesSessionOnExit(): Promise<void> {
 
   assert.equal(result.closed, true);
   assert.equal(await runtime.closeSession(result.sessionId), false);
+}
+
+async function testTerminalSessionDemoReopensExistingSessionBeforeClose(): Promise<void> {
+  const runtime = createAgentRuntime({
+    workdir: "/tmp/agent-runtime",
+  });
+  const session = await runtime.createSession({
+    title: "reopenable-terminal-session",
+  });
+  const state = await session.read();
+
+  const result = await runTerminalSessionDemo({
+    runtime,
+    sessionId: state.sessionId,
+    readInput: async () => "exit",
+    writeOutput: async () => {},
+  });
+
+  assert.equal(result.sessionId, state.sessionId);
+  assert.equal(result.closed, true);
 }
