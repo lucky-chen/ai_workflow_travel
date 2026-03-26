@@ -7,6 +7,7 @@ import { ExecutionResultValidator } from "../loop/execution-result-validator.js"
 import { ObservationValidator } from "../loop/observation-validator.js";
 import { PlanValidator } from "../loop/plan-validator.js";
 import { PlanningPromptBuilder } from "../loop/planning-prompt-builder.js";
+import { ResultNormalizer } from "../loop/result-normalizer.js";
 import { DefaultMcpGateway } from "../mcp/default-mcp-gateway.js";
 import { ExecutionStrategySelector } from "../model/execution-strategy-selector.js";
 import {
@@ -16,6 +17,7 @@ import { DefaultAgent } from "./default-agent.js";
 import { DefaultExecutor } from "./default-executor.js";
 import { DefaultObserver } from "./default-observer.js";
 import { DefaultPlanner } from "./default-planner.js";
+import { RuntimeMetricsCollector } from "./runtime-metrics-collector.js";
 import { RuntimeAgentSession } from "./runtime-agent-session.js";
 import type {
   AgentRuntime,
@@ -33,6 +35,8 @@ export class AgentRuntimeService implements AgentRuntime {
   private readonly historyStore: SessionHistoryStore;
   private readonly memoryStore: RuntimeMemoryStore;
   private readonly contextAssembler: ContextAssembler;
+  private readonly metricsCollector = new RuntimeMetricsCollector();
+  private readonly resultNormalizer = new ResultNormalizer();
 
   constructor(private readonly dependencies: AgentRuntimeDependencies) {
     this.historyStore = new SessionHistoryStore();
@@ -91,15 +95,11 @@ export class AgentRuntimeService implements AgentRuntime {
       },
     ]);
 
-    return {
-      ...result,
-      payload: {
-        ...result.payload,
-        history: context.runtimeContext.history,
-        memory: context.runtimeContext.memory,
-        retrievalContext: context.runtimeContext.retrievalContext,
-      },
-    };
+    return this.resultNormalizer.normalize(
+      result,
+      context,
+      this.metricsCollector.summarize(result),
+    );
   }
 
   readSession(sessionId: string): Promise<AgentSessionState> {
