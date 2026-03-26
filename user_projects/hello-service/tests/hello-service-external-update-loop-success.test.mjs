@@ -9,9 +9,9 @@ import {
   resetWorkspace,
   runCli,
 } from "./hello-service-test-helpers.mjs";
-import { continueDocumentUpdateLoop } from "../../../project_layer/projects/sdlc/dist/src/Runtime/external-update-loop.js";
-import { ExternalMcpAdapterService } from "../../../project_layer/projects/sdlc/dist/src/SDK/ExternalMcp/external-mcp-adapter.js";
-import { InMemoryChangeGate } from "../../../project_layer/projects/sdlc/dist/src/sdk/QualityControl/Gate/change-gate.js";
+import { continueDocumentUpdateLoop } from "../../../infra_projects/projects/sdlc/dist/src/Runtime/external-update-loop.js";
+import { ExternalMcpAdapterService } from "../../../infra_projects/projects/sdlc/dist/src/SDK/ExternalMcp/external-mcp-adapter.js";
+import { InMemoryChangeGate } from "../../../infra_projects/projects/sdlc/dist/src/sdk/QualityControl/Gate/change-gate.js";
 
 const successTaskId = "hello-service-external-update-loop-success-task";
 const runId = "6200-external-update-loop-success";

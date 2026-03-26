@@ -1,16 +1,16 @@
 version: 2
-plan_name: project_layer_feature_delivery_work_plan
+plan_name: infra_projects_feature_delivery_work_plan
 status: completed
 target: deliver each documented SDLC feature as an independently usable capability,
   from runtime foundation to mock black-box usability and then real-llm usability
 context:
   docs:
-    requirement: project_layer/docs/Requirement.md
-    architecture: project_layer/docs/TechnicalArchitecture.md
-    breakdown_dir: project_layer/docs/breakdown_docs
+    requirement: infra_projects/docs/Requirement.md
+    architecture: infra_projects/docs/TechnicalArchitecture.md
+    breakdown_dir: infra_projects/docs/breakdown_docs
   code:
-    root: project_layer/projects
-  active_work_plan: project_layer/docs/work_plan.yaml
+    root: infra_projects/projects
+  active_work_plan: infra_projects/docs/work_plan.yaml
   scope: feature-by-feature delivery plan for requirement architecture item
     overall-design-contract work-plan work-execute runtime entry black-box coverage
     and real-llm verification
@@ -79,14 +79,14 @@ milestones:
                 summary: align CLI and request creation with run unit and compose-run semantics
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Interface
-                  - project_layer/projects/sdlc/tests/cli.test.ts
+                  - infra_projects/projects/sdlc/src/Interface
+                  - infra_projects/projects/sdlc/tests/cli.test.ts
               - task_name: align runtime unit dispatch
                 summary: align runtime and orchestrator boundaries with independent execution-unit dispatch
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/projects/sdlc/tests/runtime
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/projects/sdlc/tests/runtime
           - batch_id: batch_0_2_runtime_paths_and_artifacts
             batch_type: verification
             name: verification
@@ -101,14 +101,14 @@ milestones:
                 summary: standardize persistent docs under workdir/sdlc and transient results under workdir/dist/sdlc/runId
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Data
-                  - project_layer/projects/sdlc/src/Runtime
+                  - infra_projects/projects/sdlc/src/Data
+                  - infra_projects/projects/sdlc/src/Runtime
               - task_name: align trace and result naming
                 summary: align trace and contract result naming with the current runtime model
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Data
-                  - project_layer/projects/sdlc/tests/shared
+                  - infra_projects/projects/sdlc/src/Data
+                  - infra_projects/projects/sdlc/tests/shared
         validation:
           - run unit is the primary usable runtime path
           - trace.json and result artifacts resolve under workdir/dist/sdlc/runId
@@ -137,20 +137,20 @@ milestones:
                 summary: implement requirement generate as a real document generator with current template and prompt flow
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/tests/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/src/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/tests/Capability/RequirementDesign
               - task_name: split requirement runtime units
                 summary: split requirement generate update and contract into independent runtime units
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - infra_projects/projects/sdlc/src/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
               - task_name: realign requirement update handoff
                 summary: realign requirement update to return an external-update handoff instead of rewriting the document inside the unit
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+                  - infra_projects/projects/sdlc/src/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/src/Runtime/Schema/runtime.ts
           - batch_id: batch_1_2_requirement_contract_and_tests
             batch_type: verification
             name: verification
@@ -164,14 +164,14 @@ milestones:
                 summary: move requirement contract to the static-first document contract flow
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/src/Capability/Shared
+                  - infra_projects/projects/sdlc/src/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/src/Capability/Shared
               - task_name: verify requirement mock black-box coverage
                 summary: verify requirement mock runtime generator and contract black-box coverage with hello-service
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
         validation:
           - requirement_design_generate requirement_design_update and requirement_design_contract are independently runnable
           - requirement update returns an external action payload
@@ -204,21 +204,21 @@ milestones:
                 summary: implement architecture generate with current template contract prompt inputs and design breakdown output
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
                   - meta_layer/resources/template
                   - meta_layer/resources/contract
               - task_name: split architecture runtime units
                 summary: split architecture generate update and contract into independent runtime units
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
               - task_name: realign architecture update handoff
                 summary: realign architecture update to return an external-update handoff instead of rewriting the document inside the unit
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Runtime/Schema/runtime.ts
           - batch_id: batch_2_2_architecture_contract_and_breakdown
             batch_type: verification
             name: verification
@@ -233,14 +233,14 @@ milestones:
                 summary: align architecture contract with template-extracted hints and static-first checking
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
                   - meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json
               - task_name: validate architecture breakdown section
                 summary: require architecture contract to validate the 7.2 breakdown section against architecture_design_breakdown.json
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/src/Capability/Shared/design-document-breakdown.ts
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Capability/Shared/design-document-breakdown.ts
               - task_name: verify architecture generate and contract
                 summary: verify architecture generate and contract pass against hello-service under mock and direct rerun validation
                 status: completed
@@ -277,20 +277,20 @@ milestones:
                 summary: replace module_design semantics with item_design semantics and keep one target item per run
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/src/Capability/ItemDesign
                   - meta_layer/resources/template/ItemDesignTemplate.md
               - task_name: split item-design runtime units
                 summary: split item-design generate update and contract into independent runtime units
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - infra_projects/projects/sdlc/src/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
               - task_name: realign item-design update handoff
                 summary: realign item-design update to return an external-update handoff instead of rewriting the document inside the unit
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+                  - infra_projects/projects/sdlc/src/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/src/Runtime/Schema/runtime.ts
           - batch_id: batch_3_2_item_inputs_and_contract
             batch_type: verification
             name: verification
@@ -306,13 +306,13 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/src/testing/scenario-runtime.ts
+                  - infra_projects/projects/sdlc/src/testing/scenario-runtime.ts
               - task_name: move item contract to static-first
                 summary: move item design contract to the static-first document contract flow
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/src/Capability/Shared
+                  - infra_projects/projects/sdlc/src/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/src/Capability/Shared
         validation:
           - item_design_generate item_design_update and item_design_contract are independently runnable
           - item selection comes from architecture_design_breakdown.json
@@ -339,14 +339,14 @@ milestones:
                 summary: implement overall_design_contract with stable result artifact output
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/OverallDesignContract
-                  - project_layer/projects/sdlc/tests/Capability/OverallDesignContract
+                  - infra_projects/projects/sdlc/src/Capability/OverallDesignContract
+                  - infra_projects/projects/sdlc/tests/Capability/OverallDesignContract
               - task_name: wire overall design contract inputs
                 summary: feed overall_design_contract from requirement architecture item and work-plan outputs using stable logical artifact names
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability
-                  - project_layer/projects/sdlc/src/Data
+                  - infra_projects/projects/sdlc/src/Capability
+                  - infra_projects/projects/sdlc/src/Data
         validation:
           - overall_design_contract is directly runnable and writes overall_design_contract_result.json
 
@@ -374,20 +374,20 @@ milestones:
                 summary: replace implementation_plan semantics with work_plan and emit a real yaml artifact
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/src/Capability/WorkPlan
                   - meta_layer/resources/template/WorkPlanTemplate.yaml
               - task_name: split work-plan runtime units
                 summary: split work-plan generate update and contract into independent runtime units
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - infra_projects/projects/sdlc/src/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
               - task_name: realign work-plan update handoff
                 summary: realign work-plan update to return an external-update handoff instead of rewriting the yaml inside the unit
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
+                  - infra_projects/projects/sdlc/src/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/src/Runtime/Schema/runtime.ts
           - batch_id: batch_5_2_work_plan_contract_and_model
             batch_type: verification
             name: verification
@@ -401,15 +401,15 @@ milestones:
                 summary: move work_plan_contract to the static-first contract flow
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-                  - project_layer/projects/sdlc/src/Capability/Shared
+                  - infra_projects/projects/sdlc/src/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/src/Capability/Shared
               - task_name: align work-plan structure
                 summary: align work_plan to the milestones stages batches tasks structure and remove residual old-model behavior
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-                  - project_layer/docs/Requirement.md
-                  - project_layer/docs/TechnicalArchitecture.md
+                  - infra_projects/projects/sdlc/src/Capability/WorkPlan
+                  - infra_projects/docs/Requirement.md
+                  - infra_projects/docs/TechnicalArchitecture.md
         validation:
           - work_plan_generate work_plan_update and work_plan_contract are independently runnable
           - work_plan.yaml follows the milestone-stage-batch-task model
@@ -438,14 +438,14 @@ milestones:
                 summary: align work_execute inputs outputs and naming with current design-doc semantics
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/tests/Capability/WorkExecute
+                  - infra_projects/projects/sdlc/src/Capability/WorkExecute
+                  - infra_projects/projects/sdlc/tests/Capability/WorkExecute
               - task_name: separate work-execute runtime units
                 summary: keep work_execute and work_execute_contract as separate runtime units with stable result artifacts
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
+                  - infra_projects/projects/sdlc/src/Capability/WorkExecute
+                  - infra_projects/projects/sdlc/src/Runtime/Orchestrator/runtime-orchestrator.ts
         validation:
           - work_execute and work_execute_contract are independently runnable
           - results and trace paths are stable under workdir/dist/sdlc/runId
@@ -473,14 +473,14 @@ milestones:
                 summary: add shared static document contract checking driven by template-extracted contract json
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/Shared
+                  - infra_projects/projects/sdlc/src/Capability/Shared
                   - meta_layer/resources/contract
               - task_name: switch document contracts to static-first
                 summary: switch requirement architecture item and work-plan contracts to static-first execution and llm semantic follow-up
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability
-                  - project_layer/projects/sdlc/tests/Capability
+                  - infra_projects/projects/sdlc/src/Capability
+                  - infra_projects/projects/sdlc/tests/Capability
           - batch_id: batch_7_2_generator_prompt_alignment
             batch_type: verification
             name: verification
@@ -493,13 +493,13 @@ milestones:
                 summary: pass template contract content into document generator prompts and strip template hints from prompt template bodies
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/Shared/document-unit-generator.ts
-                  - project_layer/projects/sdlc/src/Capability
+                  - infra_projects/projects/sdlc/src/Capability/Shared/document-unit-generator.ts
+                  - infra_projects/projects/sdlc/src/Capability
               - task_name: separate architecture format and content hints
                 summary: separate expected format from content checks in architecture hints and sync template contract and design docs
                 status: completed
                 involved_files:
-                  - project_layer/docs/TechnicalArchitecture.md
+                  - infra_projects/docs/TechnicalArchitecture.md
                   - meta_layer/resources/template/TechnicalArchitectureTemplate.md
                   - meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json
         validation:
@@ -533,13 +533,13 @@ milestones:
                 involved_files:
                   - user_projects/hello-service/tests/hello-service-tests.mjs
                   - user_projects/hello-service/package.json
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
               - task_name: fix copied workspace trace paths
                 summary: make copied workspace runs resolve trace.json and runId-scoped artifacts correctly
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime/application.ts
-                  - project_layer/projects/sdlc/src/Data/history-store.ts
+                  - infra_projects/projects/sdlc/src/Runtime/application.ts
+                  - infra_projects/projects/sdlc/src/Data/history-store.ts
                   - user_projects/hello-service/tests
           - batch_id: batch_8_2_mock_matrix_completion
             batch_type: verification
@@ -648,27 +648,27 @@ milestones:
                 summary: stop requirement update from calling llm inside the unit and keep it limited to prompt-plus-action output
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/RequirementDesign
-                  - project_layer/projects/sdlc/tests/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/src/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/tests/Capability/RequirementDesign
               - task_name: stop architecture update llm
                 summary: stop architecture update from calling llm inside the unit and keep it limited to prompt-plus-action output
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
-                  - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/tests/Capability/ArchitectureDesign
               - task_name: stop item-design update llm
                 summary: stop item-design update from calling llm inside the unit and keep it limited to prompt-plus-action output
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/ItemDesign
-                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/src/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/tests/Capability/ItemDesign
               - task_name: stop work-plan update llm
                 summary: stop work-plan update from calling llm inside the unit and keep it limited to prompt-plus-action output
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkPlan
-                  - project_layer/projects/sdlc/src/Runtime/Schema/runtime.ts
-                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/src/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/src/Runtime/Schema/runtime.ts
+                  - infra_projects/projects/sdlc/tests/Capability/WorkPlan
           - batch_id: batch_9_2_update_boundary_verification
             batch_type: verification
             name: verification
@@ -682,25 +682,25 @@ milestones:
                 summary: verify requirement update returns prompt plus external action without internal llm execution
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/RequirementDesign
+                  - infra_projects/projects/sdlc/tests/Capability/RequirementDesign
                   - user_projects/hello-service/tests
               - task_name: verify architecture update handoff
                 summary: verify architecture update returns prompt plus external action without internal llm execution
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/tests/Capability/ArchitectureDesign
                   - user_projects/hello-service/tests
               - task_name: verify item-design update handoff
                 summary: verify item-design update returns prompt plus external action without internal llm execution
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/ItemDesign
+                  - infra_projects/projects/sdlc/tests/Capability/ItemDesign
                   - user_projects/hello-service/tests
               - task_name: verify work-plan update handoff
                 summary: verify work-plan update returns prompt plus external action without internal llm execution
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests/Capability/WorkPlan
+                  - infra_projects/projects/sdlc/tests/Capability/WorkPlan
                   - user_projects/hello-service/tests
         validation:
           - all document update units return externalAction results
@@ -732,7 +732,7 @@ milestones:
                 involved_files:
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/sdlc/docs
-                  - project_layer/projects/sdlc/src/Capability/ArchitectureDesign
+                  - infra_projects/projects/sdlc/src/Capability/ArchitectureDesign
                   - meta_layer/resources/template/TechnicalArchitectureTemplate.md
                   - meta_layer/resources/contract/TechnicalArchitectureTemplate.contract.json
                 progress_notes:
@@ -765,7 +765,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated runtime document-generation real-llm success entry in the hello-service test registry
                   - widened work-plan downstream item-document loading to accept real-llm architecture breakdown paths and partial existing item outputs
@@ -775,7 +775,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - connected the existing dedicated hello-service real-llm unit-flow test into the runtime registry as the maintained runtime unit-flow real-llm entry
                   - verified the full requirement architecture item and work-plan real-llm unit-flow through the dedicated copied-workspace test path
@@ -784,7 +784,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated requirement generator real-llm success entry in the hello-service generator registry
                   - verified requirement document generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5300-requirement-generator-real-llm/trace.json
@@ -793,7 +793,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated architecture generator real-llm success entry in the hello-service generator registry
                   - verified architecture document generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5400-architecture-generator-real-llm/trace.json
@@ -802,7 +802,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated item-design generator real-llm success entry in the hello-service generator registry
                   - verified item design generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5500-item-generator-real-llm/trace.json
@@ -811,7 +811,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated work-plan generator real-llm success entry in the hello-service generator registry
                   - verified work-plan generation under real-llm execution with a single-runId trace layout and a persisted pass trace at dist/sdlc/5600-work-plan-generator-real-llm/trace.json
@@ -820,7 +820,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated work-execute generator real-llm success entry in the hello-service generator registry
                   - tightened work_execute real-llm parsing to accept common JSON aliases and fenced JSON so changed file outputs survive provider formatting variance
@@ -831,7 +831,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated requirement contract real-llm success entry in the hello-service contract registry
                   - verified requirement contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/5800-requirement-contract-real-llm/
@@ -840,7 +840,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated architecture contract real-llm success entry in the hello-service contract registry
                   - verified architecture contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/5900-architecture-contract-real-llm/
@@ -849,7 +849,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated item-design contract real-llm success entry in the hello-service contract registry
                   - verified item-design contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/6000-item-design-contract-real-llm/
@@ -858,7 +858,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - added a dedicated work-plan contract real-llm success entry in the hello-service contract registry
                   - verified work-plan contract execution under real-llm with a single-runId trace layout and persisted artifacts at dist/sdlc/6100-work-plan-contract-real-llm/
@@ -892,10 +892,10 @@ milestones:
                 summary: replace changedFiles-style work_execute output with prompt plus externalAction according to the technical work_execute design
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/TechnicalArchitecture.md
-                  - project_layer/docs/breakdown_docs/work_execute.md
+                  - infra_projects/projects/sdlc/src/Capability/WorkExecute
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/docs/TechnicalArchitecture.md
+                  - infra_projects/docs/breakdown_docs/work_execute.md
                 progress_notes:
                   - replaced changedFiles-style work_execute artifacts with prompt plus action output under the current technical design boundary
                   - updated mock scenario runtime and work_execute capability tests to use prompt-style generation output
@@ -904,10 +904,10 @@ milestones:
                 summary: make work_execute artifact persistence and runtime result boundaries match the technical runtime and work_execute docs
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Capability/WorkExecute
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/breakdown_docs/runtime_design.md
-                  - project_layer/docs/breakdown_docs/work_execute.md
+                  - infra_projects/projects/sdlc/src/Capability/WorkExecute
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/docs/breakdown_docs/runtime_design.md
+                  - infra_projects/docs/breakdown_docs/work_execute.md
                 progress_notes:
                   - connected work_execute runtime-unit returns to RuntimeResult.externalAction so the runtime boundary now exposes the persisted execution action
                   - verified the work_execute capability test suite through the built test runner after the runtime result boundary update
@@ -926,7 +926,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - verified hello-service work_execute generator success under the prompt-plus-action mock model with single-runId storage
                   - reverified the hello-service unit-flow success path after the work_execute prompt-action boundary change
@@ -935,7 +935,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - verified hello-service work_execute_contract success and failure paths under single-runId execution
                   - confirmed work_execute_contract emits contract artifacts without work_execute_contract llm trace events and remains command-based validation
@@ -976,9 +976,9 @@ milestones:
                 summary: define one stable mcp-oriented action payload for requirement architecture item-design and work-plan update prompts
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/projects/sdlc/src/Capability
-                  - project_layer/docs/breakdown_docs/runtime_design.md
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/projects/sdlc/src/Capability
+                  - infra_projects/docs/breakdown_docs/runtime_design.md
                 progress_notes:
                   - expanded the runtime schema so update-style actions now share one payload with handoffType prompt and targetArtifact binding
                   - aligned requirement architecture item-design and work-plan update units to emit the same payload field names and semantics
@@ -997,12 +997,12 @@ milestones:
                 summary: verify update prompt handoff payloads against the runtime external-action boundary and document update design docs
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
-                  - project_layer/docs/breakdown_docs/runtime_design.md
-                  - project_layer/docs/breakdown_docs/requirement_design.md
-                  - project_layer/docs/breakdown_docs/architecture_design.md
-                  - project_layer/docs/breakdown_docs/item_design.md
-                  - project_layer/docs/breakdown_docs/work_design.md
+                  - infra_projects/projects/sdlc/tests
+                  - infra_projects/docs/breakdown_docs/runtime_design.md
+                  - infra_projects/docs/breakdown_docs/requirement_design.md
+                  - infra_projects/docs/breakdown_docs/architecture_design.md
+                  - infra_projects/docs/breakdown_docs/item_design.md
+                  - infra_projects/docs/breakdown_docs/work_design.md
                 progress_notes:
                   - verified requirement architecture item-design and work-plan update runtime units against the same payload field names and targetArtifact binding contract
                   - confirmed the capability test suite passes after the update payload shape was unified without per-unit field translation
@@ -1037,8 +1037,8 @@ milestones:
                 summary: add one stable changes payload shape so runtime can read changed files updated artifacts and continuation-ready outputs from external mcp execution
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/breakdown_docs/runtime_design.md
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/docs/breakdown_docs/runtime_design.md
                 progress_notes:
                   - added a shared ExternalActionResult contract with changedFiles updatedArtifacts and resumeInput fields in the runtime schema
                   - updated runtime design documentation so explicit artifact refresh and continuation-ready input binding are now part of the external result contract
@@ -1056,7 +1056,7 @@ milestones:
                 summary: verify runtime can map external mcp change payloads back to artifact refresh and continuation input
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/tests
                   - user_projects/hello-service/tests
                 progress_notes:
                   - added a dedicated runtime ingestion helper that maps ExternalActionResult into explicit refreshedArtifacts without implicit file scanning
@@ -1093,10 +1093,10 @@ milestones:
                 summary: define how gate decisions accept reject or return external mcp update and change results to the next runtime step
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/projects/sdlc/src/Capability
-                  - project_layer/docs/breakdown_docs/quality_control_design.md
-                  - project_layer/docs/breakdown_docs/runtime_design.md
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/projects/sdlc/src/Capability
+                  - infra_projects/docs/breakdown_docs/quality_control_design.md
+                  - infra_projects/docs/breakdown_docs/runtime_design.md
                 progress_notes:
                   - map apply reject and wait decisions to explicit continuation branches
                   - rejected external changes must stop downstream continuation and return a clear runtime result
@@ -1117,7 +1117,7 @@ milestones:
                 summary: verify pass and reject gate paths for external mcp continuation without collapsing back into manual ad hoc handling
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/tests
                   - user_projects/hello-service/tests
                 progress_notes:
                   - cover at least apply reject and wait branch behavior in automated tests
@@ -1154,9 +1154,9 @@ milestones:
                 summary: implement one end-to-end update loop that starts from update prompt handoff reaches external mcp execution receives changes and refreshes artifacts for downstream continuation
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/projects/sdlc/src/Capability
-                  - project_layer/projects/sdlc/src/Data
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/projects/sdlc/src/Capability
+                  - infra_projects/projects/sdlc/src/Data
                   - user_projects/hello-service/tests
                 progress_notes:
                   - wire update handoff external changes return gate review and artifact refresh as one runtime-controlled loop
@@ -1178,7 +1178,7 @@ milestones:
                 status: completed
                 involved_files:
                   - user_projects/hello-service/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - verification completes only when one document path finishes with refreshed artifacts that can be consumed downstream without reopening the old update boundary
                   - verified the requirement_design_update external loop through hello-service from update handoff to external changes return gate approval and refreshed artifact binding
@@ -1214,9 +1214,9 @@ milestones:
                 summary: implement one concrete adapter that executes external_plugin update_markdown actions and returns the shared ExternalActionResult payload
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/SDK
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/breakdown_docs/runtime_design.md
+                  - infra_projects/projects/sdlc/src/SDK
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/docs/breakdown_docs/runtime_design.md
                 progress_notes:
                   - keep the adapter scope limited to external_plugin update_markdown so it does not overreach into work_execute external_execution
                   - execute the update prompt through a dedicated adapter boundary and write the refreshed target artifact back to the workspace before returning ExternalActionResult
@@ -1234,7 +1234,7 @@ milestones:
                 summary: verify the concrete document update adapter returns shared runtime payloads and works on the hello-service update loop path
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/tests
                   - user_projects/hello-service/tests
                   - user_projects/hello-service/package.json
                 progress_notes:
@@ -1268,7 +1268,7 @@ milestones:
             status: completed
             progress_notes:
               - mcp server only exposes atomic capability tools and must not add adapter-tool or continuation-tool APIs
-              - mcp input must support optional project_name with fallback to default_project from /project_layer/config/mcp_projects.json
+              - mcp input must support optional project_name with fallback to default_project from /infra_projects/config/mcp_projects.json
               - resolved project_dir is used directly as workspace root; do not reintroduce package.json.sdlc workdir translation
               - returned MCP payloads must use Codex-facing top-level fields status message files issues and optional agentAction
             covers:
@@ -1279,23 +1279,23 @@ milestones:
               - atomic_tool_exposure
             tasks:
               - task_name: implement mcp project registry and target-project resolution
-                summary: load /project_layer/config/mcp_projects.json resolve explicit project_name or default_project and use the resolved project_dir directly as workspace root
+                summary: load /infra_projects/config/mcp_projects.json resolve explicit project_name or default_project and use the resolved project_dir directly as workspace root
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Interface
-                  - project_layer/config
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/src/Interface
+                  - infra_projects/config
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - support explicit project_name override and default_project fallback
                   - fail the invocation when neither explicit project_name nor default_project resolves to one registered project_dir
-                  - added one MCP project registry service and default config file under /project_layer/config/mcp_projects.json
+                  - added one MCP project registry service and default config file under /infra_projects/config/mcp_projects.json
                   - verified explicit project_name override default_project fallback and unresolved-project failure through dedicated unit tests
               - task_name: implement mcp capability tool registry and schemas
                 summary: expose the documented first-version capability tools with one explicit schema per tool and reject non-mapped fields
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Interface
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/src/Interface
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - implement the tool set documented in mcp_adapter_design.md
                   - keep item_descriptor_path limited to item-design tools and test_command limited to work_execute_contract
@@ -1305,9 +1305,9 @@ milestones:
                 summary: project internal runtime results into top-level MCP results with status message files issues and optional agentAction
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Interface
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/src/Interface
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - do not expose internal externalAction in MCP responses
                   - map ExternalAction.operation to agentAction.actionType targetPath to targetPath and payload.prompt to instructions
@@ -1329,9 +1329,9 @@ milestones:
                 summary: verify MCP resolves explicit project_name and default_project correctly and fails when no registered project can be resolved
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
-                  - project_layer/config
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/tests
+                  - infra_projects/config
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - cover explicit project_name override default_project fallback and unresolved-project failure
                   - verified explicit project_name override default_project fallback and unresolved-project failure through dedicated MCP project registry tests
@@ -1339,8 +1339,8 @@ milestones:
                 summary: verify each MCP tool rejects non-mapped fields and enforces item_descriptor_path and test_command only on documented tools
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/tests
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - cover field-rejection behavior for non-mapped MCP arguments
                   - cover item_descriptor_path-only and test_command-only tool boundaries
@@ -1349,9 +1349,9 @@ milestones:
                 summary: verify MCP returns top-level status message files issues and optional agentAction without leaking internal externalAction
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
-                  - project_layer/projects/sdlc/src/Runtime
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/src/Runtime
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - verify update and work_execute results project to agentAction
                   - verify generate and contract results project to stable files.role values
@@ -1361,9 +1361,9 @@ milestones:
                 summary: verify hello-service can execute one atomic generate path and one atomic contract path through MCP with Codex-facing responses
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/tests
                   - user_projects/hello-service/tests
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - verify one generate tool and one contract tool through the real MCP boundary on hello-service
                   - verify returned files use stable role values documented in mcp_adapter_design.md
@@ -1372,9 +1372,9 @@ milestones:
                 summary: verify hello-service can execute one atomic update path and one atomic work_execute path through MCP and return agentAction only
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/tests
                   - user_projects/hello-service/tests
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - verify update tools return agentAction without exposing externalAction
                   - verify work_execute returns agentAction without introducing adapter-tool or continuation-tool behavior
@@ -1382,7 +1382,7 @@ milestones:
                   - verified requirement_design_update and work_execute through the real MCP boundary on hello-service with top-level agentAction-only results
         validation:
           - mcp capability exposure follows mcp_adapter_design.md as the design authority
-          - project_name and default_project resolution behave according to /project_layer/config/mcp_projects.json
+          - project_name and default_project resolution behave according to /infra_projects/config/mcp_projects.json
           - mcp responses expose top-level Codex-facing fields and do not leak internal externalAction payloads
 
   - milestone_id: milestone_5_mcp_server_startup_delivery
@@ -1418,11 +1418,11 @@ milestones:
                 summary: add one directly startable stdio MCP server process that exposes initialize tools/list and tools/call on top of McpServerService
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/src/Interface/Mcp
-                  - project_layer/projects/sdlc/src/Interface/bin
-                  - project_layer/projects/sdlc/bin
-                  - project_layer/projects/sdlc/package.json
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/src/Interface/Mcp
+                  - infra_projects/projects/sdlc/src/Interface/bin
+                  - infra_projects/projects/sdlc/bin
+                  - infra_projects/projects/sdlc/package.json
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - added one stdio MCP transport implementation on top of McpServerService with initialize tools/list tools/call and ping handling
                   - added one directly startable bin entry and package script for sdlc-mcp startup without changing the existing atomic capability boundary
@@ -1441,28 +1441,28 @@ milestones:
                 summary: verify one stdio MCP process starts and completes initialize without transport errors
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
-                  - project_layer/projects/sdlc/package.json
+                  - infra_projects/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/package.json
                 progress_notes:
                   - verified one directly started sdlc-mcp stdio process completes initialize and returns serverInfo without transport errors
               - task_name: verify tool listing over mcp transport
                 summary: verify tools/list over stdio returns the documented atomic capability tool set
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/projects/sdlc/tests
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - verified tools/list over one directly started stdio MCP process and confirmed the documented 15 atomic capability tools are returned
               - task_name: verify codex-facing tool invocation over mcp transport
                 summary: verify tools/call over stdio returns one top-level Codex-facing MCP payload for one update capability
                 status: completed
                 involved_files:
-                  - project_layer/projects/sdlc/tests
+                  - infra_projects/projects/sdlc/tests
                   - user_projects/hello-service/tests
-                  - project_layer/docs/breakdown_docs/mcp_adapter_design.md
+                  - infra_projects/docs/breakdown_docs/mcp_adapter_design.md
                 progress_notes:
                   - verified tools/call over one directly started stdio MCP process for requirement_design_update and confirmed the returned payload keeps top-level status message files and agentAction without exposing internal externalAction
         validation:
-          - one stdio MCP server process can be started directly from project_layer/projects/sdlc
+          - one stdio MCP server process can be started directly from infra_projects/projects/sdlc
           - initialize tools/list and tools/call work over stdio transport
           - tools/call keeps the documented Codex-facing top-level result shape

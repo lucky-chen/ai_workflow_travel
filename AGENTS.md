@@ -58,7 +58,7 @@
 
 - 需求文档保持在产品需求层，不写实现细节、类名或运行时内部机制，除非用户明确要求。
 - 技术架构文档保持在架构层，不下沉到模块内部实现细节，除非用户明确要求。
-- 用户明确指定 `project_layer/docs/TechnicalArchitecture.md` 与 `project_layer/docs/breakdown_docs/*` 为技术文档时，检查设计对齐必须以这些文档为准。
+- 用户明确指定 `infra_projects/docs/TechnicalArchitecture.md` 与 `infra_projects/docs/breakdown_docs/*` 为技术文档时，检查设计对齐必须以这些文档为准。
 - 如果设计文档未明确某个实现细节，应先保持现有设计边界并指出缺口；不要自行发明新规则、新测试目标或新能力定义。
 - 通用 document contract 是检查规约，不要写死项目内容。
 - 文档中的术语一旦在上文确定，下文必须保持一致。
@@ -67,6 +67,7 @@
 - 不要把多个无关行为塞进一个过大的函数。
 - 测试文件优先采用一个入口组织加多个按行为拆分的小测试。
 - 新生成代码优先保证结构清晰，再考虑压缩行数。
+- 如果是js代码，必须使用typescript.
 
 ## 目录约定
 

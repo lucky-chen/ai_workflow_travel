@@ -24,8 +24,9 @@ TestResults.xml
 # Node.js
 node_modules/
 **/dist/
-project_layer/node_modules/
-project_layer/dist/
-project_layer/local_env.json
+infra_projects/node_modules/
+infra_projects/dist/
+infra_projects/local_env.json
 **/local_env.json
+**/local.env.json
 **/artifact_store/

@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 export const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const helloServiceDistRoot = path.join(workspaceRoot, "dist");
 const projectRoot = path.resolve(workspaceRoot, "..", "..");
-const sdlcProjectRoot = path.join(projectRoot, "project_layer", "projects", "sdlc");
+const sdlcProjectRoot = path.join(projectRoot, "infra_projects", "projects", "sdlc");
 const cliEntry = path.join(sdlcProjectRoot, "bin", "sdlc.js");
 const sdlcDistEntry = path.join(sdlcProjectRoot, "dist", "src", "index.js");
 const scenarioRuntimeEntry = path.join(sdlcProjectRoot, "dist", "src", "testing", "scenario-runtime.js");
@@ -249,7 +249,7 @@ export async function invokeMcpTool(targetWorkspaceRoot, request, options = {}) 
     import(pathToFileURL(sdlcDistEntry).href),
     import(pathToFileURL(scenarioRuntimeEntry).href),
   ]);
-  const registryConfigPath = path.join(projectRoot, "project_layer", "config", "mcp_projects.json");
+  const registryConfigPath = path.join(projectRoot, "infra_projects", "config", "mcp_projects.json");
   const registryJson = JSON.stringify({
     default_project: defaultProject,
     projects: [

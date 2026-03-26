@@ -108,9 +108,9 @@ function createRegistryService(repoRoot: string): McpProjectRegistryService {
 
 async function createTempRepoRoot(prefix: string): Promise<string> {
   const repoRoot = await mkdtemp(path.join(os.tmpdir(), prefix));
-  await mkdir(path.join(repoRoot, "project_layer", "projects", "sdlc"), { recursive: true });
-  await writeFile(path.join(repoRoot, "project_layer", "projects", "sdlc", "package.json"), "{}\n", "utf8");
-  await mkdir(path.join(repoRoot, "project_layer", "config"), { recursive: true });
+  await mkdir(path.join(repoRoot, "infra_projects", "projects", "sdlc"), { recursive: true });
+  await writeFile(path.join(repoRoot, "infra_projects", "projects", "sdlc", "package.json"), "{}\n", "utf8");
+  await mkdir(path.join(repoRoot, "infra_projects", "config"), { recursive: true });
   return repoRoot;
 }
 
@@ -122,7 +122,7 @@ async function writeRegistryConfig(
   },
 ): Promise<void> {
   await writeFile(
-    path.join(repoRoot, "project_layer", "config", "mcp_projects.json"),
+    path.join(repoRoot, "infra_projects", "config", "mcp_projects.json"),
     JSON.stringify(config, null, 2),
     "utf8",
   );

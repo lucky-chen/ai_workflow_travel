@@ -49,16 +49,16 @@ If you prefer a recommended reading order, read:
 1. This `README.md`: understand the purpose of the repository and the role of each project.
 2. [Requirement document](./meta_layer/docs/Requirement.md): understand the target problem, workflow, and expected capability boundary.
 3. [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): understand the technical structure and stage flow.
-4. [Code generation execution plan](./project_layer/docs/CodeGenerationExecutionPlan.md): understand the current implementation scope and progress.
+4. [Code generation execution plan](./infra_projects/docs/CodeGenerationExecutionPlan.md): understand the current implementation scope and progress.
 
 # Roadmap
 
-- `project_layer/projects/sdlc`
+- `infra_projects/projects/sdlc`
   - [x] Workflow stage flow
   - [x] CLI-based stage launch and task execution
   - [x] Requirement, architecture, module design, implementation plan, implementation execution, and validation stages
   - [x] richer CLI interaction flow
-- `project_layer/projects/agent_runtime`
+- `infra_projects/projects/agent_runtime`
   - [x] AgentRuntime V1 single-turn execution foundation
   - [x] Agent abstraction, runtime execution loop, and trace integration
   - [ ] AgentRuntime V2 memory support
@@ -114,12 +114,12 @@ If you prefer a recommended reading order, read:
 - [Requirement document](./meta_layer/docs/Requirement.md): product requirement baseline, scope, user workflow, and target capability definition.
 - [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model.
 - [Module design documents](./meta_layer/docs/design_docs/): current design-doc directory referenced as `module_desig` in discussions, covering workflow, execution, contract, interface, SDK, data, and quality-gate details.
-- [Code generation execution plan](./project_layer/docs/CodeGenerationExecutionPlan.md): implementation delivery plan, batch breakdown, execution status, and completion tracking.
+- [Code generation execution plan](./infra_projects/docs/CodeGenerationExecutionPlan.md): implementation delivery plan, batch breakdown, execution status, and completion tracking.
 - [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md): collaboration rules for change plans, batch boundaries, validation, and commit requirements.
 
 ### Usage Entry
 
-- CLI entry: `project_layer/projects/sdlc/src/interface/cli/cli.ts`
+- CLI entry: `infra_projects/projects/sdlc/src/interface/cli/cli.ts`
 - Quick start:
 
 ```bash
@@ -156,11 +156,11 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 ### Core Docs
 
 - No standalone design-doc set is listed for AgentRuntime in the current repository root README.
-- Primary workspace: [project_layer/projects/agent_runtime/](./project_layer/projects/agent_runtime/)
+- Primary workspace: [infra_projects/projects/agent_runtime/](./infra_projects/projects/agent_runtime/)
 
 ### Usage Entry
 
-- Workspace: `project_layer/projects/agent_runtime/`
+- Workspace: `infra_projects/projects/agent_runtime/`
 - Run tests: `npm test`
 - Build: `npm run build`
 
@@ -249,7 +249,7 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 - [Requirement document](./meta_layer/docs/Requirement.md): product requirement baseline, scope, user workflow, and target capability definition.
 - [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model.
 - [Module design documents](./meta_layer/docs/design_docs/): current design-doc directory referenced as `module_desig` in discussions, covering workflow, execution, contract, interface, SDK, data, and quality-gate details.
-- [Code generation execution plan](./project_layer/docs/CodeGenerationExecutionPlan.md): implementation delivery plan, batch breakdown, execution status, and completion tracking.
+- [Code generation execution plan](./infra_projects/docs/CodeGenerationExecutionPlan.md): implementation delivery plan, batch breakdown, execution status, and completion tracking.
 - [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md): collaboration rules for change plans, batch boundaries, validation, and commit requirements.
 
 # Inputs and Outputs
@@ -271,7 +271,7 @@ Outputs:
 
 # Run Tests
 
-- Run the following in `project_layer/projects/sdlc`:
+- Run the following in `infra_projects/projects/sdlc`:
 
 ```bash
 npm test

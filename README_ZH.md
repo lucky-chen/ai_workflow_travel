@@ -47,16 +47,16 @@
 1. 当前 `README_ZH.md`：先了解仓库目的，以及各项目分别承担什么角色。
 2. [需求文档](./meta_layer/docs/Requirement.md)：了解目标问题、工作流和能力边界。
 3. [架构文档](./meta_layer/docs/TechnicalArchitecture.md)：了解整体技术结构和阶段流转。
-4. [代码生成计划](./project_layer/docs/CodeGenerationExecutionPlan.md)：了解当前实现范围和执行进度。
+4. [代码生成计划](./infra_projects/docs/CodeGenerationExecutionPlan.md)：了解当前实现范围和执行进度。
 
 # 里程碑
 
-- `project_layer/projects/sdlc`
+- `infra_projects/projects/sdlc`
   - [x] Workflow 主线阶段流转
   - [x] 基于 CLI 的阶段启动与任务执行
   - [x] Requirement、Architecture、Module Design、Implementation Plan、Implementation Execution、Validation 阶段
   - [x] 更丰富的 CLI 交互流程
-- `project_layer/projects/agent_runtime`
+- `infra_projects/projects/agent_runtime`
   - [x] AgentRuntime V1 单轮执行基础能力
   - [x] Agent 抽象、runtime 执行循环与 trace 集成
   - [ ] AgentRuntime V2 memory support
@@ -111,12 +111,12 @@
 - [需求文档](./meta_layer/docs/Requirement.md)：定义产品需求基线、范围、用户工作流和目标能力。
 - [架构文档](./meta_layer/docs/TechnicalArchitecture.md)：定义端到端技术架构、阶段流转、模块职责和运行时协作模型。
 - [模块设计文档](./meta_layer/docs/design_docs/)：讨论中的 `module_desig` 当前对应设计文档目录，包含 workflow、execution、contract、interface、SDK、data、quality-gate 等模块级设计。
-- [代码生成计划](./project_layer/docs/CodeGenerationExecutionPlan.md)：定义实现交付计划、batch 拆分、执行状态和完成跟踪。
+- [代码生成计划](./infra_projects/docs/CodeGenerationExecutionPlan.md)：定义实现交付计划、batch 拆分、执行状态和完成跟踪。
 - [协作文档](./meta_layer/resources/COLLABORATION_STANDARD.md)：定义变更计划、batch 边界、验证要求和 commit 规则。
 
 ### 使用入口
 
-- CLI 入口：`project_layer/projects/sdlc/src/interface/cli/cli.ts`
+- CLI 入口：`infra_projects/projects/sdlc/src/interface/cli/cli.ts`
 - 快速开始：
 
 ```bash
@@ -153,11 +153,11 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 ### 核心文档
 
 - 当前仓库根 README 中未单列 AgentRuntime 的独立设计文档集合。
-- 主工作区：[project_layer/projects/agent_runtime/](./project_layer/projects/agent_runtime/)
+- 主工作区：[infra_projects/projects/agent_runtime/](./infra_projects/projects/agent_runtime/)
 
 ### 使用入口
 
-- 工作区：`project_layer/projects/agent_runtime/`
+- 工作区：`infra_projects/projects/agent_runtime/`
 - 运行测试：`npm test`
 - 构建：`npm run build`
 

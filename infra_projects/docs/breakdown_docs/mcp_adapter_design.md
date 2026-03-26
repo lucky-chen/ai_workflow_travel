@@ -224,8 +224,8 @@ Registered-project mapping example:
 Project-resolution rules:
 
 - MCP server must resolve `project_name` through one registered-project mapping table.
-- By default, MCP server must read that registered-project mapping table from `/project_layer/config/mcp_projects.json` under the repository root.
-- If MCP input omits `project_name`, MCP must read `default_project` from `/project_layer/config/mcp_projects.json`.
+- By default, MCP server must read that registered-project mapping table from `/infra_projects/config/mcp_projects.json` under the repository root.
+- If MCP input omits `project_name`, MCP must read `default_project` from `/infra_projects/config/mcp_projects.json`.
 - If MCP input provides `project_name`, that explicit value overrides `default_project`.
 - The resolved `project_dir` is the only target project directory for the current invocation.
 - MCP must use the resolved `project_dir` directly as the workspace root.

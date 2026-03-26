@@ -1,6 +1,6 @@
 # Collaboration Standard
 
-This document defines the shared collaboration standard for all work under `project_layer`.
+This document defines the shared collaboration standard for all work under `infra_projects`.
 
 ## 1. Change Plan First
 

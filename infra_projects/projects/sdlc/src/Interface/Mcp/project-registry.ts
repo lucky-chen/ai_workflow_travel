@@ -75,7 +75,7 @@ export class McpProjectRegistryService {
     }
 
     const repositoryRoot = await this.resolveRepositoryRoot(startDir);
-    return path.join(repositoryRoot, "project_layer", "config", "mcp_projects.json");
+    return path.join(repositoryRoot, "infra_projects", "config", "mcp_projects.json");
   }
 
   private async loadConfig(repositoryRoot: string): Promise<RegisteredProjectConfig> {
@@ -115,7 +115,7 @@ export class McpProjectRegistryService {
     let currentDir = path.resolve(startDir);
 
     while (true) {
-      const markerPath = path.join(currentDir, "project_layer", "projects", "sdlc", "package.json");
+      const markerPath = path.join(currentDir, "infra_projects", "projects", "sdlc", "package.json");
       if (await this.fileExistsImpl(markerPath)) {
         return currentDir;
       }

@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "file:../../../project_layer/projects/sdlc/node_modules/@modelcontextprotocol/sdk",
+    "@modelcontextprotocol/sdk": "file:../../../infra_projects/projects/sdlc/node_modules/@modelcontextprotocol/sdk",
     "undici": "^7.16.0",
-    "zod": "file:../../../project_layer/projects/sdlc/node_modules/zod"
+    "zod": "file:../../../infra_projects/projects/sdlc/node_modules/zod"
   },
   "scripts": {
-    "build": "node ../../../project_layer/projects/sdlc/node_modules/typescript/bin/tsc -p tsconfig.json",
+    "build": "node ../../../infra_projects/projects/sdlc/node_modules/typescript/bin/tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "start:http": "node dist/server.js --transport=http"
   }

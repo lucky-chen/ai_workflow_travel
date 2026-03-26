@@ -7,7 +7,7 @@
       "node"
     ],
     "typeRoots": [
-      "../../../project_layer/projects/sdlc/node_modules/@types"
+      "../../../infra_projects/projects/sdlc/node_modules/@types"
     ],
     "outDir": "dist",
     "rootDir": ".",
