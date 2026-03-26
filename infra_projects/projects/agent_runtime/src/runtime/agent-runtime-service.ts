@@ -1,7 +1,7 @@
 import { ContextAssembler } from "../context/context-assembler.js";
 import { DefaultRetrievalProvider } from "../context/default-retrieval-provider.js";
 import { RuntimeMemoryStore } from "../context/runtime-memory-store.js";
-import { SessionHistoryStore } from "../context/session-history-store.js";
+import { SessionTranscriptStore } from "../context/session-transcript-store.js";
 import { ExecutionPromptBuilder } from "../loop/execution-prompt-builder.js";
 import { ExecutionResultValidator } from "../loop/execution-result-validator.js";
 import { ObservationValidator } from "../loop/observation-validator.js";
@@ -37,7 +37,7 @@ import type {
 
 export class AgentRuntimeService implements AgentRuntime {
   private readonly sessionManager: AgentSessionManager;
-  private readonly historyStore: SessionHistoryStore;
+  private readonly transcriptStore: SessionTranscriptStore;
   private readonly memoryStore: RuntimeMemoryStore;
   private readonly contextAssembler: ContextAssembler;
   private readonly traceRecorder;
@@ -48,11 +48,11 @@ export class AgentRuntimeService implements AgentRuntime {
     const traceFileId = dependencies.traceFileId ?? createRuntimeTraceFileId();
     this.traceRecorder = dependencies.traceRecorder
       ?? new FileAgentTraceRecorder(resolveRuntimeTracePath(dependencies.workdir, traceFileId));
-    this.historyStore = new SessionHistoryStore(dependencies.workdir);
+    this.transcriptStore = new SessionTranscriptStore(dependencies.workdir);
     this.memoryStore = new RuntimeMemoryStore(dependencies.workdir);
-    this.sessionManager = new AgentSessionManager(dependencies.workdir, this.traceRecorder, this.historyStore);
+    this.sessionManager = new AgentSessionManager(dependencies.workdir, this.traceRecorder, this.transcriptStore);
     this.contextAssembler = new ContextAssembler(
-      this.historyStore,
+      this.transcriptStore,
       this.memoryStore,
       new DefaultRetrievalProvider(),
       dependencies.workdir,
@@ -205,7 +205,7 @@ export class AgentRuntimeService implements AgentRuntime {
   private normalizeExecutionResult(
     result: AgentRuntimeResult,
     context: AgentContext,
-    history: AgentContext["runtimeContext"]["history"],
+    transcript: AgentContext["runtimeContext"]["transcript"],
   ): AgentRuntimeResult {
     return this.resultNormalizer.normalize(
       result,
@@ -213,7 +213,7 @@ export class AgentRuntimeService implements AgentRuntime {
         ...context,
         runtimeContext: {
           ...context.runtimeContext,
-          history,
+          transcript,
         },
       },
       this.metricsCollector.summarize(result, context.request.metadata),

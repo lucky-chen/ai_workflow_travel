@@ -4,7 +4,7 @@ import path from "node:path";
 import type { MessageTurn } from "../runtime/agent-runtime-types.js";
 import { resolveSessionTranscriptPath } from "../runtime/runtime-storage-paths.js";
 
-export class SessionHistoryStore {
+export class SessionTranscriptStore {
   constructor(private readonly workdir: string) {}
 
   async initialize(sessionId: string, transcript: MessageTurn[]): Promise<void> {
@@ -30,9 +30,9 @@ export class SessionHistoryStore {
   }
 
   async append(sessionId: string, turns: MessageTurn[]): Promise<void> {
-    const history = await this.load(sessionId);
-    history.push(...turns.map((turn) => ({ ...turn })));
-    await this.writeTranscript(sessionId, history);
+    const transcript = await this.load(sessionId);
+    transcript.push(...turns.map((turn) => ({ ...turn })));
+    await this.writeTranscript(sessionId, transcript);
   }
 
   resolvePath(sessionId: string): string {

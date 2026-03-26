@@ -12,7 +12,7 @@ export async function runTerminalSessionCliTests(): Promise<void> {
   await testTerminalSessionCliPrintsChatJsonAnswerAsPlainText();
   await testTerminalSessionCliLoadsRealProviderConfigFromLocalEnv();
   await testTerminalSessionCliLoadsRealProviderConfigFromFixtureLocalEnv();
-  await testTerminalSessionCliWritesTraceToWorkdirDist();
+  await testTerminalSessionCliWritesTraceToAgentRuntimeStorage();
   await testTerminalSessionCliFailsWithoutWorkdir();
   await testTerminalSessionCliFailsWhenLocalEnvIsMissing();
   await testTerminalSessionCliFailsWhenLocalEnvIsInvalidJson();
@@ -250,11 +250,11 @@ async function testTerminalSessionCliLoadsRealProviderConfigFromFixtureLocalEnv(
   assert.equal(capturedDependencies?.realProvider?.timeoutMs, 600000);
 }
 
-async function testTerminalSessionCliWritesTraceToWorkdirDist(): Promise<void> {
+async function testTerminalSessionCliWritesTraceToAgentRuntimeStorage(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-cli-");
   await writeTestLocalEnv(workdir);
   let capturedDependencies: AgentRuntimeDependencies | undefined;
-  const traceDirPath = path.join(workdir, "dist");
+  const traceDirPath = path.join(workdir, ".agent_runtime");
 
   const exitCode = await runTerminalSessionCli({
     argv: ["--workdir", workdir],

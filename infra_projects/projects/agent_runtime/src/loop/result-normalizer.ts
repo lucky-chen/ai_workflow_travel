@@ -14,7 +14,7 @@ export class ResultNormalizer {
       ...result,
       payload: {
         ...result.payload,
-        history: context.runtimeContext.history,
+        transcript: context.runtimeContext.transcript,
         memory: context.runtimeContext.memory,
         retrievalContext: context.runtimeContext.retrievalContext,
         metrics,

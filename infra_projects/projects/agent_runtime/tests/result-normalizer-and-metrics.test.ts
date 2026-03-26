@@ -50,7 +50,7 @@ async function testResultNormalizerAddsContextAndMetrics(): Promise<void> {
     stepCount: 1,
   });
 
-  assert.equal(normalized.payload.history?.length, 1);
+  assert.equal(normalized.payload.transcript?.length, 1);
   assert.equal(normalized.payload.metrics?.stepCount, 1);
 }
 
@@ -68,7 +68,7 @@ function createAgentContext(): AgentContext {
     runtimeContext: {
       sessionId: "session-1",
       workdir: "/tmp/agent-runtime",
-      history: [
+      transcript: [
         {
           role: "user",
           content: "{\"task\":\"normalize\"}",

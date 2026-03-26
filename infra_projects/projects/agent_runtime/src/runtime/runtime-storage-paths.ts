@@ -10,7 +10,7 @@ export function createRuntimeTraceFileId(now = new Date()): string {
 }
 
 export function resolveRuntimeTracePath(workdir: string, traceFileId: string): string {
-  return path.join(workdir, "dist", `agent-runtime-trace-${traceFileId}.json`);
+  return path.join(resolveAgentRuntimeStorageRoot(workdir), `agent-runtime-trace-${traceFileId}.json`);
 }
 
 export function resolveSessionStatePath(workdir: string, sessionId: string): string {
@@ -22,7 +22,7 @@ export function resolveSessionTranscriptPath(workdir: string, sessionId: string)
 }
 
 export function resolveMemoryPath(workdir: string, scope: string): string {
-  return path.join(resolveAgentRuntimeStorageRoot(workdir), "memory", `${encodeURIComponent(scope)}.json`);
+  return path.join(resolveAgentRuntimeStorageRoot(workdir), "runtime_memory", `${encodeURIComponent(scope)}.json`);
 }
 
 export function resolveWorkspaceLocalEnvPath(workdir: string): string {

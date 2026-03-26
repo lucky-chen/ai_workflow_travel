@@ -22,7 +22,7 @@ This design document directly covers:
 - `AgentSessionManager`
 - `RuntimeAgentSession`
 - `ContextAssembler`
-- `SessionHistoryStore`
+- `SessionTranscriptStore`
 - `RuntimeMemoryStore`
 - `RetrievalProvider`
 - `DefaultAgent`
@@ -77,7 +77,7 @@ class AgentSessionManager
 class RuntimeAgentSession
 interface AgentSession
 class ContextAssembler
-class SessionHistoryStore
+class SessionTranscriptStore
 class RuntimeMemoryStore
 interface RetrievalProvider
 class DefaultAgent
@@ -117,10 +117,10 @@ AgentRuntimeService ..> StreamingEventSink
 AgentRuntimeService ..> RuntimeSafetyPolicy
 AgentRuntimeService ..> MultiAgentCoordinator
 
-ContextAssembler --> SessionHistoryStore
+ContextAssembler --> SessionTranscriptStore
 ContextAssembler --> RuntimeMemoryStore
 ContextAssembler --> RetrievalProvider
-AgentSessionManager --> SessionHistoryStore
+AgentSessionManager --> SessionTranscriptStore
 AgentSessionManager --> RuntimeAgentSession
 RuntimeAgentSession --> AgentRuntimeService
 AgentSession --> AgentRuntime
@@ -206,21 +206,22 @@ Role:
 
 Responsibilities:
 
-- Read session history from `SessionHistoryStore`.
+- Read session transcript from `SessionTranscriptStore`.
 - Read short-term runtime memory from `RuntimeMemoryStore`.
+- Merge stable runtime-memory summaries into `AgentContext.runtimeContext.memory` as bounded follow-up context for the next run.
 - Load optional retrieval-backed context through `RetrievalProvider`.
 - Load SDK-level `workdir` into runtime context.
 - Merge caller payload and loaded context into one stable `AgentContext`.
 
-#### 2.2.6 `SessionHistoryStore`
+#### 2.2.6 `SessionTranscriptStore`
 
 Role:
 
-- Runtime-owned boundary for session-level message history.
+- Runtime-owned boundary for session-level message transcript.
 
 Responsibilities:
 
-- Load ordered message history by session identity.
+- Load ordered message transcript by session identity.
 - Append normalized user, assistant, and tool turns to the bound session transcript after run completion.
 - Return empty history when the bound session has no prior transcript.
 - Keep persistence details outside `AgentRuntimeService`.
@@ -229,13 +230,36 @@ Responsibilities:
 
 Role:
 
-- Runtime-owned boundary for short-term memory state.
+- Runtime-owned boundary for short-term runtime memory.
 
 Responsibilities:
 
 - Load short-lived memory fragments relevant to the current request.
-- Save updated memory summary after successful execution when configured.
+- Save updated runtime-memory summary after successful execution when configured.
+- Preserve stable request constraints that should continue across later runs under the same `memoryScope`.
+- Preserve the last successful run result summary for short follow-up context reuse.
+- Preserve observation-confirmed run status summary for later execution control context.
+- Keep runtime memory scoped, bounded, and summary-oriented instead of acting as full history, long-term knowledge, or retrieval storage.
 - Keep memory lifecycle separate from model execution logic.
+
+Runtime memory functional boundary:
+
+- purpose:
+  - save stable constraints from the current request
+  - save the prior run result summary
+  - save observation-confirmed run status summary
+  - provide short summary context to the next execution under the same `memoryScope`
+  - reduce reliance on re-summarizing long transcript windows every time
+- current minimal stored items:
+  - `request_constraints`
+  - `result_summary`
+  - `observation_status`
+- non-goals:
+  - full history persistence
+  - long-term knowledge base
+  - complex semantic summarization
+  - automatic conflict merge
+  - vector retrieval
 
 #### 2.2.8 `RetrievalProvider`
 
@@ -419,7 +443,7 @@ Responsibilities:
 participant Caller
 participant AgentRuntimeService as AgentRuntime
 participant ContextAssembler
-participant SessionHistoryStore
+participant SessionTranscriptStore
 participant RuntimeMemoryStore
 participant RetrievalProvider
 participant DefaultAgent
@@ -438,8 +462,8 @@ AgentRuntime --> Caller: AgentSession
 Caller -> AgentSession: execute(request)
 AgentSession -> AgentRuntime: execute(request)
 AgentRuntime -> ContextAssembler: assemble(request)
-ContextAssembler -> SessionHistoryStore: load history
-SessionHistoryStore --> ContextAssembler: history
+ContextAssembler -> SessionTranscriptStore: load transcript
+SessionTranscriptStore --> ContextAssembler: transcript
 ContextAssembler -> RuntimeMemoryStore: load memory
 RuntimeMemoryStore --> ContextAssembler: memory
 ContextAssembler -> RetrievalProvider: load retrieval context
@@ -903,8 +927,9 @@ Input loading:
 
 Processing:
 
-- load session history from `SessionHistoryStore`
+- load session transcript from `SessionTranscriptStore`
 - load short-term runtime memory from `RuntimeMemoryStore`
+- treat runtime memory as bounded summary context instead of full history replay
 - build one rule-driven retrieval request when `retrievalQuery` is provided
 - choose candidate retrieval sources from runtime conventions, configured source policy, and explicit target scope
 - load retrieval-backed context through `RetrievalProvider` without letting LLM choose retrieval sources in P0
@@ -949,7 +974,7 @@ Input fields:
 
 - `input.context.request.prompt.systemPrompt`
 - `input.context.request.prompt.userPrompt`
-- `input.context.runtimeContext.history`
+- `input.context.runtimeContext.transcript`
 - `input.context.runtimeContext.memory`
 - `input.context.runtimeContext.retrievalContext`
 - `input.priorStepResults`
@@ -960,9 +985,10 @@ Output constraints:
 - `mode` must be `"planning"`.
 - `responseFormat` must be `"json"`.
 - `systemPrompt` must place runtime planning rules before caller-provided prompt fragments.
-- `userPrompt` must include current task input, bounded history context, stable memory, retrieval context, prior step results, and prior observation when present.
+- `userPrompt` must include current task input, bounded transcript context, stable runtime memory, retrieval context, prior step results, and prior observation when present.
 - planning request must describe the expected `ExecutionPlan` contract.
-- `history` should be recent-context or summarized-context data, not unbounded full transcript append.
+- `transcript` should be recent-context or summarized-context data, not unbounded full transcript append.
+- `memory` should contain only bounded runtime-memory summary items such as stable request constraints, prior result summary, and observation-confirmed status.
 - `retrievalContext` should contain only runtime-selected bounded reference items.
 
 Output emission:
@@ -1027,7 +1053,7 @@ Input fields:
 - `input.context.request.prompt.systemPrompt`
 - `input.context.request.prompt.userPrompt`
 - `input.plan.nextStepGoal`
-- `input.context.runtimeContext.history`
+- `input.context.runtimeContext.transcript`
 - `input.context.runtimeContext.memory`
 - `input.context.runtimeContext.retrievalContext`
 - `input.toolResults`
@@ -1037,9 +1063,10 @@ Output constraints:
 - `mode` must be `"execution"`.
 - `responseFormat` must equal `input.context.request.responseFormat`.
 - `systemPrompt` must place runtime execution rules before caller-provided prompt fragments.
-- `userPrompt` must include current task input, validated `nextStepGoal`, bounded history context, stable memory, retrieval context, and tool results when present.
+- `userPrompt` must include current task input, validated `nextStepGoal`, bounded transcript context, stable runtime memory, retrieval context, and tool results when present.
 - execution request must describe the expected output format from the current request.
-- `history` should be recent-context or summarized-context data, not unbounded full transcript append.
+- `transcript` should be recent-context or summarized-context data, not unbounded full transcript append.
+- `memory` should contain only bounded runtime-memory summary items such as stable request constraints, prior result summary, and observation-confirmed status.
 - `toolResults` should be injected only when the current execution step used tools.
 - `retrievalContext` should contain only runtime-selected bounded reference items.
 
@@ -1276,7 +1303,7 @@ infra_projects/projects/agent_runtime/
 
     context/
       context-assembler.ts
-      session-history-store.ts
+      session-transcript-store.ts
       runtime-memory-store.ts
       retrieval-provider.ts
       retrieval-request.ts
@@ -1322,7 +1349,7 @@ infra_projects/projects/agent_runtime/
 
     context/
       context-assembler.test.ts
-      session-history-store.test.ts
+      session-transcript-store.test.ts
       runtime-memory-store.test.ts
       retrieval-provider.test.ts
 

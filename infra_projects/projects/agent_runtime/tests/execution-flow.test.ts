@@ -159,7 +159,7 @@ function createAgentContext(): AgentContext {
     runtimeContext: {
       sessionId: "session-1",
       workdir: "/tmp/agent-runtime",
-      history: [],
+      transcript: [],
       memory: [],
       retrievalContext: [],
       mcpToolCalls: [],

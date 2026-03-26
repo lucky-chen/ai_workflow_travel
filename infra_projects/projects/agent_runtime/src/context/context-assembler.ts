@@ -6,18 +6,18 @@ import type {
 } from "../runtime/agent-runtime-types.js";
 import type { RetrievalProvider } from "./default-retrieval-provider.js";
 import { RuntimeMemoryStore } from "./runtime-memory-store.js";
-import { SessionHistoryStore } from "./session-history-store.js";
+import { SessionTranscriptStore } from "./session-transcript-store.js";
 
 export class ContextAssembler {
   constructor(
-    private readonly historyStore: SessionHistoryStore,
+    private readonly transcriptStore: SessionTranscriptStore,
     private readonly memoryStore: RuntimeMemoryStore,
     private readonly retrievalProvider: RetrievalProvider,
     private readonly workdir: string,
   ) {}
 
   async assemble(session: AgentSessionState, request: AgentSessionRequest): Promise<AgentContext> {
-    const history = await this.historyStore.load(session.sessionId);
+    const transcript = await this.transcriptStore.load(session.sessionId);
     const memory = await this.memoryStore.load(request.payload.memoryScope);
     const retrievalContext = request.payload.retrievalQuery
       ? await this.retrievalProvider.load(this.buildRetrievalRequest(session, request))
@@ -36,7 +36,7 @@ export class ContextAssembler {
         sessionId: session.sessionId,
         workdir: this.workdir,
         runId: undefined,
-        history,
+        transcript,
         memory,
         retrievalContext,
         mcpToolCalls: request.payload.mcpToolCalls?.map((toolCall) => ({
@@ -52,7 +52,7 @@ export class ContextAssembler {
       query: request.payload.retrievalQuery ?? "",
       candidateSources: [
         `${this.workdir}/docs`,
-        this.historyStore.resolvePath(session.sessionId),
+        this.transcriptStore.resolvePath(session.sessionId),
       ],
       metadata: request.metadata,
     };

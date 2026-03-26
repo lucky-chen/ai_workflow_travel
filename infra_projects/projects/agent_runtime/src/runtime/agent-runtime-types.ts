@@ -45,7 +45,7 @@ export interface AgentContext {
     sessionId: string;
     workdir: string;
     runId?: string;
-    history: MessageTurn[];
+    transcript: MessageTurn[];
     memory: MemoryEntry[];
     retrievalContext: RetrievalItem[];
     mcpToolCalls: McpToolRequest[];
@@ -225,7 +225,7 @@ export interface AgentRuntimeResult {
   payload: {
     content?: string;
     responseFormat?: "text" | "json";
-    history?: MessageTurn[];
+    transcript?: MessageTurn[];
     memory?: MemoryEntry[];
     retrievalContext?: RetrievalItem[];
     toolResults?: McpToolResult[];

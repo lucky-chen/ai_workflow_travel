@@ -40,7 +40,7 @@ async function testResultMetricsAndTraceDoNotLeakIntoTranscript(): Promise<void>
   const state = await session.read();
 
   assert.equal(result.payload.metrics?.modelLatencyMs, 25);
-  assert.equal(Array.isArray(result.payload.history), true);
+  assert.equal(Array.isArray(result.payload.transcript), true);
   assert.equal(state.transcript.some((turn) => turn.content.includes("modelLatencyMs")), false);
   assert.equal(state.transcript.some((turn) => turn.content.includes("run_started")), false);
   assert.equal(recorder.events.some((event) => event.eventType === "run_started"), true);

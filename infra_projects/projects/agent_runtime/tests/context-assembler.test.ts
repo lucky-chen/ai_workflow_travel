@@ -5,7 +5,7 @@ import path from "node:path";
 import { ContextAssembler } from "../src/context/context-assembler.js";
 import { DefaultRetrievalProvider } from "../src/context/default-retrieval-provider.js";
 import { RuntimeMemoryStore } from "../src/context/runtime-memory-store.js";
-import { SessionHistoryStore } from "../src/context/session-history-store.js";
+import { SessionTranscriptStore } from "../src/context/session-transcript-store.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runContextAssemblerTests(): Promise<void> {
@@ -14,11 +14,11 @@ export async function runContextAssemblerTests(): Promise<void> {
 
 async function testContextAssemblerBuildsAgentContext(): Promise<void> {
   const workdir = await createTestWorkdir();
-  const historyStore = new SessionHistoryStore(workdir);
+  const transcriptStore = new SessionTranscriptStore(workdir);
   const memoryStore = new RuntimeMemoryStore(workdir);
   const retrievalProvider = new DefaultRetrievalProvider();
   const assembler = new ContextAssembler(
-    historyStore,
+    transcriptStore,
     memoryStore,
     retrievalProvider,
     workdir,
@@ -26,7 +26,7 @@ async function testContextAssemblerBuildsAgentContext(): Promise<void> {
   await mkdir(path.join(workdir, "docs"), { recursive: true });
   await writeFile(path.join(workdir, "docs", "design.md"), "agent runtime design reference", "utf8");
 
-  await historyStore.initialize("session-1", [
+  await transcriptStore.initialize("session-1", [
     {
       role: "user",
       content: "{\"task\":\"existing\"}",
@@ -66,7 +66,7 @@ async function testContextAssemblerBuildsAgentContext(): Promise<void> {
 
   assert.equal(context.runtimeContext.sessionId, "session-1");
   assert.equal(context.runtimeContext.workdir, workdir);
-  assert.equal(context.runtimeContext.history.length, 1);
+  assert.equal(context.runtimeContext.transcript.length, 1);
   assert.equal(context.runtimeContext.memory[0]?.key, "priority");
   assert.equal(context.runtimeContext.retrievalContext.length >= 1, true);
 }

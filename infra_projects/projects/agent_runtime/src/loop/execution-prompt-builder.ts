@@ -25,7 +25,7 @@ export class ExecutionPromptBuilder {
           nextStepGoal: input.plan.nextStepGoal,
           responseFormat: input.context.request.responseFormat,
           outputContract: outputContract.userPrompt,
-          history: input.context.runtimeContext.history,
+          transcript: input.context.runtimeContext.transcript,
           memory: input.context.runtimeContext.memory,
           retrievalContext: input.context.runtimeContext.retrievalContext,
           toolResults: input.toolResults ?? [],

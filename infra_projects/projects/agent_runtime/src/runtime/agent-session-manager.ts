@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { SessionHistoryStore } from "../context/session-history-store.js";
+import { SessionTranscriptStore } from "../context/session-transcript-store.js";
 import type {
   AgentSessionCreateInput,
   AgentSessionOpenInput,
@@ -22,7 +22,7 @@ export class AgentSessionManager {
   constructor(
     private readonly workdir: string,
     private readonly traceRecorder?: IAgentTraceRecorder,
-    private readonly historyStore: SessionHistoryStore = new SessionHistoryStore(workdir),
+    private readonly transcriptStore: SessionTranscriptStore = new SessionTranscriptStore(workdir),
   ) {}
 
   async createSession(input: AgentSessionCreateInput): Promise<AgentSessionState> {
@@ -38,7 +38,7 @@ export class AgentSessionManager {
       metadata: input.metadata,
     };
     await this.writeState(session);
-    await this.historyStore.initialize(session.sessionId, transcript);
+    await this.transcriptStore.initialize(session.sessionId, transcript);
 
     await this.recordLifecycleEvent("session_created", session.sessionId, input.metadata);
     return cloneSessionState(session);
@@ -57,7 +57,7 @@ export class AgentSessionManager {
 
   async readSession(sessionId: string): Promise<AgentSessionState> {
     const session = await this.getSessionOrThrow(sessionId);
-    const transcript = await this.historyStore.load(sessionId);
+    const transcript = await this.transcriptStore.load(sessionId);
     return cloneSessionState({
       ...session,
       transcript,
@@ -94,8 +94,8 @@ export class AgentSessionManager {
 
   async appendTranscript(sessionId: string, turns: MessageTurn[]): Promise<void> {
     const session = await this.getSessionOrThrow(sessionId);
-    await this.historyStore.append(sessionId, turns);
-    session.transcript = await this.historyStore.load(sessionId);
+    await this.transcriptStore.append(sessionId, turns);
+    session.transcript = await this.transcriptStore.load(sessionId);
     await this.writeState(session);
   }
 

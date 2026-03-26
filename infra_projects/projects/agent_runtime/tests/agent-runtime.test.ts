@@ -508,12 +508,12 @@ async function testRuntimeWritesAllTraceEventsIntoSingleRuntimeTraceFile(): Prom
     },
   });
 
-  const traceFiles = (await readdir(path.join(workdir, "dist")))
+  const traceFiles = (await readdir(path.join(workdir, ".agent_runtime")))
     .filter((fileName) => /^agent-runtime-trace-.+\.json$/.test(fileName));
   assert.equal(traceFiles.length, 1);
 
   const traceEvents = JSON.parse(
-    await readFile(path.join(workdir, "dist", traceFiles[0]!), "utf8"),
+    await readFile(path.join(workdir, ".agent_runtime", traceFiles[0]!), "utf8"),
   ) as Array<{ sessionId?: string; runId?: string; eventType?: string }>;
   const runIds = new Set(traceEvents.filter((event) => event.runId).map((event) => event.runId));
   const sessionIds = new Set(traceEvents.filter((event) => event.sessionId).map((event) => event.sessionId));

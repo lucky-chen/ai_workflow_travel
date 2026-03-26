@@ -28,7 +28,7 @@ export class PlanningPromptBuilder {
         userPrompt: {
           originalTask: input.context.request.prompt.userPrompt,
           responseFormat: input.context.request.responseFormat,
-          history: input.context.runtimeContext.history,
+          transcript: input.context.runtimeContext.transcript,
           memory: input.context.runtimeContext.memory,
           retrievalContext: input.context.runtimeContext.retrievalContext,
           availableTools,
