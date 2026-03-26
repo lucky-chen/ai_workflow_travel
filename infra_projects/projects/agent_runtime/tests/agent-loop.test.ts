@@ -19,6 +19,8 @@ import type {
 
 export async function runAgentLoopTests(): Promise<void> {
   await testDefaultAgentRunsMultipleStepsUntilCompleted();
+  await testDefaultAgentReturnsValidationFailureForInvalidPlan();
+  await testDefaultAgentReturnsValidationFailureForInvalidExecutionResult();
   await testDefaultAgentReturnsValidationFailureForInvalidObservation();
 }
 
@@ -57,6 +59,40 @@ async function testDefaultAgentReturnsValidationFailureForInvalidObservation(): 
   assert.equal(result.diagnostics?.[0]?.code, "missing_observation_issues");
 }
 
+async function testDefaultAgentReturnsValidationFailureForInvalidPlan(): Promise<void> {
+  const backend = new InvalidPlanBackend();
+  const agent = new DefaultAgent(
+    new DefaultPlanner(backend, new PlanningPromptBuilder()),
+    new PlanValidator(),
+    new DefaultExecutor(backend, undefined, new ExecutionPromptBuilder()),
+    new ExecutionResultValidator(),
+    new DefaultObserver(),
+    new ObservationValidator(),
+  );
+
+  const result = await agent.run(createAgentContext());
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.diagnostics?.[0]?.code, "missing_summary");
+}
+
+async function testDefaultAgentReturnsValidationFailureForInvalidExecutionResult(): Promise<void> {
+  const backend = new InvalidExecutionBackend();
+  const agent = new DefaultAgent(
+    new DefaultPlanner(backend, new PlanningPromptBuilder()),
+    new PlanValidator(),
+    new DefaultExecutor(backend, undefined, new ExecutionPromptBuilder()),
+    new ExecutionResultValidator(),
+    new DefaultObserver(),
+    new ObservationValidator(),
+  );
+
+  const result = await agent.run(createAgentContext());
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.diagnostics?.[0]?.code, "invalid_json_content");
+}
+
 class StepAwareModelBackend implements IModelBackend {
   async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
     if (request.mode === "planning") {
@@ -93,6 +129,48 @@ class StepAwareModelBackend implements IModelBackend {
         summary: stepGoal,
       }),
       responseFormat: request.responseFormat,
+    };
+  }
+}
+
+class InvalidPlanBackend implements IModelBackend {
+  async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
+    if (request.mode === "planning") {
+      return {
+        content: JSON.stringify({
+          mode: "direct_generation",
+          summary: "",
+          stepIndex: 1,
+          nextStepGoal: "Generate output.",
+        }),
+        responseFormat: "json",
+      };
+    }
+
+    return {
+      content: "{\"summary\":\"unused\"}",
+      responseFormat: request.responseFormat,
+    };
+  }
+}
+
+class InvalidExecutionBackend implements IModelBackend {
+  async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
+    if (request.mode === "planning") {
+      return {
+        content: JSON.stringify({
+          mode: "direct_generation",
+          summary: "Valid plan.",
+          stepIndex: 1,
+          nextStepGoal: "Generate output.",
+        }),
+        responseFormat: "json",
+      };
+    }
+
+    return {
+      content: "not-json",
+      responseFormat: "json",
     };
   }
 }
