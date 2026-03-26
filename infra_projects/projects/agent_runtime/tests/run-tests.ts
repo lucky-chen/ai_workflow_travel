@@ -5,6 +5,7 @@ import { runExecutionFlowTests } from "./execution-flow.test.js";
 import { runExecutionStrategySelectorTests } from "./execution-strategy-selector.test.js";
 import { runPlanningFlowTests } from "./planning-flow.test.js";
 import { runResultNormalizerAndMetricsTests } from "./result-normalizer-and-metrics.test.js";
+import { runRuntimeApiLifecycleTests } from "./runtime-api-lifecycle.test.js";
 import { runRuntimeMemoryAndRetrievalTests } from "./runtime-memory-and-retrieval.test.js";
 import { runSessionHistoryStoreTests } from "./session-history-store.test.js";
 import { runTraceRecorderTests } from "./trace-recorder.test.js";
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
   await runExecutionStrategySelectorTests();
   await runPlanningFlowTests();
   await runResultNormalizerAndMetricsTests();
+  await runRuntimeApiLifecycleTests();
   await runRuntimeMemoryAndRetrievalTests();
   await runSessionHistoryStoreTests();
   await runTraceRecorderTests();
