@@ -1,8 +1,10 @@
 import type {
   AgentSessionCreateInput,
   AgentSessionOpenInput,
+  AgentSessionRequest,
   AgentSessionState,
   IAgentTraceRecorder,
+  MessageTurn,
   RequestMetadata,
   SdkTraceEvent,
 } from "./agent-runtime-types.js";
@@ -59,6 +61,26 @@ export class AgentSessionManager {
     session.status = "closed";
     await this.recordLifecycleEvent("session_closed", sessionId, session.metadata);
     return true;
+  }
+
+  async attachRequest(sessionId: string, request: AgentSessionRequest): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    if (!session.initialRequest) {
+      session.initialRequest = cloneRequest(request);
+    }
+  }
+
+  async appendTranscript(sessionId: string, turns: MessageTurn[]): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    session.transcript.push(...turns.map((turn) => ({ ...turn })));
   }
 
   hasSession(sessionId: string): boolean {
@@ -127,7 +149,25 @@ function resolveTraceId(metadata?: RequestMetadata): string {
 function cloneSessionState(state: AgentSessionState): AgentSessionState {
   return {
     ...state,
+    initialRequest: state.initialRequest ? cloneRequest(state.initialRequest) : undefined,
     transcript: state.transcript.map((turn) => ({ ...turn })),
     metadata: state.metadata ? { ...state.metadata, labels: state.metadata.labels ? { ...state.metadata.labels } : undefined } : undefined,
+  };
+}
+
+function cloneRequest(request: AgentSessionRequest): AgentSessionRequest {
+  return {
+    payload: {
+      ...request.payload,
+      prompt: {
+        systemPrompt: [...request.payload.prompt.systemPrompt],
+        userPrompt: { ...request.payload.prompt.userPrompt },
+      },
+      mcpToolCalls: request.payload.mcpToolCalls?.map((toolCall) => ({
+        toolName: toolCall.toolName,
+        arguments: { ...toolCall.arguments },
+      })),
+    },
+    metadata: request.metadata ? { ...request.metadata, labels: request.metadata.labels ? { ...request.metadata.labels } : undefined } : undefined,
   };
 }

@@ -35,13 +35,27 @@ export class AgentRuntimeService implements AgentRuntime {
   }
 
   async execute(sessionId: string, request: AgentSessionRequest): Promise<AgentRuntimeResult> {
-    if (!this.sessionManager.hasSession(sessionId)) {
-      throw new Error(`Session not found: ${sessionId}`);
+    const session = await this.sessionManager.readSession(sessionId);
+    if (session.status === "closed") {
+      throw new Error(`Session is closed: ${sessionId}`);
     }
+
+    await this.sessionManager.attachRequest(sessionId, request);
+    await this.sessionManager.appendTranscript(sessionId, [
+      {
+        role: "user",
+        content: JSON.stringify(request.payload.prompt.userPrompt),
+      },
+      {
+        role: "assistant",
+        content: "Session execution is not implemented yet.",
+      },
+    ]);
 
     return {
       status: "failed",
       payload: {
+        history: session.transcript,
         summary: "Session execution is not implemented yet.",
       },
       diagnostics: [

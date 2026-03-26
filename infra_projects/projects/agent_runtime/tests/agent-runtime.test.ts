@@ -10,6 +10,7 @@ import {
 export async function runAgentRuntimeTests(): Promise<void> {
   await testCreateAgentRuntimeExposesRootApi();
   await testCreateSessionReturnsSessionHandle();
+  await testSessionHandleExecutesAgainstBoundSession();
 }
 
 async function testCreateAgentRuntimeExposesRootApi(): Promise<void> {
@@ -41,4 +42,32 @@ async function testCreateSessionReturnsSessionHandle(): Promise<void> {
   assert.equal(state.title, "task-1-session");
   assert.equal(state.status, "active");
   assert.equal(state.transcript.length, 2);
+}
+
+async function testSessionHandleExecutesAgainstBoundSession(): Promise<void> {
+  const runtime = createAgentRuntime({
+    workdir: "/tmp/agent-runtime",
+  });
+  const session = await runtime.createSession({
+    title: "task-2-session",
+  });
+
+  const result = await session.execute({
+    payload: {
+      prompt: {
+        systemPrompt: ["system"],
+        userPrompt: {
+          task: "execute through bound session",
+        },
+      },
+      responseFormat: "json",
+    },
+  });
+  const state = await session.read();
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.diagnostics?.[0]?.code, "session_execution_not_implemented");
+  assert.equal(state.initialRequest?.payload.responseFormat, "json");
+  assert.equal(state.transcript.at(-2)?.role, "user");
+  assert.equal(state.transcript.at(-1)?.role, "assistant");
 }
