@@ -7,6 +7,7 @@ import { runPlanningFlowTests } from "./planning-flow.test.js";
 import { runResultNormalizerAndMetricsTests } from "./result-normalizer-and-metrics.test.js";
 import { runRuntimeMemoryAndRetrievalTests } from "./runtime-memory-and-retrieval.test.js";
 import { runSessionHistoryStoreTests } from "./session-history-store.test.js";
+import { runTraceRecorderTests } from "./trace-recorder.test.js";
 
 async function main(): Promise<void> {
   await runAgentRuntimeTests();
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
   await runResultNormalizerAndMetricsTests();
   await runRuntimeMemoryAndRetrievalTests();
   await runSessionHistoryStoreTests();
+  await runTraceRecorderTests();
   process.stdout.write("All tests passed.\n");
 }
 
