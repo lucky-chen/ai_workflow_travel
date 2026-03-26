@@ -1,3 +1,7 @@
+import { ContextAssembler } from "../context/context-assembler.js";
+import { DefaultRetrievalProvider } from "../context/default-retrieval-provider.js";
+import { RuntimeMemoryStore } from "../context/runtime-memory-store.js";
+import { SessionHistoryStore } from "../context/session-history-store.js";
 import {
   AgentSessionManager,
 } from "./agent-session-manager.js";
@@ -15,9 +19,20 @@ import type {
 
 export class AgentRuntimeService implements AgentRuntime {
   private readonly sessionManager: AgentSessionManager;
+  private readonly historyStore: SessionHistoryStore;
+  private readonly memoryStore: RuntimeMemoryStore;
+  private readonly contextAssembler: ContextAssembler;
 
   constructor(private readonly dependencies: AgentRuntimeDependencies) {
-    this.sessionManager = new AgentSessionManager(dependencies.traceRecorder);
+    this.historyStore = new SessionHistoryStore();
+    this.memoryStore = new RuntimeMemoryStore();
+    this.sessionManager = new AgentSessionManager(dependencies.traceRecorder, this.historyStore);
+    this.contextAssembler = new ContextAssembler(
+      this.historyStore,
+      this.memoryStore,
+      new DefaultRetrievalProvider(),
+      dependencies.workdir,
+    );
   }
 
   async createSession(input: AgentSessionCreateInput): Promise<AgentSession> {
@@ -41,6 +56,7 @@ export class AgentRuntimeService implements AgentRuntime {
     }
 
     await this.sessionManager.attachRequest(sessionId, request);
+    const context = await this.contextAssembler.assemble(session, request);
     await this.sessionManager.appendTranscript(sessionId, [
       {
         role: "user",
@@ -55,7 +71,9 @@ export class AgentRuntimeService implements AgentRuntime {
     return {
       status: "failed",
       payload: {
-        history: session.transcript,
+        history: context.runtimeContext.history,
+        memory: context.runtimeContext.memory,
+        retrievalContext: context.runtimeContext.retrievalContext,
         summary: "Session execution is not implemented yet.",
       },
       diagnostics: [
