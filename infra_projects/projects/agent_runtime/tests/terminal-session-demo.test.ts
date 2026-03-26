@@ -26,7 +26,7 @@ async function testTerminalSessionDemoRunsInteractionFlow(): Promise<void> {
 
   assert.equal(outputs.length, 1);
   assert.equal(result.closed, true);
-  assert.equal(await runtime.closeSession(result.sessionId), false);
+  assert.equal((await runtime.closeSession(result.sessionId)).closed, false);
 }
 
 async function testTerminalSessionDemoClosesSessionOnExit(): Promise<void> {
@@ -41,7 +41,7 @@ async function testTerminalSessionDemoClosesSessionOnExit(): Promise<void> {
   });
 
   assert.equal(result.closed, true);
-  assert.equal(await runtime.closeSession(result.sessionId), false);
+  assert.equal((await runtime.closeSession(result.sessionId)).closed, false);
 }
 
 async function testTerminalSessionDemoReopensExistingSessionBeforeClose(): Promise<void> {

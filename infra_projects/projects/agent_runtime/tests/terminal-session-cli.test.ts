@@ -123,7 +123,11 @@ async function testTerminalSessionCliLoadsRealProviderConfigFromLocalEnv(): Prom
           throw new Error("not used");
         },
         async closeSession() {
-          return true;
+          return {
+            sessionId: "session-cli",
+            closed: true,
+            usageSummary: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          };
         },
       };
     },
@@ -178,7 +182,11 @@ async function testTerminalSessionCliPrintsChatJsonAnswerAsPlainText(): Promise<
         throw new Error("not used");
       },
       async closeSession() {
-        return true;
+        return {
+          sessionId: "session-cli-json",
+          closed: true,
+          usageSummary: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        };
       },
     }),
   });
@@ -222,7 +230,11 @@ async function testTerminalSessionCliLoadsRealProviderConfigFromFixtureLocalEnv(
           throw new Error("not used");
         },
         async closeSession() {
-          return true;
+          return {
+            sessionId: "session-cli-fixture",
+            closed: true,
+            usageSummary: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          };
         },
       };
     },
@@ -280,7 +292,11 @@ async function testTerminalSessionCliWritesTraceToWorkdirDist(): Promise<void> {
           throw new Error("not used");
         },
         async closeSession() {
-          return true;
+          return {
+            sessionId: "session-cli-trace",
+            closed: true,
+            usageSummary: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          };
         },
       };
     },

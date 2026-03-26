@@ -37,6 +37,7 @@ export async function runTerminalSessionCli(
   }
 
   let closeReadline: (() => void) | undefined;
+  let flushTrace: (() => Promise<void>) | undefined;
   const readInput = options.readInput ?? (() => {
     const rl = createInterface({
       input: processInput,
@@ -49,13 +50,15 @@ export async function runTerminalSessionCli(
   try {
     const traceFileId = createRuntimeTraceFileId();
     const tracePath = resolveRuntimeTracePath(parsed.workdir, traceFileId);
+    const traceRecorder = new FileAgentTraceRecorder(tracePath);
     const runtime = (options.createRuntime ?? createAgentRuntime)({
       workdir: parsed.workdir,
       traceFileId,
       mode: "real",
       realProvider: await loadRequiredRealProviderConfig(parsed.workdir),
-      traceRecorder: new FileAgentTraceRecorder(tracePath),
+      traceRecorder,
     });
+    flushTrace = async () => traceRecorder.flush();
     let session = await openInitialSession(runtime, parsed.sessionId);
     await writeLine(`Trace file: ${tracePath}`);
     await writeLine(`Session ready: ${(await session.read()).sessionId}`);
@@ -64,8 +67,11 @@ export async function runTerminalSessionCli(
       const input = await readInput();
       if (input === null || input.trim().toLowerCase() === "exit") {
         const sessionState = await session.read();
-        const closed = await runtime.closeSession(sessionState.sessionId);
-        await writeLine(`Session closed: ${sessionState.sessionId} (${closed ? "closed" : "already-closed"})`);
+        const closeResult = await runtime.closeSession(sessionState.sessionId);
+        await writeLine(
+          `Session closed: ${sessionState.sessionId} (${closeResult.closed ? "closed" : "already-closed"}) `
+          + `[tokens in=${closeResult.usageSummary.inputTokens} out=${closeResult.usageSummary.outputTokens} total=${closeResult.usageSummary.totalTokens}]`,
+        );
         break;
       }
 
@@ -104,6 +110,7 @@ export async function runTerminalSessionCli(
     await writeError(message);
     return 1;
   } finally {
+    await flushTrace?.();
     closeReadline?.();
   }
 }

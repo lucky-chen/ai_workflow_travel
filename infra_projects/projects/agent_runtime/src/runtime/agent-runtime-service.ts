@@ -21,8 +21,10 @@ import { DefaultPlanner } from "./default-planner.js";
 import { RuntimeMetricsCollector } from "./runtime-metrics-collector.js";
 import { RuntimeAgentSession } from "./runtime-agent-session.js";
 import { createRuntimeTraceFileId, resolveRuntimeTracePath } from "./runtime-storage-paths.js";
+import { createEmptyTokenUsageSummary } from "./agent-runtime-types.js";
 import type {
   AgentRuntime,
+  CloseSessionResult,
   AgentRuntimeDependencies,
   AgentRuntimeResult,
   AgentContext,
@@ -67,7 +69,7 @@ export class AgentRuntimeService implements AgentRuntime {
     return new RuntimeAgentSession(this, session.sessionId);
   }
 
-  closeSession(sessionId: string): Promise<boolean> {
+  closeSession(sessionId: string): Promise<CloseSessionResult> {
     return this.closeSessionWithSummary(sessionId);
   }
 
@@ -146,7 +148,7 @@ export class AgentRuntimeService implements AgentRuntime {
     });
   }
 
-  private async closeSessionWithSummary(sessionId: string): Promise<boolean> {
+  private async closeSessionWithSummary(sessionId: string): Promise<CloseSessionResult> {
     const session = await this.sessionManager.readSession(sessionId).catch((error: unknown) => {
       if (error instanceof Error && error.message.startsWith("Session not found:")) {
         return undefined;
@@ -154,13 +156,24 @@ export class AgentRuntimeService implements AgentRuntime {
       throw error;
     });
     if (!session) {
-      return false;
+      return {
+        sessionId,
+        closed: false,
+        usageSummary: this.traceRecorder.summarizeSessionUsage?.(sessionId) ?? createEmptyTokenUsageSummary(),
+      };
     }
 
     const closedMemorySummary = session.lastMemoryScope
       ? await this.memoryStore.load(session.lastMemoryScope)
       : undefined;
-    return this.sessionManager.closeSession(sessionId, closedMemorySummary);
+    const usageSummary = this.traceRecorder.summarizeSessionUsage?.(sessionId) ?? createEmptyTokenUsageSummary();
+    const closed = await this.sessionManager.closeSession(sessionId, closedMemorySummary, usageSummary);
+    await this.traceRecorder.flush?.();
+    return {
+      sessionId,
+      closed,
+      usageSummary,
+    };
   }
 
   private async writeExecutionOutputs(

@@ -18,6 +18,7 @@ export async function runAgentRuntimeTests(): Promise<void> {
   await testSessionHandleExecutesAgainstBoundSession();
   await testOpenSessionReturnsExistingSessionHandle();
   await testCloseSessionLifecycleSemantics();
+  await testCloseSessionReturnsUsageSummary();
   await testRuntimePersistsSessionStateAndTranscript();
   await testRuntimeMarksSessionFailedWhenExecutionFails();
   await testRuntimeWritesToolTurnsAndMemorySummary();
@@ -124,9 +125,9 @@ async function testCloseSessionLifecycleSemantics(): Promise<void> {
   });
   const state = await session.read();
 
-  assert.equal(await runtime.closeSession(state.sessionId), true);
-  assert.equal(await runtime.closeSession(state.sessionId), false);
-  assert.equal(await runtime.closeSession("missing-session"), false);
+  assert.equal((await runtime.closeSession(state.sessionId)).closed, true);
+  assert.equal((await runtime.closeSession(state.sessionId)).closed, false);
+  assert.equal((await runtime.closeSession("missing-session")).closed, false);
 
   await assert.rejects(
     () =>
@@ -143,6 +144,99 @@ async function testCloseSessionLifecycleSemantics(): Promise<void> {
       }),
     /Session is closed/,
   );
+}
+
+async function testCloseSessionReturnsUsageSummary(): Promise<void> {
+  const workdir = await createTestWorkdir();
+  const runtime = createAgentRuntime({
+    workdir,
+    mode: "real",
+    realProvider: {
+      provider: "openai",
+      apiKey: "test-key",
+      model: "gpt-test",
+      fetchFn: async (_url, init) => {
+        const body = String(init.body ?? "");
+        const responseBody = body.includes("planning component inside AgentRuntime")
+          ? {
+              usage: {
+                prompt_tokens: 11,
+                completion_tokens: 7,
+                total_tokens: 18,
+              },
+              choices: [
+                {
+                  finish_reason: "stop",
+                  message: {
+                    content: JSON.stringify({
+                      intent: "chat",
+                      mode: "direct_generation",
+                      summary: "close usage plan",
+                      stepIndex: 1,
+                      nextStepGoal: "answer",
+                      completed: true,
+                      stopReason: "completed",
+                    }),
+                  },
+                },
+              ],
+            }
+          : {
+              usage: {
+                prompt_tokens: 13,
+                completion_tokens: 5,
+                total_tokens: 18,
+              },
+              choices: [
+                {
+                  finish_reason: "stop",
+                  message: {
+                    content: "{\"answer\":\"usage result\"}",
+                  },
+                },
+              ],
+            };
+
+        return {
+          ok: true,
+          status: 200,
+          async text() {
+            return JSON.stringify(responseBody);
+          },
+          async json() {
+            return responseBody;
+          },
+        };
+      },
+    },
+  });
+  const session = await runtime.createSession({});
+  const state = await session.read();
+
+  await session.execute({
+    payload: {
+      prompt: {
+        systemPrompt: ["system"],
+        userPrompt: {
+          task: "close usage summary",
+        },
+      },
+      responseFormat: "json",
+    },
+  });
+
+  const closeResult = await runtime.closeSession(state.sessionId);
+  const persistedState = JSON.parse(
+    await readFile(resolveSessionStatePath(workdir, state.sessionId), "utf8"),
+  ) as { usageSummary?: { inputTokens?: number; outputTokens?: number; totalTokens?: number } };
+
+  assert.equal(closeResult.closed, true);
+  assert.deepEqual(closeResult.usageSummary, {
+    inputTokens: 24,
+    outputTokens: 12,
+    totalTokens: 36,
+  });
+  assert.deepEqual(persistedState.usageSummary, closeResult.usageSummary);
 }
 
 async function testRuntimePersistsSessionStateAndTranscript(): Promise<void> {

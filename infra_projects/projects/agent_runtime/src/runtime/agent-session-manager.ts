@@ -12,6 +12,7 @@ import type {
   MessageTurn,
   RequestMetadata,
   SdkTraceEvent,
+  TokenUsageSummary,
 } from "./agent-runtime-types.js";
 import { resolveSessionStatePath } from "./runtime-storage-paths.js";
 
@@ -63,7 +64,11 @@ export class AgentSessionManager {
     });
   }
 
-  async closeSession(sessionId: string, closedMemorySummary?: MemoryEntry[]): Promise<boolean> {
+  async closeSession(
+    sessionId: string,
+    closedMemorySummary?: MemoryEntry[],
+    usageSummary?: TokenUsageSummary,
+  ): Promise<boolean> {
     const session = await this.tryGetSession(sessionId);
     if (!session || session.status === "closed") {
       return false;
@@ -71,6 +76,7 @@ export class AgentSessionManager {
 
     session.status = "closed";
     session.closedMemorySummary = closedMemorySummary?.map((entry) => ({ ...entry })) ?? session.closedMemorySummary;
+    session.usageSummary = usageSummary ?? session.usageSummary;
     await this.writeState(session);
     await this.recordLifecycleEvent("session_closed", sessionId, session.metadata);
     return true;
@@ -178,6 +184,7 @@ export class AgentSessionManager {
       initialRequest: session.initialRequest ? cloneRequest(session.initialRequest) : undefined,
       lastMemoryScope: session.lastMemoryScope,
       closedMemorySummary: session.closedMemorySummary?.map((entry) => ({ ...entry })),
+      usageSummary: session.usageSummary ? { ...session.usageSummary } : undefined,
       metadata: session.metadata ? { ...session.metadata, labels: session.metadata.labels ? { ...session.metadata.labels } : undefined } : undefined,
     };
     await mkdir(path.dirname(statePath), { recursive: true });
@@ -216,6 +223,7 @@ function cloneSessionState(state: AgentSessionState): AgentSessionState {
     initialRequest: state.initialRequest ? cloneRequest(state.initialRequest) : undefined,
     lastMemoryScope: state.lastMemoryScope,
     closedMemorySummary: state.closedMemorySummary?.map((entry) => ({ ...entry })),
+    usageSummary: state.usageSummary ? { ...state.usageSummary } : undefined,
     transcript: state.transcript.map((turn) => ({ ...turn })),
     metadata: state.metadata ? { ...state.metadata, labels: state.metadata.labels ? { ...state.metadata.labels } : undefined } : undefined,
   };

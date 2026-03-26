@@ -23,8 +23,8 @@ async function testRuntimeApiLifecycleEndToEnd(): Promise<void> {
   const reopenedState = await reopened.read();
 
   assert.equal(reopenedState.sessionId, createdState.sessionId);
-  assert.equal(await runtime.closeSession(createdState.sessionId), true);
-  assert.equal(await runtime.closeSession(createdState.sessionId), false);
+  assert.equal((await runtime.closeSession(createdState.sessionId)).closed, true);
+  assert.equal((await runtime.closeSession(createdState.sessionId)).closed, false);
 
   const reopenedRuntime = createAgentRuntime({
     workdir,

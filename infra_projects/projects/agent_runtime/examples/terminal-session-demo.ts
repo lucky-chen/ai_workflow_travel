@@ -33,10 +33,10 @@ export async function runTerminalSessionDemo(
   await runInteractionLoop(session, options.readInput, options.writeOutput);
 
   const state = await session.read();
-  const closed = await runtime.closeSession(state.sessionId);
+  const closeResult = await runtime.closeSession(state.sessionId);
   return {
     sessionId: state.sessionId,
-    closed,
+    closed: closeResult.closed,
   };
 }
 

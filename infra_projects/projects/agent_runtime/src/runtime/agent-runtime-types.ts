@@ -60,6 +60,7 @@ export interface AgentSessionState {
   initialRequest?: AgentSessionRequest;
   lastMemoryScope?: string;
   closedMemorySummary?: MemoryEntry[];
+  usageSummary?: TokenUsageSummary;
   transcript: MessageTurn[];
   metadata?: RequestMetadata;
 }
@@ -205,6 +206,20 @@ export interface RuntimeMetrics {
   outputTokens?: number;
 }
 
+export interface TokenUsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+export function createEmptyTokenUsageSummary(): TokenUsageSummary {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+  };
+}
+
 export interface AgentRuntimeResult {
   status: "success" | "failed";
   payload: {
@@ -300,7 +315,7 @@ export interface AgentRuntimeDependencies {
 export interface AgentRuntime {
   createSession(input: AgentSessionCreateInput): Promise<AgentSession>;
   openSession(input: AgentSessionOpenInput): Promise<AgentSession>;
-  closeSession(sessionId: string): Promise<boolean>;
+  closeSession(sessionId: string): Promise<CloseSessionResult>;
 }
 
 export interface AgentSession {
@@ -310,6 +325,14 @@ export interface AgentSession {
 
 export interface IAgentTraceRecorder {
   record(event: AgentTraceEvent): Promise<void>;
+  flush?(): Promise<void>;
+  summarizeSessionUsage?(sessionId: string): TokenUsageSummary;
+}
+
+export interface CloseSessionResult {
+  sessionId: string;
+  closed: boolean;
+  usageSummary: TokenUsageSummary;
 }
 
 export interface IModelBackend {
