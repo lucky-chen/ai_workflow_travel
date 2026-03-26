@@ -1,19 +1,47 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import type { MessageTurn } from "../runtime/agent-runtime-types.js";
+import { resolveSessionTranscriptPath } from "../runtime/runtime-storage-paths.js";
 
 export class SessionHistoryStore {
-  private readonly histories = new Map<string, MessageTurn[]>();
+  constructor(private readonly workdir: string) {}
 
   async initialize(sessionId: string, transcript: MessageTurn[]): Promise<void> {
-    this.histories.set(sessionId, transcript.map((turn) => ({ ...turn })));
+    await this.writeTranscript(sessionId, transcript);
   }
 
   async load(sessionId: string): Promise<MessageTurn[]> {
-    return (this.histories.get(sessionId) ?? []).map((turn) => ({ ...turn }));
+    const transcriptPath = this.resolvePath(sessionId);
+    let raw: string;
+
+    try {
+      raw = await readFile(transcriptPath, "utf8");
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+
+    const parsed = JSON.parse(raw) as MessageTurn[];
+    return parsed.map((turn) => ({ ...turn }));
   }
 
   async append(sessionId: string, turns: MessageTurn[]): Promise<void> {
-    const history = this.histories.get(sessionId) ?? [];
+    const history = await this.load(sessionId);
     history.push(...turns.map((turn) => ({ ...turn })));
-    this.histories.set(sessionId, history);
+    await this.writeTranscript(sessionId, history);
+  }
+
+  resolvePath(sessionId: string): string {
+    return resolveSessionTranscriptPath(this.workdir, sessionId);
+  }
+
+  private async writeTranscript(sessionId: string, transcript: MessageTurn[]): Promise<void> {
+    const transcriptPath = this.resolvePath(sessionId);
+    await mkdir(path.dirname(transcriptPath), { recursive: true });
+    await writeFile(transcriptPath, `${JSON.stringify(transcript, null, 2)}\n`, "utf8");
   }
 }

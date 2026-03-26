@@ -15,4 +15,8 @@ export class McpToolRegistry {
   resolve(toolName: string): IMcpToolHandler | undefined {
     return this.handlers.get(toolName);
   }
+
+  listToolNames(): string[] {
+    return [...this.handlers.keys()];
+  }
 }

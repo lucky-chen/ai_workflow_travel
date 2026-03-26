@@ -6,6 +6,7 @@ import type { FetchLike } from "../src/model/http-json-client.js";
 export async function runExecutionStrategySelectorTests(): Promise<void> {
   await testExecutionStrategySelectorDefaultsToMock();
   await testExecutionStrategySelectorChoosesRealProvider();
+  await testExecutionStrategySelectorClassifiesProviderTimeout();
 }
 
 async function testExecutionStrategySelectorDefaultsToMock(): Promise<void> {
@@ -56,6 +57,33 @@ async function testExecutionStrategySelectorChoosesRealProvider(): Promise<void>
     responseFormat: "text",
   });
   assert.equal(result.content, "selected deepseek");
+}
+
+async function testExecutionStrategySelectorClassifiesProviderTimeout(): Promise<void> {
+  const selector = new ExecutionStrategySelector();
+  const strategy = selector.select({
+    mode: "real",
+    realProvider: {
+      provider: "openai",
+      apiKey: "openai-key",
+      model: "gpt-4.1-mini",
+      fetchFn: async () => {
+        throw new Error("Request aborted.");
+      },
+    },
+  });
+
+  await assert.rejects(
+    () => strategy.executor.execute({
+      mode: "execution",
+      prompt: {
+        systemPrompt: ["system"],
+        userPrompt: { input: "user" },
+      },
+      responseFormat: "text",
+    }),
+    /Request aborted/,
+  );
 }
 
 function createMockFetch(responseBody: unknown, status = 200): FetchLike {

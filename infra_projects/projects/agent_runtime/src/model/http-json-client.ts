@@ -37,6 +37,30 @@ export class HttpJsonClient {
         : undefined;
 
     try {
+      const detail = await this.postJsonDetailed<TRequest, TResponse>(url, options);
+      return detail.data;
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  }
+
+  async postJsonDetailed<TRequest, TResponse>(
+    url: string,
+    options: {
+      headers: Record<string, string>;
+      body: TRequest;
+      timeoutMs?: number;
+    },
+  ): Promise<{ status: number; rawText: string; data: TResponse }> {
+    const controller = typeof AbortController === "undefined" ? undefined : new AbortController();
+    const timeoutId =
+      controller && options.timeoutMs
+        ? setTimeout(() => controller.abort(), options.timeoutMs)
+        : undefined;
+
+    try {
       const response = await this.getFetch()(url, {
         method: "POST",
         headers: {
@@ -47,12 +71,16 @@ export class HttpJsonClient {
         ...(controller ? { signal: controller.signal } : {}),
       });
 
+      const rawText = await response.text();
       if (!response.ok) {
-        const responseText = await response.text();
-        throw new Error(`HTTP request failed with status ${response.status}: ${responseText}`);
+        throw new Error(`HTTP request failed with status ${response.status}: ${rawText}`);
       }
 
-      return await response.json() as TResponse;
+      return {
+        status: response.status,
+        rawText,
+        data: JSON.parse(rawText) as TResponse,
+      };
     } finally {
       if (timeoutId) {
         clearTimeout(timeoutId);

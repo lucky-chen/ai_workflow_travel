@@ -2,6 +2,7 @@ import type { AgentTraceEvent, SessionRunTraceEvent, ValidationIssue } from "./a
 import type {
   ExecutionPlan,
   ExecutionResult,
+  ModelTraceFacts,
   McpToolResult,
   ObservationResult,
 } from "./agent-runtime-types.js";
@@ -12,6 +13,7 @@ function createSessionEvent(
   eventType: SessionRunTraceEvent["eventType"],
   caller: string,
   summary: string,
+  stepIndex?: number,
   payload?: Record<string, unknown>,
   diagnostics?: ValidationIssue[],
 ): SessionRunTraceEvent {
@@ -23,6 +25,7 @@ function createSessionEvent(
     timestamp: new Date().toISOString(),
     eventType,
     caller,
+    ...(stepIndex !== undefined ? { stepIndex } : {}),
     summary,
     payload,
     ...(diagnostics ? { diagnostics } : {}),
@@ -33,29 +36,88 @@ export function buildRunStartedEvent(sessionId: string, runId: string): AgentTra
   return createSessionEvent(sessionId, runId, "run_started", "DefaultAgent.run", "Runtime run started.");
 }
 
+export function buildPlanStartedEvent(sessionId: string, runId: string, stepIndex: number): AgentTraceEvent {
+  return createSessionEvent(sessionId, runId, "plan_started", "DefaultAgent.run", "Planning started.", stepIndex, {
+    stepIndex,
+  });
+}
+
 export function buildPlanGeneratedEvent(sessionId: string, runId: string, plan: ExecutionPlan): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "plan_generated", "DefaultPlanner.plan", "Execution plan generated.", {
-    mode: plan.mode,
-    stepIndex: plan.stepIndex,
-  });
+  return createSessionEvent(
+    sessionId,
+    runId,
+    "plan_generated",
+    "DefaultPlanner.plan",
+    "Execution plan generated.",
+    plan.stepIndex,
+    {
+      mode: plan.mode,
+      intent: plan.intent,
+      stepIndex: plan.stepIndex,
+      nextStepGoal: plan.nextStepGoal,
+      toolNames: plan.toolSteps?.map((toolStep) => toolStep.toolName) ?? [],
+      ...buildModelTracePayload(plan.traceFacts),
+    },
+  );
 }
 
-export function buildToolCalledEvent(sessionId: string, runId: string, toolResult: McpToolResult): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "tool_called", "DefaultExecutor.execute", `Tool called: ${toolResult.toolName}.`, {
-    toolName: toolResult.toolName,
-  });
+export function buildExecuteStartedEvent(sessionId: string, runId: string, plan: ExecutionPlan): AgentTraceEvent {
+  return createSessionEvent(
+    sessionId,
+    runId,
+    "execute_started",
+    "DefaultAgent.run",
+    "Execution started.",
+    plan.stepIndex,
+    {
+      stepIndex: plan.stepIndex,
+      intent: plan.intent,
+      mode: plan.mode,
+      nextStepGoal: plan.nextStepGoal,
+      toolNames: plan.toolSteps?.map((toolStep) => toolStep.toolName) ?? [],
+      planningRequestType: plan.traceFacts?.requestType,
+      planningProvider: plan.traceFacts?.provider,
+      planningModel: plan.traceFacts?.model,
+    },
+  );
 }
 
-export function buildToolResultRecordedEvent(sessionId: string, runId: string, toolResult: McpToolResult): AgentTraceEvent {
+export function buildToolCalledEvent(
+  sessionId: string,
+  runId: string,
+  stepIndex: number,
+  toolResult: McpToolResult,
+): AgentTraceEvent {
+  return createSessionEvent(
+    sessionId,
+    runId,
+    "tool_called",
+    "DefaultExecutor.execute",
+    `Tool called: ${toolResult.toolName}.`,
+    stepIndex,
+    {
+      toolName: toolResult.toolName,
+    },
+  );
+}
+
+export function buildToolResultRecordedEvent(
+  sessionId: string,
+  runId: string,
+  stepIndex: number,
+  toolResult: McpToolResult,
+): AgentTraceEvent {
   return createSessionEvent(
     sessionId,
     runId,
     "tool_result_recorded",
     "DefaultExecutor.execute",
     `Tool result recorded: ${toolResult.toolName}.`,
+    stepIndex,
     {
       toolName: toolResult.toolName,
       success: toolResult.success,
+      toolResultPreview: createContentPreview(toolResult.content),
     },
   );
 }
@@ -63,6 +125,7 @@ export function buildToolResultRecordedEvent(sessionId: string, runId: string, t
 export function buildExecutionFinishedEvent(
   sessionId: string,
   runId: string,
+  stepIndex: number,
   executionResult: ExecutionResult,
 ): AgentTraceEvent {
   return createSessionEvent(
@@ -71,9 +134,33 @@ export function buildExecutionFinishedEvent(
     "execution_finished",
     "DefaultExecutor.execute",
     "Execution finished.",
+    stepIndex,
     {
       responseFormat: executionResult.responseFormat,
       toolResultCount: executionResult.toolResults?.length ?? 0,
+      ...buildModelTracePayload(executionResult.traceFacts),
+    },
+  );
+}
+
+export function buildObserveStartedEvent(
+  sessionId: string,
+  runId: string,
+  plan: ExecutionPlan,
+  executionResult: ExecutionResult,
+): AgentTraceEvent {
+  return createSessionEvent(
+    sessionId,
+    runId,
+    "observe_started",
+    "DefaultAgent.run",
+    "Observation started.",
+    plan.stepIndex,
+    {
+      stepIndex: plan.stepIndex,
+      responseFormat: executionResult.responseFormat,
+      toolResultCount: executionResult.toolResults?.length ?? 0,
+      executionContentPreview: createContentPreview(executionResult.content),
     },
   );
 }
@@ -81,6 +168,7 @@ export function buildExecutionFinishedEvent(
 export function buildObservationFinishedEvent(
   sessionId: string,
   runId: string,
+  stepIndex: number,
   observation: ObservationResult,
 ): AgentTraceEvent {
   return createSessionEvent(
@@ -89,9 +177,11 @@ export function buildObservationFinishedEvent(
     "observation_finished",
     "DefaultObserver.observe",
     "Observation finished.",
+    stepIndex,
     {
       accepted: observation.accepted,
       completed: observation.completed ?? false,
+      observationSummaryPreview: createContentPreview(observation.summary),
     },
   );
 }
@@ -100,16 +190,37 @@ export function buildRunFinishedEvent(
   sessionId: string,
   runId: string,
   observation: ObservationResult,
+  stepIndex?: number,
 ): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "run_finished", "DefaultAgent.run", "Runtime run finished.", {
+  return createSessionEvent(sessionId, runId, "run_finished", "DefaultAgent.run", "Runtime run finished.", stepIndex, {
     accepted: observation.accepted,
     completed: observation.completed ?? false,
+    stopReason: observation.completed ? "completed" : "continue",
+    observationSummaryPreview: createContentPreview(observation.summary),
+  });
+}
+
+export function buildRunFailedEvent(
+  sessionId: string,
+  runId: string,
+  summary: string,
+  stopReason: "failed" | "max_steps",
+  stepIndex?: number,
+): AgentTraceEvent {
+  return createSessionEvent(sessionId, runId, "run_finished", "DefaultAgent.run", "Runtime run finished.", stepIndex, {
+    accepted: false,
+    completed: false,
+    summary,
+    stopReason,
   });
 }
 
 export function buildValidationFailedEvent(
   sessionId: string,
   runId: string,
+  stepIndex: number,
+  phase: "plan" | "execution" | "observation",
+  action: "repair" | "replan" | "fail",
   diagnostics: ValidationIssue[],
 ): AgentTraceEvent {
   return createSessionEvent(
@@ -118,7 +229,42 @@ export function buildValidationFailedEvent(
     "validation_failed",
     "DefaultAgent.run",
     "Validation failed.",
-    undefined,
+    stepIndex,
+    {
+      phase,
+      action,
+      stepIndex,
+    },
     diagnostics,
   );
+}
+
+function buildModelTracePayload(traceFacts?: ModelTraceFacts): Record<string, unknown> {
+  if (!traceFacts) {
+    return {};
+  }
+
+  return {
+    requestType: traceFacts.requestType,
+    provider: traceFacts.provider,
+    model: traceFacts.model,
+    timeoutMs: traceFacts.timeoutMs,
+    httpStatus: traceFacts.httpStatus,
+    responseFormat: traceFacts.responseFormat,
+    finishReason: traceFacts.finishReason,
+    usage: traceFacts.usage,
+    responseShape: traceFacts.responseShape,
+    systemPromptPreview: traceFacts.systemPromptPreview,
+    userPromptPreview: traceFacts.userPromptPreview,
+    requestBodyPreview: traceFacts.requestBodyPreview,
+    rawResponsePreview: traceFacts.rawResponsePreview,
+    parsedContentPreview: traceFacts.parsedContentPreview,
+  };
+}
+
+function createContentPreview(content: string): { text: string; truncated: boolean } {
+  return {
+    text: content.slice(0, 400),
+    truncated: content.length > 400,
+  };
 }

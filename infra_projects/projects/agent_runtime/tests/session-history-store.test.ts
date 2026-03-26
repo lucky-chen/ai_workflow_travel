@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 
 import { SessionHistoryStore } from "../src/context/session-history-store.js";
+import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runSessionHistoryStoreTests(): Promise<void> {
   await testSessionHistoryStoreLoadsAndAppendsTranscript();
 }
 
 async function testSessionHistoryStoreLoadsAndAppendsTranscript(): Promise<void> {
-  const store = new SessionHistoryStore();
+  const store = new SessionHistoryStore(await createTestWorkdir());
 
   await store.initialize("session-1", [
     {

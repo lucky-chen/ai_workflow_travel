@@ -18,6 +18,10 @@ export class DefaultMcpGateway implements IMcpGateway {
 
     return handler.call(request);
   }
+
+  listToolNames(): string[] {
+    return this.registry.listToolNames();
+  }
 }
 
 function createDefaultRegistry(): McpToolRegistry {

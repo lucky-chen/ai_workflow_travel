@@ -17,6 +17,8 @@ export async function runExecutionFlowTests(): Promise<void> {
   await testExecutionPromptBuilderBuildsExecutionRequest();
   await testDefaultExecutorUsesPromptBuilderAndToolGateway();
   await testExecutionResultValidatorRejectsInvalidJson();
+  await testExecutionResultValidatorRejectsInvalidChatJsonAnswer();
+  await testExecutionResultValidatorRejectsInvalidTaskJsonSummary();
 }
 
 async function testExecutionPromptBuilderBuildsExecutionRequest(): Promise<void> {
@@ -24,6 +26,7 @@ async function testExecutionPromptBuilderBuildsExecutionRequest(): Promise<void>
   const request = builder.build({
     context: createAgentContext(),
     plan: {
+      intent: "chat",
       mode: "direct_generation",
       summary: "summary",
       stepIndex: 1,
@@ -33,6 +36,13 @@ async function testExecutionPromptBuilderBuildsExecutionRequest(): Promise<void>
 
   assert.equal(request.mode, "execution");
   assert.equal(request.prompt.userPrompt.nextStepGoal, "Generate output.");
+  assert.equal(request.prompt.userPrompt.intent, "chat");
+  assert.deepEqual(request.prompt.userPrompt.outputContract, {
+    type: "json_object",
+    schema: {
+      answer: "string",
+    },
+  });
 }
 
 async function testDefaultExecutorUsesPromptBuilderAndToolGateway(): Promise<void> {
@@ -44,6 +54,7 @@ async function testDefaultExecutorUsesPromptBuilderAndToolGateway(): Promise<voi
   const executor = new DefaultExecutor(backend, gateway);
 
   const result = await executor.execute(createAgentContext(), {
+    intent: "task",
     mode: "tool_augmented_generation",
     summary: "summary",
     stepIndex: 1,
@@ -76,6 +87,38 @@ async function testExecutionResultValidatorRejectsInvalidJson(): Promise<void> {
 
   assert.equal(validation.ok, false);
   assert.equal(validation.issues?.[0]?.code, "invalid_json_content");
+}
+
+async function testExecutionResultValidatorRejectsInvalidChatJsonAnswer(): Promise<void> {
+  const validator = new ExecutionResultValidator();
+
+  const validation = validator.validate(
+    {
+      content: "{\"summary\":\"not-answer\"}",
+      responseFormat: "json",
+    },
+    "json",
+    "chat",
+  );
+
+  assert.equal(validation.ok, false);
+  assert.equal(validation.issues?.some((issue) => issue.code === "invalid_chat_json_answer"), true);
+}
+
+async function testExecutionResultValidatorRejectsInvalidTaskJsonSummary(): Promise<void> {
+  const validator = new ExecutionResultValidator();
+
+  const validation = validator.validate(
+    {
+      content: "{\"result\":{\"ok\":true}}",
+      responseFormat: "json",
+    },
+    "json",
+    "task",
+  );
+
+  assert.equal(validation.ok, false);
+  assert.equal(validation.issues?.some((issue) => issue.code === "invalid_task_json_summary"), true);
 }
 
 class TestModelBackend implements IModelBackend {

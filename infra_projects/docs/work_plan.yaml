@@ -1674,8 +1674,75 @@ milestones:
                   - infra_projects/projects/agent_runtime/examples
                   - infra_projects/projects/agent_runtime/package.json
                   - infra_projects/docs/breakdown_docs/agent_runtime_design.md
+          - batch_id: batch_19_7_agent_runtime_availability_hardening_implementation
+            batch_type: implementation
+            name: implementation
+            goal: harden agent runtime prompt contracts exception handling and observability so real-llm execution is more usable under normal and abnormal provider responses
+            status: pending
+            covers:
+              - prompt_building
+              - validation_chain
+              - result_normalization
+              - trace_metrics_boundary
+            tasks:
+              - task_name: harden planning and execution prompt contracts
+                summary: tighten planning output contracts and execution response contracts so chat json and task json paths are explicit stable and easier to validate under real-llm execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/docs/breakdown_docs/agent_runtime_design.md
+              - task_name: classify provider abnormal responses and runtime stop behavior
+                summary: define stable handling for provider timeout transport error empty response malformed output and contract violations so runtime failures are categorized and closed consistently
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/model
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/docs/breakdown_docs/agent_runtime_design.md
+              - task_name: enrich trace diagnostics for runtime troubleshooting
+                summary: expand trace and result diagnostics so DefaultAgent.run records factual in-process trace events at each plan execute and observe step instead of only appending post-step summary events and so prompt-shape issues provider-response issues validation failures and final stop reasons can be distinguished directly from runtime outputs
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/docs/breakdown_docs/agent_runtime_design.md
+          - batch_id: batch_19_8_agent_runtime_real_llm_availability_verification
+            batch_type: verification
+            name: verification
+            goal: verify agent runtime availability against real-llm normal and abnormal response scenarios instead of only local mock or injected-fetch coverage
+            status: pending
+            covers:
+              - prompt_building
+              - validation_chain
+              - result_normalization
+              - trace_metrics_boundary
+            tasks:
+              - task_name: verify real-llm chat and planning paths
+                summary: add explicit real-llm verification for planning request shaping chat execution and chat json contract stability under the agent runtime entry
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/bin
+                  - infra_projects/docs/breakdown_docs/agent_runtime_design.md
+              - task_name: verify real-llm task json and abnormal provider scenarios
+                summary: verify task json outputs and exercise timeout empty response malformed output and provider-failure scenarios so runtime degradation behavior is actually observed and recorded
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src/model
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/docs/breakdown_docs/agent_runtime_design.md
+              - task_name: verify in-process trace facts for plan execute observe
+                summary: verify trace output records each plan execute and observe invocation inside DefaultAgent.run as in-process facts with ordered step-level events rather than only post-execution summary records
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/docs/breakdown_docs/agent_runtime_design.md
         validation:
           - AgentRuntime createSession openSession closeSession and AgentSession execute read are directly usable
           - one multi-step plan execute observe re-plan loop runs through the documented validator chain on a mock backend
           - transcript trace and metrics boundaries follow the documented write-back separation
           - examples/terminal-session-demo.ts exercises the implemented sdk boundary without introducing a separate terminal runtime layer
+          - real-llm availability is not marked complete until prompt contracts abnormal-response handling and trace diagnostics are verified through explicit runtime coverage

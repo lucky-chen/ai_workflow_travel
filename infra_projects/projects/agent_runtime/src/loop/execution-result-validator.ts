@@ -7,6 +7,7 @@ export class ExecutionResultValidator {
   validate(
     result: ExecutionResult,
     expectedResponseFormat: "text" | "json",
+    expectedIntent?: "chat" | "task",
   ): ValidationResult<ExecutionResult> {
     const issues = [];
 
@@ -27,12 +28,29 @@ export class ExecutionResultValidator {
     }
 
     if (result.responseFormat === "json") {
+      let parsed: unknown;
       try {
-        JSON.parse(result.content);
+        parsed = JSON.parse(result.content);
       } catch {
         issues.push({
           code: "invalid_json_content",
           message: "JSON execution results must be valid JSON.",
+          severity: "high" as const,
+        });
+      }
+
+      if (expectedIntent === "chat" && !hasValidChatJsonAnswer(parsed)) {
+        issues.push({
+          code: "invalid_chat_json_answer",
+          message: "Chat JSON responses must be a JSON object with a string answer field.",
+          severity: "high" as const,
+        });
+      }
+
+      if (expectedIntent === "task" && !hasValidTaskJsonSummary(parsed)) {
+        issues.push({
+          code: "invalid_task_json_summary",
+          message: "Task JSON responses must be a JSON object with a non-empty summary field.",
           severity: "high" as const,
         });
       }
@@ -50,4 +68,24 @@ export class ExecutionResultValidator {
       value: result,
     };
   }
+}
+
+function hasValidChatJsonAnswer(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.answer === "string";
+}
+
+function hasValidTaskJsonSummary(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.summary === "string" && value.summary.trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -10,6 +10,7 @@ import { PlanningPromptBuilder } from "../loop/planning-prompt-builder.js";
 import { ResultNormalizer } from "../loop/result-normalizer.js";
 import { DefaultMcpGateway } from "../mcp/default-mcp-gateway.js";
 import { ExecutionStrategySelector } from "../model/execution-strategy-selector.js";
+import { FileAgentTraceRecorder } from "./file-agent-trace-recorder.js";
 import {
   AgentSessionManager,
 } from "./agent-session-manager.js";
@@ -19,10 +20,12 @@ import { DefaultObserver } from "./default-observer.js";
 import { DefaultPlanner } from "./default-planner.js";
 import { RuntimeMetricsCollector } from "./runtime-metrics-collector.js";
 import { RuntimeAgentSession } from "./runtime-agent-session.js";
+import { createRuntimeTraceFileId, resolveRuntimeTracePath } from "./runtime-storage-paths.js";
 import type {
   AgentRuntime,
   AgentRuntimeDependencies,
   AgentRuntimeResult,
+  AgentContext,
   AgentSession,
   AgentSessionCreateInput,
   AgentSessionOpenInput,
@@ -35,13 +38,17 @@ export class AgentRuntimeService implements AgentRuntime {
   private readonly historyStore: SessionHistoryStore;
   private readonly memoryStore: RuntimeMemoryStore;
   private readonly contextAssembler: ContextAssembler;
+  private readonly traceRecorder;
   private readonly metricsCollector = new RuntimeMetricsCollector();
   private readonly resultNormalizer = new ResultNormalizer();
 
   constructor(private readonly dependencies: AgentRuntimeDependencies) {
-    this.historyStore = new SessionHistoryStore();
-    this.memoryStore = new RuntimeMemoryStore();
-    this.sessionManager = new AgentSessionManager(dependencies.traceRecorder, this.historyStore);
+    const traceFileId = dependencies.traceFileId ?? createRuntimeTraceFileId();
+    this.traceRecorder = dependencies.traceRecorder
+      ?? new FileAgentTraceRecorder(resolveRuntimeTracePath(dependencies.workdir, traceFileId));
+    this.historyStore = new SessionHistoryStore(dependencies.workdir);
+    this.memoryStore = new RuntimeMemoryStore(dependencies.workdir);
+    this.sessionManager = new AgentSessionManager(dependencies.workdir, this.traceRecorder, this.historyStore);
     this.contextAssembler = new ContextAssembler(
       this.historyStore,
       this.memoryStore,
@@ -61,52 +68,25 @@ export class AgentRuntimeService implements AgentRuntime {
   }
 
   closeSession(sessionId: string): Promise<boolean> {
-    return this.sessionManager.closeSession(sessionId);
+    return this.closeSessionWithSummary(sessionId);
   }
 
   async execute(sessionId: string, request: AgentSessionRequest): Promise<AgentRuntimeResult> {
-    const session = await this.sessionManager.readSession(sessionId);
-    if (this.sessionManager.isClosed(sessionId)) {
-      throw new Error(`Session is closed: ${sessionId}`);
+    const context = await this.prepareExecutionContext(sessionId, request);
+    const agent = this.createAgent();
+    let result: AgentRuntimeResult;
+    try {
+      result = await agent.run(context);
+    } catch (error) {
+      await this.sessionManager.updateStatus(sessionId, "failed");
+      throw error;
     }
 
-    await this.sessionManager.attachRequest(sessionId, request);
-    const context = await this.contextAssembler.assemble(session, request);
-    const strategy = new ExecutionStrategySelector().select();
-    const agent = new DefaultAgent(
-      new DefaultPlanner(strategy.executor, new PlanningPromptBuilder()),
-      new PlanValidator(),
-      new DefaultExecutor(strategy.executor, new DefaultMcpGateway(), new ExecutionPromptBuilder()),
-      new ExecutionResultValidator(),
-      new DefaultObserver(),
-      new ObservationValidator(),
-      this.dependencies.traceRecorder,
-    );
-    const result = await agent.run(context);
-
-    await this.sessionManager.appendTranscript(sessionId, [
-      {
-        role: "user",
-        content: JSON.stringify(request.payload.prompt.userPrompt),
-      },
-      {
-        role: "assistant",
-        content: result.payload.content ?? result.payload.summary ?? "",
-      },
-    ]);
+    await this.writeExecutionOutputs(sessionId, request, result);
+    await this.saveRuntimeMemorySummary(request, result);
     const updatedSession = await this.sessionManager.readSession(sessionId);
 
-    return this.resultNormalizer.normalize(
-      result,
-      {
-        ...context,
-        runtimeContext: {
-          ...context.runtimeContext,
-          history: updatedSession.transcript,
-        },
-      },
-      this.metricsCollector.summarize(result, context.request.metadata),
-    );
+    return this.normalizeExecutionResult(result, context, updatedSession.transcript);
   }
 
   readSession(sessionId: string): Promise<AgentSessionState> {
@@ -116,4 +96,147 @@ export class AgentRuntimeService implements AgentRuntime {
   getWorkdir(): string {
     return this.dependencies.workdir;
   }
+
+  private async prepareExecutionContext(
+    sessionId: string,
+    request: AgentSessionRequest,
+  ): Promise<AgentContext> {
+    const runId = createRunId();
+    const session = await this.sessionManager.readSession(sessionId);
+    this.assertSessionIsWritable(sessionId, session.status);
+    await this.sessionManager.attachRequest(sessionId, request);
+    const context = await this.contextAssembler.assemble(session, request);
+    return {
+      ...context,
+      runtimeContext: {
+        ...context.runtimeContext,
+        runId,
+      },
+    };
+  }
+
+  private assertSessionIsWritable(sessionId: string, status: AgentSessionState["status"]): void {
+    if (status === "closed") {
+      throw new Error(`Session is closed: ${sessionId}`);
+    }
+  }
+
+  private createAgent(): DefaultAgent {
+    const strategy = this.selectExecutionStrategy();
+    const mcpGateway = new DefaultMcpGateway();
+    const availableTools = mcpGateway.listToolNames();
+
+    return new DefaultAgent(
+      new DefaultPlanner(strategy.executor, availableTools, new PlanningPromptBuilder()),
+      new PlanValidator(availableTools),
+      new DefaultExecutor(strategy.executor, mcpGateway, new ExecutionPromptBuilder()),
+      new ExecutionResultValidator(),
+      new DefaultObserver(),
+      new ObservationValidator(),
+      this.traceRecorder,
+    );
+  }
+
+  private selectExecutionStrategy() {
+    return new ExecutionStrategySelector().select({
+      mode: this.dependencies.mode,
+      realProvider: this.dependencies.realProvider,
+      mockContent: this.dependencies.mockContent,
+      mockExecute: this.dependencies.mockExecute,
+    });
+  }
+
+  private async closeSessionWithSummary(sessionId: string): Promise<boolean> {
+    const session = await this.sessionManager.readSession(sessionId).catch((error: unknown) => {
+      if (error instanceof Error && error.message.startsWith("Session not found:")) {
+        return undefined;
+      }
+      throw error;
+    });
+    if (!session) {
+      return false;
+    }
+
+    const closedMemorySummary = session.lastMemoryScope
+      ? await this.memoryStore.load(session.lastMemoryScope)
+      : undefined;
+    return this.sessionManager.closeSession(sessionId, closedMemorySummary);
+  }
+
+  private async writeExecutionOutputs(
+    sessionId: string,
+    request: AgentSessionRequest,
+    result: AgentRuntimeResult,
+  ): Promise<void> {
+    await this.sessionManager.appendTranscript(sessionId, this.buildTranscriptTurns(request, result));
+    await this.sessionManager.updateStatus(sessionId, result.status === "success" ? "completed" : "failed");
+  }
+
+  private buildTranscriptTurns(request: AgentSessionRequest, result: AgentRuntimeResult) {
+    return [
+      {
+        role: "user" as const,
+        content: JSON.stringify(request.payload.prompt.userPrompt),
+      },
+      ...(result.payload.toolResults ?? []).map((toolResult) => ({
+        role: "tool" as const,
+        content: toolResult.content,
+      })),
+      {
+        role: "assistant" as const,
+        content: result.payload.content ?? result.payload.summary ?? "",
+      },
+    ];
+  }
+
+  private normalizeExecutionResult(
+    result: AgentRuntimeResult,
+    context: AgentContext,
+    history: AgentContext["runtimeContext"]["history"],
+  ): AgentRuntimeResult {
+    return this.resultNormalizer.normalize(
+      result,
+      {
+        ...context,
+        runtimeContext: {
+          ...context.runtimeContext,
+          history,
+        },
+      },
+      this.metricsCollector.summarize(result, context.request.metadata),
+    );
+  }
+
+  private async saveRuntimeMemorySummary(
+    request: AgentSessionRequest,
+    result: AgentRuntimeResult,
+  ): Promise<void> {
+    const scope = request.payload.memoryScope;
+    if (!scope || result.status !== "success") {
+      return;
+    }
+
+    await this.memoryStore.save(scope, [
+      {
+        key: "request_constraints",
+        content: JSON.stringify(request.payload.prompt.userPrompt),
+      },
+      {
+        key: "result_summary",
+        content: result.payload.summary ?? result.payload.content ?? "",
+      },
+      {
+        key: "observation_status",
+        content: JSON.stringify({
+          accepted: result.payload.accepted ?? false,
+          completed: result.payload.completed ?? false,
+          stopReason: result.payload.stopReason ?? "completed",
+        }),
+      },
+    ]);
+  }
+}
+
+function createRunId(): string {
+  return `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }

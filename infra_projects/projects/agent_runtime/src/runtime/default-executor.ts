@@ -39,6 +39,7 @@ export class DefaultExecutor implements IExecutor {
     return {
       content: result.content,
       responseFormat: result.responseFormat,
+      traceFacts: result.traceFacts,
       metadata: result.metadata,
       ...(toolResults.length > 0 ? { toolResults } : {}),
     };

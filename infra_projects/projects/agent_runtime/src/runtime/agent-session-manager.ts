@@ -1,3 +1,6 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { SessionHistoryStore } from "../context/session-history-store.js";
 import type {
   AgentSessionCreateInput,
@@ -5,17 +8,20 @@ import type {
   AgentSessionRequest,
   AgentSessionState,
   IAgentTraceRecorder,
+  MemoryEntry,
   MessageTurn,
   RequestMetadata,
   SdkTraceEvent,
 } from "./agent-runtime-types.js";
+import { resolveSessionStatePath } from "./runtime-storage-paths.js";
+
+interface PersistedSessionState extends Omit<AgentSessionState, "transcript"> {}
 
 export class AgentSessionManager {
-  private readonly sessions = new Map<string, AgentSessionState>();
-
   constructor(
+    private readonly workdir: string,
     private readonly traceRecorder?: IAgentTraceRecorder,
-    private readonly historyStore: SessionHistoryStore = new SessionHistoryStore(),
+    private readonly historyStore: SessionHistoryStore = new SessionHistoryStore(workdir),
   ) {}
 
   async createSession(input: AgentSessionCreateInput): Promise<AgentSessionState> {
@@ -30,7 +36,7 @@ export class AgentSessionManager {
       transcript,
       metadata: input.metadata,
     };
-    this.sessions.set(session.sessionId, session);
+    await this.writeState(session);
     await this.historyStore.initialize(session.sessionId, transcript);
 
     await this.recordLifecycleEvent("session_created", session.sessionId, input.metadata);
@@ -40,14 +46,16 @@ export class AgentSessionManager {
   async openSession(input: AgentSessionOpenInput, metadata?: RequestMetadata): Promise<AgentSessionState> {
     await this.recordRequestedEvent("session_open_requested", metadata, input.sessionId);
 
-    const session = this.getSessionOrThrow(input.sessionId);
+    const session = await this.getSessionOrThrow(input.sessionId);
+    session.status = "active";
+    await this.writeState(session);
 
     await this.recordLifecycleEvent("session_opened", session.sessionId, metadata ?? session.metadata);
     return cloneSessionState(session);
   }
 
   async readSession(sessionId: string): Promise<AgentSessionState> {
-    const session = this.getSessionOrThrow(sessionId);
+    const session = await this.getSessionOrThrow(sessionId);
     const transcript = await this.historyStore.load(sessionId);
     return cloneSessionState({
       ...session,
@@ -55,38 +63,44 @@ export class AgentSessionManager {
     });
   }
 
-  async closeSession(sessionId: string): Promise<boolean> {
-    const session = this.sessions.get(sessionId);
+  async closeSession(sessionId: string, closedMemorySummary?: MemoryEntry[]): Promise<boolean> {
+    const session = await this.tryGetSession(sessionId);
     if (!session || session.status === "closed") {
       return false;
     }
 
     session.status = "closed";
+    session.closedMemorySummary = closedMemorySummary?.map((entry) => ({ ...entry })) ?? session.closedMemorySummary;
+    await this.writeState(session);
     await this.recordLifecycleEvent("session_closed", sessionId, session.metadata);
     return true;
   }
 
   async attachRequest(sessionId: string, request: AgentSessionRequest): Promise<void> {
-    const session = this.getSessionOrThrow(sessionId);
+    const session = await this.getSessionOrThrow(sessionId);
 
     if (!session.initialRequest) {
       session.initialRequest = cloneRequest(request);
     }
+    session.lastMemoryScope = request.payload.memoryScope;
+    await this.writeState(session);
   }
 
   async appendTranscript(sessionId: string, turns: MessageTurn[]): Promise<void> {
-    const session = this.getSessionOrThrow(sessionId);
+    const session = await this.getSessionOrThrow(sessionId);
     await this.historyStore.append(sessionId, turns);
     session.transcript = await this.historyStore.load(sessionId);
+    await this.writeState(session);
   }
 
-  hasSession(sessionId: string): boolean {
-    return this.sessions.has(sessionId);
+  async updateStatus(sessionId: string, status: AgentSessionState["status"]): Promise<void> {
+    const session = await this.getSessionOrThrow(sessionId);
+    session.status = status;
+    await this.writeState(session);
   }
 
-  isClosed(sessionId: string): boolean {
-    const session = this.sessions.get(sessionId);
-    return session?.status === "closed";
+  resolveSessionStatePath(sessionId: string): string {
+    return resolveSessionStatePath(this.workdir, sessionId);
   }
 
   private async recordRequestedEvent(
@@ -122,12 +136,52 @@ export class AgentSessionManager {
     await this.traceRecorder?.record(event);
   }
 
-  private getSessionOrThrow(sessionId: string): AgentSessionState {
-    const session = this.sessions.get(sessionId);
+  private async tryGetSession(sessionId: string): Promise<AgentSessionState | undefined> {
+    const statePath = this.resolveSessionStatePath(sessionId);
+    let raw: string;
+
+    try {
+      raw = await readFile(statePath, "utf8");
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === "ENOENT") {
+        return undefined;
+      }
+      throw error;
+    }
+
+    const persisted = JSON.parse(raw) as PersistedSessionState;
+    return {
+      ...persisted,
+      transcript: [],
+      metadata: persisted.metadata
+        ? { ...persisted.metadata, labels: persisted.metadata.labels ? { ...persisted.metadata.labels } : undefined }
+        : undefined,
+    };
+  }
+
+  private async getSessionOrThrow(sessionId: string): Promise<AgentSessionState> {
+    const session = await this.tryGetSession(sessionId);
     if (!session) {
       throw new Error(`Session not found: ${sessionId}`);
     }
     return session;
+  }
+
+  private async writeState(session: AgentSessionState): Promise<void> {
+    const statePath = this.resolveSessionStatePath(session.sessionId);
+    const persisted: PersistedSessionState = {
+      sessionId: session.sessionId,
+      title: session.title,
+      createdAt: session.createdAt,
+      status: session.status,
+      initialRequest: session.initialRequest ? cloneRequest(session.initialRequest) : undefined,
+      lastMemoryScope: session.lastMemoryScope,
+      closedMemorySummary: session.closedMemorySummary?.map((entry) => ({ ...entry })),
+      metadata: session.metadata ? { ...session.metadata, labels: session.metadata.labels ? { ...session.metadata.labels } : undefined } : undefined,
+    };
+    await mkdir(path.dirname(statePath), { recursive: true });
+    await writeFile(statePath, `${JSON.stringify(persisted, null, 2)}\n`, "utf8");
   }
 }
 
@@ -160,6 +214,8 @@ function cloneSessionState(state: AgentSessionState): AgentSessionState {
   return {
     ...state,
     initialRequest: state.initialRequest ? cloneRequest(state.initialRequest) : undefined,
+    lastMemoryScope: state.lastMemoryScope,
+    closedMemorySummary: state.closedMemorySummary?.map((entry) => ({ ...entry })),
     transcript: state.transcript.map((turn) => ({ ...turn })),
     metadata: state.metadata ? { ...state.metadata, labels: state.metadata.labels ? { ...state.metadata.labels } : undefined } : undefined,
   };

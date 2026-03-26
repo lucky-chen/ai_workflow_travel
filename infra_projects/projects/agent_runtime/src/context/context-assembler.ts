@@ -35,6 +35,7 @@ export class ContextAssembler {
       runtimeContext: {
         sessionId: session.sessionId,
         workdir: this.workdir,
+        runId: undefined,
         history,
         memory,
         retrievalContext,
@@ -51,7 +52,7 @@ export class ContextAssembler {
       query: request.payload.retrievalQuery ?? "",
       candidateSources: [
         `${this.workdir}/docs`,
-        `session:${session.sessionId}`,
+        this.historyStore.resolvePath(session.sessionId),
       ],
       metadata: request.metadata,
     };

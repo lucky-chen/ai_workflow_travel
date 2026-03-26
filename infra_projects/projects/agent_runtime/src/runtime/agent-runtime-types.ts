@@ -44,6 +44,7 @@ export interface AgentContext {
   runtimeContext: {
     sessionId: string;
     workdir: string;
+    runId?: string;
     history: MessageTurn[];
     memory: MemoryEntry[];
     retrievalContext: RetrievalItem[];
@@ -57,6 +58,8 @@ export interface AgentSessionState {
   createdAt: string;
   status: "active" | "completed" | "failed" | "closed";
   initialRequest?: AgentSessionRequest;
+  lastMemoryScope?: string;
+  closedMemorySummary?: MemoryEntry[];
   transcript: MessageTurn[];
   metadata?: RequestMetadata;
 }
@@ -83,11 +86,15 @@ export interface RetrievalRequest {
   metadata?: RequestMetadata;
 }
 
+export type RequestIntent = "chat" | "task";
+
 export interface ExecutionPlan {
+  intent: RequestIntent;
   mode: "direct_generation" | "tool_augmented_generation";
   summary: string;
   stepIndex: number;
   nextStepGoal: string;
+  traceFacts?: ModelTraceFacts;
   completed?: boolean;
   stopReason?: "completed" | "max_steps" | "cancelled" | "failed";
   toolSteps?: McpToolRequest[];
@@ -97,6 +104,7 @@ export interface ExecutionResult {
   content: ModelBackendResult["content"];
   responseFormat: ModelBackendResult["responseFormat"];
   toolResults?: McpToolResult[];
+  traceFacts?: ModelBackendResult["traceFacts"];
   metadata?: ModelBackendResult["metadata"];
 }
 
@@ -113,14 +121,40 @@ export interface ModelBackendRequest {
 export interface ModelBackendResult {
   content: string;
   responseFormat: "text" | "json";
+  traceFacts?: ModelTraceFacts;
   metadata?: RequestMetadata;
+}
+
+export interface TracePreview {
+  text: string;
+  truncated: boolean;
+}
+
+export interface ModelTraceFacts {
+  requestType?: "planning" | "execution";
+  provider?: "mock" | "openai" | "deepseek";
+  model?: string;
+  timeoutMs?: number;
+  httpStatus?: number;
+  responseFormat?: "text" | "json";
+  systemPromptPreview?: TracePreview;
+  userPromptPreview?: TracePreview;
+  requestBodyPreview?: TracePreview;
+  rawResponsePreview?: TracePreview;
+  parsedContentPreview?: TracePreview;
+  finishReason?: string;
+  usage?: Record<string, number>;
+  responseShape?: string;
 }
 
 export interface PlanningPromptBuilderInput {
   context: AgentContext;
+  availableTools?: string[];
   priorStepResults?: ExecutionResult[];
   priorObservation?: ObservationResult;
   stepIndex?: number;
+  repairPhase?: "plan" | "execution" | "observation";
+  repairIssues?: ValidationIssue[];
 }
 
 export interface ExecutionPromptBuilderInput {
@@ -197,10 +231,13 @@ export type AgentTraceEventType =
   | "session_opened"
   | "session_closed"
   | "run_started"
+  | "plan_started"
   | "plan_generated"
+  | "execute_started"
   | "tool_called"
   | "tool_result_recorded"
   | "execution_finished"
+  | "observe_started"
   | "observation_finished"
   | "validation_failed"
   | "run_finished";
@@ -233,10 +270,13 @@ export interface SessionRunTraceEvent extends AgentTraceEventBase {
   scope: "session";
   eventType:
     | "run_started"
+    | "plan_started"
     | "plan_generated"
+    | "execute_started"
     | "tool_called"
     | "tool_result_recorded"
     | "execution_finished"
+    | "observe_started"
     | "observation_finished"
     | "validation_failed"
     | "run_finished";
@@ -250,6 +290,11 @@ export type AgentTraceEvent = SdkTraceEvent | SessionRunTraceEvent;
 export interface AgentRuntimeDependencies {
   workdir: string;
   traceRecorder?: IAgentTraceRecorder;
+  traceFileId?: string;
+  mode?: "mock" | "real";
+  realProvider?: RealProviderConfig;
+  mockContent?: string;
+  mockExecute?: (request: ModelBackendRequest) => Promise<ModelBackendResult> | ModelBackendResult;
 }
 
 export interface AgentRuntime {
@@ -273,6 +318,7 @@ export interface IModelBackend {
 
 export interface IMcpGateway {
   call(request: McpToolRequest): Promise<McpToolResult>;
+  listToolNames?(): string[];
 }
 
 export interface IAgent {
@@ -319,4 +365,7 @@ export interface PlannerLoopState {
   stepIndex: number;
   priorStepResults?: ExecutionResult[];
   priorObservation?: ObservationResult;
+  repairPhase?: "plan" | "execution" | "observation";
+  repairIssues?: ValidationIssue[];
 }
+import type { RealProviderConfig } from "../model/real-provider-config.js";
