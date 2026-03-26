@@ -9,6 +9,7 @@ import { runResultNormalizerAndMetricsTests } from "./result-normalizer-and-metr
 import { runRuntimeApiLifecycleTests } from "./runtime-api-lifecycle.test.js";
 import { runRuntimeMemoryAndRetrievalTests } from "./runtime-memory-and-retrieval.test.js";
 import { runSessionHistoryStoreTests } from "./session-history-store.test.js";
+import { runTerminalSessionCliTests } from "./terminal-session-cli.test.js";
 import { runTraceRecorderTests } from "./trace-recorder.test.js";
 import { runTerminalSessionDemoTests } from "./terminal-session-demo.test.js";
 
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
   await runRuntimeApiLifecycleTests();
   await runRuntimeMemoryAndRetrievalTests();
   await runSessionHistoryStoreTests();
+  await runTerminalSessionCliTests();
   await runTerminalSessionDemoTests();
   await runTraceRecorderTests();
   process.stdout.write("All tests passed.\n");

@@ -94,10 +94,17 @@ export class AgentRuntimeService implements AgentRuntime {
         content: result.payload.content ?? result.payload.summary ?? "",
       },
     ]);
+    const updatedSession = await this.sessionManager.readSession(sessionId);
 
     return this.resultNormalizer.normalize(
       result,
-      context,
+      {
+        ...context,
+        runtimeContext: {
+          ...context.runtimeContext,
+          history: updatedSession.transcript,
+        },
+      },
       this.metricsCollector.summarize(result, context.request.metadata),
     );
   }
