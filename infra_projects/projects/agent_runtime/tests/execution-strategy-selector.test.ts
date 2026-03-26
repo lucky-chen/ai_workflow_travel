@@ -16,9 +16,10 @@ async function testExecutionStrategySelectorDefaultsToMock(): Promise<void> {
 
   assert.equal(strategy.mode, "mock");
   const result = await strategy.executor.execute({
+    mode: "execution",
     prompt: {
-      systemPrompt: "system",
-      userPrompt: "user",
+      systemPrompt: ["system"],
+      userPrompt: { input: "user" },
     },
     responseFormat: "text",
   });
@@ -47,9 +48,10 @@ async function testExecutionStrategySelectorChoosesRealProvider(): Promise<void>
 
   assert.equal(strategy.mode, "real");
   const result = await strategy.executor.execute({
+    mode: "execution",
     prompt: {
-      systemPrompt: "system",
-      userPrompt: "user",
+      systemPrompt: ["system"],
+      userPrompt: { input: "user" },
     },
     responseFormat: "text",
   });

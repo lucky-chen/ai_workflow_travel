@@ -3,15 +3,15 @@ import type {
   ExecutionPlan,
   ExecutionResult,
   IExecutor,
-  IModelExecutionBackend,
+  IModelBackend,
   IMcpGateway,
-  LlmExecutionRequest,
   McpToolResult,
+  ModelBackendRequest,
 } from "./agent-runtime-types.js";
 
 export class DefaultExecutor implements IExecutor {
   constructor(
-    private readonly backend: IModelExecutionBackend,
+    private readonly backend: IModelBackend,
     private readonly mcpGateway?: IMcpGateway,
   ) {}
 
@@ -27,29 +27,32 @@ export class DefaultExecutor implements IExecutor {
       }
     }
 
-    const result = await this.backend.execute(buildExecutionRequest(context.request, toolResults));
-    return toolResults.length > 0 ? { result, toolResults } : { result };
+    const result = await this.backend.execute(buildExecutionRequest(context, plan, toolResults));
+    return {
+      content: result.content,
+      responseFormat: result.responseFormat,
+      metadata: result.metadata,
+      ...(toolResults.length > 0 ? { toolResults } : {}),
+    };
   }
 }
 
 function buildExecutionRequest(
-  request: LlmExecutionRequest,
+  context: AgentContext,
+  plan: ExecutionPlan,
   toolResults: McpToolResult[],
-): LlmExecutionRequest {
-  if (toolResults.length === 0) {
-    return request;
-  }
-
+): ModelBackendRequest {
   return {
-    ...request,
+    mode: "execution",
+    responseFormat: context.request.responseFormat,
+    metadata: context.request.metadata,
     prompt: {
-      ...request.prompt,
-      userPrompt: [
-        request.prompt.userPrompt,
-        "",
-        "MCP tool results:",
-        JSON.stringify(toolResults, null, 2),
-      ].join("\n"),
+      systemPrompt: [...context.request.prompt.systemPrompt],
+      userPrompt: {
+        ...context.request.prompt.userPrompt,
+        nextStepGoal: plan.nextStepGoal,
+        ...(toolResults.length > 0 ? { toolResults } : {}),
+      },
     },
   };
 }

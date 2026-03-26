@@ -1,9 +1,10 @@
 import type { AgentTraceEvent, IAgentTraceRecorder } from "./agent-trace-recorder.js";
 import {
   buildExecutionFinishedEvent,
-  buildExecutionStartedEvent,
   buildObservationFinishedEvent,
-  buildPlanCreatedEvent,
+  buildPlanGeneratedEvent,
+  buildRunFinishedEvent,
+  buildRunStartedEvent,
   buildToolCalledEvent,
   buildToolResultRecordedEvent,
 } from "./agent-trace-events.js";
@@ -12,27 +13,31 @@ import type { ExecutionPlan, ExecutionResult, McpToolResult, ObservationResult }
 export class AgentTraceApi {
   constructor(private readonly traceRecorder?: IAgentTraceRecorder) {}
 
-  async recordPlanCreated(runId: string, plan: ExecutionPlan): Promise<void> {
-    await this.record(buildPlanCreatedEvent(runId, plan));
+  async recordRunStarted(sessionId: string, runId: string): Promise<void> {
+    await this.record(buildRunStartedEvent(sessionId, runId));
   }
 
-  async recordExecutionStarted(runId: string, plan: ExecutionPlan): Promise<void> {
-    await this.record(buildExecutionStartedEvent(runId, plan));
+  async recordPlanGenerated(sessionId: string, runId: string, plan: ExecutionPlan): Promise<void> {
+    await this.record(buildPlanGeneratedEvent(sessionId, runId, plan));
   }
 
-  async recordToolResults(runId: string, toolResults?: McpToolResult[]): Promise<void> {
+  async recordToolResults(sessionId: string, runId: string, toolResults?: McpToolResult[]): Promise<void> {
     for (const toolResult of toolResults ?? []) {
-      await this.record(buildToolCalledEvent(runId, toolResult));
-      await this.record(buildToolResultRecordedEvent(runId, toolResult));
+      await this.record(buildToolCalledEvent(sessionId, runId, toolResult));
+      await this.record(buildToolResultRecordedEvent(sessionId, runId, toolResult));
     }
   }
 
-  async recordExecutionFinished(runId: string, executionResult: ExecutionResult): Promise<void> {
-    await this.record(buildExecutionFinishedEvent(runId, executionResult));
+  async recordExecutionFinished(sessionId: string, runId: string, executionResult: ExecutionResult): Promise<void> {
+    await this.record(buildExecutionFinishedEvent(sessionId, runId, executionResult));
   }
 
-  async recordObservationFinished(runId: string, observation: ObservationResult): Promise<void> {
-    await this.record(buildObservationFinishedEvent(runId, observation));
+  async recordObservationFinished(sessionId: string, runId: string, observation: ObservationResult): Promise<void> {
+    await this.record(buildObservationFinishedEvent(sessionId, runId, observation));
+  }
+
+  async recordRunFinished(sessionId: string, runId: string, observation: ObservationResult): Promise<void> {
+    await this.record(buildRunFinishedEvent(sessionId, runId, observation));
   }
 
   private async record(event: AgentTraceEvent): Promise<void> {

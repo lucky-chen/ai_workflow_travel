@@ -15,6 +15,7 @@ export class DefaultObserver implements IObserver {
     return {
       accepted: true,
       summary: "Result accepted.",
+      completed: true,
     };
   }
 }

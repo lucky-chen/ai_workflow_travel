@@ -1,7 +1,7 @@
 import type {
-  IModelExecutionBackend,
-  LlmExecutionRequest,
-  LlmExecutionResult,
+  IModelBackend,
+  ModelBackendRequest,
+  ModelBackendResult,
 } from "../runtime/agent-runtime.js";
 import { HttpJsonClient } from "./http-json-client.js";
 import type { RealProviderConfig } from "./real-provider-config.js";
@@ -11,13 +11,13 @@ export type ModelExecutionMode = "mock" | "real";
 export interface ModelExecutionDependencies {
   mode?: ModelExecutionMode;
   mockContent?: string;
-  mockExecute?: (request: LlmExecutionRequest) => Promise<LlmExecutionResult> | LlmExecutionResult;
+  mockExecute?: (request: ModelBackendRequest) => Promise<ModelBackendResult> | ModelBackendResult;
   realProvider?: RealProviderConfig;
 }
 
 export interface ExecutionStrategy {
   mode: ModelExecutionMode;
-  executor: IModelExecutionBackend;
+  executor: IModelBackend;
 }
 
 export class ExecutionStrategySelector {
@@ -36,13 +36,13 @@ export class ExecutionStrategySelector {
   }
 }
 
-export class MockModelExecutionBackend implements IModelExecutionBackend {
+export class MockModelExecutionBackend implements IModelBackend {
   constructor(
     private readonly mockContent?: string,
-    private readonly mockExecute?: (request: LlmExecutionRequest) => Promise<LlmExecutionResult> | LlmExecutionResult,
+    private readonly mockExecute?: (request: ModelBackendRequest) => Promise<ModelBackendResult> | ModelBackendResult,
   ) {}
 
-  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+  async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
     if (this.mockExecute) {
       return this.mockExecute(request);
     }
@@ -53,7 +53,7 @@ export class MockModelExecutionBackend implements IModelExecutionBackend {
         JSON.stringify({
           summary: "Mock implementation change set",
           changed_files: [],
-          request_preview: request.prompt.userPrompt.slice(0, 200),
+          request_preview: JSON.stringify(request.prompt.userPrompt).slice(0, 200),
         }),
       responseFormat: request.responseFormat,
       metadata: request.metadata,
@@ -61,14 +61,14 @@ export class MockModelExecutionBackend implements IModelExecutionBackend {
   }
 }
 
-export class OpenAiModelExecutionBackend implements IModelExecutionBackend {
+export class OpenAiModelExecutionBackend implements IModelBackend {
   private readonly httpClient: HttpJsonClient;
 
   constructor(private readonly config: RealProviderConfig) {
     this.httpClient = new HttpJsonClient(config.fetchFn);
   }
 
-  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+  async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
     validateRealProviderConfig(this.config, "openai");
 
     const response = await this.httpClient.postJson<
@@ -84,8 +84,8 @@ export class OpenAiModelExecutionBackend implements IModelExecutionBackend {
       body: {
         model: this.config.model!,
         messages: [
-          { role: "system", content: request.prompt.systemPrompt },
-          { role: "user", content: request.prompt.userPrompt },
+          { role: "system", content: request.prompt.systemPrompt.join("\n") },
+          { role: "user", content: JSON.stringify(request.prompt.userPrompt) },
         ],
       },
       timeoutMs: this.config.timeoutMs,
@@ -104,14 +104,14 @@ export class OpenAiModelExecutionBackend implements IModelExecutionBackend {
   }
 }
 
-export class DeepSeekModelExecutionBackend implements IModelExecutionBackend {
+export class DeepSeekModelExecutionBackend implements IModelBackend {
   private readonly httpClient: HttpJsonClient;
 
   constructor(private readonly config: RealProviderConfig) {
     this.httpClient = new HttpJsonClient(config.fetchFn);
   }
 
-  async execute(request: LlmExecutionRequest): Promise<LlmExecutionResult> {
+  async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
     validateRealProviderConfig(this.config, "deepseek");
 
     const response = await this.httpClient.postJson<
@@ -127,8 +127,8 @@ export class DeepSeekModelExecutionBackend implements IModelExecutionBackend {
       body: {
         model: this.config.model!,
         messages: [
-          { role: "system", content: request.prompt.systemPrompt },
-          { role: "user", content: request.prompt.userPrompt },
+          { role: "system", content: request.prompt.systemPrompt.join("\n") },
+          { role: "user", content: JSON.stringify(request.prompt.userPrompt) },
         ],
       },
       timeoutMs: this.config.timeoutMs,
@@ -155,7 +155,7 @@ interface ChatCompletionsResponse {
   }>;
 }
 
-function createRealProviderExecutor(config: RealProviderConfig = {}): IModelExecutionBackend {
+function createRealProviderExecutor(config: RealProviderConfig = {}): IModelBackend {
   if (!config.provider) {
     throw new Error("Real LLM provider is required when mode is set to real.");
   }

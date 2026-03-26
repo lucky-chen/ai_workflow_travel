@@ -1,4 +1,4 @@
-import type { AgentTraceEvent } from "./agent-trace-recorder.js";
+import type { AgentTraceEvent, SessionRunTraceEvent, ValidationIssue } from "./agent-runtime-types.js";
 import type {
   ExecutionPlan,
   ExecutionResult,
@@ -6,84 +6,103 @@ import type {
   ObservationResult,
 } from "./agent-runtime-types.js";
 
-export function buildPlanCreatedEvent(runId: string, plan: ExecutionPlan): AgentTraceEvent {
+function createSessionEvent(
+  sessionId: string,
+  runId: string,
+  eventType: SessionRunTraceEvent["eventType"],
+  caller: string,
+  summary: string,
+  payload?: Record<string, unknown>,
+  diagnostics?: ValidationIssue[],
+): SessionRunTraceEvent {
   return {
+    scope: "session",
+    sessionId,
     runId,
-    caller: "DefaultPlanner.plan",
-    eventType: "agent_plan_created",
-    summary: "Agent plan created.",
-    payload: {
-      mode: plan.mode,
-    },
+    traceId: runId,
+    timestamp: new Date().toISOString(),
+    eventType,
+    caller,
+    summary,
+    payload,
+    ...(diagnostics ? { diagnostics } : {}),
   };
 }
 
-export function buildExecutionStartedEvent(runId: string, plan: ExecutionPlan): AgentTraceEvent {
-  return {
-    runId,
-    caller: "DefaultExecutor.execute",
-    eventType: "agent_execution_started",
-    summary: "Agent execution started.",
-    payload: {
-      mode: plan.mode,
-      toolStepCount: String(plan.toolSteps?.length ?? 0),
-    },
-  };
+export function buildRunStartedEvent(sessionId: string, runId: string): AgentTraceEvent {
+  return createSessionEvent(sessionId, runId, "run_started", "DefaultAgent.run", "Runtime run started.");
 }
 
-export function buildToolCalledEvent(runId: string, toolResult: McpToolResult): AgentTraceEvent {
-  return {
+export function buildPlanGeneratedEvent(sessionId: string, runId: string, plan: ExecutionPlan): AgentTraceEvent {
+  return createSessionEvent(sessionId, runId, "plan_generated", "DefaultPlanner.plan", "Execution plan generated.", {
+    mode: plan.mode,
+    stepIndex: plan.stepIndex,
+  });
+}
+
+export function buildToolCalledEvent(sessionId: string, runId: string, toolResult: McpToolResult): AgentTraceEvent {
+  return createSessionEvent(sessionId, runId, "tool_called", "DefaultExecutor.execute", `Tool called: ${toolResult.toolName}.`, {
+    toolName: toolResult.toolName,
+  });
+}
+
+export function buildToolResultRecordedEvent(sessionId: string, runId: string, toolResult: McpToolResult): AgentTraceEvent {
+  return createSessionEvent(
+    sessionId,
     runId,
-    caller: "DefaultMcpGateway.callTool",
-    eventType: "agent_tool_called",
-    summary: `Agent tool called: ${toolResult.toolName}.`,
-    payload: {
+    "tool_result_recorded",
+    "DefaultExecutor.execute",
+    `Tool result recorded: ${toolResult.toolName}.`,
+    {
       toolName: toolResult.toolName,
-      success: String(toolResult.success),
+      success: toolResult.success,
     },
-  };
-}
-
-export function buildToolResultRecordedEvent(runId: string, toolResult: McpToolResult): AgentTraceEvent {
-  return {
-    runId,
-    caller: "DefaultMcpGateway.callTool",
-    eventType: "agent_tool_result_recorded",
-    summary: `Agent tool result recorded: ${toolResult.toolName}.`,
-    payload: {
-      toolName: toolResult.toolName,
-      success: String(toolResult.success),
-    },
-  };
+  );
 }
 
 export function buildExecutionFinishedEvent(
+  sessionId: string,
   runId: string,
   executionResult: ExecutionResult,
 ): AgentTraceEvent {
-  return {
+  return createSessionEvent(
+    sessionId,
     runId,
-    caller: "DefaultExecutor.execute",
-    eventType: "agent_execution_finished",
-    summary: "Agent execution finished.",
-    payload: {
-      responseFormat: executionResult.result.responseFormat,
-      toolResultCount: String(executionResult.toolResults?.length ?? 0),
+    "execution_finished",
+    "DefaultExecutor.execute",
+    "Execution finished.",
+    {
+      responseFormat: executionResult.responseFormat,
+      toolResultCount: executionResult.toolResults?.length ?? 0,
     },
-  };
+  );
 }
 
 export function buildObservationFinishedEvent(
+  sessionId: string,
   runId: string,
   observation: ObservationResult,
 ): AgentTraceEvent {
-  return {
+  return createSessionEvent(
+    sessionId,
     runId,
-    caller: "DefaultObserver.observe",
-    eventType: "agent_observation_finished",
-    summary: "Agent observation finished.",
-    payload: {
+    "observation_finished",
+    "DefaultObserver.observe",
+    "Observation finished.",
+    {
       accepted: observation.accepted,
+      completed: observation.completed ?? false,
     },
-  };
+  );
+}
+
+export function buildRunFinishedEvent(
+  sessionId: string,
+  runId: string,
+  observation: ObservationResult,
+): AgentTraceEvent {
+  return createSessionEvent(sessionId, runId, "run_finished", "DefaultAgent.run", "Runtime run finished.", {
+    accepted: observation.accepted,
+    completed: observation.completed ?? false,
+  });
 }
