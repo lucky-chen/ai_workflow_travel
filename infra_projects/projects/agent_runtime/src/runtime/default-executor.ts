@@ -1,3 +1,4 @@
+import { ExecutionPromptBuilder } from "../loop/execution-prompt-builder.js";
 import type {
   AgentContext,
   ExecutionPlan,
@@ -13,6 +14,7 @@ export class DefaultExecutor implements IExecutor {
   constructor(
     private readonly backend: IModelBackend,
     private readonly mcpGateway?: IMcpGateway,
+    private readonly promptBuilder: ExecutionPromptBuilder = new ExecutionPromptBuilder(),
   ) {}
 
   async execute(context: AgentContext, plan: ExecutionPlan): Promise<ExecutionResult> {
@@ -27,7 +29,13 @@ export class DefaultExecutor implements IExecutor {
       }
     }
 
-    const result = await this.backend.execute(buildExecutionRequest(context, plan, toolResults));
+    const result = await this.backend.execute(
+      this.promptBuilder.build({
+        context,
+        plan,
+        ...(toolResults.length > 0 ? { toolResults } : {}),
+      }),
+    );
     return {
       content: result.content,
       responseFormat: result.responseFormat,
@@ -35,24 +43,4 @@ export class DefaultExecutor implements IExecutor {
       ...(toolResults.length > 0 ? { toolResults } : {}),
     };
   }
-}
-
-function buildExecutionRequest(
-  context: AgentContext,
-  plan: ExecutionPlan,
-  toolResults: McpToolResult[],
-): ModelBackendRequest {
-  return {
-    mode: "execution",
-    responseFormat: context.request.responseFormat,
-    metadata: context.request.metadata,
-    prompt: {
-      systemPrompt: [...context.request.prompt.systemPrompt],
-      userPrompt: {
-        ...context.request.prompt.userPrompt,
-        nextStepGoal: plan.nextStepGoal,
-        ...(toolResults.length > 0 ? { toolResults } : {}),
-      },
-    },
-  };
 }
