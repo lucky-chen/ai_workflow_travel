@@ -33,7 +33,7 @@ The projects in this repository should not be read as isolated products with unr
 - `infra_projects/`: shared infrastructure and workflow projects.
   - `sdlc`
     - Function: the main workflow project used to validate whether AI can support a staged delivery workflow from requirement to design, implementation, and validation.
-    - Related docs: [Requirement](./infra_projects/docs/Requirement.md), [TechnicalArchitecture](./infra_projects/docs/TechnicalArchitecture.md), [breakdown_docs](./infra_projects/docs/breakdown_docs/), [CodeGenerationExecutionPlan](./infra_projects/docs/CodeGenerationExecutionPlan.md)
+    - Related docs: [Requirement](./infra_projects/docs/Requirement.md), [TechnicalArchitecture](./infra_projects/docs/TechnicalArchitecture.md), [breakdown_docs](./infra_projects/docs/breakdown_docs/), [work_plan](./infra_projects/docs/work_plan.yaml)
   - `agent_runtime`
     - Function: the shared runtime foundation used to validate the reusable runtime capabilities needed by agent-style projects.
     - Related docs: [agent_runtime_design](./infra_projects/docs/breakdown_docs/agent_runtime_design.md)
@@ -116,7 +116,7 @@ The detailed project descriptions below keep the current structure as a working 
 - [Requirement document](./meta_layer/docs/Requirement.md): product requirement baseline, scope, user workflow, and target capability definition.
 - [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model.
 - [Module design documents](./meta_layer/docs/design_docs/): current design-doc directory referenced as `module_desig` in discussions, covering workflow, execution, contract, interface, SDK, data, and quality-gate details.
-- [Code generation execution plan](./infra_projects/docs/CodeGenerationExecutionPlan.md): implementation delivery plan, batch breakdown, execution status, and completion tracking.
+- [work_plan](./infra_projects/docs/work_plan.yaml): implementation delivery plan, batch breakdown, execution status, and completion tracking.
 - [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md): collaboration rules for change plans, batch boundaries, validation, and commit requirements.
 
 ### Usage Entry
@@ -294,7 +294,7 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 - [Requirement document](./meta_layer/docs/Requirement.md): product requirement baseline, scope, user workflow, and target capability definition.
 - [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model.
 - [Module design documents](./meta_layer/docs/design_docs/): current design-doc directory referenced as `module_desig` in discussions, covering workflow, execution, contract, interface, SDK, data, and quality-gate details.
-- [Code generation execution plan](./infra_projects/docs/CodeGenerationExecutionPlan.md): implementation delivery plan, batch breakdown, execution status, and completion tracking.
+- [work_plan](./infra_projects/docs/work_plan.yaml): implementation delivery plan, batch breakdown, execution status, and completion tracking.
 - [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md): collaboration rules for change plans, batch boundaries, validation, and commit requirements.
 
 # Inputs and Outputs
