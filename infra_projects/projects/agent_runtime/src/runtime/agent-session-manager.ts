@@ -1,3 +1,4 @@
+import { SessionHistoryStore } from "../context/session-history-store.js";
 import type {
   AgentSessionCreateInput,
   AgentSessionOpenInput,
@@ -12,20 +13,25 @@ import type {
 export class AgentSessionManager {
   private readonly sessions = new Map<string, AgentSessionState>();
 
-  constructor(private readonly traceRecorder?: IAgentTraceRecorder) {}
+  constructor(
+    private readonly traceRecorder?: IAgentTraceRecorder,
+    private readonly historyStore: SessionHistoryStore = new SessionHistoryStore(),
+  ) {}
 
   async createSession(input: AgentSessionCreateInput): Promise<AgentSessionState> {
     await this.recordRequestedEvent("session_create_requested", input.metadata);
 
+    const transcript = createInitialTranscript(input);
     const session: AgentSessionState = {
       sessionId: createSessionId(),
       title: input.title,
       createdAt: new Date().toISOString(),
       status: "active",
-      transcript: createInitialTranscript(input),
+      transcript,
       metadata: input.metadata,
     };
     this.sessions.set(session.sessionId, session);
+    await this.historyStore.initialize(session.sessionId, transcript);
 
     await this.recordLifecycleEvent("session_created", session.sessionId, input.metadata);
     return cloneSessionState(session);
@@ -41,7 +47,12 @@ export class AgentSessionManager {
   }
 
   async readSession(sessionId: string): Promise<AgentSessionState> {
-    return cloneSessionState(this.getSessionOrThrow(sessionId));
+    const session = this.getSessionOrThrow(sessionId);
+    const transcript = await this.historyStore.load(sessionId);
+    return cloneSessionState({
+      ...session,
+      transcript,
+    });
   }
 
   async closeSession(sessionId: string): Promise<boolean> {
@@ -65,8 +76,8 @@ export class AgentSessionManager {
 
   async appendTranscript(sessionId: string, turns: MessageTurn[]): Promise<void> {
     const session = this.getSessionOrThrow(sessionId);
-
-    session.transcript.push(...turns.map((turn) => ({ ...turn })));
+    await this.historyStore.append(sessionId, turns);
+    session.transcript = await this.historyStore.load(sessionId);
   }
 
   hasSession(sessionId: string): boolean {
