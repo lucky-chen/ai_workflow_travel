@@ -10,6 +10,7 @@ import { runRuntimeApiLifecycleTests } from "./runtime-api-lifecycle.test.js";
 import { runRuntimeMemoryAndRetrievalTests } from "./runtime-memory-and-retrieval.test.js";
 import { runSessionHistoryStoreTests } from "./session-history-store.test.js";
 import { runTraceRecorderTests } from "./trace-recorder.test.js";
+import { runTerminalSessionDemoTests } from "./terminal-session-demo.test.js";
 
 async function main(): Promise<void> {
   await runAgentRuntimeTests();
@@ -23,6 +24,7 @@ async function main(): Promise<void> {
   await runRuntimeApiLifecycleTests();
   await runRuntimeMemoryAndRetrievalTests();
   await runSessionHistoryStoreTests();
+  await runTerminalSessionDemoTests();
   await runTraceRecorderTests();
   process.stdout.write("All tests passed.\n");
 }
