@@ -17,10 +17,19 @@ async function testRuntimeMetricsCollectorUsesLastStepIndex(): Promise<void> {
     payload: {
       lastStepIndex: 2,
     },
+  }, {
+    labels: {
+      modelLatencyMs: "120",
+      inputTokens: "40",
+      outputTokens: "8",
+    },
   });
 
   assert.deepEqual(metrics, {
     stepCount: 2,
+    modelLatencyMs: 120,
+    inputTokens: 40,
+    outputTokens: 8,
   });
 }
 

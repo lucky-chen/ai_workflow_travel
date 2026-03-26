@@ -98,7 +98,7 @@ export class AgentRuntimeService implements AgentRuntime {
     return this.resultNormalizer.normalize(
       result,
       context,
-      this.metricsCollector.summarize(result),
+      this.metricsCollector.summarize(result, context.request.metadata),
     );
   }
 
