@@ -194,11 +194,11 @@
     "title": "Allowed Dependencies",
     "checkitems": [
       "define dependency rules by allowed relations only",
-      "treat all unspecified dependencies as forbidden by default",
+      "state the layer dependency law explicitly: upper layers may depend on lower layers, same-layer modules may depend on each other, and lower layers must not depend on upper layers",
       "keep the rules aligned with the defined layers or partitions"
     ],
     "severity": "medium",
-    "expected_format": "ALLOW:\n- `{SourceA}` -> `{TargetA}`\n- `{SourceB}` -> `{TargetB}`\n- `{SourceC}` -> `{TargetC}`"
+    "expected_format": "Rules:\n- upper layers may depend on lower layers\n- same-layer modules may depend on each other\n- lower layers must not depend on upper layers\n\nALLOW:\n- `{SourceA}` -> `{TargetA}`\n- `{SourceB}` -> `{TargetB}`\n- `{SourceC}` -> `{TargetC}`"
   }
 }
 -->
@@ -212,10 +212,12 @@
     "title": "High-level Diagram",
     "checkitems": [
       "show the main architecture parts and dependency direction",
-      "keep the diagram high level and readable"
+      "keep the diagram high level and readable",
+      "use a boxed layered architecture diagram in plain text",
+      "show top-down layer progression and major dependency direction"
     ],
     "severity": "medium",
-    "expected_format": "```text\n[High-level architecture diagram here]\n```"
+    "expected_format": "```text\n+------------------+\n|     Layer A      |\n|  role summary    |\n+------------------+\n      |\n      v\n+------------------+\n|     Layer B      |\n|  role summary    |\n+------------------+\n      |\n      v\n+------------------------------+\n|           Layer C            |\n| sub-part A / sub-part B      |\n+------------------------------+\n      |          \\\\          \\\\\n      v           v           v\n+----------+   +----------+   +----------+\n| Layer D  |   | Layer E  |   | Layer F  |\n+----------+   +----------+   +----------+\n```\n\nThe diagram must use boxed text blocks like the example above. Do not use bullet-tree diagrams for this section."
   }
 }
 -->
@@ -285,7 +287,10 @@
     "checkitems": [
       "make the main execution, request, or event path explicit",
       "show the reusable control shape across the main interaction path",
-      "identify gateways, retries, asynchronous handoffs, approvals, or other control points where relevant"
+      "identify gateways, retries, asynchronous handoffs, approvals, or other control points where relevant",
+      "the main path must cover every architecture layer that participates in the primary path and must not skip required intermediate layers",
+      "all key boundaries that participate in the primary path must be shown explicitly in both the diagram and the textual steps",
+      "the textual steps must stay consistent with the diagram and must not assign responsibilities to a layer that are owned by another layer"
     ],
     "severity": "medium",
     "expected_format": "```text\n[Main flow diagram here]\n```\n\n1. `{Step1}`\n2. `{Step2}`\n3. `{Step3}`\n\n`{FlowSummary}`"
@@ -328,14 +333,19 @@
     "checkitems": [
       "explain how modules collaborate at a high level",
       "group interactions by major interaction step, user scenario, or control point",
-      "make it clear which interactions belong to the current mainline and which are future-stage extensions when relevant",
       "keep this section at cross-module interaction level rather than module-internal detail",
-      "for each scenario, make user scenario, stage position, and interaction goal explicit before listing interaction cases",
-      "for each interaction case, make summary, modules involved, and control focus explicit",
-      "when adding lightweight shared interaction shapes, keep them at architecture boundary level rather than detailed API or storage schema level"
+      "for each 5.3.x scenario, include one mandatory UML interaction diagram",
+      "the UML for each scenario must be a core-module interaction diagram rather than a layer-level interaction diagram",
+      "the UML must stay at architecture boundary level and must not expand into API field or storage schema detail",
+      "for each scenario, make user scenario and InteractionGoal explicit",
+      "when multiple scenarios exist, each scenario must carry its own UML instead of relying on one section-level shared UML",
+      "each 5.3.x scenario UML must show one complete interaction backbone from scenario entry to scenario exit",
+      "each 5.3.x scenario UML must include all architecture-defined modules or boundaries that participate in that scenario backbone",
+      "each scenario UML must not introduce modules or responsibilities that are not defined in the architecture layers and core modules sections",
+      "related 5.3.x scenarios should keep consistent interaction granularity and notation"
     ],
     "severity": "medium",
-    "expected_format": "This section describes high-level cross-module interaction.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section in two main steps:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`"
+    "expected_format": "This section describes high-level cross-module interaction.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section by scenario:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n  - InteractionGoal: `{InteractionGoal}`\n\n```plantuml\n@startuml\n{CoreModuleInteractionDiagramForScenarioX}\n@enduml\n```"
   }
 }
 -->
