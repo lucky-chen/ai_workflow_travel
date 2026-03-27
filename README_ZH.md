@@ -33,10 +33,10 @@
 - `infra_projects/`：共享基础设施与工作流工程。
   - `sdlc`
     - 功能说明：主工作流项目，用来验证 AI 是否能支持从需求到设计、实现、验证的阶段化交付工作流。
-    - 相关文档：[需求文档](./infra_projects/docs/Requirement.md)、[架构文档](./infra_projects/docs/TechnicalArchitecture.md)、[模块设计目录](./infra_projects/docs/breakdown_docs/)、[work_plan](./infra_projects/docs/work_plan.yaml)
+    - 相关文档：[需求文档](./infra_projects/projects/sdlc/docs/Requirement.md)、[架构文档](./infra_projects/projects/sdlc/docs/TechnicalArchitecture.md)、[模块设计目录](./infra_projects/projects/sdlc/docs/breakdown_docs/)、[work_plan](./infra_projects/projects/sdlc/docs/work_plan.yaml)
   - `agent_runtime`
     - 功能说明：共享运行时基础项目，用来验证 agent 类项目所需的可复用运行时能力。
-    - 相关文档：[agent_runtime_design](./infra_projects/docs/breakdown_docs/agent_runtime_design.md)
+    - 相关文档：[agent_runtime_design](./infra_projects/projects/agent_runtime/docs/agent_runtime_design.md)、[work_plan](./infra_projects/projects/agent_runtime/docs/work_plan.yaml)
 - `user_projects/`：面向用户或具体场景的项目。
   - `TravelAi`
     - 功能说明：主真实产品探索项目，用来验证这套协作方式和工程方法是否能在真实产品场景中成立。
@@ -115,7 +115,7 @@
 - [需求文档](./meta_layer/docs/Requirement.md)：定义产品需求基线、范围、用户工作流和目标能力。
 - [架构文档](./meta_layer/docs/TechnicalArchitecture.md)：定义端到端技术架构、阶段流转、模块职责和运行时协作模型。
 - [模块设计文档](./meta_layer/docs/design_docs/)：讨论中的 `module_desig` 当前对应设计文档目录，包含 workflow、execution、contract、interface、SDK、data、quality-gate 等模块级设计。
-- [work_plan](./infra_projects/docs/work_plan.yaml)：定义实现交付计划、batch 拆分、执行状态和完成跟踪。
+- [work_plan](./infra_projects/projects/sdlc/docs/work_plan.yaml)：定义实现交付计划、batch 拆分、执行状态和完成跟踪。
 - [协作文档](./meta_layer/resources/COLLABORATION_STANDARD.md)：定义变更计划、batch 边界、验证要求和 commit 规则。
 
 ### 使用入口

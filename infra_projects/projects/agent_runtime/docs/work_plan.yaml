@@ -1,0 +1,320 @@
+version: 2
+plan_name: agent_runtime_feature_delivery_work_plan
+status: in_progress
+target: deliver the standalone agent runtime sdk as one session-based multi-step runtime
+  with stable result, trace, and observability boundaries
+context:
+  docs:
+    design: infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+  code:
+    root: infra_projects/projects/agent_runtime
+  active_work_plan: infra_projects/projects/agent_runtime/docs/work_plan.yaml
+  scope: feature-by-feature delivery plan for agent runtime api, session lifecycle,
+    context assembly, multi-step loop, trace, terminal usage, and real-llm verification
+workflow:
+  current_focus:
+    milestone_id: milestone_6_agent_runtime_delivery
+    stage_id: agent runtime core usable
+    batch_id: batch_19_1_agent_runtime_api_and_session_implementation
+    task_name: implement agent runtime public api and session lifecycle
+  execution_rules:
+    - finish all tasks in the current batch before advancing to the next batch in the same stage
+    - a stage is completed only after all of its implementation and verification batches are completed
+    - after a stage is completed, move current_focus to the first incomplete batch of the next stage
+governance:
+  principles:
+    - each stage must deliver one feature or one directly usable system capability
+    - each batch uses a fixed type label so implementation and verification are visually distinct
+    - each feature stage may contain multiple small batches, but each batch must be either implementation or verification
+    - each stage defines feature_scope explicitly, and each batch declares covers from that scope
+    - a stage is only completed after code tests and artifact behavior are verified
+    - runtime mock coverage and real-llm coverage are tracked separately
+    - do not mark real-llm coverage complete until it is actually executed and stable
+  decisions:
+    resolved:
+      - work_plan.yaml is the only active execution baseline for agent_runtime implementation tracking
+      - use infra_projects/projects/agent_runtime/docs/agent_runtime_design.md as the direct design authority for runtime boundaries and naming
+      - batch_type is restricted to implementation or verification
+      - feature semantics are defined by stage feature_scope, while verification only provides evidence
+    open:
+      - request-level routing and step-level routing are not yet split into separate runtime modules
+milestones:
+  - milestone_id: milestone_6_agent_runtime_delivery
+    name: agent runtime delivery
+    goal: deliver the standalone agent runtime sdk defined by agent_runtime_design.md as one session-based multi-step runtime with stable result and observability boundaries
+    status: in_progress
+    stages:
+      - stage_id: agent runtime core usable
+        goal: make the documented AgentRuntime and AgentSession boundaries directly usable with session lifecycle context assembly multi-step loop and stable result contracts
+        status: in_progress
+        delivered_feature: agent runtime core
+        feature_scope:
+          - runtime_api
+          - session_lifecycle
+          - context_assembly
+          - multi_step_runtime_loop
+          - prompt_building
+          - validation_chain
+          - result_normalization
+          - trace_metrics_boundary
+        batches:
+          - batch_id: batch_19_1_agent_runtime_api_and_session_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement the documented agent runtime public api session handle and session lifecycle boundaries
+            status: in_progress
+            progress_notes:
+              - use infra_projects/projects/agent_runtime/docs/agent_runtime_design.md as the direct design authority for runtime boundaries and naming
+              - keep workdir as sdk-scoped configuration on createAgentRuntime rather than session-scoped input
+              - keep public entry stable at AgentRuntime createSession openSession closeSession and AgentSession execute read
+            covers:
+              - runtime_api
+              - session_lifecycle
+            tasks:
+              - task_name: implement runtime root api contract
+                summary: implement AgentRuntime createSession openSession and closeSession according to the documented public contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/api
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement runtime agent session handle
+                summary: implement AgentSession and RuntimeAgentSession so session-bound execute and read delegate through the runtime service
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/src/api
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement session manager lifecycle
+                summary: implement AgentSessionManager session creation opening close semantics and session-state reads
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_2_agent_runtime_context_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement context assembly session history runtime memory retrieval and sdk-scoped workdir loading
+            status: pending
+            covers:
+              - context_assembly
+            tasks:
+              - task_name: implement session history store
+                summary: implement SessionHistoryStore load and transcript append behavior for the bound session
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/context
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement runtime memory and retrieval boundaries
+                summary: implement RuntimeMemoryStore and RetrievalProvider-facing contracts with the documented runtime-owned boundaries
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/context
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement context assembler
+                summary: implement ContextAssembler with sdk-scoped workdir loading and bound-session context assembly
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/context
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_3_agent_runtime_loop_and_validation_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement the multi-step runtime loop prompt builders validators and shared model backend integration
+            status: pending
+            progress_notes:
+              - keep planning and execution on the shared IModelBackend abstraction and do not reintroduce separate planning backend types
+            covers:
+              - multi_step_runtime_loop
+              - prompt_building
+              - validation_chain
+            tasks:
+              - task_name: implement planner and planning prompt flow
+                summary: implement DefaultPlanner PlanningPromptBuilder and PlanValidator on top of the shared IModelBackend abstraction
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/src/model
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement executor and execution prompt flow
+                summary: implement DefaultExecutor ExecutionPromptBuilder and ExecutionResultValidator with documented model request shaping
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/src/model
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement loop coordinator and observer chain
+                summary: implement DefaultAgent DefaultObserver and ObservationValidator for one controlled multi-step plan execute observe re-plan loop
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_4_agent_runtime_result_and_trace_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement result normalization runtime metrics and trace boundaries with documented write-back separation
+            status: pending
+            covers:
+              - result_normalization
+              - trace_metrics_boundary
+            tasks:
+              - task_name: implement result normalizer
+                summary: implement ResultNormalizer with stable success failed diagnostics and loop-state output contracts
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement runtime metrics collector
+                summary: implement RuntimeMetricsCollector and keep metrics in run-scoped result output rather than session transcript state
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: implement trace contracts and recorder boundary
+                summary: implement trace event contracts recorder integration and the documented separation between trace transcript and metrics write-back
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/trace
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_5_agent_runtime_core_verification
+            batch_type: verification
+            name: verification
+            goal: verify the documented agent runtime boundaries through unit coverage on runtime api loop validation and result contracts
+            status: pending
+            covers:
+              - runtime_api
+              - session_lifecycle
+              - context_assembly
+              - multi_step_runtime_loop
+              - validation_chain
+              - result_normalization
+              - trace_metrics_boundary
+            tasks:
+              - task_name: verify runtime api and session lifecycle
+                summary: verify createSession openSession closeSession and AgentSession read behavior against the documented session lifecycle contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: verify multi-step loop and validators
+                summary: verify one mock-backend multi-step loop runs through the documented planner executor observer and validator chain
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests/loop
+                  - infra_projects/projects/agent_runtime/tests/runtime
+                  - infra_projects/projects/agent_runtime/tests/trace
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: verify normalized result and observability boundaries
+                summary: verify stable AgentRuntimeResult diagnostics metrics and transcript trace write-back separation
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests/runtime
+                  - infra_projects/projects/agent_runtime/tests/trace
+                  - infra_projects/projects/agent_runtime/tests/context
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_6_agent_runtime_terminal_example_verification
+            batch_type: verification
+            name: verification
+            goal: verify the manual terminal session example against the implemented sdk boundary
+            status: pending
+            covers:
+              - runtime_api
+              - session_lifecycle
+              - multi_step_runtime_loop
+            tasks:
+              - task_name: verify terminal session demo entry presence
+                summary: verify examples/terminal-session-demo.ts follows the documented scope and drives AgentRuntime and AgentSession without introducing a separate terminal runtime layer
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/examples
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: verify terminal session demo interaction flow
+                summary: verify the terminal session demo can create one session loop over user input and print runtime output on top of the implemented sdk boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/examples
+                  - infra_projects/projects/agent_runtime/package.json
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: verify terminal session demo close path
+                summary: verify the terminal session demo closes the target session through AgentRuntime closeSession with the documented boolean result contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/examples
+                  - infra_projects/projects/agent_runtime/package.json
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_7_agent_runtime_availability_hardening_implementation
+            batch_type: implementation
+            name: implementation
+            goal: harden agent runtime prompt contracts exception handling and observability so real-llm execution is more usable under normal and abnormal provider responses
+            status: pending
+            covers:
+              - prompt_building
+              - validation_chain
+              - result_normalization
+              - trace_metrics_boundary
+            tasks:
+              - task_name: harden planning and execution prompt contracts
+                summary: tighten planning output contracts and execution response contracts so chat json and task json paths are explicit stable and easier to validate under real-llm execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: classify provider abnormal responses and runtime stop behavior
+                summary: define stable handling for provider timeout transport error empty response malformed output and contract violations so runtime failures are categorized and closed consistently
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/model
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: enrich trace diagnostics for runtime troubleshooting
+                summary: expand trace and result diagnostics so DefaultAgent.run records factual in-process trace events at each plan execute and observe step instead of only appending post-step summary events and so prompt-shape issues provider-response issues validation failures and final stop reasons can be distinguished directly from runtime outputs
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/src/loop
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+          - batch_id: batch_19_8_agent_runtime_real_llm_availability_verification
+            batch_type: verification
+            name: verification
+            goal: verify agent runtime availability against real-llm normal and abnormal response scenarios instead of only local mock or injected-fetch coverage
+            status: pending
+            covers:
+              - prompt_building
+              - validation_chain
+              - result_normalization
+              - trace_metrics_boundary
+            tasks:
+              - task_name: verify real-llm chat and planning paths
+                summary: add explicit real-llm verification for planning request shaping chat execution and chat json contract stability under the agent runtime entry
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/bin
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: verify real-llm task json and abnormal provider scenarios
+                summary: verify task json outputs and exercise timeout empty response malformed output and provider-failure scenarios so runtime degradation behavior is actually observed and recorded
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src/model
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+              - task_name: verify in-process trace facts for plan execute observe
+                summary: verify trace output records each plan execute and observe invocation inside DefaultAgent.run as in-process facts with ordered step-level events rather than only post-execution summary records
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src/runtime
+                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+        validation:
+          - AgentRuntime createSession openSession closeSession and AgentSession execute read are directly usable
+          - one multi-step plan execute observe re-plan loop runs through the documented validator chain on a mock backend
+          - transcript trace and metrics boundaries follow the documented write-back separation
+          - examples/terminal-session-demo.ts exercises the implemented sdk boundary without introducing a separate terminal runtime layer
+          - real-llm availability is not marked complete until prompt contracts abnormal-response handling and trace diagnostics are verified through explicit runtime coverage

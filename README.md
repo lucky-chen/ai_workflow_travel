@@ -33,10 +33,10 @@ The projects in this repository should not be read as isolated products with unr
 - `infra_projects/`: shared infrastructure and workflow projects.
   - `sdlc`
     - Function: the main workflow project used to validate whether AI can support a staged delivery workflow from requirement to design, implementation, and validation.
-    - Related docs: [Requirement](./infra_projects/docs/Requirement.md), [TechnicalArchitecture](./infra_projects/docs/TechnicalArchitecture.md), [breakdown_docs](./infra_projects/docs/breakdown_docs/), [work_plan](./infra_projects/docs/work_plan.yaml)
+    - Related docs: [Requirement](./infra_projects/projects/sdlc/docs/Requirement.md), [TechnicalArchitecture](./infra_projects/projects/sdlc/docs/TechnicalArchitecture.md), [breakdown_docs](./infra_projects/projects/sdlc/docs/breakdown_docs/), [work_plan](./infra_projects/projects/sdlc/docs/work_plan.yaml)
   - `agent_runtime`
     - Function: the shared runtime foundation used to validate the reusable runtime capabilities needed by agent-style projects.
-    - Related docs: [agent_runtime_design](./infra_projects/docs/breakdown_docs/agent_runtime_design.md)
+    - Related docs: [agent_runtime_design](./infra_projects/projects/agent_runtime/docs/agent_runtime_design.md), [work_plan](./infra_projects/projects/agent_runtime/docs/work_plan.yaml)
 - `user_projects/`: user-facing or scenario-specific projects.
   - `TravelAi`
     - Function: the main real product exploration project used to validate whether the collaboration model and engineering approach can work in a real product scenario.
@@ -116,7 +116,7 @@ The detailed project descriptions below keep the current structure as a working 
 - [Requirement document](./meta_layer/docs/Requirement.md): product requirement baseline, scope, user workflow, and target capability definition.
 - [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model.
 - [Module design documents](./meta_layer/docs/design_docs/): current design-doc directory referenced as `module_desig` in discussions, covering workflow, execution, contract, interface, SDK, data, and quality-gate details.
-- [work_plan](./infra_projects/docs/work_plan.yaml): implementation delivery plan, batch breakdown, execution status, and completion tracking.
+- [work_plan](./infra_projects/projects/sdlc/docs/work_plan.yaml): implementation delivery plan, batch breakdown, execution status, and completion tracking.
 - [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md): collaboration rules for change plans, batch boundaries, validation, and commit requirements.
 
 ### Usage Entry
@@ -294,7 +294,7 @@ generate --stage module_design --workspace /path/to/workspace --target-module Wo
 - [Requirement document](./meta_layer/docs/Requirement.md): product requirement baseline, scope, user workflow, and target capability definition.
 - [Architecture document](./meta_layer/docs/TechnicalArchitecture.md): end-to-end technical architecture, stage flow, module responsibilities, and runtime collaboration model.
 - [Module design documents](./meta_layer/docs/design_docs/): current design-doc directory referenced as `module_desig` in discussions, covering workflow, execution, contract, interface, SDK, data, and quality-gate details.
-- [work_plan](./infra_projects/docs/work_plan.yaml): implementation delivery plan, batch breakdown, execution status, and completion tracking.
+- [work_plan](./infra_projects/projects/sdlc/docs/work_plan.yaml): implementation delivery plan, batch breakdown, execution status, and completion tracking.
 - [Collaboration standard](./meta_layer/resources/COLLABORATION_STANDARD.md): collaboration rules for change plans, batch boundaries, validation, and commit requirements.
 
 # Inputs and Outputs
