@@ -57,10 +57,10 @@ The detailed project descriptions below keep the current structure as a working 
   - [x] generate executable code, scripts, and project changes and place them into the target workspace
   - [x] run tests, validate results, and generate verification conclusions
 - `infra_projects/projects/agent_runtime`
-  - [x] AgentRuntime V1 single-turn execution foundation
-  - [x] Agent abstraction, runtime execution loop, and trace integration
-  - [ ] AgentRuntime V2 memory support
-  - [ ] AgentRuntime-managed multi-turn continuation
+  - [x] AgentRuntime V1 single-turn, agent abstraction, trace, MCP, and LLM provider integration
+  - [x] AgentRuntime V2 session, transcript, and Plan-Execute-Observe multi-turn runtime
+  - [ ] AgentRuntime V3 retrieval/RAG and multi-agent planning
+  - [ ] AgentRuntime V4 context compression and memory optimization
 - `user_projects/hello-service`
   - [x] baseline capability black-box test
   - [x] llm call chain black-box test

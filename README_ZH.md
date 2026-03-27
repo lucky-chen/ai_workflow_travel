@@ -57,10 +57,10 @@
   - [x] 生成可执行代码、脚本与工程改动，并落到目标工作区
   - [x] 执行测试、校验结果并生成验证结论
 - `infra_projects/projects/agent_runtime`
-  - [x] AgentRuntime V1 单轮执行基础能力
-  - [x] Agent 抽象、runtime 执行循环与 trace 集成
-  - [ ] AgentRuntime V2 memory support
-  - [ ] AgentRuntime-managed multi-turn continuation
+  - [x] AgentRuntime V1 单轮执行、Agent 抽象、trace、MCP 与 LLM provider 集成
+  - [x] AgentRuntime V2 session、transcript 与 Plan-Execute-Observe 多轮 runtime
+  - [ ] AgentRuntime V3 retrieval/RAG 与多 agent 计划
+  - [ ] AgentRuntime V4 上下文压缩与记忆优化
 - `user_projects/hello-service`
   - [x] 基线能力黑盒测试
   - [x] LLM 调用链路黑盒测试
