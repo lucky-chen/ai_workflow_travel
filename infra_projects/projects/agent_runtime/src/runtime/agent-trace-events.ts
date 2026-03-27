@@ -56,6 +56,7 @@ export function buildPlanGeneratedEvent(sessionId: string, runId: string, plan: 
       stepIndex: plan.stepIndex,
       nextStepGoal: plan.nextStepGoal,
       toolNames: plan.toolSteps?.map((toolStep) => toolStep.toolName) ?? [],
+      toolCallIds: plan.toolSteps?.map((toolStep) => toolStep.toolCallId) ?? [],
       ...buildModelTracePayload(plan.traceFacts),
     },
   );
@@ -75,6 +76,7 @@ export function buildExecuteStartedEvent(sessionId: string, runId: string, plan:
       mode: plan.mode,
       nextStepGoal: plan.nextStepGoal,
       toolNames: plan.toolSteps?.map((toolStep) => toolStep.toolName) ?? [],
+      toolCallIds: plan.toolSteps?.map((toolStep) => toolStep.toolCallId) ?? [],
       planningRequestType: plan.traceFacts?.requestType,
       planningProvider: plan.traceFacts?.provider,
       planningModel: plan.traceFacts?.model,
@@ -96,7 +98,9 @@ export function buildToolCalledEvent(
     `Tool called: ${toolResult.toolName}.`,
     stepIndex,
     {
+      toolCallId: toolResult.toolCallId,
       toolName: toolResult.toolName,
+      argumentsPreview: createArgumentsPreview(toolResult.arguments),
     },
   );
 }
@@ -115,7 +119,9 @@ export function buildToolResultRecordedEvent(
     `Tool result recorded: ${toolResult.toolName}.`,
     stepIndex,
     {
+      toolCallId: toolResult.toolCallId,
       toolName: toolResult.toolName,
+      argumentsPreview: createArgumentsPreview(toolResult.arguments),
       success: toolResult.success,
       toolResultPreview: createContentPreview(toolResult.content),
     },
@@ -138,6 +144,7 @@ export function buildExecutionFinishedEvent(
     {
       responseFormat: executionResult.responseFormat,
       toolResultCount: executionResult.toolResults?.length ?? 0,
+      toolCallIds: executionResult.toolResults?.map((toolResult) => toolResult.toolCallId) ?? [],
       ...buildModelTracePayload(executionResult.traceFacts),
     },
   );
@@ -266,5 +273,13 @@ function createContentPreview(content: string): { text: string; truncated: boole
   return {
     text: content.slice(0, 400),
     truncated: content.length > 400,
+  };
+}
+
+function createArgumentsPreview(argumentsValue: Record<string, unknown>): { text: string; truncated: boolean } {
+  const serialized = JSON.stringify(argumentsValue);
+  return {
+    text: serialized.slice(0, 400),
+    truncated: serialized.length > 400,
   };
 }

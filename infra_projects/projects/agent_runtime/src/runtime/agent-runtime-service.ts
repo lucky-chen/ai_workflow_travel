@@ -14,6 +14,7 @@ import { FileAgentTraceRecorder } from "./file-agent-trace-recorder.js";
 import {
   AgentSessionManager,
 } from "./agent-session-manager.js";
+import { AgentTraceApi } from "./agent-trace-api.js";
 import { DefaultAgent } from "./default-agent.js";
 import { DefaultExecutor } from "./default-executor.js";
 import { DefaultObserver } from "./default-observer.js";
@@ -41,6 +42,7 @@ export class AgentRuntimeService implements AgentRuntime {
   private readonly memoryStore: RuntimeMemoryStore;
   private readonly contextAssembler: ContextAssembler;
   private readonly traceRecorder;
+  private readonly traceApi: AgentTraceApi;
   private readonly metricsCollector = new RuntimeMetricsCollector();
   private readonly resultNormalizer = new ResultNormalizer();
 
@@ -48,6 +50,7 @@ export class AgentRuntimeService implements AgentRuntime {
     const traceFileId = dependencies.traceFileId ?? createRuntimeTraceFileId();
     this.traceRecorder = dependencies.traceRecorder
       ?? new FileAgentTraceRecorder(resolveRuntimeTracePath(dependencies.workdir, traceFileId));
+    this.traceApi = new AgentTraceApi(this.traceRecorder);
     this.transcriptStore = new SessionTranscriptStore(dependencies.workdir);
     this.memoryStore = new RuntimeMemoryStore(dependencies.workdir);
     this.sessionManager = new AgentSessionManager(dependencies.workdir, this.traceRecorder, this.transcriptStore);
@@ -85,7 +88,7 @@ export class AgentRuntimeService implements AgentRuntime {
     }
 
     await this.writeExecutionOutputs(sessionId, request, result);
-    await this.saveRuntimeMemorySummary(request, result);
+    await this.saveRuntimeMemorySummary(sessionId, request, result);
     const updatedSession = await this.sessionManager.readSession(sessionId);
 
     return this.normalizeExecutionResult(result, context, updatedSession.transcript);
@@ -135,7 +138,7 @@ export class AgentRuntimeService implements AgentRuntime {
       new ExecutionResultValidator(),
       new DefaultObserver(),
       new ObservationValidator(),
-      this.traceRecorder,
+      this.traceApi,
     );
   }
 
@@ -163,11 +166,10 @@ export class AgentRuntimeService implements AgentRuntime {
       };
     }
 
-    const closedMemorySummary = session.lastMemoryScope
-      ? await this.memoryStore.load(session.lastMemoryScope)
-      : undefined;
+    const closedMemorySummary = await this.memoryStore.load(sessionId);
     const usageSummary = this.traceRecorder.summarizeSessionUsage?.(sessionId) ?? createEmptyTokenUsageSummary();
     const closed = await this.sessionManager.closeSession(sessionId, closedMemorySummary, usageSummary);
+    await this.memoryStore.flush(sessionId);
     await this.traceRecorder.flush?.();
     return {
       sessionId,
@@ -182,6 +184,7 @@ export class AgentRuntimeService implements AgentRuntime {
     result: AgentRuntimeResult,
   ): Promise<void> {
     await this.sessionManager.appendTranscript(sessionId, this.buildTranscriptTurns(request, result));
+    await this.transcriptStore.flush(sessionId);
     await this.sessionManager.updateStatus(sessionId, result.status === "success" ? "completed" : "failed");
   }
 
@@ -221,15 +224,15 @@ export class AgentRuntimeService implements AgentRuntime {
   }
 
   private async saveRuntimeMemorySummary(
+    sessionId: string,
     request: AgentSessionRequest,
     result: AgentRuntimeResult,
   ): Promise<void> {
-    const scope = request.payload.memoryScope;
-    if (!scope || result.status !== "success") {
+    if (result.status !== "success") {
       return;
     }
 
-    await this.memoryStore.save(scope, [
+    await this.memoryStore.save(sessionId, [
       {
         key: "request_constraints",
         content: JSON.stringify(request.payload.prompt.userPrompt),

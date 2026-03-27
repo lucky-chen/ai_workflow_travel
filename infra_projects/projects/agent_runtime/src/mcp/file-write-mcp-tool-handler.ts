@@ -13,7 +13,9 @@ export class FileWriteMcpToolHandler implements IMcpToolHandler {
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, content, "utf8");
     return {
+      toolCallId: request.toolCallId,
       toolName: this.toolName,
+      arguments: { ...request.arguments },
       success: true,
       content: "ok",
       metadata: {

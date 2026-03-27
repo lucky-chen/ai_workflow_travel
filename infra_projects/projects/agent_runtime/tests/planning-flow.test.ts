@@ -14,6 +14,7 @@ export async function runPlanningFlowTests(): Promise<void> {
   await testPlanningPromptBuilderBuildsPlanningRequest();
   await testDefaultPlannerUsesModelBackendForPlanGeneration();
   await testDefaultPlannerParsesExecutionPlanStepsShape();
+  await testDefaultPlannerNormalizesDirectToolStepsShape();
   await testPlanValidatorRejectsInvalidToolSteps();
 }
 
@@ -84,6 +85,34 @@ async function testDefaultPlannerParsesExecutionPlanStepsShape(): Promise<void> 
   assert.equal(plan.nextStepGoal, "Generate final response.");
 }
 
+async function testDefaultPlannerNormalizesDirectToolStepsShape(): Promise<void> {
+  const backend = new TestModelBackend({
+    content: JSON.stringify({
+      intent: "task",
+      mode: "tool_augmented_generation",
+      summary: "Read a file.",
+      stepIndex: 1,
+      nextStepGoal: "Read food.md.",
+      toolSteps: [
+        {
+          tool: "file_read",
+          parameters: {
+            path: "food.md",
+          },
+        },
+      ],
+    }),
+    responseFormat: "json",
+  });
+  const planner = new DefaultPlanner(backend, ["file_read"]);
+
+  const plan = await planner.plan(createAgentContext());
+
+  assert.equal(plan.toolSteps?.[0]?.toolName, "file_read");
+  assert.equal(plan.toolSteps?.[0]?.toolCallId, "step-1-tool-1");
+  assert.deepEqual(plan.toolSteps?.[0]?.arguments, { path: "food.md" });
+}
+
 async function testPlanValidatorRejectsInvalidToolSteps(): Promise<void> {
   const validator = new PlanValidator();
 
@@ -95,6 +124,7 @@ async function testPlanValidatorRejectsInvalidToolSteps(): Promise<void> {
     nextStepGoal: "Generate output.",
     toolSteps: [
       {
+        toolCallId: "step-1-tool-1",
         toolName: "file_read",
         arguments: {},
       },

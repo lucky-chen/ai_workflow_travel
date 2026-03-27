@@ -1,18 +1,21 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
 
 import { DefaultRetrievalProvider } from "../src/context/default-retrieval-provider.js";
 import { RuntimeMemoryStore } from "../src/context/runtime-memory-store.js";
+import { resolveMemoryPath } from "../src/runtime/runtime-storage-paths.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runRuntimeMemoryAndRetrievalTests(): Promise<void> {
   await testRuntimeMemoryStoreLoadsSavedScope();
+  await testRuntimeMemoryStoreFlushesBufferedEntries();
   await testDefaultRetrievalProviderReturnsBoundedItems();
 }
 
 async function testRuntimeMemoryStoreLoadsSavedScope(): Promise<void> {
-  const store = new RuntimeMemoryStore(await createTestWorkdir());
+  const workdir = await createTestWorkdir();
+  const store = new RuntimeMemoryStore(workdir);
 
   await store.save("scope-1", [
     {
@@ -24,6 +27,31 @@ async function testRuntimeMemoryStoreLoadsSavedScope(): Promise<void> {
   const memory = await store.load("scope-1");
 
   assert.deepEqual(memory, [
+    {
+      key: "priority",
+      content: "p0",
+    },
+  ]);
+  await assert.rejects(readFile(resolveMemoryPath(workdir, "scope-1"), "utf8"));
+}
+
+async function testRuntimeMemoryStoreFlushesBufferedEntries(): Promise<void> {
+  const workdir = await createTestWorkdir();
+  const store = new RuntimeMemoryStore(workdir);
+
+  await store.save("scope-1", [
+    {
+      key: "priority",
+      content: "p0",
+    },
+  ]);
+  await store.flush();
+
+  const persisted = JSON.parse(
+    await readFile(resolveMemoryPath(workdir, "scope-1"), "utf8"),
+  ) as Array<{ key: string; content: string }>;
+
+  assert.deepEqual(persisted, [
     {
       key: "priority",
       content: "p0",

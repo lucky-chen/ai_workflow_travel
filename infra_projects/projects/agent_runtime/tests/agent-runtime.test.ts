@@ -23,7 +23,7 @@ export async function runAgentRuntimeTests(): Promise<void> {
   await testRuntimeMarksSessionFailedWhenExecutionFails();
   await testRuntimeWritesToolTurnsAndMemorySummary();
   await testCloseSessionPersistsClosedMemorySummary();
-  await testCloseSessionDoesNotReuseStaleMemoryScope();
+  await testCloseSessionPersistsSessionBoundRuntimeMemory();
   await testRuntimeWritesAllTraceEventsIntoSingleRuntimeTraceFile();
   await testRuntimeUsesRealBackendForPlanningRequestContract();
   await testRuntimeUsesRealBackendWhenConfigured();
@@ -316,6 +316,7 @@ async function testRuntimeWritesToolTurnsAndMemorySummary(): Promise<void> {
               completed: false,
               toolSteps: [
                 {
+                  toolCallId: "step-1-tool-1",
                   toolName: "file_read",
                   arguments: { path: readableFile },
                 },
@@ -362,13 +363,15 @@ async function testRuntimeWritesToolTurnsAndMemorySummary(): Promise<void> {
         userPrompt: { task: "tool transcript" },
       },
       responseFormat: "json",
-      memoryScope: "scope-tool",
     },
   });
   const state = await session.read();
-  const memory = JSON.parse(await readFile(resolveMemoryPath(workdir, "scope-tool"), "utf8")) as Array<{ key: string }>;
 
   assert.equal(state.transcript.some((turn) => turn.role === "tool"), true);
+  await runtime.closeSession(state.sessionId);
+  const memory = JSON.parse(
+    await readFile(resolveMemoryPath(workdir, state.sessionId), "utf8"),
+  ) as Array<{ key: string }>;
   assert.equal(memory.some((entry) => entry.key === "result_summary"), true);
 }
 
@@ -410,7 +413,6 @@ async function testCloseSessionPersistsClosedMemorySummary(): Promise<void> {
         userPrompt: { task: "close summary" },
       },
       responseFormat: "json",
-      memoryScope: "close-scope",
     },
   });
   await runtime.closeSession(state.sessionId);
@@ -424,7 +426,7 @@ async function testCloseSessionPersistsClosedMemorySummary(): Promise<void> {
   assert.equal(persistedState.closedMemorySummary?.some((entry) => entry.key === "result_summary"), true);
 }
 
-async function testCloseSessionDoesNotReuseStaleMemoryScope(): Promise<void> {
+async function testCloseSessionPersistsSessionBoundRuntimeMemory(): Promise<void> {
   const workdir = await createTestWorkdir();
   const runtime = createAgentRuntime({
     workdir,
@@ -459,17 +461,16 @@ async function testCloseSessionDoesNotReuseStaleMemoryScope(): Promise<void> {
     payload: {
       prompt: {
         systemPrompt: ["system"],
-        userPrompt: { task: "with scope" },
+        userPrompt: { task: "first run" },
       },
       responseFormat: "json",
-      memoryScope: "scope-a",
     },
   });
   await session.execute({
     payload: {
       prompt: {
         systemPrompt: ["system"],
-        userPrompt: { task: "without scope" },
+        userPrompt: { task: "second run" },
       },
       responseFormat: "json",
     },
@@ -478,9 +479,10 @@ async function testCloseSessionDoesNotReuseStaleMemoryScope(): Promise<void> {
 
   const persistedState = JSON.parse(
     await readFile(resolveSessionStatePath(workdir, state.sessionId), "utf8"),
-  ) as { closedMemorySummary?: unknown[] };
+  ) as { closedMemorySummary?: Array<{ key?: string }> };
 
-  assert.equal(Array.isArray(persistedState.closedMemorySummary), false);
+  assert.equal(Array.isArray(persistedState.closedMemorySummary), true);
+  assert.equal(persistedState.closedMemorySummary?.some((entry) => entry.key === "result_summary"), true);
 }
 
 async function testRuntimeWritesAllTraceEventsIntoSingleRuntimeTraceFile(): Promise<void> {

@@ -61,6 +61,7 @@ async function testDefaultExecutorUsesPromptBuilderAndToolGateway(): Promise<voi
     nextStepGoal: "Generate output.",
     toolSteps: [
       {
+        toolCallId: "step-1-tool-1",
         toolName: "file_read",
         arguments: {
           path: "/tmp/demo.txt",
@@ -72,6 +73,22 @@ async function testDefaultExecutorUsesPromptBuilderAndToolGateway(): Promise<voi
   assert.equal(gateway.calls.length, 1);
   assert.equal(backend.requests.length, 1);
   assert.equal(result.toolResults?.length, 1);
+  assert.equal(result.toolResults?.[0]?.toolCallId, "step-1-tool-1");
+  assert.deepEqual(result.toolResults?.[0]?.arguments, { path: "/tmp/demo.txt" });
+  assert.deepEqual(
+    backend.requests[0]?.prompt.userPrompt.toolResults,
+    [
+      {
+        toolCallId: "step-1-tool-1",
+        toolName: "file_read",
+        arguments: {
+          path: "/tmp/demo.txt",
+        },
+        success: true,
+        content: "tool-content",
+      },
+    ],
+  );
 }
 
 async function testExecutionResultValidatorRejectsInvalidJson(): Promise<void> {
@@ -138,7 +155,9 @@ class TestMcpGateway implements IMcpGateway {
   async call(request: McpToolRequest): Promise<McpToolResult> {
     this.calls.push(request);
     return {
+      toolCallId: request.toolCallId,
       toolName: request.toolName,
+      arguments: { ...request.arguments },
       success: true,
       content: "tool-content",
     };

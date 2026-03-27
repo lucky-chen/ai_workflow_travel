@@ -5,6 +5,7 @@ import { ObservationValidator } from "../src/loop/observation-validator.js";
 import { PlanValidator } from "../src/loop/plan-validator.js";
 import { ExecutionPromptBuilder } from "../src/loop/execution-prompt-builder.js";
 import { PlanningPromptBuilder } from "../src/loop/planning-prompt-builder.js";
+import { AgentTraceApi } from "../src/runtime/agent-trace-api.js";
 import { DefaultAgent } from "../src/runtime/default-agent.js";
 import { DefaultExecutor } from "../src/runtime/default-executor.js";
 import { DefaultObserver } from "../src/runtime/default-observer.js";
@@ -19,6 +20,7 @@ import type {
 
 export async function runAgentLoopTests(): Promise<void> {
   await testDefaultAgentRunsMultipleStepsUntilCompleted();
+  await testDefaultAgentCarriesToolResultsIntoLaterExecution();
   await testDefaultAgentRepairsInvalidPlanByRetryingPlanner();
   await testDefaultAgentRepairsExecutionResultLocally();
   await testDefaultAgentWrapsChatJsonTextIntoAnswerObject();
@@ -30,6 +32,7 @@ export async function runAgentLoopTests(): Promise<void> {
 
 async function testDefaultAgentRunsMultipleStepsUntilCompleted(): Promise<void> {
   const backend = new StepAwareModelBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -37,6 +40,7 @@ async function testDefaultAgentRunsMultipleStepsUntilCompleted(): Promise<void> 
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -48,6 +52,7 @@ async function testDefaultAgentRunsMultipleStepsUntilCompleted(): Promise<void> 
 
 async function testDefaultAgentReturnsValidationFailureForInvalidObservation(): Promise<void> {
   const backend = new StepAwareModelBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -55,6 +60,7 @@ async function testDefaultAgentReturnsValidationFailureForInvalidObservation(): 
     new ExecutionResultValidator(),
     new InvalidObservationObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -63,8 +69,28 @@ async function testDefaultAgentReturnsValidationFailureForInvalidObservation(): 
   assert.equal(result.diagnostics?.[0]?.code, "missing_observation_issues");
 }
 
+async function testDefaultAgentCarriesToolResultsIntoLaterExecution(): Promise<void> {
+  const backend = new ToolCarryForwardBackend();
+  const traceApi = new AgentTraceApi();
+  const agent = new DefaultAgent(
+    new DefaultPlanner(backend, ["file_read"], new PlanningPromptBuilder()),
+    new PlanValidator(["file_read"]),
+    new DefaultExecutor(backend, new StubMcpGateway(), new ExecutionPromptBuilder()),
+    new ExecutionResultValidator(),
+    new DefaultObserver(),
+    new ObservationValidator(),
+    traceApi,
+  );
+
+  const result = await agent.run(createAgentContext());
+
+  assert.equal(result.status, "success");
+  assert.equal(result.payload.content, "{\"answer\":\"# AI_META Project\"}");
+}
+
 async function testDefaultAgentRepairsInvalidPlanByRetryingPlanner(): Promise<void> {
   const backend = new RepairablePlanBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -72,6 +98,7 @@ async function testDefaultAgentRepairsInvalidPlanByRetryingPlanner(): Promise<vo
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -82,6 +109,7 @@ async function testDefaultAgentRepairsInvalidPlanByRetryingPlanner(): Promise<vo
 
 async function testDefaultAgentRepairsExecutionResultLocally(): Promise<void> {
   const backend = new RepairableExecutionBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -89,6 +117,7 @@ async function testDefaultAgentRepairsExecutionResultLocally(): Promise<void> {
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -99,6 +128,7 @@ async function testDefaultAgentRepairsExecutionResultLocally(): Promise<void> {
 
 async function testDefaultAgentWrapsChatJsonTextIntoAnswerObject(): Promise<void> {
   const backend = new PlainTextChatExecutionBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -106,6 +136,7 @@ async function testDefaultAgentWrapsChatJsonTextIntoAnswerObject(): Promise<void
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -116,6 +147,7 @@ async function testDefaultAgentWrapsChatJsonTextIntoAnswerObject(): Promise<void
 
 async function testDefaultAgentRejectsUnsupportedToolNameInPlan(): Promise<void> {
   const backend = new UnsupportedToolPlanBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, ["file_read", "file_write"], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -123,6 +155,7 @@ async function testDefaultAgentRejectsUnsupportedToolNameInPlan(): Promise<void>
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -133,6 +166,7 @@ async function testDefaultAgentRejectsUnsupportedToolNameInPlan(): Promise<void>
 
 async function testDefaultAgentReturnsValidationFailureForInvalidPlan(): Promise<void> {
   const backend = new InvalidPlanBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -140,6 +174,7 @@ async function testDefaultAgentReturnsValidationFailureForInvalidPlan(): Promise
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -150,6 +185,7 @@ async function testDefaultAgentReturnsValidationFailureForInvalidPlan(): Promise
 
 async function testDefaultAgentReturnsValidationFailureForInvalidExecutionResult(): Promise<void> {
   const backend = new InvalidExecutionBackend();
+  const traceApi = new AgentTraceApi();
   const agent = new DefaultAgent(
     new DefaultPlanner(backend, [], new PlanningPromptBuilder()),
     new PlanValidator(),
@@ -157,6 +193,7 @@ async function testDefaultAgentReturnsValidationFailureForInvalidExecutionResult
     new ExecutionResultValidator(),
     new DefaultObserver(),
     new ObservationValidator(),
+    traceApi,
   );
 
   const result = await agent.run(createAgentContext());
@@ -234,6 +271,86 @@ class InvalidPlanBackend implements IModelBackend {
       content: "{\"summary\":\"unused\"}",
       responseFormat: request.responseFormat,
     };
+  }
+}
+
+class ToolCarryForwardBackend implements IModelBackend {
+  async execute(request: ModelBackendRequest): Promise<ModelBackendResult> {
+    if (request.mode === "planning") {
+      const stepIndex = Number((request.prompt.userPrompt.stepIndex as number | undefined) ?? 1);
+      if (stepIndex === 1) {
+        return {
+          content: JSON.stringify({
+            intent: "task",
+            mode: "tool_augmented_generation",
+            summary: "Read file first.",
+            stepIndex,
+            nextStepGoal: "Read the file content.",
+            completed: false,
+            toolSteps: [
+              {
+                toolCallId: "step-1-tool-1",
+                toolName: "file_read",
+                arguments: { path: "README.md" },
+              },
+            ],
+          }),
+          responseFormat: "json",
+        };
+      }
+
+      return {
+        content: JSON.stringify({
+          intent: "chat",
+          mode: "direct_generation",
+          summary: "Return the first line.",
+          stepIndex,
+          nextStepGoal: "Return the first line that was already read.",
+          completed: true,
+          stopReason: "completed",
+        }),
+        responseFormat: "json",
+      };
+    }
+
+    if (request.prompt.userPrompt.intent === "task") {
+      return {
+        content: JSON.stringify({
+          summary: "Read file succeeded.",
+          first_line: "# AI_META Project",
+        }),
+        responseFormat: "json",
+      };
+    }
+
+    const toolResults = Array.isArray(request.prompt.userPrompt.toolResults)
+      ? request.prompt.userPrompt.toolResults as Array<{ content?: unknown }>
+      : [];
+    const firstLine = typeof toolResults[0]?.content === "string"
+      ? String(toolResults[0].content).split("\n")[0]
+      : "";
+    return {
+      content: JSON.stringify({
+        answer: firstLine,
+      }),
+      responseFormat: "json",
+    };
+  }
+}
+
+class StubMcpGateway {
+  async call(request: { toolCallId: string; arguments: Record<string, unknown> }) {
+    return {
+      toolCallId: request.toolCallId,
+      toolName: "file_read",
+      arguments: { ...request.arguments },
+      success: true,
+      content: "# AI_META Project\n# Purpose",
+    };
+  }
+
+  listToolNames(): string[] {
+    return ["file_read"];
   }
 }
 
@@ -335,6 +452,7 @@ class UnsupportedToolPlanBackend implements IModelBackend {
           nextStepGoal: "Continue with unsupported tool.",
           toolSteps: [
             {
+              toolCallId: "step-1-tool-1",
               toolName: "processInput",
               arguments: {},
             },

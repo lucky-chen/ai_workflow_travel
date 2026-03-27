@@ -17,7 +17,11 @@ export class DefaultExecutor implements IExecutor {
     private readonly promptBuilder: ExecutionPromptBuilder = new ExecutionPromptBuilder(),
   ) {}
 
-  async execute(context: AgentContext, plan: ExecutionPlan): Promise<ExecutionResult> {
+  async execute(
+    context: AgentContext,
+    plan: ExecutionPlan,
+    priorToolResults: McpToolResult[] = [],
+  ): Promise<ExecutionResult> {
     const toolResults: McpToolResult[] = [];
     if (plan.mode === "tool_augmented_generation") {
       if (!this.mcpGateway) {
@@ -25,7 +29,15 @@ export class DefaultExecutor implements IExecutor {
       }
 
       for (const toolStep of plan.toolSteps ?? []) {
-        toolResults.push(await this.mcpGateway.call(toolStep));
+        const rawToolResult = await this.mcpGateway.call(toolStep);
+        toolResults.push({
+          toolCallId: toolStep.toolCallId,
+          toolName: toolStep.toolName,
+          arguments: { ...toolStep.arguments },
+          success: rawToolResult.success,
+          content: rawToolResult.content,
+          ...(rawToolResult.metadata ? { metadata: { ...rawToolResult.metadata } } : {}),
+        });
       }
     }
 
@@ -33,6 +45,7 @@ export class DefaultExecutor implements IExecutor {
       this.promptBuilder.build({
         context,
         plan,
+        ...(priorToolResults.length > 0 ? { priorToolResults } : {}),
         ...(toolResults.length > 0 ? { toolResults } : {}),
       }),
     );

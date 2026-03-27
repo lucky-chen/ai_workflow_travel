@@ -10,7 +10,9 @@ export class FileReadMcpToolHandler implements IMcpToolHandler {
     const filePath = readStringArg(request.arguments, "path", this.toolName);
     const content = await readFile(filePath, "utf8");
     return {
+      toolCallId: request.toolCallId,
       toolName: this.toolName,
+      arguments: { ...request.arguments },
       success: true,
       content,
       metadata: {

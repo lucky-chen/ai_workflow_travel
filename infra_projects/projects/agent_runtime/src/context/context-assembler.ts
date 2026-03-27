@@ -18,7 +18,7 @@ export class ContextAssembler {
 
   async assemble(session: AgentSessionState, request: AgentSessionRequest): Promise<AgentContext> {
     const transcript = await this.transcriptStore.load(session.sessionId);
-    const memory = await this.memoryStore.load(request.payload.memoryScope);
+    const memory = await this.memoryStore.load(session.sessionId);
     const retrievalContext = request.payload.retrievalQuery
       ? await this.retrievalProvider.load(this.buildRetrievalRequest(session, request))
       : [];
@@ -40,6 +40,7 @@ export class ContextAssembler {
         memory,
         retrievalContext,
         mcpToolCalls: request.payload.mcpToolCalls?.map((toolCall) => ({
+          toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
           arguments: { ...toolCall.arguments },
         })) ?? [],

@@ -20,7 +20,6 @@ export interface AgentPromptPayload {
     userPrompt: Record<string, unknown>;
   };
   responseFormat: "text" | "json";
-  memoryScope?: string;
   retrievalQuery?: string;
   mcpToolCalls?: McpToolRequest[];
 }
@@ -58,7 +57,6 @@ export interface AgentSessionState {
   createdAt: string;
   status: "active" | "completed" | "failed" | "closed";
   initialRequest?: AgentSessionRequest;
-  lastMemoryScope?: string;
   closedMemorySummary?: MemoryEntry[];
   usageSummary?: TokenUsageSummary;
   transcript: MessageTurn[];
@@ -162,6 +160,7 @@ export interface ExecutionPromptBuilderInput {
   context: AgentContext;
   plan: ExecutionPlan;
   toolResults?: McpToolResult[];
+  priorToolResults?: McpToolResult[];
 }
 
 export interface ValidationIssue {
@@ -177,12 +176,15 @@ export interface ValidationResult<T> {
 }
 
 export interface McpToolRequest {
+  toolCallId: string;
   toolName: string;
   arguments: Record<string, unknown>;
 }
 
 export interface McpToolResult {
+  toolCallId: string;
   toolName: string;
+  arguments: Record<string, unknown>;
   success: boolean;
   content: string;
   metadata?: Record<string, string>;
@@ -353,7 +355,7 @@ export interface IPlanner {
 }
 
 export interface IExecutor {
-  execute(context: AgentContext, plan: ExecutionPlan): Promise<ExecutionResult>;
+  execute(context: AgentContext, plan: ExecutionPlan, priorToolResults?: McpToolResult[]): Promise<ExecutionResult>;
 }
 
 export interface IObserver {

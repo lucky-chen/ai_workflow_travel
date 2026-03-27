@@ -81,7 +81,7 @@ function normalizeDirectExecutionPlanShape(
     nextStepGoal: typeof parsed.nextStepGoal === "string" ? parsed.nextStepGoal : undefined,
     completed: typeof parsed.completed === "boolean" ? parsed.completed : undefined,
     stopReason: isStopReason(parsed.stopReason) ? parsed.stopReason : undefined,
-    toolSteps: Array.isArray(parsed.toolSteps) ? (parsed.toolSteps as ExecutionPlan["toolSteps"]) : undefined,
+    toolSteps: normalizeToolSteps(parsed.toolSteps),
   };
 }
 
@@ -134,6 +134,7 @@ function normalizeNestedExecutionPlanShape(
         ? {
             toolSteps: [
               {
+                toolCallId: "",
                 toolName,
                 arguments: isRecord(toolArguments) ? toolArguments : {},
               },
@@ -160,8 +161,58 @@ function finalizeExecutionPlan(
     ...(traceFacts ? { traceFacts } : {}),
     ...(normalized.completed !== undefined ? { completed: normalized.completed } : {}),
     ...(normalized.stopReason ? { stopReason: normalized.stopReason } : {}),
-    ...(normalized.toolSteps ? { toolSteps: normalized.toolSteps } : {}),
+    ...(normalized.toolSteps ? { toolSteps: assignToolCallIds(normalized.toolSteps, normalized.stepIndex ?? stepIndex) } : {}),
   };
+}
+
+function normalizeToolSteps(value: unknown): ExecutionPlan["toolSteps"] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = value
+    .map((item) => normalizeToolStep(item))
+    .filter((item): item is NonNullable<ExecutionPlan["toolSteps"]>[number] => item !== undefined);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeToolStep(value: unknown): NonNullable<ExecutionPlan["toolSteps"]>[number] | undefined {
+  const record = asRecord(value);
+  if (Object.keys(record).length === 0) {
+    return undefined;
+  }
+
+  const toolName = typeof record.toolName === "string"
+    ? record.toolName
+    : typeof record.tool === "string"
+      ? record.tool
+      : undefined;
+  const argumentsValue = isRecord(record.arguments)
+    ? record.arguments
+    : isRecord(record.parameters)
+      ? record.parameters
+      : {};
+
+  if (!toolName) {
+    return undefined;
+  }
+
+  return {
+    toolCallId: typeof record.toolCallId === "string" ? record.toolCallId : "",
+    toolName,
+    arguments: argumentsValue,
+  };
+}
+
+function assignToolCallIds(
+  toolSteps: NonNullable<ExecutionPlan["toolSteps"]>,
+  stepIndex: number,
+): NonNullable<ExecutionPlan["toolSteps"]> {
+  return toolSteps.map((toolStep, toolIndex) => ({
+    ...toolStep,
+    toolCallId: toolStep.toolCallId.trim() || `step-${stepIndex}-tool-${toolIndex + 1}`,
+  }));
 }
 
 function isExecutionMode(value: unknown): value is ExecutionPlan["mode"] {

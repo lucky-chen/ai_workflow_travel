@@ -1,25 +1,25 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import type {
   AgentTraceEvent,
   IAgentTraceRecorder,
   TokenUsageSummary,
 } from "./agent-runtime-types.js";
 import { createEmptyTokenUsageSummary } from "./agent-runtime-types.js";
+import { BufferedFileStore } from "../shared/buffered-file-store.js";
 
-export class FileAgentTraceRecorder implements IAgentTraceRecorder {
-  private readonly events: AgentTraceEvent[] = [];
-  private pendingCount = 0;
+const TRACE_BUFFER_KEY = "runtime-trace";
 
+export class FileAgentTraceRecorder extends BufferedFileStore<AgentTraceEvent[]> implements IAgentTraceRecorder {
   constructor(
     private readonly outputPath: string,
-    private readonly flushThreshold = 3,
-  ) {}
+    flushThreshold = 3,
+  ) {
+    super(flushThreshold);
+  }
 
   async record(event: AgentTraceEvent): Promise<void> {
-    this.events.push(event);
-    this.pendingCount += 1;
+    const events = await this.loadBuffered(TRACE_BUFFER_KEY);
+    events.push(event);
+    await this.saveBuffered(TRACE_BUFFER_KEY, events);
 
     if (this.shouldFlush(event)) {
       await this.flush();
@@ -27,25 +27,19 @@ export class FileAgentTraceRecorder implements IAgentTraceRecorder {
   }
 
   async flush(): Promise<void> {
-    if (this.pendingCount === 0) {
-      return;
-    }
-
-    await mkdir(path.dirname(this.outputPath), { recursive: true });
-    await writeFile(this.outputPath, `${JSON.stringify(this.events, null, 2)}\n`, "utf8");
-    this.pendingCount = 0;
+    await this.flushBuffered(TRACE_BUFFER_KEY);
   }
 
   private shouldFlush(event: AgentTraceEvent): boolean {
     return (
-      this.pendingCount >= this.flushThreshold
+      this.shouldFlushByThreshold()
       || event.eventType === "run_finished"
       || event.eventType === "session_closed"
     );
   }
 
   summarizeSessionUsage(sessionId: string): TokenUsageSummary {
-    return this.events
+    return this.loadCurrentEvents()
       .filter((event) => event.scope === "session" && event.sessionId === sessionId)
       .reduce<TokenUsageSummary>((summary, event) => {
         const usage = event.payload?.usage;
@@ -64,6 +58,30 @@ export class FileAgentTraceRecorder implements IAgentTraceRecorder {
           totalTokens: summary.totalTokens + totalTokens,
         };
       }, createEmptyTokenUsageSummary());
+  }
+
+  protected resolvePath(): string {
+    return this.outputPath;
+  }
+
+  protected emptyValue(): AgentTraceEvent[] {
+    return [];
+  }
+
+  protected parse(raw: string): AgentTraceEvent[] {
+    return structuredClone(JSON.parse(raw) as AgentTraceEvent[]);
+  }
+
+  protected serialize(value: AgentTraceEvent[]): string {
+    return `${JSON.stringify(this.cloneValue(value), null, 2)}\n`;
+  }
+
+  protected cloneValue(value: AgentTraceEvent[]): AgentTraceEvent[] {
+    return structuredClone(value);
+  }
+
+  private loadCurrentEvents(): AgentTraceEvent[] {
+    return this.getBufferedValue(TRACE_BUFFER_KEY) ?? [];
   }
 }
 

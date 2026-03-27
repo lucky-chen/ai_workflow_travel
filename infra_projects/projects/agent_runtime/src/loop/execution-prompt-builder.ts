@@ -28,7 +28,7 @@ export class ExecutionPromptBuilder {
           transcript: input.context.runtimeContext.transcript,
           memory: input.context.runtimeContext.memory,
           retrievalContext: input.context.runtimeContext.retrievalContext,
-          toolResults: input.toolResults ?? [],
+          toolResults: [...(input.priorToolResults ?? []), ...(input.toolResults ?? [])],
         },
       },
     };

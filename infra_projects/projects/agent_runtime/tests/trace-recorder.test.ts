@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -14,6 +14,7 @@ export async function runTraceRecorderTests(): Promise<void> {
   await testTraceRecorderCapturesSessionLifecycleAndRunEvents();
   await testTraceRecorderCapturesRepairPlanningAsSeparateStartedFact();
   await testTraceRecorderCapturesRequestAndResponseFacts();
+  await testTraceRecorderCapturesToolCallFacts();
   await testTraceRecorderCapturesValidationDecisionFacts();
   await testFileTraceRecorderFlushesAtThresholdWithoutReadingBack();
   await testFileTraceRecorderFlushesOnSessionClosed();
@@ -167,6 +168,91 @@ async function testTraceRecorderCapturesRequestAndResponseFacts(): Promise<void>
   assert.equal(executionFinished?.payload?.requestType, "execution");
   assert.equal(typeof executionFinished?.payload?.rawResponsePreview, "object");
   assert.equal(typeof executionFinished?.payload?.parsedContentPreview, "object");
+}
+
+async function testTraceRecorderCapturesToolCallFacts(): Promise<void> {
+  const recorder = new InMemoryAgentTraceRecorder();
+  const workdir = await createTestWorkdir("agent-runtime-trace-tool-");
+  const readableFile = path.join(workdir, "README.md");
+  await writeFile(readableFile, "# demo\n", "utf8");
+  const runtime = createAgentRuntime({
+    workdir,
+    traceRecorder: recorder,
+    mockExecute(request) {
+      if (request.mode === "planning") {
+        const stepIndex = Number(request.prompt.userPrompt.stepIndex ?? 1);
+        if (stepIndex === 1) {
+          return {
+            content: JSON.stringify({
+              intent: "task",
+              mode: "tool_augmented_generation",
+              summary: "read file",
+              stepIndex,
+              nextStepGoal: "Read the file.",
+              toolSteps: [
+                {
+                  toolName: "file_read",
+                  arguments: {
+                    path: readableFile,
+                  },
+                },
+              ],
+            }),
+            responseFormat: "json",
+          };
+        }
+
+        return {
+          content: JSON.stringify({
+            intent: "chat",
+            mode: "direct_generation",
+            summary: "finish",
+            stepIndex,
+            nextStepGoal: "Answer.",
+            completed: true,
+            stopReason: "completed",
+          }),
+          responseFormat: "json",
+        };
+      }
+
+      if (request.prompt.userPrompt.intent === "chat") {
+        return {
+          content: "{\"answer\":\"ok\"}",
+          responseFormat: "json",
+        };
+      }
+
+      return {
+        content: "{\"summary\":\"read ok\"}",
+        responseFormat: "json",
+      };
+    },
+  });
+  const session = await runtime.createSession({});
+
+  await session.execute({
+    payload: {
+      prompt: {
+        systemPrompt: ["system"],
+        userPrompt: {
+          task: "trace tool facts",
+        },
+      },
+      responseFormat: "json",
+    },
+  });
+
+  const toolCalled = recorder.events.find((event) => event.eventType === "tool_called");
+  const toolRecorded = recorder.events.find((event) => event.eventType === "tool_result_recorded");
+  const executionFinished = recorder.events.find((event) => event.eventType === "execution_finished" && event.payload?.toolResultCount === 1);
+
+  assert.equal(toolCalled?.payload?.toolCallId, "step-1-tool-1");
+  assert.equal(toolCalled?.payload?.toolName, "file_read");
+  assert.equal(typeof toolCalled?.payload?.argumentsPreview, "object");
+  assert.equal(toolRecorded?.payload?.toolCallId, "step-1-tool-1");
+  assert.equal(typeof toolRecorded?.payload?.toolResultPreview, "object");
+  assert.deepEqual(executionFinished?.payload?.toolCallIds, ["step-1-tool-1"]);
 }
 
 async function testTraceRecorderCapturesValidationDecisionFacts(): Promise<void> {

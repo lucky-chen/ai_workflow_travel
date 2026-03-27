@@ -32,7 +32,7 @@ async function testContextAssemblerBuildsAgentContext(): Promise<void> {
       content: "{\"task\":\"existing\"}",
     },
   ]);
-  await memoryStore.save("scope-1", [
+  await memoryStore.save("session-1", [
     {
       key: "priority",
       content: "p0",
@@ -55,7 +55,6 @@ async function testContextAssemblerBuildsAgentContext(): Promise<void> {
           },
         },
         responseFormat: "json",
-        memoryScope: "scope-1",
         retrievalQuery: "agent runtime design",
       },
       metadata: {

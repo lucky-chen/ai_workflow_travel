@@ -39,6 +39,7 @@ export class AgentSessionManager {
     };
     await this.writeState(session);
     await this.transcriptStore.initialize(session.sessionId, transcript);
+    await this.transcriptStore.flush(session.sessionId);
 
     await this.recordLifecycleEvent("session_created", session.sessionId, input.metadata);
     return cloneSessionState(session);
@@ -88,7 +89,6 @@ export class AgentSessionManager {
     if (!session.initialRequest) {
       session.initialRequest = cloneRequest(request);
     }
-    session.lastMemoryScope = request.payload.memoryScope;
     await this.writeState(session);
   }
 
@@ -182,7 +182,6 @@ export class AgentSessionManager {
       createdAt: session.createdAt,
       status: session.status,
       initialRequest: session.initialRequest ? cloneRequest(session.initialRequest) : undefined,
-      lastMemoryScope: session.lastMemoryScope,
       closedMemorySummary: session.closedMemorySummary?.map((entry) => ({ ...entry })),
       usageSummary: session.usageSummary ? { ...session.usageSummary } : undefined,
       metadata: session.metadata ? { ...session.metadata, labels: session.metadata.labels ? { ...session.metadata.labels } : undefined } : undefined,
@@ -221,7 +220,6 @@ function cloneSessionState(state: AgentSessionState): AgentSessionState {
   return {
     ...state,
     initialRequest: state.initialRequest ? cloneRequest(state.initialRequest) : undefined,
-    lastMemoryScope: state.lastMemoryScope,
     closedMemorySummary: state.closedMemorySummary?.map((entry) => ({ ...entry })),
     usageSummary: state.usageSummary ? { ...state.usageSummary } : undefined,
     transcript: state.transcript.map((turn) => ({ ...turn })),
@@ -238,6 +236,7 @@ function cloneRequest(request: AgentSessionRequest): AgentSessionRequest {
         userPrompt: { ...request.payload.prompt.userPrompt },
       },
       mcpToolCalls: request.payload.mcpToolCalls?.map((toolCall) => ({
+        toolCallId: toolCall.toolCallId,
         toolName: toolCall.toolName,
         arguments: { ...toolCall.arguments },
       })),

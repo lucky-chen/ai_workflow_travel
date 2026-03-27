@@ -1,5 +1,4 @@
 import { AgentTraceApi } from "./agent-trace-api.js";
-import type { IAgentTraceRecorder } from "./agent-trace-recorder.js";
 import type {
   AgentContext,
   ExecutionPlan,
@@ -22,7 +21,6 @@ import { RuntimeResultBuilder } from "./runtime-result-builder.js";
 import { ProviderExecutionError } from "./provider-execution-error.js";
 
 export class DefaultAgent implements IAgent {
-  private readonly traceApi: AgentTraceApi;
   private readonly resultBuilder = new RuntimeResultBuilder();
 
   constructor(
@@ -32,11 +30,9 @@ export class DefaultAgent implements IAgent {
     private readonly executionResultValidator: ExecutionResultValidator,
     private readonly observer: IObserver,
     private readonly observationValidator: ObservationValidator,
-    private readonly traceRecorder?: IAgentTraceRecorder,
+    private readonly traceApi: AgentTraceApi,
     private readonly maxSteps = 3,
-  ) {
-    this.traceApi = new AgentTraceApi(traceRecorder);
-  }
+  ) {}
 
   async run(context: AgentContext): Promise<AgentRuntimeResult> {
     const runId = context.runtimeContext.runId ?? createRunId();
@@ -133,7 +129,7 @@ export class DefaultAgent implements IAgent {
       };
     }
 
-    const executionOutcome = await this.executeStep(context, runId, stepIndex, validatedPlan.value);
+    const executionOutcome = await this.executeStep(context, runId, stepIndex, validatedPlan.value, state);
     if (executionOutcome.type === "continue") {
       return executionOutcome;
     }
@@ -156,13 +152,14 @@ export class DefaultAgent implements IAgent {
     runId: string,
     stepIndex: number,
     plan: ExecutionPlan,
+    state: AgentLoopState,
   ): Promise<StepExecutionOutcome> {
     const sessionId = context.runtimeContext.sessionId;
     let executionResult: ExecutionResult;
 
     try {
       await this.traceApi.recordExecuteStarted(sessionId, runId, plan);
-      executionResult = await this.executor.execute(context, plan);
+      executionResult = await this.executor.execute(context, plan, state.collectedToolResults);
     } catch (error) {
       const issues = [buildExecutionErrorIssue(error)];
       if (stepIndex < this.maxSteps) {

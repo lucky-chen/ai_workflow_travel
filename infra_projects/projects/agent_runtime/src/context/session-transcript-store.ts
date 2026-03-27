@@ -1,47 +1,53 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { MessageTurn } from "../runtime/agent-runtime-types.js";
 import { resolveSessionTranscriptPath } from "../runtime/runtime-storage-paths.js";
+import { BufferedFileStore } from "../shared/buffered-file-store.js";
 
-export class SessionTranscriptStore {
-  constructor(private readonly workdir: string) {}
+export class SessionTranscriptStore extends BufferedFileStore<MessageTurn[]> {
+  constructor(private readonly workdir: string, flushThreshold = 3) {
+    super(flushThreshold);
+  }
 
   async initialize(sessionId: string, transcript: MessageTurn[]): Promise<void> {
-    await this.writeTranscript(sessionId, transcript);
+    await this.saveBuffered(sessionId, transcript);
+    if (this.shouldFlushByThreshold()) {
+      await this.flush(sessionId);
+    }
   }
 
   async load(sessionId: string): Promise<MessageTurn[]> {
-    const transcriptPath = this.resolvePath(sessionId);
-    let raw: string;
-
-    try {
-      raw = await readFile(transcriptPath, "utf8");
-    } catch (error) {
-      const nodeError = error as NodeJS.ErrnoException;
-      if (nodeError.code === "ENOENT") {
-        return [];
-      }
-      throw error;
-    }
-
-    const parsed = JSON.parse(raw) as MessageTurn[];
-    return parsed.map((turn) => ({ ...turn }));
+    return this.loadBuffered(sessionId);
   }
 
   async append(sessionId: string, turns: MessageTurn[]): Promise<void> {
     const transcript = await this.load(sessionId);
     transcript.push(...turns.map((turn) => ({ ...turn })));
-    await this.writeTranscript(sessionId, transcript);
+    await this.saveBuffered(sessionId, transcript);
+    if (this.shouldFlushByThreshold()) {
+      await this.flush(sessionId);
+    }
+  }
+
+  async flush(sessionId?: string): Promise<void> {
+    await this.flushBuffered(sessionId);
   }
 
   resolvePath(sessionId: string): string {
     return resolveSessionTranscriptPath(this.workdir, sessionId);
   }
 
-  private async writeTranscript(sessionId: string, transcript: MessageTurn[]): Promise<void> {
-    const transcriptPath = this.resolvePath(sessionId);
-    await mkdir(path.dirname(transcriptPath), { recursive: true });
-    await writeFile(transcriptPath, `${JSON.stringify(transcript, null, 2)}\n`, "utf8");
+  protected emptyValue(): MessageTurn[] {
+    return [];
+  }
+
+  protected parse(raw: string): MessageTurn[] {
+    return (JSON.parse(raw) as MessageTurn[]).map((turn) => ({ ...turn }));
+  }
+
+  protected serialize(value: MessageTurn[]): string {
+    return `${JSON.stringify(this.cloneValue(value), null, 2)}\n`;
+  }
+
+  protected cloneValue(value: MessageTurn[]): MessageTurn[] {
+    return value.map((turn) => ({ ...turn }));
   }
 }
