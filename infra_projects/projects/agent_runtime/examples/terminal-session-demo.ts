@@ -1,11 +1,11 @@
+import type { RuntimeApi } from "../src_new/interface/api.js";
 import {
-  createAgentRuntime,
-  type AgentRuntime,
-  type AgentSession,
-} from "../src/runtime/agent-runtime.js";
+  createTerminalSessionDemo,
+  type TerminalSessionDemoOptions,
+} from "../src_new/application/terminal-session-demo.js";
 
-export interface TerminalSessionDemoOptions {
-  runtime?: AgentRuntime;
+export interface ExampleTerminalSessionDemoOptions {
+  runtime?: RuntimeApi;
   workdir?: string;
   sessionId?: string;
   initialSystemPrompt?: string[];
@@ -13,56 +13,37 @@ export interface TerminalSessionDemoOptions {
   writeOutput: (line: string) => Promise<void> | void;
 }
 
-export interface TerminalSessionDemoResult {
+export interface ExampleTerminalSessionDemoResult {
   sessionId: string;
   closed: boolean;
 }
 
 export async function runTerminalSessionDemo(
-  options: TerminalSessionDemoOptions,
-): Promise<TerminalSessionDemoResult> {
-  const runtime = options.runtime ?? createAgentRuntime({
-    workdir: options.workdir ?? process.cwd(),
+  options: ExampleTerminalSessionDemoOptions,
+): Promise<ExampleTerminalSessionDemoResult> {
+  const demo = createTerminalSessionDemo({
+    runtime: options.runtime,
+    workdir: options.workdir,
+    sessionId: options.sessionId,
+    sysPrompt: options.initialSystemPrompt,
+    readInput: async () => {
+      const rawText = await options.readInput();
+      return {
+        rawText: rawText ?? "",
+        closeRequested: rawText === null || rawText.trim().toLowerCase() === "exit",
+      };
+    },
+    writeLine: options.writeOutput,
+  } satisfies TerminalSessionDemoOptions);
+
+  const result = await demo.run({
+    runtime: options.runtime,
+    workdir: options.workdir,
+    sessionId: options.sessionId,
+    sysPrompt: options.initialSystemPrompt,
   });
-  const session = options.sessionId
-    ? await runtime.openSession({ sessionId: options.sessionId })
-    : await runtime.createSession({
-        initialSystemPrompt: options.initialSystemPrompt,
-      });
-
-  await runInteractionLoop(session, options.readInput, options.writeOutput);
-
-  const state = await session.read();
-  const closeResult = await runtime.closeSession(state.sessionId);
   return {
-    sessionId: state.sessionId,
-    closed: closeResult.closed,
+    sessionId: result.sessionId,
+    closed: true,
   };
-}
-
-async function runInteractionLoop(
-  session: AgentSession,
-  readInput: () => Promise<string | null>,
-  writeOutput: (line: string) => Promise<void> | void,
-): Promise<void> {
-  while (true) {
-    const input = await readInput();
-    if (input === null || input.trim().toLowerCase() === "exit") {
-      return;
-    }
-
-    const result = await session.execute({
-      payload: {
-        prompt: {
-          systemPrompt: ["You are an agent runtime assistant."],
-          userPrompt: {
-            input,
-          },
-        },
-        responseFormat: "json",
-      },
-    });
-
-    await writeOutput(result.payload.content ?? result.payload.summary ?? "");
-  }
 }

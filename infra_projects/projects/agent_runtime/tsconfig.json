@@ -13,5 +13,13 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "src_new/**/*.ts", "tests/**/*.ts", "examples/**/*.ts", "bin/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src_new/**/*.ts",
+    "tests/run-tests.ts",
+    "tests/*src-new*.test.ts",
+    "tests/test-workdir.ts",
+    "examples/**/*.ts",
+    "bin/**/*.ts"
+  ]
 }

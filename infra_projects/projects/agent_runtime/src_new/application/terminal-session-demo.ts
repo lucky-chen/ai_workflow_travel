@@ -1,0 +1,121 @@
+import type {
+  CloseSessionResult,
+  RuntimeApi,
+  SessionResult,
+  UserInput,
+} from "../interface/api.js";
+import { createRuntime } from "../runtime/runtime.js";
+
+export interface TerminalSessionDemoEntry {
+  run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult>;
+}
+
+export interface TerminalSessionDemoOptions {
+  sessionId?: string;
+  sysPrompt?: string[];
+  userPrompt?: Record<string, unknown>;
+  config?: Record<string, unknown>;
+  readInput?: () => Promise<{ rawText: string; closeRequested: boolean }>;
+  writeLine?: (line: string) => Promise<void> | void;
+  runtime?: RuntimeApi;
+  workdir?: string;
+}
+
+export interface TerminalSessionDemoResult {
+  sessionId: string;
+  closeResult: CloseSessionResult;
+}
+
+export class TerminalInputHandler {
+  constructor(private readonly readInputImpl: () => Promise<{ rawText: string; closeRequested: boolean }>) {}
+
+  async readUserInput(): Promise<{ rawText: string; closeRequested: boolean }> {
+    return this.readInputImpl();
+  }
+
+  toUserInput(userInput: { rawText: string; closeRequested: boolean }): UserInput {
+    return {
+      content: {
+        task: userInput.rawText,
+      },
+    };
+  }
+}
+
+export class TerminalOutputRenderer {
+  constructor(private readonly writeLine: (line: string) => Promise<void> | void) {}
+
+  renderAgentOutput(output: SessionResult): void | Promise<void> {
+    if (typeof output.content === "string") {
+      return this.writeLine(output.content);
+    }
+    if (output.content) {
+      return this.writeLine(JSON.stringify(output.content));
+    }
+    return this.writeLine(output.errorMessage ?? "");
+  }
+
+  renderFailure(error: { summary: string; traceId?: string }): void | Promise<void> {
+    const suffix = error.traceId ? ` [trace=${error.traceId}]` : "";
+    return this.writeLine(`${error.summary}${suffix}`);
+  }
+
+  renderCloseResult(result: CloseSessionResult): void | Promise<void> {
+    return this.writeLine(`Session closed: ${result.sessionId}`);
+  }
+}
+
+export class TerminalSessionDemo implements TerminalSessionDemoEntry {
+  constructor(
+    private readonly runtime: RuntimeApi,
+    private readonly inputHandler: TerminalInputHandler,
+    private readonly outputRenderer: TerminalOutputRenderer,
+  ) {}
+
+  async run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult> {
+    const session = input.sessionId
+      ? await this.runtime.openSession(input.sessionId)
+      : await this.runtime.createSession({
+          sysPrompt: input.sysPrompt,
+          userPrompt: input.userPrompt,
+          config: input.config,
+        });
+
+    while (true) {
+      const nextInput = await this.inputHandler.readUserInput();
+      if (nextInput.closeRequested) {
+        break;
+      }
+
+      try {
+        const result = await session.execute(this.inputHandler.toUserInput(nextInput));
+        await this.outputRenderer.renderAgentOutput(result);
+      } catch (error) {
+        await this.outputRenderer.renderFailure({
+          summary: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const state = await session.load();
+    const closeResult = await this.runtime.closeSession(state.sessionId);
+    await this.outputRenderer.renderCloseResult(closeResult);
+    return {
+      sessionId: state.sessionId,
+      closeResult,
+    };
+  }
+}
+
+export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): TerminalSessionDemo {
+  const runtime = input.runtime ?? createRuntime({
+    workdir: input.workdir ?? process.cwd(),
+  });
+  const inputHandler = new TerminalInputHandler(
+    input.readInput ?? (async () => ({ rawText: "", closeRequested: true })),
+  );
+  const outputRenderer = new TerminalOutputRenderer(
+    input.writeLine ?? (() => {}),
+  );
+  return new TerminalSessionDemo(runtime, inputHandler, outputRenderer);
+}
