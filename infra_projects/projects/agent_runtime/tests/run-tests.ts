@@ -12,6 +12,9 @@ import { runSessionTranscriptStoreTests } from "./session-transcript-store.test.
 import { runTerminalSessionCliTests } from "./terminal-session-cli.test.js";
 import { runTraceRecorderTests } from "./trace-recorder.test.js";
 import { runTerminalSessionDemoTests } from "./terminal-session-demo.test.js";
+import { runRuntimeFoundationSrcNewTests } from "./runtime-foundation-src-new.test.js";
+import { runContextFoundationSrcNewTests } from "./context-foundation-src-new.test.js";
+import { runModelFoundationSrcNewTests } from "./model-foundation-src-new.test.js";
 
 async function main(): Promise<void> {
   await runAgentRuntimeTests();
@@ -28,6 +31,9 @@ async function main(): Promise<void> {
   await runTerminalSessionCliTests();
   await runTerminalSessionDemoTests();
   await runTraceRecorderTests();
+  await runRuntimeFoundationSrcNewTests();
+  await runContextFoundationSrcNewTests();
+  await runModelFoundationSrcNewTests();
   process.stdout.write("All tests passed.\n");
 }
 

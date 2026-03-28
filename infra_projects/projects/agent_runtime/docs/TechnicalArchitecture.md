@@ -33,9 +33,9 @@ Cross-module interaction contracts and detailed runtime boundaries are covered i
 
 - Session-based runtime continuity: the SDK must expose stable session lifecycle boundaries instead of forcing callers to manage raw runtime state themselves.
 - Controlled multi-step execution: the runtime must support one reusable bounded `route -> plan -> execute -> observe -> repair or stop` loop rather than one-shot generation only.
-- Stable external contract: callers need one stable `RuntimeApi` / `ISession` boundary even when internal prompting, provider handling, tool policy, or trace logic evolves.
+- Stable external contract: callers need one stable `RuntimeApi` / `ISession` boundary even when internal prompting, provider handling, tool policy, trace logic, or requested agent mode evolves.
 - Explicit runtime control: request routing, internal step decisions, loop stop conditions, and repair policy must remain runtime-owned control decisions rather than caller-owned prompt tricks.
-- Capability governance: tool invocation, approval policy, execution environment, and sandbox boundaries must remain explicit architecture concerns rather than hidden inside agent-internal execution details.
+- Capability governance: tool invocation, permission policy, execution environment, and sandbox boundaries must remain explicit architecture concerns rather than hidden inside agent-internal execution details.
 - Provider abstraction: mock and real LLM providers must remain replaceable behind one shared model integration boundary.
 - Context governance: transcript, runtime memory, retrieval context, and context budgeting or compression must evolve without redefining the runtime API.
 - Observability as a first-class concern: trace, diagnostics, usage, and metrics must be available as runtime-level architecture concerns rather than ad hoc debug output.
@@ -53,11 +53,11 @@ The system adopts a layered modular agent SDK architecture.
 
 - `Application Layer`: owns terminal-facing runtime entry adapters and other external-facing application modules built on top of the runtime boundary.
 - `Interface Layer`: defines stable `RuntimeApi` and `ISession` contracts exposed to external callers.
-- `Runtime Controller Layer`: owns runtime bootstrap, SDK-level runtime scheduling, cross-layer runtime scheduling, concrete session objects, session lifecycle entry, session-bound execution entry, caller-facing result shaping, and checkpoint-oriented runtime state coordination.
+- `Runtime Controller Layer`: owns runtime bootstrap, SDK-level runtime scheduling, cross-layer runtime scheduling, concrete session objects, session lifecycle entry, session-bound execution entry, caller-facing result shaping, and a reserved checkpoint recovery hook.
 - `Agent Orchestration Layer`: owns request-level agent selection, single-agent orchestration, and multi-agent protocol orchestration.
 - `Context Governance Layer`: owns transcript logic, runtime memory logic, retrieval context, context assembly, and context budgeting or compression policy.
-- `Capability and Tooling Layer`: owns MCP gateway, tool registry, built-in tool handlers, approval policy, and execution-environment boundaries.
-- `Model Integration Layer`: owns provider strategy selection, model backend interaction, model-request adaptation, and streaming adaptation.
+- `Capability and Tooling Layer`: owns MCP gateway, tool registry, permission policy, and execution-environment boundaries.
+- `Model Integration Layer`: owns model selection and creation, shared model execution, and streaming adaptation.
 - `Observability Layer`: owns trace, diagnostics, usage, and metrics logic.
 - `Data Layer`: owns the shared runtime data persistence boundary through one common storage interface.
 
@@ -152,11 +152,11 @@ ALLOW:
 
 - `Application Layer`: `TypeScript` on `Node.js` for terminal-facing runtime adapters and other external-facing application modules.
 - `Interface Layer`: `TypeScript` on `Node.js` for stable `RuntimeApi` and `ISession` contracts exposed through the SDK.
-- `Runtime Controller Layer`: `TypeScript` on `Node.js` for runtime bootstrap, SDK-level runtime scheduling, cross-layer runtime scheduling, concrete session objects, session lifecycle entry, session-bound execution entry, caller-facing result shaping, and checkpoint-oriented runtime state coordination.
+- `Runtime Controller Layer`: `TypeScript` on `Node.js` for runtime bootstrap, SDK-level runtime scheduling, cross-layer runtime scheduling, concrete session objects, session lifecycle entry, session-bound execution entry, caller-facing result shaping, and a reserved checkpoint recovery hook.
 - `Agent Orchestration Layer`: `TypeScript` on `Node.js` for agent selection, chat orchestration, ReAct orchestration, PEO orchestration, and multi-agent protocol orchestration.
 - `Context Governance Layer`: `TypeScript` for transcript logic, runtime memory logic, context assembly, retrieval loading, and context budgeting or compression inputs.
-- `Capability and Tooling Layer`: `TypeScript` for MCP integration, tool registry, built-in tool handlers, and approval or execution-environment adapters.
-- `Model Integration Layer`: `TypeScript` for provider abstraction, model-request adaptation, backend interaction, and streaming adapters.
+- `Capability and Tooling Layer`: `TypeScript` for MCP integration, tool registry, permission policy, and execution-environment boundaries.
+- `Model Integration Layer`: `TypeScript` for model selection and creation, shared model execution, and streaming adapters.
 - `Observability Layer`: `TypeScript` for trace logic, metrics logic, and runtime telemetry shaping.
 - `Data Layer`: `TypeScript` for the shared runtime storage interface, with file-backed and remote-backed implementations.
 
@@ -209,17 +209,17 @@ ALLOW:
    +-----------------------+
    |
    v
-[AgentRuntimeResult]
+[SessionResult]
 ```
 
 1. The caller creates or opens one runtime session through the stable SDK boundary.
-2. The caller submits one execution request through the bound session handle.
+2. The caller submits one execution request through the bound `ISession` handle.
 3. The bound session object enters the runtime controller path, assembles execution context through the context-governance boundary, and selects the appropriate orchestration agent.
 4. The selected agent performs model calls through the model-integration boundary and tool calls through the capability-and-tooling boundary.
 5. Runtime observability updates flow through the observability boundary, and shared persisted data flows through the data boundary.
-6. The runtime returns one stable success or failure result with diagnostics while keeping provider, tool, observability, and storage details behind internal boundaries.
+6. The runtime returns one stable success or failure result while keeping provider, tool, observability, and storage details behind internal boundaries.
 
-`RuntimeApi` uses one reusable control shape: expose stable contracts through the interface layer, enter the runtime controller layer through `Runtime`, create or open one concrete session object, assemble context through context governance, let the bound session select and run the appropriate orchestration agent, route tool and model interaction through their dedicated boundaries, coordinate observability and data updates, and return one normalized result.
+`RuntimeApi` uses one reusable control shape: expose stable contracts through the interface layer, enter the runtime controller layer through `Runtime`, create or open one concrete session object, execute requests through the bound `ISession` handle, assemble context through context governance, let the bound session select and run the appropriate orchestration agent, route tool and model interaction through their dedicated boundaries, coordinate observability and data updates, and return one normalized result.
 
 ### 5.2 Core Modules
 
@@ -229,7 +229,7 @@ ALLOW:
   - `TerminalSessionDemo`
     - responsibility: provide one interactive terminal entry on top of the runtime boundary for manual runtime usage.
     - inputs: CLI arguments and interactive user input.
-    - outputs: visible runtime output and session-close summary.
+    - outputs: visible runtime output and session-close result.
     - ownership boundary: owns terminal interaction only and does not redefine agent orchestration.
 
 - **`Interface Layer`**
@@ -241,52 +241,49 @@ ALLOW:
 
 - **`Runtime Controller Layer`**
   - `Runtime`
-    - responsibility: initialize runtime dependencies, act as the SDK-level runtime scheduling entry, coordinate cross-layer runtime scheduling, and expose caller-facing session lifecycle entry operations.
+    - responsibility: initialize runtime dependencies, act as the SDK-level runtime scheduling entry, coordinate cross-layer runtime scheduling, expose caller-facing session lifecycle entry operations, and own module-internal session lifecycle coordination.
     - inputs: SDK caller requests, SDK configuration input, and runtime dependency sources.
     - outputs: initialized runtime boundary, session handles, and close results.
     - ownership boundary: owns runtime bootstrap, SDK-level runtime scheduling, and caller-facing lifecycle entry behavior only and does not own session-bound execution internals, agent execution internals, or storage implementation details.
   - `AgentSession`
-    - responsibility: act as the concrete session object, own in-memory session state during runtime use, and coordinate one session-bound execution cycle.
+    - responsibility: act as the concrete session object, own in-memory session state during runtime use, coordinate one session-bound execution cycle, expose stable session reads, normalize caller-facing runtime results, and preserve a reserved checkpoint hook outside the current main execution path.
     - inputs: per-session execution requests, in-memory session state, and shared runtime collaborators.
     - outputs: stable runtime results and session-bound reads.
     - ownership boundary: owns session-bound runtime behavior but does not own storage implementation, provider internals, or tool implementation internals.
-  - `AgentSessionManager`
-    - responsibility: provide session lifecycle coordination for runtime-owned session objects without taking ownership of session-bound execution behavior.
-    - inputs: session lifecycle requests.
-    - outputs: session creation, session opening, and close results.
-  - `ResultNormalizer`
-    - responsibility: convert internal loop results into one stable caller-facing runtime result shape at the runtime controller boundary.
-    - inputs: loop output, diagnostics, and runtime metadata.
-    - outputs: stable `AgentRuntimeResult`.
+  - `RunCheckpoint`
+    - responsibility: represent one reserved runtime-controller-owned checkpoint recovery module for later retry, resume, or background execution expansion.
+    - inputs: run snapshots and recovery metadata.
+    - outputs: checkpoint state for later runtime recovery.
+    - ownership boundary: owns checkpoint coordination and recovery-facing state shaping only and does not own generic storage implementation.
 
 - **`Agent Orchestration Layer`**
   - `AgentSelector`
     - responsibility: select the appropriate runtime agent from the agent orchestration family for the current request.
-    - inputs: runtime request, session state, and runtime policy.
-    - outputs: agent-selection decision.
+    - inputs: user input, session state, and requested mode.
+    - outputs: selected `IAgent`.
     - ownership boundary: owns request-level agent selection only and does not own prompt shaping, model calls, or persistence internals.
   - `ChatAgent`
     - responsibility: run direct chat-oriented orchestration for requests that can be completed without ReAct-style or plan-execute-observe loops.
     - inputs: assembled `AgentContext`.
-    - outputs: chat-oriented runtime result and diagnostics.
+    - outputs: chat-oriented `AgentRuntimeResult`.
   - `ReActAgent`
     - responsibility: run ReAct-style orchestration for requests that need iterative reasoning, action, and observation.
     - inputs: assembled `AgentContext`.
-    - outputs: ReAct-oriented runtime result and diagnostics.
+    - outputs: ReAct-oriented `AgentRuntimeResult`.
   - `PEOAgent`
     - responsibility: run plan-execute-observe orchestration for requests that need explicit planning and bounded execution stages.
     - inputs: assembled `AgentContext`.
-    - outputs: plan-execute-observe runtime result and diagnostics.
+    - outputs: plan-execute-observe `AgentRuntimeResult`.
   - `MultiAgentProtocol`
-    - responsibility: define agent-to-agent task delegation, handoff, and result aggregation when one agent needs another agent to complete a sub-task.
-    - inputs: delegated sub-goals, agent capability metadata, and parent-run coordination state.
-    - outputs: coordinated agent-task execution and aggregated delegation results.
-    - ownership boundary: owns agent-to-agent collaboration protocol and does not replace single-agent orchestration.
+    - responsibility: represent one reserved delegation protocol boundary for later multi-agent collaboration.
+    - inputs: reserved delegated sub-goals, reserved agent capability metadata, and reserved parent-run coordination state.
+    - outputs: reserved delegation protocol state for later expansion.
+    - ownership boundary: owns only the reserved multi-agent protocol boundary and does not replace single-agent orchestration in the current implementation scope.
 
 - **`Context Governance Layer`**
   - `ContextAssembler`
-    - responsibility: assemble transcript, runtime memory, retrieval context, and request payload into one execution-ready context.
-    - inputs: session state, runtime request, transcript context, runtime memory context, and retrieval provider.
+    - responsibility: assemble original and bounded context views into one execution-ready context.
+    - inputs: session state, user input, transcript context, runtime memory context, retrieval provider, and budget policy.
     - outputs: `AgentContext`.
   - `SessionTranscript`
     - responsibility: manage session-owned transcript loading and write-back logic without owning physical storage implementation.
@@ -298,75 +295,78 @@ ALLOW:
     - outputs: bounded runtime memory context.
   - `RetrievalProvider`
     - responsibility: provide optional retrieval-backed context to the runtime as one knowledge-source boundary.
-    - inputs: runtime request and retrieval query context.
+    - inputs: user input, session identity, and retrieval query text.
     - outputs: retrieval context fragments.
 
 - **`Capability and Tooling Layer`**
   - `McpGateway`
     - responsibility: dispatch runtime tool calls to MCP handlers through one gateway boundary.
     - inputs: normalized tool steps.
-    - outputs: structured tool results.
+    - outputs: tool-call results.
   - `McpToolRegistry`
     - responsibility: register and resolve built-in or external tool handlers without leaking handler selection into runtime control.
     - inputs: tool-handler registrations and tool names.
     - outputs: resolved tool handlers and tool-name listings.
-  - `BuiltInToolHandlers`
-    - responsibility: expose built-in runtime tool capabilities behind the shared tool contract without pushing concrete tool names into the architecture boundary.
-    - inputs: normalized built-in tool requests.
-    - outputs: structured built-in tool results.
+  - `RuntimePermissionPolicy`
+    - responsibility: evaluate permission decisions before tool execution.
+    - inputs: tool call context and environment restrictions.
+    - outputs: permission decisions.
+  - `ExecutionEnvironment`
+    - responsibility: execute resolved tool handlers in local, sandboxed, or remote environments without redefining the tool contract.
+    - inputs: tool calls and resolved tool handlers.
+    - outputs: tool-call results.
 
 - **`Model Integration Layer`**
-  - `ExecutionStrategySelector`
-    - responsibility: choose the current model backend strategy without exposing provider-specific handling to callers.
-    - inputs: runtime dependencies and mode selection.
-    - outputs: shared execution strategy for runtime agents.
-  - `ModelAdapter`
-    - responsibility: provide one normalized model-provider boundary for runtime agents, including request adaptation, backend invocation, and response normalization, without taking ownership of agent orchestration.
-    - inputs: agent-generated model request intents, runtime context slices, response-shape requirements, and execution strategy.
-    - outputs: normalized model responses.
+  - `ModelFactory`
+    - responsibility: choose and create one shared model instance for runtime agents without leaking provider-specific handling to callers.
+    - inputs: model creation input, mode selection, and optional mock configuration.
+    - outputs: one shared model interface.
+  - `IModel`
+    - responsibility: execute and stream model requests through one shared model interface.
+    - inputs: caller-prepared module requests.
+    - outputs: module responses and stream events.
+  - `StreamingEventAdapter`
+    - responsibility: adapt provider stream events into shared stream events without leaking provider-specific streaming shapes upward.
+    - inputs: provider stream events.
+    - outputs: stream events.
 - **`Observability Layer`**
   - `Metrics`
-    - responsibility: provide the unified runtime metrics boundary for run-scoped metrics summaries and usage aggregation without mixing analytics data into transcript state.
-    - inputs: normalized runtime results, request metadata, provider usage facts, tool execution facts, and run scope.
-    - outputs: metrics summaries and usage summaries.
+    - responsibility: provide the unified runtime metrics boundary for session-scoped and total metrics aggregation without mixing analytics data into transcript state.
+    - inputs: session identity, normalized runtime results, provider usage facts, tool execution facts, and run scope.
+    - outputs: current metrics views and persisted metrics payloads.
   - `Trace`
-    - responsibility: provide the unified runtime trace boundary for trace event coordination, normalization, persistence, and flush behavior.
-    - inputs: runtime trace events and flush requests.
-    - outputs: persisted trace records and flush results.
+    - responsibility: provide the unified runtime trace boundary for trace event coordination, querying, normalization, persistence, and flush behavior.
+    - inputs: sdk-scoped or session-scoped trace events and trace query input.
+    - outputs: current trace views and persisted trace payloads.
 
 - **`Data Layer`**
   - `Storage`
     - responsibility: provide one shared runtime storage interface for transcript, memory, checkpoint, trace, and metrics persistence without exposing storage backend details upward.
-    - inputs: storage keys, load requests, save requests, and runtime data payloads.
-    - outputs: loaded runtime data payloads and save results.
+    - inputs: storage keys and runtime data payloads.
+    - outputs: loaded runtime data payloads and save completion.
     - ownership boundary: owns only generic runtime data persistence and may be implemented by file-backed, network-backed, or database-backed storage adapters.
 
 ### 5.2.1 Extension Boundaries
 
-- `RunCheckpoint`
-  - responsibility: represent run checkpoint logic for retry, resume, or background execution as a runtime-controller-owned recovery boundary.
-  - inputs: run snapshots and recovery metadata.
-  - outputs: checkpoint state requests for later runtime recovery.
-
 - `ContextBudgetPolicy`
   - responsibility: represent transcript, retrieval, tool-result, and memory budgeting or compression policy without changing the runtime boundary.
-  - inputs: assembled context candidates and runtime limits.
-  - outputs: bounded context slices for downstream orchestration and execution use.
+  - inputs: original context and runtime limits.
+  - outputs: bounded context views for downstream orchestration and execution use.
 
 - `RuntimePermissionPolicy`
-  - responsibility: represent approval, path policy, command policy, and capability allowlist checks before tool execution.
-  - inputs: runtime request, tool request, session state, and environment policy.
-  - outputs: allow, deny, or approval-required decisions.
+  - responsibility: represent permission, path policy, command policy, and capability allowlist checks before tool execution.
+  - inputs: tool call context and environment restrictions.
+  - outputs: permission decisions.
 
-- `ExecutionEnvironmentAdapter`
+- `ExecutionEnvironment`
   - responsibility: represent local, sandboxed, or remote execution environments for tools without redefining the tool contract.
-  - inputs: normalized capability requests and environment policy.
-  - outputs: environment-bound execution results.
+  - inputs: tool calls and resolved tool handlers.
+  - outputs: tool-call results.
 
 - `StreamingEventAdapter`
   - responsibility: represent provider-stream adaptation without leaking provider-specific streaming shapes into runtime control.
-  - inputs: provider stream events and runtime execution state.
-  - outputs: runtime-normalized stream events.
+  - inputs: provider stream events.
+  - outputs: stream events.
 
 ### 5.3 Interaction Model
 
@@ -381,8 +381,8 @@ This section describes high-level cross-module interaction.
 @startuml
 actor Application
 participant Api
+participant ISession
 participant Runtime
-participant AgentSessionManager
 participant AgentSession
 participant ContextAssembler
 participant SessionTranscript
@@ -390,36 +390,35 @@ participant RuntimeMemory
 participant Storage
 participant AgentSelector
 participant Agent
-participant ExecutionStrategySelector
-participant ModelAdapter
+participant ModelFactory
+participant IModel
 participant Metrics
 participant Trace
-participant ResultNormalizer
 
 Application -> Api: createSession(input)
 Api -> Runtime: createSession(input)
-Runtime -> AgentSessionManager: createSession(input)
-AgentSessionManager -> AgentSession: create()
-Application -> Api: execute(request)
-Api -> AgentSession: execute(request)
-AgentSession -> ContextAssembler: assemble(sessionState, request)
+Runtime -> AgentSession: create()
+Runtime --> Api: ISession
+Api --> Application: ISession
+Application -> ISession: execute(userInput)
+ISession -> AgentSession: execute(userInput)
+AgentSession -> ContextAssembler: assemble(sessionId, userInput, runtimeLimits)
 ContextAssembler -> SessionTranscript: load(sessionId)
 ContextAssembler -> RuntimeMemory: load(sessionId)
 ContextAssembler --> AgentSession: AgentContext
-AgentSession -> AgentSelector: select(request, sessionState)
+AgentSession -> AgentSelector: select(userInput, sessionState, requestedMode)
 AgentSelector --> AgentSession: Agent
 AgentSession -> Agent: run(context)
-Agent -> ExecutionStrategySelector: resolveStrategy(...)
-ExecutionStrategySelector --> Agent: model backend strategy
-Agent -> ModelAdapter: invoke model backend
-AgentSession -> SessionTranscript: update(turns)
-SessionTranscript -> Storage: update(transcriptPayload)
-AgentSession -> RuntimeMemory: update(memorySummary)
-RuntimeMemory -> Storage: update(memoryPayload)
-AgentSession -> Metrics: collect(result, usageFacts)
-AgentSession -> Trace: record runtime trace
-AgentSession -> ResultNormalizer: normalize(result, context, metrics)
-AgentSession --> Application: AgentRuntimeResult
+Agent -> ModelFactory: createModel(input)
+ModelFactory --> Agent: IModel
+Agent -> IModel: execute(input)
+AgentSession -> SessionTranscript: update(sessionId, transcriptAppend)
+SessionTranscript -> Storage: save(transcriptKey, transcriptPayload)
+AgentSession -> RuntimeMemory: update(sessionId, runtimeMemorySummaryItems)
+RuntimeMemory -> Storage: save(memoryKey, memoryPayload)
+AgentSession -> Metrics: collect(input)
+AgentSession -> Trace: record(event)
+AgentSession --> Application: SessionResult
 @enduml
 ```
 
@@ -432,8 +431,8 @@ AgentSession --> Application: AgentRuntimeResult
 @startuml
 actor Application
 participant Api
+participant ISession
 participant Runtime
-participant AgentSessionManager
 participant AgentSession
 participant ContextAssembler
 participant AgentSelector
@@ -441,40 +440,35 @@ participant SessionTranscript
 participant RuntimeMemory
 participant Storage
 participant Agent
-participant ExecutionStrategySelector
-participant ModelAdapter
+participant ModelFactory
+participant IModel
 participant Metrics
 participant Trace
-participant ResultNormalizer
 
 Application -> Api: openSession(sessionId)
 Api -> Runtime: openSession(sessionId)
-Runtime -> AgentSessionManager: openSession(sessionId)
-AgentSessionManager -> AgentSession: open(sessionId)
-AgentSession -> SessionTranscript: load(sessionId)
-AgentSession -> RuntimeMemory: load(sessionId)
-AgentSession --> Api: historical resources restored
-Api --> Application: historical resources restored
-Application -> Api: execute(request)
-Api -> AgentSession: execute(request)
-AgentSession -> ContextAssembler: assemble(sessionState, request)
+Runtime -> AgentSession: open(sessionId)
+Runtime --> Api: ISession
+Api --> Application: ISession
+Application -> ISession: execute(userInput)
+ISession -> AgentSession: execute(userInput)
+AgentSession -> ContextAssembler: assemble(sessionId, userInput, runtimeLimits)
 ContextAssembler -> SessionTranscript: load(sessionId)
 ContextAssembler -> RuntimeMemory: load(sessionId)
 ContextAssembler --> AgentSession: AgentContext
-AgentSession -> AgentSelector: select(request, sessionState)
+AgentSession -> AgentSelector: select(userInput, sessionState, requestedMode)
 AgentSelector --> AgentSession: Agent
 AgentSession -> Agent: run(context)
-Agent -> ExecutionStrategySelector: resolveStrategy(...)
-ExecutionStrategySelector --> Agent: model backend strategy
-Agent -> ModelAdapter: invoke model backend
-AgentSession -> SessionTranscript: update(turns)
-SessionTranscript -> Storage: update(transcriptPayload)
-AgentSession -> RuntimeMemory: update(memorySummary)
-RuntimeMemory -> Storage: update(memoryPayload)
-AgentSession -> Metrics: collect(result, usageFacts)
-AgentSession -> Trace: record runtime trace
-AgentSession -> ResultNormalizer: normalize(result, context, metrics)
-AgentSession --> Application: AgentRuntimeResult
+Agent -> ModelFactory: createModel(input)
+ModelFactory --> Agent: IModel
+Agent -> IModel: execute(input)
+AgentSession -> SessionTranscript: update(sessionId, transcriptAppend)
+SessionTranscript -> Storage: save(transcriptKey, transcriptPayload)
+AgentSession -> RuntimeMemory: update(sessionId, runtimeMemorySummaryItems)
+RuntimeMemory -> Storage: save(memoryKey, memoryPayload)
+AgentSession -> Metrics: collect(input)
+AgentSession -> Trace: record(event)
+AgentSession --> Application: SessionResult
 @enduml
 ```
 
@@ -487,44 +481,43 @@ AgentSession --> Application: AgentRuntimeResult
 @startuml
 actor Application
 participant Api
+participant ISession
 participant AgentSession
 participant ContextAssembler
 participant SessionTranscript
 participant RuntimeMemory
 participant AgentSelector
 participant Agent
-participant ExecutionStrategySelector
-participant ModelAdapter
+participant ModelFactory
+participant IModel
 participant McpGateway
 participant Trace
 participant Metrics
-participant ResultNormalizer
 participant Storage
 
-Application -> Api: execute(request)
-Api -> AgentSession: execute(request)
-AgentSession -> ContextAssembler: assemble(sessionState, request)
+Application -> ISession: execute(userInput)
+ISession -> AgentSession: execute(userInput)
+AgentSession -> ContextAssembler: assemble(sessionId, userInput, runtimeLimits)
 ContextAssembler -> SessionTranscript: load(sessionId)
 ContextAssembler -> RuntimeMemory: load(sessionId)
 ContextAssembler --> AgentSession: AgentContext
-AgentSession -> AgentSelector: select(request, sessionState)
+AgentSession -> AgentSelector: select(userInput, sessionState, requestedMode)
 AgentSelector --> AgentSession: Agent
 AgentSession -> Agent: run(context)
 Agent -> Trace: record run trace
-Agent -> ExecutionStrategySelector: resolveStrategy(...)
-ExecutionStrategySelector --> Agent: model backend strategy
 opt tool_augmented_generation
   Agent -> McpGateway: call(toolStep)
 end
-Agent -> ModelAdapter: invoke model backend
+Agent -> ModelFactory: createModel(input)
+ModelFactory --> Agent: IModel
+Agent -> IModel: execute(input)
 Agent -> Trace: record step trace
-AgentSession -> SessionTranscript: update(turns)
-SessionTranscript -> Storage: update(transcriptPayload)
-AgentSession -> RuntimeMemory: update(memorySummary)
-RuntimeMemory -> Storage: update(memoryPayload)
-AgentSession -> Metrics: collect(result, usageFacts)
-AgentSession -> ResultNormalizer: normalize(result, context, metrics)
-AgentSession --> Application: AgentRuntimeResult
+AgentSession -> SessionTranscript: update(sessionId, transcriptAppend)
+SessionTranscript -> Storage: save(transcriptKey, transcriptPayload)
+AgentSession -> RuntimeMemory: update(sessionId, runtimeMemorySummaryItems)
+RuntimeMemory -> Storage: save(memoryKey, memoryPayload)
+AgentSession -> Metrics: collect(input)
+AgentSession --> Application: SessionResult
 @enduml
 ```
 
@@ -539,33 +532,30 @@ actor Application
 participant Api
 participant Runtime
 participant AgentSessionManager
-participant AgentSession
-participant Agent
 participant Trace
 participant Metrics
 
 Application -> Api: closeSession(sessionId)
 Api -> Runtime: closeSession(sessionId)
-Runtime -> AgentSessionManager: closeSession(sessionId)
-AgentSessionManager -> AgentSession: close()
-AgentSession -> Agent: close()
-AgentSession -> Trace: flush close trace
-AgentSession -> Metrics: flush close metrics
-AgentSession -> AgentSession: release session resources
+Runtime -> Trace: flush()
+Runtime -> Metrics: flush()
+Runtime -> AgentSessionManager: remove(sessionId)
+AgentSessionManager --> Runtime: removed
 Runtime --> Api: CloseSessionResult
 Api --> Application: CloseSessionResult
 @enduml
 ```
 
-#### 5.3.5 Delegate Work Across Multiple Agents
+#### 5.3.5 Reserved Multi-Agent Delegation Hook
 
-- user scenario: a request needs one agent to delegate sub-tasks to other agents and collect the results through a stable collaboration protocol.
-  - InteractionGoal: support agent-to-agent task calling without forcing single-agent orchestration modules to absorb delegation logic.
+- user scenario: later expansion may require one agent to delegate sub-tasks to other agents through a stable collaboration protocol.
+  - InteractionGoal: reserve the collaboration boundary without pulling delegation logic into the current single-agent mainline.
 
 ```plantuml
 @startuml
 actor Application
 participant Api
+participant ISession
 participant AgentSession
 participant ContextAssembler
 participant SessionTranscript
@@ -574,37 +564,25 @@ participant Storage
 participant AgentSelector
 participant Agent
 participant MultiAgentProtocol
-participant ExecutionStrategySelector
-participant ModelAdapter
+participant ModelFactory
+participant IModel
 participant Trace
 participant Metrics
-participant ResultNormalizer
 
-Application -> Api: execute(request)
-Api -> AgentSession: execute(request)
-AgentSession -> ContextAssembler: assemble(sessionState, request)
+Application -> ISession: execute(userInput)
+ISession -> AgentSession: execute(userInput)
+AgentSession -> ContextAssembler: assemble(sessionId, userInput, runtimeLimits)
 ContextAssembler -> SessionTranscript: load(sessionId)
 ContextAssembler -> RuntimeMemory: load(sessionId)
 ContextAssembler --> AgentSession: AgentContext
-AgentSession -> AgentSelector: select(request, sessionState)
+AgentSession -> AgentSelector: select(userInput, sessionState, requestedMode)
 AgentSelector --> AgentSession: Agent
 AgentSession -> Agent: run(context)
-Agent -> Trace: record run trace
+note over Agent,MultiAgentProtocol
+reserved flow for later multi-agent enablement
+end note
 Agent -> MultiAgentProtocol: delegate sub-task
-MultiAgentProtocol --> Agent: aggregated delegation result
-opt further reasoning is needed
-  Agent -> ExecutionStrategySelector: resolveStrategy(...)
-  ExecutionStrategySelector --> Agent: model backend strategy
-  Agent -> ModelAdapter: invoke model backend
-end
-Agent -> Trace: record step trace
-AgentSession -> SessionTranscript: update(turns)
-SessionTranscript -> Storage: update(transcriptPayload)
-AgentSession -> RuntimeMemory: update(memorySummary)
-RuntimeMemory -> Storage: update(memoryPayload)
-AgentSession -> Metrics: collect(result, usageFacts)
-AgentSession -> ResultNormalizer: normalize(result, context, metrics)
-AgentSession --> Application: AgentRuntimeResult
+MultiAgentProtocol --> Agent: reserved delegation result
 @enduml
 ```
 
@@ -615,8 +593,8 @@ AgentSession --> Application: AgentRuntimeResult
 - Request-level agent selection, single-agent orchestration, and multi-agent protocol orchestration belong to the agent-orchestration side rather than to provider or storage boundaries.
 - `AgentSession` is the real session object and must remain the owner of session-bound execution behavior rather than degrading into a forwarding handle.
 - Transcript, runtime memory, retrieval, and context budgeting or compression belong to the context-governance side rather than to the model-integration or storage layers.
-- Tool gateway, tool registry, approval policy, and execution environments belong to the capability-and-tooling side rather than to agent-orchestration or provider logic.
-- Provider strategy selection, normalized model adaptation, and streaming adaptation belong to model integration rather than to session, orchestration, or persistence boundaries.
+- Tool gateway, tool registry, permission policy, and execution environments belong to the capability-and-tooling side rather than to agent-orchestration or provider logic.
+- Provider-backed model creation, normalized model adaptation, and streaming adaptation belong to model integration rather than to session, orchestration, or persistence boundaries.
 - Provider selection, capability execution, and observability are integrated into the runtime backbone but remain behind stable internal abstractions.
 - Transcript, runtime memory, checkpoints, metrics, and trace must remain logically separated even when they share one common storage boundary.
 
@@ -653,7 +631,7 @@ AgentSession --> Application: AgentRuntimeResult
 - Why it matters:
   - Agent runtimes need controlled capability execution rather than unrestricted local side effects.
 - Architectural support:
-  - Capability governance is kept as an explicit architecture concern so approval, allowlist, and sandbox policies can evolve without redefining the SDK contract.
+  - Capability governance is kept as an explicit architecture concern so permission, allowlist, and sandbox policies can evolve without redefining the SDK contract.
   - Validation, trace, and result normalization provide bounded failure paths instead of leaking arbitrary provider or tool behavior to callers.
 
 ---
@@ -677,12 +655,13 @@ Different design documents have different focus. All of them must still follow t
 - [sdk_interface_design](./breakdown_docs/sdk_interface_design.md)
   - type: `functional_group_design`
   - scope: define the interface-layer boundary, interface contracts, interface-level interaction, and interface-layer dependency limits
-  - include: `Api`, `RuntimeApi`, and `ISession`
+  - include: `Api`
+  - contract note: this design expands the `RuntimeApi` and `ISession` contracts published by `Api`
 - [runtime_control_design](./breakdown_docs/runtime_control_design.md)
   - type: `functional_group_design`
   - scope: define the runtime-controller-layer boundary, runtime-controller module responsibilities, intra-layer interaction, and dependency limits
   - extension note: cover runtime-controller extension boundaries when they are expanded by design
-  - include: `Runtime`, `AgentSession`, `AgentSessionManager`, `ResultNormalizer`, and `RunCheckpoint`
+  - include: `Runtime`, `AgentSession`, and `RunCheckpoint`
 - [agent_orchestration_design](./breakdown_docs/agent_orchestration_design.md)
   - type: `functional_group_design`
   - scope: define the agent-orchestration-layer boundary, agent module responsibilities, intra-layer interaction, and dependency limits
@@ -697,12 +676,12 @@ Different design documents have different focus. All of them must still follow t
   - type: `functional_group_design`
   - scope: define the capability-and-tooling-layer boundary, capability module responsibilities, intra-layer interaction, and dependency limits
   - extension note: cover capability-and-tooling extension boundaries when they are expanded by design
-  - include: `McpGateway`, `McpToolRegistry`, `BuiltInToolHandlers`, `RuntimePermissionPolicy`, and `ExecutionEnvironmentAdapter`
+  - include: `McpGateway`, `McpToolRegistry`, `RuntimePermissionPolicy`, and `ExecutionEnvironment`
 - [model_integration_design](./breakdown_docs/model_integration_design.md)
   - type: `functional_group_design`
   - scope: define the model-integration-layer boundary, model module responsibilities, intra-layer interaction, and dependency limits
   - extension note: cover model-integration extension boundaries when they are expanded by design
-  - include: `ExecutionStrategySelector`, `ModelAdapter`, and `StreamingEventAdapter`
+  - include: `ModelFactory`, `IModel`, and `StreamingEventAdapter`
 - [observability_design](./breakdown_docs/observability_design.md)
   - type: `functional_group_design`
   - scope: define the observability-layer boundary, observability module responsibilities, intra-layer interaction, and dependency limits
@@ -721,14 +700,14 @@ Different design documents have different focus. All of them must still follow t
 - Stable `RuntimeApi` / `ISession` SDK boundary.
 - Session-based, single-agent, bounded multi-step loop.
 - Transcript, runtime memory, and retrieval-backed context assembly.
-- Mock and real provider strategy selection.
+- Mock and real provider model creation from mode selection.
 - MCP gateway with minimal built-in file capabilities.
-- File-backed storage for session state, transcript, runtime memory, and trace, plus in-result basic metrics output.
+- File-backed storage for session state, transcript, runtime memory, and trace, plus runtime metrics collection through the observability boundary.
 
 ### 8.2 Phase P1 Single-Agent Production Hardening
 
-- Make request routing explicit and make internal step decisions and repair policy boundaries clearer instead of keeping them implicit inside agent-internal orchestration behavior.
-- Add capability governance modules for tool allowlist, approval policy, path policy, and execution policy.
+- Harden request routing, internal step decisions, and repair policy boundaries so the implementation follows the already-defined architecture more directly.
+- Add capability governance modules for tool allowlist, permission policy, path policy, and execution policy.
 - Expand built-in capabilities beyond file operations while keeping the same gateway contract.
 - Add streaming, cancellation, timeout, and richer execution-observation policy without redefining the external runtime result contract.
 - Add run checkpoint persistence and resume-ready state boundaries.
@@ -748,7 +727,7 @@ Different design documents have different focus. All of them must still follow t
 
 - Request-level routing and internal step decisions are still partly implicit in the current implementation and need clearer implementation boundaries later.
 - The current code still centralizes too much session-bound execution logic outside `AgentSession`; implementation must be aligned with this architecture.
-- Capability governance is defined at architecture level but does not yet have implementation-ready approval, sandbox, or execution-policy modules.
+- Capability governance is defined at architecture level but does not yet have implementation-ready permission, sandbox, or execution-policy modules.
 - Retrieval, memory optimization, context budgeting or compression, checkpoint resume, and multi-agent orchestration remain architecture-defined capabilities that still need implementation-ready detail.
 - The current architecture keeps file-backed runtime storage in one SDK process; separation of storage, background execution, or remote execution environments is still open.
 

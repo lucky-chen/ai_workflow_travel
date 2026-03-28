@@ -1,22 +1,26 @@
 version: 2
-plan_name: agent_runtime_feature_delivery_work_plan
+plan_name: agent_runtime_code_generation_work_plan
 status: in_progress
-target: deliver the standalone agent runtime sdk as one session-based multi-step runtime
-  with stable result, trace, and observability boundaries
+target: deliver the current AgentRuntime SDK defined by TechnicalArchitecture and
+  breakdown_docs as one session-based runtime implementation, with new runtime
+  source code generated under src_new
 context:
   docs:
-    design: infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+    architecture: infra_projects/projects/agent_runtime/docs/TechnicalArchitecture.md
+    breakdown_dir: infra_projects/projects/agent_runtime/docs/breakdown_docs
   code:
     root: infra_projects/projects/agent_runtime
+    source_root: infra_projects/projects/agent_runtime/src_new
   active_work_plan: infra_projects/projects/agent_runtime/docs/work_plan.yaml
-  scope: feature-by-feature delivery plan for agent runtime api, session lifecycle,
-    context assembly, multi-step loop, trace, terminal usage, and real-llm verification
+  scope: feature-by-feature code generation plan for the current interface runtime
+    controller agent orchestration context governance capability and tooling model
+    integration observability data and application-layer design
 workflow:
   current_focus:
-    milestone_id: milestone_6_agent_runtime_delivery
-    stage_id: agent runtime core usable
-    batch_id: batch_19_1_agent_runtime_api_and_session_implementation
-    task_name: implement agent runtime public api and session lifecycle
+    milestone_id: milestone_p1_single_agent_production_hardening
+    stage_id: session execution and orchestration usable
+    batch_id: batch_3_1_selector_chat_session_implementation
+    task_name: implement agent selector
   execution_rules:
     - finish all tasks in the current batch before advancing to the next batch in the same stage
     - a stage is completed only after all of its implementation and verification batches are completed
@@ -27,294 +31,1146 @@ governance:
     - each batch uses a fixed type label so implementation and verification are visually distinct
     - each feature stage may contain multiple small batches, but each batch must be either implementation or verification
     - each stage defines feature_scope explicitly, and each batch declares covers from that scope
+    - the technical architecture and breakdown docs are the design authority for naming boundaries and dependency direction
+    - implementation code generation must place new runtime source files under src_new rather than extending the legacy src tree
+    - placeholder boundaries must be implemented only to the level defined by the current docs and must not be expanded into active runtime behavior
     - a stage is only completed after code tests and artifact behavior are verified
-    - runtime mock coverage and real-llm coverage are tracked separately
-    - do not mark real-llm coverage complete until it is actually executed and stable
   decisions:
     resolved:
-      - work_plan.yaml is the only active execution baseline for agent_runtime implementation tracking
-      - use infra_projects/projects/agent_runtime/docs/agent_runtime_design.md as the direct design authority for runtime boundaries and naming
+      - work_plan.yaml is the only active execution baseline for the current agent_runtime rewrite
+      - use TechnicalArchitecture.md and docs/breakdown_docs as the direct design authority instead of the legacy agent_runtime_design.md
+      - src_new is the only target source root for newly generated runtime implementation code
+      - milestone structure follows the phased implementation defined in TechnicalArchitecture.md section 8 as P0 P1 and P2
       - batch_type is restricted to implementation or verification
-      - feature semantics are defined by stage feature_scope, while verification only provides evidence
-    open:
-      - request-level routing and step-level routing are not yet split into separate runtime modules
+      - multi-agent protocol and run checkpoint remain reserved boundaries and are not part of the current mainline execution path
+      - terminal session demo remains an application-layer adapter and must not introduce a second runtime stack
+    open: []
 milestones:
-  - milestone_id: milestone_6_agent_runtime_delivery
-    name: agent runtime delivery
-    goal: deliver the standalone agent runtime sdk defined by agent_runtime_design.md as one session-based multi-step runtime with stable result and observability boundaries
-    status: in_progress
+  - milestone_id: milestone_p0_current_mainline
+    name: p0 current mainline
+    goal: deliver the phase-p0 foundation baseline for the current runtime rewrite,
+      with stable RuntimeApi and ISession boundaries, file-backed session storage,
+      context assembly, and provider model creation ready for later agent execution
+    status: completed
     stages:
-      - stage_id: agent runtime core usable
-        goal: make the documented AgentRuntime and AgentSession boundaries directly usable with session lifecycle context assembly multi-step loop and stable result contracts
-        status: in_progress
-        delivered_feature: agent runtime core
+      - stage_id: runtime interface and storage foundation usable
+        goal: make the interface layer runtime controller entry and data storage
+          boundary directly usable as the base of the new runtime
+        status: completed
+        delivered_feature: runtime entry and persistence foundation
         feature_scope:
           - runtime_api
           - session_lifecycle
-          - context_assembly
-          - multi_step_runtime_loop
-          - prompt_building
-          - validation_chain
-          - result_normalization
-          - trace_metrics_boundary
+          - session_state_registry
+          - data_storage_boundary
+          - source_layout
         batches:
-          - batch_id: batch_19_1_agent_runtime_api_and_session_implementation
+          - batch_id: batch_1_1_interface_contract_implementation
             batch_type: implementation
             name: implementation
-            goal: implement the documented agent runtime public api session handle and session lifecycle boundaries
-            status: in_progress
-            progress_notes:
-              - use infra_projects/projects/agent_runtime/docs/agent_runtime_design.md as the direct design authority for runtime boundaries and naming
-              - keep workdir as sdk-scoped configuration on createAgentRuntime rather than session-scoped input
-              - keep public entry stable at AgentRuntime createSession openSession closeSession and AgentSession execute read
+            goal: implement stable interface and lifecycle contracts in src_new
+            status: completed
             covers:
               - runtime_api
               - session_lifecycle
             tasks:
-              - task_name: implement runtime root api contract
-                summary: implement AgentRuntime createSession openSession and closeSession according to the documented public contract
-                status: pending
+              - task_name: implement runtime api interfaces
+                summary: implement Api RuntimeApi and ISession contracts in src_new/interface
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/api
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement runtime agent session handle
-                summary: implement AgentSession and RuntimeAgentSession so session-bound execute and read delegate through the runtime service
-                status: pending
+                  - infra_projects/projects/agent_runtime/src_new/interface
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/sdk_interface_design.md
+              - task_name: implement runtime entry wiring
+                summary: implement the src_new entry export and runtime bootstrap entrypoints
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/src/api
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement session manager lifecycle
-                summary: implement AgentSessionManager session creation opening close semantics and session-state reads
-                status: pending
+                  - infra_projects/projects/agent_runtime/src_new/index.ts
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: implement session lifecycle methods
+                summary: implement createSession openSession and closeSession on Runtime
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_2_agent_runtime_context_implementation
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
+          - batch_id: batch_1_2_runtime_registry_storage_implementation
             batch_type: implementation
             name: implementation
-            goal: implement context assembly session history runtime memory retrieval and sdk-scoped workdir loading
-            status: pending
+            goal: implement session registry storage boundary and source layout
+            status: completed
+            covers:
+              - session_state_registry
+              - data_storage_boundary
+              - source_layout
+            tasks:
+              - task_name: implement agent session manager
+                summary: implement AgentSessionManager for in-memory session handle registration lookup and removal
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
+              - task_name: implement shared storage contract
+                summary: implement Storage load and save contracts with baseline file-backed behavior
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/data
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/data_design.md
+              - task_name: establish src_new foundation layout
+                summary: create src_new directory structure for interface runtime data and shared modules
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new
+          - batch_id: batch_1_3_runtime_foundation_verification
+            batch_type: verification
+            name: verification
+            goal: verify the interface runtime lifecycle and storage foundation
+            status: completed
+            covers:
+              - runtime_api
+              - session_lifecycle
+              - data_storage_boundary
+            tasks:
+              - task_name: verify runtime api contract behavior
+                summary: verify RuntimeApi and ISession entry behavior matches the current interface contract
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/interface
+              - task_name: verify session lifecycle behavior
+                summary: verify create open and close lifecycle behavior on Runtime and AgentSessionManager
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: verify storage boundary behavior
+                summary: verify Storage file-backed load save and path behavior without leaking backend details upward
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/data
+
+      - stage_id: context and model foundation usable
+        goal: make context governance and model integration usable for later session execution
+        status: completed
+        delivered_feature: context assembly and model boundary
+        feature_scope:
+          - context_assembly
+          - transcript_boundary
+          - runtime_memory_boundary
+          - retrieval_boundary
+          - context_budget_policy
+          - model_factory
+          - shared_model_execution
+          - streaming_adapter
+        batches:
+          - batch_id: batch_2_1_context_store_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement transcript memory and retrieval boundaries
+            status: completed
+            covers:
+              - transcript_boundary
+              - runtime_memory_boundary
+              - retrieval_boundary
+            tasks:
+              - task_name: implement session transcript boundary
+                summary: implement SessionTranscript load and update behavior on top of Storage
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/context
+                  - infra_projects/projects/agent_runtime/src_new/data
+              - task_name: implement runtime memory boundary
+                summary: implement RuntimeMemory load and update behavior on top of Storage
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/context
+                  - infra_projects/projects/agent_runtime/src_new/data
+              - task_name: implement retrieval provider boundary
+                summary: implement RetrievalProvider contract for optional retrieval-backed context loading
+                status: completed
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/context
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/context_governance_design.md
+          - batch_id: batch_2_2_context_assembly_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement context assembly and bounded-context policy
+            status: completed
             covers:
               - context_assembly
+              - context_budget_policy
             tasks:
-              - task_name: implement session history store
-                summary: implement SessionHistoryStore load and transcript append behavior for the bound session
-                status: pending
+              - task_name: implement context budget policy
+                summary: implement ContextBudgetPolicy bound behavior for assembled context views
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/context
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement runtime memory and retrieval boundaries
-                summary: implement RuntimeMemoryStore and RetrievalProvider-facing contracts with the documented runtime-owned boundaries
-                status: pending
-                involved_files:
-                  - infra_projects/projects/agent_runtime/src/context
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
+                  - infra_projects/projects/agent_runtime/src_new/context
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/context_governance_design.md
               - task_name: implement context assembler
-                summary: implement ContextAssembler with sdk-scoped workdir loading and bound-session context assembly
-                status: pending
+                summary: implement ContextAssembler to produce AgentContext with originalContext and boundedContext
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/context
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_3_agent_runtime_loop_and_validation_implementation
+                  - infra_projects/projects/agent_runtime/src_new/context
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+          - batch_id: batch_2_3_model_boundary_implementation
             batch_type: implementation
             name: implementation
-            goal: implement the multi-step runtime loop prompt builders validators and shared model backend integration
-            status: pending
-            progress_notes:
-              - keep planning and execution on the shared IModelBackend abstraction and do not reintroduce separate planning backend types
+            goal: implement model creation shared execution and stream adaptation
+            status: completed
             covers:
-              - multi_step_runtime_loop
-              - prompt_building
-              - validation_chain
+              - model_factory
+              - shared_model_execution
+              - streaming_adapter
             tasks:
-              - task_name: implement planner and planning prompt flow
-                summary: implement DefaultPlanner PlanningPromptBuilder and PlanValidator on top of the shared IModelBackend abstraction
-                status: pending
+              - task_name: implement model factory
+                summary: implement ModelFactory and ModelCreationInput resolution without leaking provider-specific types upward
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/src/model
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement executor and execution prompt flow
-                summary: implement DefaultExecutor ExecutionPromptBuilder and ExecutionResultValidator with documented model request shaping
-                status: pending
+                  - infra_projects/projects/agent_runtime/src_new/model
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/model_integration_design.md
+              - task_name: implement shared model execution
+                summary: implement IModel execute and stream behavior with normalized request and response contracts
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/src/model
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement loop coordinator and observer chain
-                summary: implement DefaultAgent DefaultObserver and ObservationValidator for one controlled multi-step plan execute observe re-plan loop
-                status: pending
+                  - infra_projects/projects/agent_runtime/src_new/model
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/model_integration_design.md
+              - task_name: implement streaming event adapter
+                summary: implement StreamingEventAdapter for provider stream normalization
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_4_agent_runtime_result_and_trace_implementation
-            batch_type: implementation
-            name: implementation
-            goal: implement result normalization runtime metrics and trace boundaries with documented write-back separation
-            status: pending
-            covers:
-              - result_normalization
-              - trace_metrics_boundary
-            tasks:
-              - task_name: implement result normalizer
-                summary: implement ResultNormalizer with stable success failed diagnostics and loop-state output contracts
-                status: pending
-                involved_files:
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement runtime metrics collector
-                summary: implement RuntimeMetricsCollector and keep metrics in run-scoped result output rather than session transcript state
-                status: pending
-                involved_files:
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: implement trace contracts and recorder boundary
-                summary: implement trace event contracts recorder integration and the documented separation between trace transcript and metrics write-back
-                status: pending
-                involved_files:
-                  - infra_projects/projects/agent_runtime/src/trace
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_5_agent_runtime_core_verification
+                  - infra_projects/projects/agent_runtime/src_new/model
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/model_integration_design.md
+          - batch_id: batch_2_4_context_verification
             batch_type: verification
             name: verification
-            goal: verify the documented agent runtime boundaries through unit coverage on runtime api loop validation and result contracts
-            status: pending
+            goal: verify context governance contracts
+            status: completed
             covers:
-              - runtime_api
-              - session_lifecycle
               - context_assembly
-              - multi_step_runtime_loop
-              - validation_chain
-              - result_normalization
-              - trace_metrics_boundary
+              - retrieval_boundary
+              - context_budget_policy
             tasks:
-              - task_name: verify runtime api and session lifecycle
-                summary: verify createSession openSession closeSession and AgentSession read behavior against the documented session lifecycle contract
-                status: pending
+              - task_name: verify context assembly shape
+                summary: verify ContextAssembler produces the documented AgentContext structure
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/tests/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: verify multi-step loop and validators
-                summary: verify one mock-backend multi-step loop runs through the documented planner executor observer and validator chain
-                status: pending
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/context
+              - task_name: verify retrieval collaboration behavior
+                summary: verify RetrievalProvider collaboration stays optional and bounded inside context assembly
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/tests/loop
-                  - infra_projects/projects/agent_runtime/tests/runtime
-                  - infra_projects/projects/agent_runtime/tests/trace
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: verify normalized result and observability boundaries
-                summary: verify stable AgentRuntimeResult diagnostics metrics and transcript trace write-back separation
-                status: pending
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/context
+              - task_name: verify bounded-context policy behavior
+                summary: verify ContextBudgetPolicy returns bounded context views under runtime limits
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/tests/runtime
-                  - infra_projects/projects/agent_runtime/tests/trace
-                  - infra_projects/projects/agent_runtime/tests/context
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_6_agent_runtime_terminal_example_verification
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/context
+          - batch_id: batch_2_5_model_verification
             batch_type: verification
             name: verification
-            goal: verify the manual terminal session example against the implemented sdk boundary
-            status: pending
+            goal: verify model integration contracts
+            status: completed
             covers:
-              - runtime_api
-              - session_lifecycle
-              - multi_step_runtime_loop
+              - model_factory
+              - shared_model_execution
+              - streaming_adapter
             tasks:
-              - task_name: verify terminal session demo entry presence
-                summary: verify examples/terminal-session-demo.ts follows the documented scope and drives AgentRuntime and AgentSession without introducing a separate terminal runtime layer
-                status: pending
+              - task_name: verify model factory behavior
+                summary: verify ModelFactory resolves mock and real provider creation inputs correctly
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/examples
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: verify terminal session demo interaction flow
-                summary: verify the terminal session demo can create one session loop over user input and print runtime output on top of the implemented sdk boundary
-                status: pending
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/model
+              - task_name: verify shared model execution behavior
+                summary: verify IModel execute and stream contracts with mock provider fixtures
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/examples
-                  - infra_projects/projects/agent_runtime/package.json
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: verify terminal session demo close path
-                summary: verify the terminal session demo closes the target session through AgentRuntime closeSession with the documented boolean result contract
-                status: pending
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/model
+              - task_name: verify stream event normalization
+                summary: verify StreamingEventAdapter normalizes provider stream events into shared stream events
+                status: completed
                 involved_files:
-                  - infra_projects/projects/agent_runtime/examples
-                  - infra_projects/projects/agent_runtime/package.json
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_7_agent_runtime_availability_hardening_implementation
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/model
+
+  - milestone_id: milestone_p1_single_agent_production_hardening
+    name: p1 single-agent mainline completion
+    goal: deliver the single-agent runtime mainline on top of the p0 foundation,
+      including AgentSession execution, agent orchestration, capability and tooling
+      boundaries, observability, and application-layer integration
+    status: in_progress
+    stages:
+      - stage_id: session execution and orchestration usable
+        goal: make AgentSession and the single-agent orchestration family directly usable on top of context and model boundaries
+        status: pending
+        delivered_feature: session execution and orchestration
+        feature_scope:
+          - agent_selection
+          - chat_orchestration
+          - react_orchestration
+          - peo_orchestration
+          - session_execution_cycle
+          - stable_session_result
+          - run_checkpoint_placeholder
+          - multi_agent_protocol_placeholder
+        batches:
+          - batch_id: batch_3_1_selector_chat_session_implementation
             batch_type: implementation
             name: implementation
-            goal: harden agent runtime prompt contracts exception handling and observability so real-llm execution is more usable under normal and abnormal provider responses
+            goal: implement selector chat path and session execution mainline
             status: pending
             covers:
-              - prompt_building
-              - validation_chain
-              - result_normalization
-              - trace_metrics_boundary
+              - agent_selection
+              - chat_orchestration
+              - session_execution_cycle
             tasks:
-              - task_name: harden planning and execution prompt contracts
-                summary: tighten planning output contracts and execution response contracts so chat json and task json paths are explicit stable and easier to validate under real-llm execution
+              - task_name: implement agent selector
+                summary: implement AgentSelector with requestedMode routing and dynamic fallback
                 status: pending
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: classify provider abnormal responses and runtime stop behavior
-                summary: define stable handling for provider timeout transport error empty response malformed output and contract violations so runtime failures are categorized and closed consistently
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
+              - task_name: implement chat agent path
+                summary: implement ChatAgent ChatPromptBuilder and ChatResultChecker on top of AgentContext and IModel
                 status: pending
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/model
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: enrich trace diagnostics for runtime troubleshooting
-                summary: expand trace and result diagnostics so DefaultAgent.run records factual in-process trace events at each plan execute and observe step instead of only appending post-step summary events and so prompt-shape issues provider-response issues validation failures and final stop reasons can be distinguished directly from runtime outputs
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+                  - infra_projects/projects/agent_runtime/src_new/model
+              - task_name: implement session execution mainline
+                summary: implement AgentSession execute flow through context assembly selection and agent execution
                 status: pending
                 involved_files:
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/src/loop
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-          - batch_id: batch_19_8_agent_runtime_real_llm_availability_verification
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+          - batch_id: batch_3_2_result_react_peo_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement stable result shaping and bounded react peo paths
+            status: pending
+            covers:
+              - stable_session_result
+              - react_orchestration
+              - peo_orchestration
+            tasks:
+              - task_name: implement stable session result normalization
+                summary: normalize AgentRuntimeResult stateUpdate and metadata into stable SessionResult
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
+              - task_name: implement bounded react orchestration
+                summary: implement ReActAgent thought action and observation collaborators with bounded loop control
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
+              - task_name: implement bounded peo orchestration
+                summary: implement PEOAgent planning execution and observation stages with checker boundaries
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
+          - batch_id: batch_3_3_reserved_protocol_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement reserved runtime placeholders without wiring them into the mainline path
+            status: pending
+            covers:
+              - run_checkpoint_placeholder
+              - multi_agent_protocol_placeholder
+            tasks:
+              - task_name: implement reserved run checkpoint placeholder
+                summary: implement RunCheckpoint contract and placeholder behavior without activating checkpoint capture in the mainline path
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
+              - task_name: implement reserved multi-agent protocol placeholder
+                summary: implement MultiAgentProtocol placeholder contract without enabling active delegation in the mainline path
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
+          - batch_id: batch_3_4_session_execution_verification
             batch_type: verification
             name: verification
-            goal: verify agent runtime availability against real-llm normal and abnormal response scenarios instead of only local mock or injected-fetch coverage
+            goal: verify session routing execution and stable result behavior
             status: pending
             covers:
-              - prompt_building
-              - validation_chain
-              - result_normalization
-              - trace_metrics_boundary
+              - agent_selection
+              - session_execution_cycle
+              - stable_session_result
             tasks:
-              - task_name: verify real-llm chat and planning paths
-                summary: add explicit real-llm verification for planning request shaping chat execution and chat json contract stability under the agent runtime entry
+              - task_name: verify selector routing behavior
+                summary: verify requestedMode and dynamic routing choose the expected orchestration path
                 status: pending
                 involved_files:
                   - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: verify session execution cycle behavior
+                summary: verify AgentSession runs one bounded execution cycle through the documented collaboration chain
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: verify stable session result behavior
+                summary: verify SessionResult remains stable across success and failure paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+          - batch_id: batch_3_5_agent_path_verification
+            batch_type: verification
+            name: verification
+            goal: verify chat react and peo orchestration paths
+            status: pending
+            covers:
+              - chat_orchestration
+              - react_orchestration
+              - peo_orchestration
+            tasks:
+              - task_name: verify chat path behavior
+                summary: verify ChatAgent path returns the documented result shape
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: verify react path behavior
+                summary: verify ReActAgent bounded loop behavior and result output
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: verify peo path behavior
+                summary: verify PEOAgent bounded stage behavior and result output
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+          - batch_id: batch_3_6_reserved_protocol_verification
+            batch_type: verification
+            name: verification
+            goal: verify reserved placeholders stay non-mainline
+            status: pending
+            covers:
+              - run_checkpoint_placeholder
+              - multi_agent_protocol_placeholder
+            tasks:
+              - task_name: verify checkpoint placeholder stays reserved
+                summary: verify RunCheckpoint is callable but not activated by normal session execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: verify multi-agent placeholder stays reserved
+                summary: verify MultiAgentProtocol is callable but not activated by normal session execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+
+      - stage_id: capability and observability usable
+        goal: make tool execution governance metrics and trace boundaries usable for runtime execution
+        status: pending
+        delivered_feature: tooling and observability
+        feature_scope:
+          - tool_gateway
+          - tool_registry
+          - permission_policy
+          - execution_environment
+          - metrics_boundary
+          - trace_boundary
+        batches:
+          - batch_id: batch_4_1_tool_governance_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement tool gateway registry and permission governance
+            status: pending
+            covers:
+              - tool_gateway
+              - tool_registry
+              - permission_policy
+            tasks:
+              - task_name: implement mcp gateway
+                summary: implement McpGateway call behavior for normalized tool-call dispatch
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
+              - task_name: implement tool registry
+                summary: implement McpToolRegistry registration resolution and inventory listing
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
+              - task_name: implement permission policy
+                summary: implement RuntimePermissionPolicy with the current permission decision model
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
+          - batch_id: batch_4_2_execution_observability_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement execution environment metrics and trace boundaries
+            status: pending
+            covers:
+              - execution_environment
+              - metrics_boundary
+              - trace_boundary
+            tasks:
+              - task_name: implement execution environment
+                summary: implement ExecutionEnvironment for local baseline tool execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
+              - task_name: implement metrics boundary
+                summary: implement Metrics aggregation with sessionMetrics totalMetrics and token usage facts
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/observability
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/observability_design.md
+              - task_name: implement trace boundary
+                summary: implement Trace recording querying and flush behavior with the current generalized event model
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/observability
+                  - infra_projects/projects/agent_runtime/src_new/data
+          - batch_id: batch_4_3_tool_governance_verification
+            batch_type: verification
+            name: verification
+            goal: verify tool gateway registry and permission enforcement
+            status: pending
+            covers:
+              - tool_gateway
+              - permission_policy
+              - execution_environment
+            tasks:
+              - task_name: verify tool gateway dispatch behavior
+                summary: verify tool-call dispatch behavior across allowed runtime paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify permission enforcement behavior
+                summary: verify allowed and denied permission decisions are enforced before execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify execution environment behavior
+                summary: verify ExecutionEnvironment returns stable tool-call results for the local baseline
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+          - batch_id: batch_4_4_registry_observability_verification
+            batch_type: verification
+            name: verification
+            goal: verify tool registry metrics and trace persistence
+            status: pending
+            covers:
+              - tool_registry
+              - metrics_boundary
+              - trace_boundary
+            tasks:
+              - task_name: verify tool registry behavior
+                summary: verify registry registration resolution and listing behavior
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify metrics behavior
+                summary: verify metrics collection and aggregation stay separate from transcript state
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/observability
+              - task_name: verify trace persistence behavior
+                summary: verify trace event querying and flush persistence through Storage
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/observability
+                  - infra_projects/projects/agent_runtime/src_new/data
+
+      - stage_id: application integration usable
+        goal: make the terminal-facing demo and end-to-end mainline runtime behavior usable on top of the new src_new implementation
+        status: pending
+        delivered_feature: application demo and integration
+        feature_scope:
+          - terminal_session_demo
+          - mock_end_to_end_runtime
+          - file_backed_runtime_integration
+        batches:
+          - batch_id: batch_5_1_application_integration_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement the application-layer demo and wire the new runtime mainline
+            status: pending
+            covers:
+              - terminal_session_demo
+              - file_backed_runtime_integration
+            tasks:
+              - task_name: implement terminal session demo adapter
+                summary: implement TerminalSessionDemo on top of Api and ISession contracts
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/application
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/application_design.md
+              - task_name: implement terminal input and output helpers
+                summary: implement TerminalInputHandler and TerminalOutputRenderer for the application-layer demo
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/application
+                  - infra_projects/projects/agent_runtime/docs/breakdown_docs/application_design.md
+              - task_name: wire src_new runtime as package entry
+                summary: wire package exports examples and bin entrypoints to the new src_new runtime mainline
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/package.json
+                  - infra_projects/projects/agent_runtime/src/index.ts
+                  - infra_projects/projects/agent_runtime/src_new
+          - batch_id: batch_5_2_application_integration_verification
+            batch_type: verification
+            name: verification
+            goal: verify terminal demo and mock end-to-end runtime behavior
+            status: pending
+            covers:
+              - terminal_session_demo
+              - mock_end_to_end_runtime
+              - file_backed_runtime_integration
+            tasks:
+              - task_name: verify terminal session demo flow
+                summary: verify the terminal demo can create or open a session execute requests and close the session
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/examples
                   - infra_projects/projects/agent_runtime/bin
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: verify real-llm task json and abnormal provider scenarios
-                summary: verify task json outputs and exercise timeout empty response malformed output and provider-failure scenarios so runtime degradation behavior is actually observed and recorded
+              - task_name: verify mock end-to-end runtime path
+                summary: verify one complete mock runtime path through storage context orchestration tooling and observability boundaries
                 status: pending
                 involved_files:
                   - infra_projects/projects/agent_runtime/tests
-                  - infra_projects/projects/agent_runtime/src/model
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-              - task_name: verify in-process trace facts for plan execute observe
-                summary: verify trace output records each plan execute and observe invocation inside DefaultAgent.run as in-process facts with ordered step-level events rather than only post-execution summary records
+                  - infra_projects/projects/agent_runtime/src_new
+              - task_name: verify file-backed integration behavior
+                summary: verify the runtime uses the file-backed storage baseline as the integrated mainline
                 status: pending
                 involved_files:
                   - infra_projects/projects/agent_runtime/tests
-                  - infra_projects/projects/agent_runtime/src/runtime
-                  - infra_projects/projects/agent_runtime/docs/agent_runtime_design.md
-        validation:
-          - AgentRuntime createSession openSession closeSession and AgentSession execute read are directly usable
-          - one multi-step plan execute observe re-plan loop runs through the documented validator chain on a mock backend
-          - transcript trace and metrics boundaries follow the documented write-back separation
-          - examples/terminal-session-demo.ts exercises the implemented sdk boundary without introducing a separate terminal runtime layer
-          - real-llm availability is not marked complete until prompt contracts abnormal-response handling and trace diagnostics are verified through explicit runtime coverage
+                  - infra_projects/projects/agent_runtime/src_new/data
+
+  - milestone_id: milestone_p2_runtime_platform_expansion
+    name: p2 production hardening and runtime platform expansion
+    goal: deliver the later-phase hardening and platform expansion scope, including
+      explicit routing and repair policies, stronger governance and resilience,
+      richer context optimization, remote execution, durable runtime coordination,
+      multi-agent collaboration, analytics, and automation integrations
+    status: pending
+    stages:
+      - stage_id: routing and execution policy hardening
+        goal: make request routing internal step decisions and repair policy boundaries explicit and implementation-ready
+        status: pending
+        delivered_feature: single-agent runtime control hardening
+        feature_scope:
+          - request_routing_hardening
+          - step_decision_policy
+          - repair_policy
+          - richer_execution_observation_policy
+        batches:
+          - batch_id: batch_6_1_routing_policy_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement explicit request routing and step decision policies
+            status: pending
+            covers:
+              - request_routing_hardening
+              - step_decision_policy
+            tasks:
+              - task_name: implement request routing policy
+                summary: split requestedMode routing and dynamic selection heuristics into explicit runtime-owned routing collaborators
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: implement step decision policy
+                summary: make internal step decisions explicit instead of implicit inside orchestration internals
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+          - batch_id: batch_6_2_repair_policy_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement repair and richer execution-observation policy
+            status: pending
+            covers:
+              - repair_policy
+              - richer_execution_observation_policy
+            tasks:
+              - task_name: implement repair policy
+                summary: add runtime-owned repair stop and bounded retry policy support
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: implement richer execution-observation policy
+                summary: add richer execution-observation control without changing the external SessionResult contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+          - batch_id: batch_6_3_routing_policy_verification
+            batch_type: verification
+            name: verification
+            goal: verify explicit routing repair and observation behavior
+            status: pending
+            covers:
+              - step_decision_policy
+              - repair_policy
+              - richer_execution_observation_policy
+            tasks:
+              - task_name: verify step decision policy behavior
+                summary: verify internal step decisions remain runtime-owned and diagnosable
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: verify repair policy behavior
+                summary: verify bounded repair and retry behavior across abnormal execution paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: verify richer execution-observation behavior
+                summary: verify richer execution-observation policy does not break the stable result contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+
+      - stage_id: capability governance and runtime resilience usable
+        goal: expand capability governance runtime resilience and usage visibility for single-agent production readiness
+        status: pending
+        delivered_feature: governance and resilience hardening
+        feature_scope:
+          - tool_allowlist
+          - path_policy
+          - execution_policy
+          - built_in_capability_expansion
+          - streaming_runtime_support
+          - cancellation_timeout_support
+          - checkpoint_persistence
+          - strengthened_usage_metrics
+        batches:
+          - batch_id: batch_7_1_governance_policy_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement expanded governance policies
+            status: pending
+            covers:
+              - tool_allowlist
+              - path_policy
+              - execution_policy
+            tasks:
+              - task_name: implement tool allowlist policy
+                summary: add explicit tool allowlist checks into RuntimePermissionPolicy
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: implement path policy
+                summary: add working-directory and path policy enforcement into tool execution governance
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: implement execution policy
+                summary: add command and environment execution policy enforcement into tool governance
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+          - batch_id: batch_7_2_resilience_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement runtime resilience and expanded built-in capability support
+            status: pending
+            covers:
+              - built_in_capability_expansion
+              - streaming_runtime_support
+              - cancellation_timeout_support
+            tasks:
+              - task_name: implement expanded built-in capabilities
+                summary: add more built-in tool capabilities while preserving the existing gateway contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: implement streaming runtime support
+                summary: wire streaming support through IModel AgentSession and orchestration boundaries
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/model
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: implement cancellation and timeout support
+                summary: add cancellation and timeout support across runtime-owned execution paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+          - batch_id: batch_7_3_checkpoint_metrics_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement checkpoint persistence and stronger usage metrics
+            status: pending
+            covers:
+              - checkpoint_persistence
+              - strengthened_usage_metrics
+            tasks:
+              - task_name: implement checkpoint persistence
+                summary: connect RunCheckpoint to durable persistence beyond the p0 placeholder baseline
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/data
+              - task_name: implement strengthened usage metrics
+                summary: strengthen provider and tool usage aggregation beyond the p0 metrics baseline
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/observability
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+          - batch_id: batch_7_4_governance_verification
+            batch_type: verification
+            name: verification
+            goal: verify governance enforcement and expanded built-in capabilities
+            status: pending
+            covers:
+              - tool_allowlist
+              - execution_policy
+              - built_in_capability_expansion
+            tasks:
+              - task_name: verify tool allowlist behavior
+                summary: verify allowlist rules are enforced before tool execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify execution policy behavior
+                summary: verify execution policy enforcement under allowed and denied runtime paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify expanded built-in capability behavior
+                summary: verify expanded built-in capabilities still follow the shared gateway contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+          - batch_id: batch_7_5_resilience_verification
+            batch_type: verification
+            name: verification
+            goal: verify resilience and persistence behavior
+            status: pending
+            covers:
+              - streaming_runtime_support
+              - cancellation_timeout_support
+              - checkpoint_persistence
+            tasks:
+              - task_name: verify streaming runtime behavior
+                summary: verify streaming support works across runtime-owned execution paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/model
+              - task_name: verify cancellation and timeout behavior
+                summary: verify cancellation and timeout handling under normal and abnormal execution paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: verify checkpoint persistence behavior
+                summary: verify persisted checkpoints can be written and recovered under the hardened runtime path
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/data
+          - batch_id: batch_7_6_metrics_policy_verification
+            batch_type: verification
+            name: verification
+            goal: verify path policy and strengthened usage metrics
+            status: pending
+            covers:
+              - path_policy
+              - strengthened_usage_metrics
+            tasks:
+              - task_name: verify path policy behavior
+                summary: verify path restrictions are enforced before tool execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify strengthened usage metrics behavior
+                summary: verify stronger provider and tool usage metrics are aggregated and persisted correctly
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/observability
+
+      - stage_id: context and execution platform expansion
+        goal: expand context governance and execution-environment capabilities beyond the p0 file-backed local-process baseline
+        status: pending
+        delivered_feature: context and execution platform expansion
+        feature_scope:
+          - transcript_compression
+          - memory_optimization
+          - richer_retrieval_coordination
+          - sandboxed_execution_adapter
+          - remote_execution_adapter
+        batches:
+          - batch_id: batch_8_1_context_optimization_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement richer context optimization
+            status: pending
+            covers:
+              - transcript_compression
+              - memory_optimization
+              - richer_retrieval_coordination
+            tasks:
+              - task_name: implement transcript compression
+                summary: add transcript compression support on top of the context-governance boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/context
+              - task_name: implement memory optimization
+                summary: add runtime memory optimization support beyond the p0 summary baseline
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/context
+              - task_name: implement richer retrieval coordination
+                summary: add richer retrieval coordination across request and session context assembly
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/context
+          - batch_id: batch_8_2_execution_adapter_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement non-local execution adapters
+            status: pending
+            covers:
+              - sandboxed_execution_adapter
+              - remote_execution_adapter
+            tasks:
+              - task_name: implement sandboxed execution adapter
+                summary: add sandboxed ExecutionEnvironment support behind the capability boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: implement remote execution adapter
+                summary: add remote ExecutionEnvironment support behind the capability boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/capability
+          - batch_id: batch_8_3_context_optimization_verification
+            batch_type: verification
+            name: verification
+            goal: verify richer context optimization behavior
+            status: pending
+            covers:
+              - transcript_compression
+              - memory_optimization
+              - richer_retrieval_coordination
+            tasks:
+              - task_name: verify transcript compression behavior
+                summary: verify transcript compression preserves stable runtime contracts
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/context
+              - task_name: verify memory optimization behavior
+                summary: verify memory optimization behavior across repeated session execution
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/context
+              - task_name: verify richer retrieval coordination behavior
+                summary: verify richer retrieval coordination stays within the context-governance boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/context
+          - batch_id: batch_8_4_execution_adapter_verification
+            batch_type: verification
+            name: verification
+            goal: verify sandboxed and remote execution adapters
+            status: pending
+            covers:
+              - sandboxed_execution_adapter
+              - remote_execution_adapter
+            tasks:
+              - task_name: verify sandboxed execution adapter behavior
+                summary: verify sandboxed adapter preserves the existing tool contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+              - task_name: verify remote execution adapter behavior
+                summary: verify remote adapter preserves the existing tool contract
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/capability
+
+      - stage_id: durable runtime and platform integration usable
+        goal: expand runtime coordination from single-process foreground sessions toward durable background and multi-agent platform behavior
+        status: pending
+        delivered_feature: durable and integrated runtime platform
+        feature_scope:
+          - background_execution
+          - durable_run_checkpoints
+          - long_running_coordination
+          - multi_agent_coordination
+          - richer_analytics
+          - governance_surfaces
+          - automation_entry_integrations
+        batches:
+          - batch_id: batch_9_1_durable_runtime_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement durable runtime coordination
+            status: pending
+            covers:
+              - background_execution
+              - durable_run_checkpoints
+              - long_running_coordination
+            tasks:
+              - task_name: implement background execution
+                summary: add background execution support on top of the runtime-controller boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: implement durable run checkpoints
+                summary: add durable checkpoint resume behavior beyond p1 persistence hardening
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/data
+              - task_name: implement long-running coordination
+                summary: add long-running runtime coordination for non-foreground execution paths
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+          - batch_id: batch_9_2_platform_integration_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement active multi-agent and platform-facing integrations
+            status: pending
+            covers:
+              - multi_agent_coordination
+              - richer_analytics
+              - governance_surfaces
+            tasks:
+              - task_name: implement active multi-agent coordination
+                summary: expand MultiAgentProtocol from placeholder to active collaboration behavior
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: implement richer analytics
+                summary: add richer analytics views on top of the observability boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/observability
+              - task_name: implement governance surfaces
+                summary: expose richer governance surfaces without leaking internal runtime details outward
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/application
+                  - infra_projects/projects/agent_runtime/src_new/observability
+          - batch_id: batch_9_3_automation_integration_implementation
+            batch_type: implementation
+            name: implementation
+            goal: implement automation-entry integrations
+            status: pending
+            covers:
+              - automation_entry_integrations
+            tasks:
+              - task_name: implement automation-entry integrations
+                summary: add automation-facing integration entrypoints on top of the runtime boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/src_new/application
+          - batch_id: batch_9_4_durable_runtime_verification
+            batch_type: verification
+            name: verification
+            goal: verify durable runtime behavior
+            status: pending
+            covers:
+              - background_execution
+              - durable_run_checkpoints
+              - long_running_coordination
+            tasks:
+              - task_name: verify background execution behavior
+                summary: verify background execution preserves runtime contracts and session continuity
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+              - task_name: verify durable run checkpoint behavior
+                summary: verify durable checkpoints can be resumed correctly
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+                  - infra_projects/projects/agent_runtime/src_new/data
+              - task_name: verify long-running coordination behavior
+                summary: verify long-running coordination remains bounded and observable
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/runtime
+          - batch_id: batch_9_5_platform_integration_verification
+            batch_type: verification
+            name: verification
+            goal: verify multi-agent and platform-facing integrations
+            status: pending
+            covers:
+              - multi_agent_coordination
+              - richer_analytics
+              - governance_surfaces
+            tasks:
+              - task_name: verify multi-agent coordination behavior
+                summary: verify active multi-agent collaboration behavior above the current single-loop baseline
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/orchestration
+              - task_name: verify richer analytics behavior
+                summary: verify richer analytics remain behind the documented observability boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/observability
+              - task_name: verify governance surface behavior
+                summary: verify governance surfaces remain externally consumable without exposing runtime internals
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/application
+          - batch_id: batch_9_6_automation_integration_verification
+            batch_type: verification
+            name: verification
+            goal: verify automation-entry integrations
+            status: pending
+            covers:
+              - automation_entry_integrations
+            tasks:
+              - task_name: verify automation-entry integration behavior
+                summary: verify automation-facing integrations stay on the documented runtime boundary
+                status: pending
+                involved_files:
+                  - infra_projects/projects/agent_runtime/tests
+                  - infra_projects/projects/agent_runtime/src_new/application
