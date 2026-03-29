@@ -5,6 +5,7 @@ import { runOrchestrationP1SrcNewTests } from "./orchestration-p1-src-new.test.j
 import { runCapabilityObservabilityP1SrcNewTests } from "./capability-observability-p1-src-new.test.js";
 import { runApplicationP1SrcNewTests } from "./application-p1-src-new.test.js";
 import { runRealProviderP1SrcNewTests } from "./real-provider-p1-src-new.test.js";
+import { runTerminalSessionCliSrcNewTests } from "./terminal-session-cli-src-new.test.js";
 
 async function main(): Promise<void> {
   await runRuntimeFoundationSrcNewTests();
@@ -14,6 +15,7 @@ async function main(): Promise<void> {
   await runCapabilityObservabilityP1SrcNewTests();
   await runApplicationP1SrcNewTests();
   await runRealProviderP1SrcNewTests();
+  await runTerminalSessionCliSrcNewTests();
   process.stdout.write("All tests passed.\n");
 }
 
