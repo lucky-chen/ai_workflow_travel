@@ -7,13 +7,14 @@ import type {
 } from "./types.js";
 
 export class RuntimePermissionPolicy implements RuntimePermissionPolicyContract {
-  constructor(private readonly defaultAllowedWorkingDirectories: string[] = []) {}
+  constructor(
+    private readonly workingDirectory?: string,
+    private readonly defaultAllowedWorkingDirectories: string[] = [],
+  ) {}
 
   async evaluate(input: PermissionCheckInput): Promise<PermissionDecision> {
-    const workingDirectory = input.toolCall.workingDirectory;
-    const allowlist = input.allowedWorkingDirectories
-      ?? input.toolCall.allowedWorkingDirectories
-      ?? this.defaultAllowedWorkingDirectories;
+    const workingDirectory = this.workingDirectory;
+    const allowlist = this.defaultAllowedWorkingDirectories;
 
     if (!workingDirectory || allowlist.length === 0) {
       return { allowed: true };

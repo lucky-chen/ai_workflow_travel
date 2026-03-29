@@ -20,8 +20,12 @@ export interface IModel {
   stream(input: ModuleRequest): AsyncIterable<StreamEvent>;
 }
 
+export type ModuleResponseFormat = "text" | "json";
+
 export interface ModuleRequest {
-  prompt: Record<string, unknown>;
+  systemPrompt: string[];
+  responseFormat: ModuleResponseFormat;
+  userPrompt: Record<string, unknown>;
   stream: boolean;
 }
 

@@ -265,7 +265,6 @@ export interface AgentTraceEventBase {
   traceId: string;
   stepIndex?: number;
   timestamp: string;
-  caller: string;
   summary: string;
   payload?: Record<string, unknown>;
 }

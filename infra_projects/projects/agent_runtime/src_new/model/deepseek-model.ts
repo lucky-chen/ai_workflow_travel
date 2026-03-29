@@ -9,7 +9,23 @@ import type {
   StreamEvent,
 } from "./types.js";
 
-export class RealProviderModel implements IModel {
+interface DeepSeekRequestBody {
+  model: string;
+  messages: Array<{
+    role: "system" | "user";
+    content: string;
+  }>;
+}
+
+interface DeepSeekResponseBody {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+export class DeepSeekModel implements IModel {
   private running = false;
 
   constructor(
@@ -25,13 +41,14 @@ export class RealProviderModel implements IModel {
   async execute(input: ModuleRequest): Promise<ModuleResponse> {
     this.running = true;
     try {
+      const requestBody = buildDeepSeekRequestBody(this.modeSelection.model!, input);
       const response = await this.fetchFn(this.modeSelection.url!, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${this.modeSelection.key!}`,
         },
-        body: JSON.stringify(input.prompt),
+        body: JSON.stringify(requestBody),
       });
       const rawText = await response.text();
       if (!response.ok) {
@@ -44,8 +61,9 @@ export class RealProviderModel implements IModel {
         };
       }
 
+      const content = extractDeepSeekResponseContent(rawText);
       return {
-        content: rawText,
+        content,
         error: {
           code: "",
           message: "",
@@ -69,6 +87,39 @@ export class RealProviderModel implements IModel {
     };
     yield this.streamingAdapter.adapt(event);
   }
+}
+
+function buildDeepSeekRequestBody(model: string, input: ModuleRequest): DeepSeekRequestBody {
+  const systemPrompt = input.systemPrompt.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  const messages: DeepSeekRequestBody["messages"] = [];
+  if (systemPrompt.length > 0) {
+    messages.push({
+      role: "system",
+      content: systemPrompt.join("\n"),
+    });
+  }
+  messages.push({
+    role: "user",
+    content: JSON.stringify(input.userPrompt),
+  });
+  return {
+    model,
+    messages,
+  };
+}
+
+function extractDeepSeekResponseContent(rawText: string): string {
+  let parsed: DeepSeekResponseBody;
+  try {
+    parsed = JSON.parse(rawText) as DeepSeekResponseBody;
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : "Provider returned invalid JSON.");
+  }
+  const content = parsed.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content.trim()) {
+    throw new Error("Provider response did not include choices[0].message.content.");
+  }
+  return content;
 }
 
 export function validateModeSelection(modeSelection: ModeSelection): void {

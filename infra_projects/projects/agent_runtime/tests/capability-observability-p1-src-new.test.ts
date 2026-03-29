@@ -23,35 +23,39 @@ export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-gateway-");
   const registry = new McpToolRegistry({
     echo: {
       async handle(input: ToolCallInput) {
         return {
-          content: String(input.payload.content ?? ""),
+          content: String(input.arguments.content ?? ""),
           exitCode: 0,
         };
       },
     },
   });
   const gateway = new McpGateway(
-    new RuntimePermissionPolicy(["/tmp/allowed"]),
+    new RuntimePermissionPolicy("/tmp/allowed", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
+    new Trace(new FileStorage(path.join(workdir, ".agent_runtime"))),
+  );
+  const blockedGateway = new McpGateway(
+    new RuntimePermissionPolicy("/tmp/blocked", ["/tmp/allowed"]),
+    registry,
+    new ExecutionEnvironment(),
+    new Trace(new FileStorage(path.join(workdir, ".agent_runtime"))),
   );
 
   const allowed = await gateway.call({
+    toolCallId: "tool-1",
     toolName: "echo",
-    payload: { content: "ok" },
-    sessionId: "session-1",
-    runId: "run-1",
-    workingDirectory: "/tmp/allowed",
+    arguments: { content: "ok" },
   });
-  const denied = await gateway.call({
+  const denied = await blockedGateway.call({
+    toolCallId: "tool-2",
     toolName: "echo",
-    payload: { content: "deny" },
-    sessionId: "session-1",
-    runId: "run-1",
-    workingDirectory: "/tmp/blocked",
+    arguments: { content: "deny" },
   });
 
   assert.equal(allowed.content, "ok");
@@ -172,7 +176,6 @@ async function testTracePersistsFlushState(): Promise<void> {
     scope: "session",
     eventType: "run_started",
     timestamp: new Date().toISOString(),
-    caller: "test",
     summary: "run started",
     sessionId: "session-1",
     runId: "run-1",
@@ -220,7 +223,6 @@ function createTraceEvent(eventType: Parameters<Trace["record"]>[0]["eventType"]
     scope: "session" as const,
     eventType,
     timestamp: new Date().toISOString(),
-    caller: "test",
     summary: eventType,
     sessionId: "session-1",
     runId: "run-1",

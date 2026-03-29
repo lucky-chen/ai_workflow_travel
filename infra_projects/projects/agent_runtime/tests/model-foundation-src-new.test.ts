@@ -23,7 +23,9 @@ async function testModelFactoryCreatesMockModel(): Promise<void> {
   });
 
   const response = await model.execute({
-    prompt: { hello: "world" },
+    systemPrompt: [],
+    responseFormat: "json",
+    userPrompt: { hello: "world" },
     stream: false,
   });
 
@@ -61,12 +63,16 @@ async function testModelFactoryCreatesHttpModel(): Promise<void> {
   });
 
   const response = await model.execute({
-    prompt: { hello: "world" },
+    systemPrompt: [],
+    responseFormat: "json",
+    userPrompt: { hello: "world" },
     stream: false,
   });
   const events = [];
   for await (const event of model.stream({
-    prompt: { hello: "world" },
+    systemPrompt: [],
+    responseFormat: "json",
+    userPrompt: { hello: "world" },
     stream: true,
   })) {
     events.push(event);

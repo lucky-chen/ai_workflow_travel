@@ -1,31 +1,37 @@
 import { randomUUID } from "node:crypto";
 
-import type { AgentContext } from "../context/types.js";
-import type { ModuleResponse } from "../model/types.js";
-import type { Trace } from "../observability/trace.js";
-import type { ModelFactory } from "../model/model-factory.js";
-import type { AgentRuntimeResult, IAgent } from "./types.js";
+import type { AgentContext } from "../../context/types.js";
+import type { ModelFactory } from "../../model/model-factory.js";
+import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
+import type { Trace } from "../../observability/trace.js";
+import type { AgentRuntimeResult, IAgent } from "../types.js";
 import {
   createAssistantTranscriptTurn as createAssistantTurn,
   createUserTranscriptTurn as createUserTurn,
   getRuntimeContext,
-} from "./agent-orchestration-helpers.js";
+} from "../agent_orchestration_helpers.js";
 
-export class ChatPromptBuilder {
-  async buildPrompt(context: AgentContext): Promise<Record<string, unknown>> {
+class ChatPromptBuilder {
+  async buildPrompt(context: AgentContext): Promise<ModuleRequest> {
     const activeContext = context.boundedContext ?? context.originalContext;
+    const runtimeContext = getRuntimeContext(context);
     return {
-      sessionId: getRuntimeContext(context).sessionId,
-      requestedMode: getRuntimeContext(context).requestedMode,
-      transcript: activeContext.transcriptContext.turns,
-      memory: activeContext.runtimeMemoryContext.summaryItems,
-      retrieval: activeContext.retrievalContext?.fragments ?? [],
-      userInput: getRuntimeContext(context).userInput.content,
+      systemPrompt: [],
+      responseFormat: "text",
+      userPrompt: {
+        sessionId: runtimeContext.sessionId,
+        requestedMode: runtimeContext.requestedMode,
+        transcript: activeContext.transcriptContext.turns,
+        memory: activeContext.runtimeMemoryContext.summaryItems,
+        retrieval: activeContext.retrievalContext?.fragments ?? [],
+        userInput: runtimeContext.userInput.content,
+      },
+      stream: false,
     };
   }
 }
 
-export class ChatResultChecker {
+class ChatResultChecker {
   async check(result: ModuleResponse): Promise<{ data: string | Record<string, unknown>; format: "text" | "json" }> {
     if (result.error.code) {
       throw new Error(result.error.message || result.error.code);
@@ -33,7 +39,6 @@ export class ChatResultChecker {
     if (!result.content) {
       throw new Error("Chat model returned empty content.");
     }
-
     try {
       return {
         data: JSON.parse(result.content) as Record<string, unknown>,
@@ -48,7 +53,7 @@ export class ChatResultChecker {
   }
 }
 
-export class ChatAgent implements IAgent {
+class ChatAgent implements IAgent {
   readonly pattern = "chat" as const;
   private running = false;
 
@@ -67,7 +72,6 @@ export class ChatAgent implements IAgent {
     const runId = randomUUID();
     this.running = true;
     try {
-      await this.recordAgentStepStarted(context, runId);
       const prompt = await this.promptBuilder.buildPrompt(context);
       const response = await this.executeModel(context, runId, prompt);
       const checked = await this.resultChecker.check(response);
@@ -79,23 +83,10 @@ export class ChatAgent implements IAgent {
     }
   }
 
-  private async recordAgentStepStarted(context: AgentContext, runId: string): Promise<void> {
-    await this.trace.record({
-      traceId: runId,
-      scope: "session",
-      eventType: "agent_step_started",
-      timestamp: new Date().toISOString(),
-      caller: "ChatAgent",
-      summary: "chat run started",
-      sessionId: getRuntimeContext(context).sessionId,
-      runId,
-    });
-  }
-
   private async executeModel(
     context: AgentContext,
     runId: string,
-    prompt: Record<string, unknown>,
+    request: ModuleRequest,
   ): Promise<ModuleResponse> {
     const runtimeContext = getRuntimeContext(context);
     const model = this.modelFactory.createModel({
@@ -108,27 +99,25 @@ export class ChatAgent implements IAgent {
       scope: "session",
       eventType: "model_called",
       timestamp: new Date().toISOString(),
-      caller: "ChatAgent",
       summary: "chat model called",
       sessionId: runtimeContext.sessionId,
       runId,
     });
-    const response = await model.execute({
-      prompt,
-      stream: false,
-    });
-    await this.trace.record({
-      traceId: runId,
-      scope: "session",
-      eventType: "model_result_recorded",
-      timestamp: new Date().toISOString(),
-      caller: "ChatAgent",
-      summary: "chat model result recorded",
-      sessionId: runtimeContext.sessionId,
-      runId,
-    });
+    const response = await model.execute(request);
     return response;
   }
+}
+
+export function createChatAgent(input: {
+  modelFactory: ModelFactory;
+  trace: Trace;
+}): IAgent {
+  return new ChatAgent(
+    input.modelFactory,
+    new ChatPromptBuilder(),
+    new ChatResultChecker(),
+    input.trace,
+  );
 }
 
 function createChatSuccessResult(

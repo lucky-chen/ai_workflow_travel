@@ -16,24 +16,10 @@ import { ExecutionEnvironment } from "../capability/execution-environment.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
-import { AgentSelector } from "../orchestration/agent-selector.js";
-import { ChatAgent, ChatPromptBuilder, ChatResultChecker } from "../orchestration/chat-agent.js";
-import {
-  ExecutionResultChecker,
-  ObservationChecker as PeoObservationChecker,
-  PEOAgent,
-  PlanChecker,
-  PlanPromptBuilder,
-  TaskExecutor as PeoTaskExecutor,
-} from "../orchestration/peo-agent.js";
-import {
-  ActionResultChecker,
-  ObservationChecker as ReactObservationChecker,
-  ReActAgent,
-  TaskExecutor as ReactTaskExecutor,
-  ThoughtChecker,
-  ThoughtPromptBuilder,
-} from "../orchestration/react-agent.js";
+import { AgentSelector } from "../orchestration/agent_selector.js";
+import { createChatAgent } from "../orchestration/chat_agent/index.js";
+import { createPEOAgent } from "../orchestration/peo_agent/index.js";
+import { createReActAgent } from "../orchestration/react_agent/index.js";
 import { Metrics } from "../observability/metrics.js";
 import { Trace } from "../observability/trace.js";
 import { ModelFactory } from "../model/model-factory.js";
@@ -72,36 +58,15 @@ export class Runtime implements RuntimeApi {
       runtimeMemory,
       new RetrievalProvider(options.workdir),
     );
-    const permissionPolicy = new RuntimePermissionPolicy([options.workdir]);
+    const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolHandlers(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
     const trace = new Trace(this.storage);
-    const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment);
+    const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, trace);
     const modelFactory = new ModelFactory();
-    const chatAgent = new ChatAgent(
-      modelFactory,
-      new ChatPromptBuilder(),
-      new ChatResultChecker(),
-      trace,
-    );
-    const reactAgent = new ReActAgent(
-      modelFactory,
-      new ThoughtPromptBuilder(),
-      new ThoughtChecker(),
-      new ReactTaskExecutor(gateway),
-      new ActionResultChecker(),
-      new ReactObservationChecker(),
-      trace,
-    );
-    const peoAgent = new PEOAgent(
-      modelFactory,
-      new PlanPromptBuilder(),
-      new PlanChecker(),
-      new PeoTaskExecutor(gateway),
-      new ExecutionResultChecker(),
-      new PeoObservationChecker(),
-      trace,
-    );
+    const chatAgent = createChatAgent({ modelFactory, trace });
+    const reactAgent = createReActAgent({ modelFactory, gateway, trace, toolRegistry });
+    const peoAgent = createPEOAgent({ modelFactory, gateway, trace, toolRegistry });
     this.services = {
       storageRoot: path.join(options.workdir, ".agent_runtime"),
       contextAssembler,
@@ -137,21 +102,11 @@ export class Runtime implements RuntimeApi {
       scope: "sdk",
       eventType: "session_create_requested",
       timestamp: new Date().toISOString(),
-      caller: "Runtime",
       summary: "session create requested",
     });
     const sessionId = randomUUID();
     const session = await AgentSession.create({ ...input, sessionId }, this.storage, this.services);
     await this.sessionManager.put(sessionId, session);
-    await this.services.trace.record({
-      traceId: randomUUID(),
-      scope: "sdk",
-      eventType: "session_created",
-      timestamp: new Date().toISOString(),
-      caller: "Runtime",
-      summary: "session created",
-      sessionId,
-    });
     await this.services.trace.flush();
     return session;
   }
@@ -165,35 +120,16 @@ export class Runtime implements RuntimeApi {
       scope: "sdk",
       eventType: "session_open_requested",
       timestamp: new Date().toISOString(),
-      caller: "Runtime",
       summary: "session open requested",
       sessionId,
     });
     const cached = await this.sessionManager.get(sessionId);
     if (cached instanceof AgentSession) {
-      await this.services.trace.record({
-        traceId: randomUUID(),
-        scope: "sdk",
-        eventType: "session_opened",
-        timestamp: new Date().toISOString(),
-        caller: "Runtime",
-        summary: "session opened from cache",
-        sessionId,
-      });
       await this.services.trace.flush();
       return cached;
     }
     const session = await AgentSession.open(sessionId, this.storage, this.services);
     await this.sessionManager.put(sessionId, session);
-    await this.services.trace.record({
-      traceId: randomUUID(),
-      scope: "sdk",
-      eventType: "session_opened",
-      timestamp: new Date().toISOString(),
-      caller: "Runtime",
-      summary: "session opened",
-      sessionId,
-    });
     await this.services.trace.flush();
     return session;
   }
@@ -209,17 +145,16 @@ export class Runtime implements RuntimeApi {
     if (session.isRunning()) {
       throw new Error(`Session ${sessionId} is running and cannot be closed.`);
     }
-    await session.close();
-    await this.sessionManager.remove(sessionId);
     await this.services.trace.record({
       traceId: randomUUID(),
       scope: "sdk",
       eventType: "session_closed",
       timestamp: new Date().toISOString(),
-      caller: "Runtime",
-      summary: "session closed",
+      summary: "session close requested",
       sessionId,
     });
+    await session.close();
+    await this.sessionManager.remove(sessionId);
     await this.services.trace.flush();
     return { sessionId };
   }

@@ -28,7 +28,6 @@ export interface TraceEvent {
   scope: TraceScope;
   eventType: TraceEventType;
   timestamp: string;
-  caller: string;
   summary: string;
   sessionId?: string;
   runId?: string;

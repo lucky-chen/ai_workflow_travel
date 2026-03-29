@@ -271,7 +271,6 @@ async function testTerminalSessionCliWritesTraceToAgentRuntimeStorage(): Promise
             sessionId: "session-cli-trace",
             traceId: "trace-cli",
             timestamp: new Date().toISOString(),
-            caller: "terminal-test",
             summary: "session created.",
           });
           return {

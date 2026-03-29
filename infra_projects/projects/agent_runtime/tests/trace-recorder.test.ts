@@ -352,7 +352,6 @@ function createSdkEvent(
     eventType,
     traceId: "trace-test",
     timestamp: new Date().toISOString(),
-    caller: "trace-test",
     summary: eventType,
     ...(sessionId ? { sessionId } : {}),
   };
@@ -370,7 +369,6 @@ function createRunEvent(
     runId,
     traceId: runId,
     timestamp: new Date().toISOString(),
-    caller: "trace-test",
     summary: eventType,
   };
 }

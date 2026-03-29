@@ -157,7 +157,6 @@ export class AgentSession implements AgentSessionLike {
       scope: "session",
       eventType: "run_started",
       timestamp: new Date().toISOString(),
-      caller: "AgentSession",
       summary: "session run started",
       sessionId: this.sessionId,
       runId,
@@ -165,13 +164,12 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async assembleContext(userInput: UserInput, traceId: string, runId: string) {
-    const context = await this.services.contextAssembler.assemble({
+    await this.recordContextAssembled(traceId, runId);
+    return this.services.contextAssembler.assemble({
       sessionId: this.sessionId,
       userInput,
       runtimeLimits: this.state.config?.runtimeLimits,
     });
-    await this.recordContextAssembled(traceId, runId);
-    return context;
   }
 
   private async recordContextAssembled(traceId: string, runId: string): Promise<void> {
@@ -180,7 +178,6 @@ export class AgentSession implements AgentSessionLike {
       scope: "session",
       eventType: "context_assembled",
       timestamp: new Date().toISOString(),
-      caller: "AgentSession",
       summary: "context assembled",
       sessionId: this.sessionId,
       runId,
@@ -199,19 +196,17 @@ export class AgentSession implements AgentSessionLike {
       sessionState,
       requestedMode,
     };
-    const agent = await this.services.agentSelector.select(selectionInput);
-    await this.recordAgentSelected(traceId, runId, agent.pattern);
-    return agent;
+    await this.recordAgentSelected(traceId, runId, requestedMode);
+    return this.services.agentSelector.select(selectionInput);
   }
 
-  private async recordAgentSelected(traceId: string, runId: string, pattern: IAgent["pattern"]): Promise<void> {
+  private async recordAgentSelected(traceId: string, runId: string, requestedMode: AgentRunMode): Promise<void> {
     await this.services.trace.record({
       traceId,
       scope: "session",
       eventType: "agent_selected",
       timestamp: new Date().toISOString(),
-      caller: "AgentSession",
-      summary: `agent selected: ${pattern}`,
+      summary: `agent selection requested: ${requestedMode}`,
       sessionId: this.sessionId,
       runId,
     });
@@ -246,7 +241,6 @@ export class AgentSession implements AgentSessionLike {
     applyTranscriptToState(this.state, stateUpdate.transcriptAppend);
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
-    await this.recordStatePersisted(traceId, runId);
   }
 
   private async updateTranscript(transcriptAppend: TranscriptTurn[]): Promise<void> {
@@ -261,19 +255,6 @@ export class AgentSession implements AgentSessionLike {
     const runtimeMemory = await this.services.runtimeMemory.load(this.sessionId);
     const nextMemory = runtimeMemory.summaryItems.concat(runtimeMemorySummaryItems);
     await this.services.runtimeMemory.update(this.sessionId, nextMemory);
-  }
-
-  private async recordStatePersisted(traceId: string, runId: string): Promise<void> {
-    await this.services.trace.record({
-      traceId,
-      scope: "session",
-      eventType: "state_persisted",
-      timestamp: new Date().toISOString(),
-      caller: "AgentSession",
-      summary: "session state persisted",
-      sessionId: this.sessionId,
-      runId,
-    });
   }
 
   private async finalizeSuccess(
@@ -293,7 +274,6 @@ export class AgentSession implements AgentSessionLike {
       sessionConfig: this.state.config,
     });
     await this.collectSuccessMetrics(normalized, result, agent.pattern, runId);
-    await this.recordRunFinished(traceId, runId, normalized);
     await this.flushObservability();
     return normalized;
   }
@@ -319,19 +299,6 @@ export class AgentSession implements AgentSessionLike {
     });
   }
 
-  private async recordRunFinished(traceId: string, runId: string, result: SessionResult): Promise<void> {
-    await this.services.trace.record({
-      traceId,
-      scope: "session",
-      eventType: result.errorCode ? "run_failed" : "run_finished",
-      timestamp: new Date().toISOString(),
-      caller: "AgentSession",
-      summary: result.errorCode ? result.errorMessage ?? "run failed" : "run finished",
-      sessionId: this.sessionId,
-      runId,
-    });
-  }
-
   private async finalizeFailure(error: unknown, traceId: string, runId: string): Promise<SessionResult> {
     const failure = normalizeFailureSessionResult(this.sessionId, runId, traceId, error);
     await this.services.metrics.collect({
@@ -345,19 +312,6 @@ export class AgentSession implements AgentSessionLike {
         runId,
         agentName: "session",
       },
-    });
-    await this.services.trace.record({
-      traceId,
-      scope: "session",
-      eventType: "run_failed",
-      timestamp: new Date().toISOString(),
-      caller: "AgentSession",
-      summary: failure.errorMessage ?? "run failed",
-      sessionId: this.sessionId,
-      runId,
-      diagnostics: failure.errorCode
-        ? [{ code: failure.errorCode, message: failure.errorMessage ?? failure.errorCode }]
-        : undefined,
     });
     await this.flushObservability();
     return failure;

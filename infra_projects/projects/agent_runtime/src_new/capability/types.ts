@@ -1,11 +1,7 @@
 export interface ToolCallInput {
+  toolCallId: string;
   toolName: string;
-  payload: Record<string, unknown>;
-  sessionId: string;
-  runId: string;
-  stepIndex?: number;
-  workingDirectory?: string;
-  allowedWorkingDirectories?: string[];
+  arguments: Record<string, unknown>;
 }
 
 export interface ToolCallResult {
@@ -30,7 +26,6 @@ export interface McpToolRegistry {
 
 export interface PermissionCheckInput {
   toolCall: ToolCallInput;
-  allowedWorkingDirectories?: string[];
 }
 
 export interface PermissionDecision {

@@ -32,25 +32,11 @@ export type {
   DelegationResult,
   IAgent,
 } from "./orchestration/types.js";
-export * from "./orchestration/agent-selector.js";
-export * from "./orchestration/chat-agent.js";
-export {
-  ActionResultChecker,
-  ReActAgent,
-  TaskExecutor as ReActTaskExecutor,
-  ThoughtChecker,
-  ThoughtPromptBuilder,
-  ObservationChecker as ReActObservationChecker,
-} from "./orchestration/react-agent.js";
-export {
-  ExecutionResultChecker,
-  ObservationChecker as PeoObservationChecker,
-  PEOAgent,
-  PlanChecker,
-  PlanPromptBuilder,
-  TaskExecutor as PeoTaskExecutor,
-} from "./orchestration/peo-agent.js";
-export * from "./orchestration/multi-agent-protocol.js";
+export * from "./orchestration/agent_selector.js";
+export { createChatAgent } from "./orchestration/chat_agent/index.js";
+export { createReActAgent } from "./orchestration/react_agent/index.js";
+export { createPEOAgent } from "./orchestration/peo_agent/index.js";
+export * from "./orchestration/multi_agent_protocol.js";
 export type {
   ExecutionEnvironmentInput,
   PermissionCheckInput,

@@ -1,0 +1,143 @@
+import type { McpToolRegistry } from "../../capability/types.js";
+import type { AgentContext } from "../../context/types.js";
+import type { ModelFactory } from "../../model/model-factory.js";
+import type { ModuleRequest } from "../../model/types.js";
+import type { Trace } from "../../observability/trace.js";
+import {
+  ensureSuccessfulModelResponse,
+  getRuntimeContext,
+  isRecord,
+  matchAvailableToolName,
+  tryParseJsonRecord,
+} from "../agent_orchestration_helpers.js";
+
+export const REACT_MAX_STEPS = 2;
+
+export class ThoughtStep {
+  constructor(
+    private readonly modelFactory: ModelFactory,
+    private readonly trace: Trace,
+    private readonly toolRegistry: McpToolRegistry,
+  ) {}
+
+  async run(
+    context: AgentContext,
+    runId: string,
+    stepIndex: number,
+    state: {
+      lastObservation?: { summary: string; finalAnswer?: string };
+      priorActionSummaries: string[];
+    },
+  ): Promise<{
+    thought: string;
+    actionType: "tool" | "respond";
+    toolName?: string;
+    actionPayload?: Record<string, unknown>;
+    shouldContinue: boolean;
+    finalAnswer?: string;
+  }> {
+    const request = await this.buildPrompt(context, stepIndex, state);
+    const response = await this.executeModel(context, runId, stepIndex, request);
+    return this.check({
+      content: response.content,
+      availableTools: Array.isArray(request.userPrompt.availableTools)
+        ? request.userPrompt.availableTools.filter((value): value is string => typeof value === "string")
+        : [],
+    });
+  }
+
+  private async buildPrompt(
+    context: AgentContext,
+    stepIndex: number,
+    state: {
+      lastObservation?: { summary: string; finalAnswer?: string };
+      priorActionSummaries: string[];
+    },
+  ): Promise<ModuleRequest> {
+    const activeContext = context.boundedContext ?? context.originalContext;
+    const runtimeContext = getRuntimeContext(context);
+    const availableTools = await this.toolRegistry.listToolNames();
+    return {
+      systemPrompt: [
+        "Return valid JSON only.",
+        "Decide whether the next action is a tool call or a direct response.",
+      ],
+      responseFormat: "json",
+      userPrompt: {
+        stage: "react_thought",
+        iterationLimit: REACT_MAX_STEPS,
+        stepIndex,
+        transcript: activeContext.transcriptContext.turns,
+        userInput: runtimeContext.userInput.content,
+        availableTools,
+        priorObservation: state.lastObservation?.summary,
+        priorActionSummaries: state.priorActionSummaries,
+      },
+      stream: false,
+    };
+  }
+
+  private async check(thought: Record<string, unknown>): Promise<{
+    thought: string;
+    actionType: "tool" | "respond";
+    toolName?: string;
+    actionPayload?: Record<string, unknown>;
+    shouldContinue: boolean;
+    finalAnswer?: string;
+  }> {
+    const content = typeof thought.content === "string" ? thought.content : "";
+    if (!content.trim()) {
+      throw new Error("ReAct thought is empty.");
+    }
+    const parsed = tryParseJsonRecord(content);
+    const normalizedThought = typeof parsed?.thought === "string" && parsed.thought.trim()
+      ? parsed.thought
+      : content;
+    const availableTools = Array.isArray(thought.availableTools)
+      ? thought.availableTools.filter((value): value is string => typeof value === "string")
+      : [];
+    const toolName = typeof parsed?.toolName === "string"
+      ? parsed.toolName
+      : matchAvailableToolName(content, availableTools);
+    const actionType = parsed?.actionType === "tool" || parsed?.actionType === "respond"
+      ? parsed.actionType
+      : toolName
+        ? "tool"
+        : "respond";
+    return {
+      thought: normalizedThought,
+      actionType,
+      toolName,
+      actionPayload: isRecord(parsed?.actionPayload) ? parsed.actionPayload : undefined,
+      shouldContinue: parsed?.shouldContinue === true || actionType === "tool",
+      finalAnswer: typeof parsed?.finalAnswer === "string" ? parsed.finalAnswer : undefined,
+    };
+  }
+
+  private async executeModel(
+    context: AgentContext,
+    runId: string,
+    stepIndex: number,
+    request: ModuleRequest,
+  ) {
+    const runtimeContext = getRuntimeContext(context);
+    const model = this.modelFactory.createModel({
+      mock: runtimeContext.modelConfig?.mock ?? true,
+      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
+      mockInfo: runtimeContext.modelConfig?.mockInfo,
+    });
+    await this.trace.record({
+      traceId: runId,
+      scope: "session",
+      eventType: "model_called",
+      timestamp: new Date().toISOString(),
+      summary: "react model called",
+      sessionId: runtimeContext.sessionId,
+      runId,
+      stepIndex,
+    });
+    const response = await model.execute(request);
+    ensureSuccessfulModelResponse(response);
+    return response;
+  }
+}

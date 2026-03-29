@@ -119,7 +119,6 @@ export class AgentSessionManager {
       eventType,
       traceId: resolveTraceId(metadata),
       timestamp: new Date().toISOString(),
-      caller: "AgentSessionManager",
       summary: `${eventType.replaceAll("_", " ")}.`,
       ...(sessionId ? { sessionId } : {}),
     });
@@ -136,7 +135,6 @@ export class AgentSessionManager {
       sessionId,
       traceId: resolveTraceId(metadata),
       timestamp: new Date().toISOString(),
-      caller: "AgentSessionManager",
       summary: `${eventType.replaceAll("_", " ")}.`,
     };
     await this.traceRecorder?.record(event);

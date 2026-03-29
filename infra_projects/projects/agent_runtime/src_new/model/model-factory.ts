@@ -1,10 +1,10 @@
 import { StreamingEventAdapter } from "./streaming-event-adapter.js";
 import { MockModel } from "./mock-model.js";
 import {
+  DeepSeekModel,
   getFetchOverride,
-  RealProviderModel,
   validateModeSelection,
-} from "./real-provider-model.js";
+} from "./deepseek-model.js";
 import type { IModel, ModelCreationInput } from "./types.js";
 
 export class ModelFactory {
@@ -15,6 +15,6 @@ export class ModelFactory {
 
     validateModeSelection(input.modeSelection);
     const fetchFn = getFetchOverride(input.mockInfo);
-    return new RealProviderModel(input.modeSelection, fetchFn, new StreamingEventAdapter());
+    return new DeepSeekModel(input.modeSelection, fetchFn, new StreamingEventAdapter());
   }
 }

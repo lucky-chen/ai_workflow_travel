@@ -6,18 +6,26 @@ import type {
   ToolCallInput,
   ToolCallResult,
 } from "./types.js";
+import type { Trace } from "../observability/trace.js";
 
 export class McpGateway implements McpGatewayContract {
   constructor(
     private readonly permissionPolicy: RuntimePermissionPolicyContract,
     private readonly toolRegistry: McpToolRegistryContract,
     private readonly executionEnvironment: ExecutionEnvironmentContract,
+    private readonly trace: Trace,
   ) {}
 
   async call(input: ToolCallInput): Promise<ToolCallResult> {
+    await this.trace.record({
+      traceId: input.toolCallId,
+      scope: "session",
+      eventType: "tool_called",
+      timestamp: new Date().toISOString(),
+      summary: `tool called: ${input.toolName}`,
+    });
     const decision = await this.permissionPolicy.evaluate({
       toolCall: input,
-      allowedWorkingDirectories: input.allowedWorkingDirectories,
     });
     if (!decision.allowed) {
       return {

@@ -83,6 +83,15 @@ export function contentIncludesToolHint(content: string, toolName: string): bool
     || normalizedContent.includes(toolName.toLowerCase());
 }
 
+export function matchAvailableToolName(content: string, availableTools: string[]): string | undefined {
+  for (const toolName of availableTools) {
+    if (contentIncludesToolHint(content, toolName)) {
+      return toolName;
+    }
+  }
+  return undefined;
+}
+
 export function stringifyContent(content: string | Record<string, unknown>): string {
   return typeof content === "string" ? content : JSON.stringify(content);
 }

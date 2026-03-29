@@ -11,7 +11,6 @@ function createSessionEvent(
   sessionId: string,
   runId: string,
   eventType: SessionRunTraceEvent["eventType"],
-  caller: string,
   summary: string,
   stepIndex?: number,
   payload?: Record<string, unknown>,
@@ -24,7 +23,6 @@ function createSessionEvent(
     traceId: runId,
     timestamp: new Date().toISOString(),
     eventType,
-    caller,
     ...(stepIndex !== undefined ? { stepIndex } : {}),
     summary,
     payload,
@@ -33,11 +31,11 @@ function createSessionEvent(
 }
 
 export function buildRunStartedEvent(sessionId: string, runId: string): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "run_started", "DefaultAgent.run", "Runtime run started.");
+  return createSessionEvent(sessionId, runId, "run_started", "Runtime run started.");
 }
 
 export function buildPlanStartedEvent(sessionId: string, runId: string, stepIndex: number): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "plan_started", "DefaultAgent.run", "Planning started.", stepIndex, {
+  return createSessionEvent(sessionId, runId, "plan_started", "Planning started.", stepIndex, {
     stepIndex,
   });
 }
@@ -47,7 +45,6 @@ export function buildPlanGeneratedEvent(sessionId: string, runId: string, plan: 
     sessionId,
     runId,
     "plan_generated",
-    "DefaultPlanner.plan",
     "Execution plan generated.",
     plan.stepIndex,
     {
@@ -67,7 +64,6 @@ export function buildExecuteStartedEvent(sessionId: string, runId: string, plan:
     sessionId,
     runId,
     "execute_started",
-    "DefaultAgent.run",
     "Execution started.",
     plan.stepIndex,
     {
@@ -94,7 +90,6 @@ export function buildToolCalledEvent(
     sessionId,
     runId,
     "tool_called",
-    "DefaultExecutor.execute",
     `Tool called: ${toolResult.toolName}.`,
     stepIndex,
     {
@@ -115,7 +110,6 @@ export function buildToolResultRecordedEvent(
     sessionId,
     runId,
     "tool_result_recorded",
-    "DefaultExecutor.execute",
     `Tool result recorded: ${toolResult.toolName}.`,
     stepIndex,
     {
@@ -138,7 +132,6 @@ export function buildExecutionFinishedEvent(
     sessionId,
     runId,
     "execution_finished",
-    "DefaultExecutor.execute",
     "Execution finished.",
     stepIndex,
     {
@@ -160,7 +153,6 @@ export function buildObserveStartedEvent(
     sessionId,
     runId,
     "observe_started",
-    "DefaultAgent.run",
     "Observation started.",
     plan.stepIndex,
     {
@@ -182,7 +174,6 @@ export function buildObservationFinishedEvent(
     sessionId,
     runId,
     "observation_finished",
-    "DefaultObserver.observe",
     "Observation finished.",
     stepIndex,
     {
@@ -199,7 +190,7 @@ export function buildRunFinishedEvent(
   observation: ObservationResult,
   stepIndex?: number,
 ): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "run_finished", "DefaultAgent.run", "Runtime run finished.", stepIndex, {
+  return createSessionEvent(sessionId, runId, "run_finished", "Runtime run finished.", stepIndex, {
     accepted: observation.accepted,
     completed: observation.completed ?? false,
     stopReason: observation.completed ? "completed" : "continue",
@@ -214,7 +205,7 @@ export function buildRunFailedEvent(
   stopReason: "failed" | "max_steps",
   stepIndex?: number,
 ): AgentTraceEvent {
-  return createSessionEvent(sessionId, runId, "run_finished", "DefaultAgent.run", "Runtime run finished.", stepIndex, {
+  return createSessionEvent(sessionId, runId, "run_finished", "Runtime run finished.", stepIndex, {
     accepted: false,
     completed: false,
     summary,
@@ -234,7 +225,6 @@ export function buildValidationFailedEvent(
     sessionId,
     runId,
     "validation_failed",
-    "DefaultAgent.run",
     "Validation failed.",
     stepIndex,
     {

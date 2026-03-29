@@ -7,9 +7,9 @@ export function createBuiltInToolHandlers(rootDir: string): Record<string, ToolH
   return {
     echo: {
       async handle(input: ToolCallInput): Promise<ToolCallResult> {
-        const content = typeof input.payload.content === "string"
-          ? input.payload.content
-          : JSON.stringify(input.payload);
+        const content = typeof input.arguments.content === "string"
+          ? input.arguments.content
+          : JSON.stringify(input.arguments);
         return {
           content,
           exitCode: 0,
@@ -29,7 +29,7 @@ export function createBuiltInToolHandlers(rootDir: string): Record<string, ToolH
     write_file: {
       async handle(input: ToolCallInput): Promise<ToolCallResult> {
         const target = resolveToolPath(rootDir, input);
-        const content = typeof input.payload.content === "string" ? input.payload.content : "";
+        const content = typeof input.arguments.content === "string" ? input.arguments.content : "";
         await writeFile(target, content, "utf8");
         return {
           content: "written",
@@ -41,7 +41,6 @@ export function createBuiltInToolHandlers(rootDir: string): Record<string, ToolH
 }
 
 function resolveToolPath(rootDir: string, input: ToolCallInput): string {
-  const relativePath = typeof input.payload.path === "string" ? input.payload.path : "";
-  const baseDir = input.workingDirectory ? path.resolve(input.workingDirectory) : rootDir;
-  return path.resolve(baseDir, relativePath);
+  const relativePath = typeof input.arguments.path === "string" ? input.arguments.path : "";
+  return path.resolve(rootDir, relativePath);
 }

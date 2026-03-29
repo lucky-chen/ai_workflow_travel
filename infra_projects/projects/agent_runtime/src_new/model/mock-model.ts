@@ -48,13 +48,12 @@ export class MockModel implements IModel {
 function resolveMockContent(mockInfo: Record<string, unknown> | undefined, input: ModuleRequest): string {
   const responder = mockInfo?.respond;
   if (typeof responder === "function") {
-    const resolved = responder(input.prompt, input);
+    const resolved = responder(input.userPrompt, input);
     return typeof resolved === "string" ? resolved : JSON.stringify(resolved ?? { ok: true });
   }
 
-  const stage = isRecord(input.prompt) && typeof input.prompt.stage === "string"
-    ? input.prompt.stage
-    : undefined;
+  const userPrompt = isRecord(input.userPrompt) ? input.userPrompt : undefined;
+  const stage = typeof userPrompt?.stage === "string" ? userPrompt.stage : undefined;
   const responses = isRecord(mockInfo?.responses) ? mockInfo?.responses : undefined;
   if (stage && responses && typeof responses[stage] === "string") {
     return String(responses[stage]);
