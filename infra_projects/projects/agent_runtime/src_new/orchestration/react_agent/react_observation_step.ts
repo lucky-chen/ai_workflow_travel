@@ -3,6 +3,7 @@ import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import type { Trace } from "../../observability/trace.js";
 import {
+  createContextBasis,
   ensureSuccessfulModelResponse,
   getRuntimeContext,
   summarizeModuleRequest,
@@ -41,12 +42,24 @@ export class ObservationStep {
       responseFormat: "json",
       userPrompt: {
         stage: "react_observation",
-        stepIndex,
-        thought: input.thought,
-        actionType: input.actionType,
-        actionObservation: input.actionObservation,
-        priorObservation: input.priorObservation,
-        userInput: getRuntimeContext(context).userInput.content,
+        question: getRuntimeContext(context).userInput.content,
+        contextBasis: createContextBasis({
+          context,
+          priorObservation: input.priorObservation,
+        }),
+        expectedSchema: {
+          summary: "required string",
+          completed: "required boolean",
+          finalAnswer: "required string when completed is true",
+        },
+        runtimeState: {
+          stepIndex,
+        },
+        action: {
+          thought: input.thought,
+          actionType: input.actionType,
+          actionObservation: input.actionObservation,
+        },
       },
       stream: false,
     });

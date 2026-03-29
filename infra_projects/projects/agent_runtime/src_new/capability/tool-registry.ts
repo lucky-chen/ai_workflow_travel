@@ -21,6 +21,10 @@ export class McpToolRegistry implements McpToolRegistryContract {
     return definition.handler;
   }
 
+  async getDefinition(toolName: string): Promise<ToolDefinition | undefined> {
+    return this.definitions.get(toolName);
+  }
+
   async listToolNames(): Promise<string[]> {
     return [...this.definitions.keys()].sort();
   }

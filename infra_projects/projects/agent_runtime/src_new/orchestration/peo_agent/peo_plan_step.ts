@@ -4,16 +4,16 @@ import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import type { Trace } from "../../observability/trace.js";
 import {
+  createContextBasis,
   ensureSuccessfulModelResponse,
   getRuntimeContext,
   isRecord,
-  matchAvailableToolName,
   summarizeModuleRequest,
   summarizeModuleResponse,
   summarizeToolDefinitions,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
-import type { PlanStepResult } from "./peo_types.js";
+import type { PlanStepResult, PlanTask } from "./peo_types.js";
 
 export const PEO_STAGE_COUNT = 3;
 
@@ -35,14 +35,7 @@ export class PlanStep {
   ): Promise<PlanStepResult> {
     const request = await this.buildPrompt(context, stepIndex, state);
     const response = await this.executeModel(context, runId, stepIndex, request);
-    return this.check({
-      content: response.content,
-      availableTools: Array.isArray(request.userPrompt.availableTools)
-        ? request.userPrompt.availableTools
-          .map((value) => isRecord(value) && typeof value.name === "string" ? value.name : undefined)
-          .filter((value): value is string => typeof value === "string")
-        : [],
-    });
+    return this.check({ content: response.content });
   }
 
   private async buildPrompt(
@@ -55,41 +48,41 @@ export class PlanStep {
   ): Promise<ModuleRequest> {
     const runtimeContext = getRuntimeContext(context);
     const toolDefinitions = await this.toolRegistry.listToolDefinitions();
-    const availableTools = toolDefinitions.map((tool) => tool.name);
     return {
       systemPrompt: [
         "You are the plan stage inside the PEO agent.",
         "Return valid JSON only.",
         "Return one plan result object only.",
-        "Produce the next plan only. Do not answer the user directly outside the JSON contract.",
-        `Only use tool names from this allowlist when a tool call is required: ${availableTools.join(", ")}.`,
-        "Return toolCall only when a tool must be executed before observation.",
-        "When no tool is needed, omit toolCall.",
-        "Use finalAnswer only when the plan can already answer directly.",
+        "Produce high-level plan tasks only. Do not output direct tool calls.",
+        "Set task type to react when the task requires tool-oriented sub-problem solving.",
+        "Set task type to direct when the task is bounded direct work without a tool loop.",
         "Do not add fields outside the contract.",
-        "Do not return executionType.",
-        "Do not return executionPayload.",
-        "Do not use alternate tool field names such as tool, parameters, or payload.",
-        "When toolCall is present, it must use exactly this shape: {\"toolCallId\":\"string optional\",\"toolName\":\"string\",\"arguments\":{...}}.",
-        "When toolCall is absent, the plan must still describe the next execution intent in `plan`.",
       ],
       responseFormat: "json",
       userPrompt: {
         stage: "peo_plan",
-        stepIndex,
-        maxStages: PEO_STAGE_COUNT,
-        userInput: runtimeContext.userInput.content,
-        priorObservation: state.lastObservation?.summary,
-        priorExecutionSummaries: state.priorExecutionSummaries,
-        availableTools: summarizeToolDefinitions(toolDefinitions),
+        question: runtimeContext.userInput.content,
+        contextBasis: createContextBasis({
+          context,
+          priorObservation: state.lastObservation?.summary,
+          priorExecutionSummaries: state.priorExecutionSummaries,
+        }),
+        tools: {
+          availableTools: summarizeToolDefinitions(toolDefinitions),
+          taskTypeRules: [
+            "Use task type react for tool-oriented sub-problems.",
+            "Use task type direct for bounded direct work.",
+            "Keep tasks abstract and do not output direct toolCall payloads.",
+          ],
+        },
         expectedSchema: {
-          plan: "string",
-          toolCall: {
-            toolCallId: "string optional",
-            toolName: "string",
-            arguments: "Record<string, unknown>",
-          },
+          planSummary: "required string",
+          tasks: "required array",
           finalAnswer: "string optional",
+        },
+        runtimeState: {
+          stepIndex,
+          maxStages: PEO_STAGE_COUNT,
         },
       },
       stream: false,
@@ -102,35 +95,28 @@ export class PlanStep {
       throw new Error("PEO plan is empty.");
     }
     const parsed = tryParseJsonRecord(content);
-    const parsedToolCall = isRecord(parsed?.toolCall) ? parsed.toolCall : undefined;
-    const availableTools = Array.isArray(plan.availableTools)
-      ? plan.availableTools.filter((value): value is string => typeof value === "string")
+    const tasks = Array.isArray(parsed?.tasks)
+      ? parsed.tasks
+        .map((value, index) => normalizePlanTask(value, index))
+        .filter((value): value is NonNullable<typeof value> => Boolean(value))
       : [];
-    const toolName = typeof parsedToolCall?.toolName === "string"
-      ? parsedToolCall.toolName
-      : typeof parsed?.toolName === "string"
-        ? parsed.toolName
-        : matchAvailableToolName(content, availableTools);
-    const argumentsValue = isRecord(parsedToolCall?.arguments)
-      ? parsedToolCall.arguments
-      : isRecord(parsed?.arguments)
-        ? parsed.arguments
-        : isRecord(parsed?.executionPayload)
-          ? parsed.executionPayload
-          : undefined;
+    const planSummary = typeof parsed?.planSummary === "string" && parsed.planSummary.trim()
+      ? parsed.planSummary
+      : typeof parsed?.plan === "string" && parsed.plan.trim()
+        ? parsed.plan
+        : content;
     return {
-      plan: typeof parsed?.plan === "string" && parsed.plan.trim() ? parsed.plan : content,
-      toolCall: toolName
-        ? {
-            toolCallId: typeof parsedToolCall?.toolCallId === "string" && parsedToolCall.toolCallId.trim()
-              ? parsedToolCall.toolCallId
-              : typeof parsed?.toolCallId === "string" && parsed.toolCallId.trim()
-                ? parsed.toolCallId
-              : "",
-            toolName,
-            arguments: argumentsValue ?? {},
-          }
-        : undefined,
+      planSummary,
+      tasks: tasks.length > 0
+        ? tasks
+        : typeof parsed?.finalAnswer === "string"
+          ? []
+          : [{
+              taskId: "task-1",
+              description: planSummary,
+              type: "direct",
+              status: "pending",
+            }],
       finalAnswer: typeof parsed?.finalAnswer === "string" ? parsed.finalAnswer : undefined,
     };
   }
@@ -190,4 +176,27 @@ export class PlanStep {
       throw error;
     }
   }
+}
+
+function normalizePlanTask(value: unknown, index: number): PlanTask | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const description = typeof value.description === "string" && value.description.trim()
+    ? value.description
+    : undefined;
+  if (!description) {
+    return undefined;
+  }
+  return {
+    taskId: typeof value.taskId === "string" && value.taskId.trim() ? value.taskId : `task-${index + 1}`,
+    description,
+    type: value.type === "react" ? "react" : "direct",
+    status: value.status === "completed" || value.status === "failed" || value.status === "blocked"
+      ? value.status
+      : "pending",
+    dependsOn: Array.isArray(value.dependsOn)
+      ? value.dependsOn.filter((dependency): dependency is string => typeof dependency === "string")
+      : undefined,
+  };
 }

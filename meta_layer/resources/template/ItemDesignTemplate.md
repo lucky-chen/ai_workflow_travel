@@ -15,6 +15,11 @@
       "check_item": "format_consistency",
       "description": "The document should keep section formatting, code-block style, and terminology consistent across all sections.",
       "severity": "medium"
+    },
+    {
+      "check_item": "codegen_readiness",
+      "description": "The document should contain enough module-internal runtime logic, processing depth, and failure-path structure to guide code generation rather than stopping at architecture-summary or interface-summary level.",
+      "severity": "high"
     }
   ]
 }
@@ -194,7 +199,8 @@
     "title": "Core APIs And Types",
     "checkitems": [
       "define only stable interfaces and types needed to understand the design item",
-      "prefer concise and implementation-oriented type definitions"
+      "prefer concise and implementation-oriented type definitions",
+      "keep APIs and types meaningful enough to guide implementation boundaries rather than serving as empty placeholders only"
     ],
     "severity": "medium"
   }
@@ -213,7 +219,9 @@
 	      "keep the API structure stable and minimal",
 	      "express the public API in a TypeScript code block",
 	      "the public API may use interface, type, class signature, or other stable TypeScript boundary forms",
-	      "name the public API after the actual exposed boundary or contract surface when appropriate, rather than forcing the design item name into the API symbol"
+	      "name the public API after the actual exposed boundary or contract surface when appropriate, rather than forcing the design item name into the API symbol",
+	      "avoid using unstructured catch-all API shapes when a more meaningful boundary type can be stated",
+	      "do not invent wrapper contracts or ownership that are not supported by the source design document"
 	    ],
 	    "severity": "medium",
 	    "expected_format": "```typescript\ninterface {PublicApiName} {\n  {PublicMethod}({PrimaryInputName}: {PrimaryInputType}): {PrimaryOutputType}\n}\n```\n\nor\n\n```typescript\ntype {PublicApiName} = {\n  {PublicMethod}: ({PrimaryInputName}: {PrimaryInputType}) => {PrimaryOutputType}\n}\n```"
@@ -231,11 +239,13 @@
       "checkitems": [
 	        "define only input structures that belong to this design item",
 	        "do not repeat upstream shared types unless this design item owns them",
-	        "when the design item contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
-	        "input format must be defined explicitly in code blocks",
-	        "do not use natural-language prose to describe input structure",
-	        "TypeScript type definitions must remain the primary content; short code comments are optional but must not replace the type definitions",
-	        "do not add explanatory prose before or after the code block in this subsection"
+	      "when the design item contains contract-style section definitions, prefer stable names such as `document_contracts` and `section_contracts`",
+	      "input format must be defined explicitly in code blocks",
+	      "do not use natural-language prose to describe input structure",
+	      "TypeScript type definitions must remain the primary content; short code comments are optional but must not replace the type definitions",
+	      "do not add explanatory prose before or after the code block in this subsection",
+	      "prefer semantic placeholder type names over repeated unstructured catch-all fields when exact field shapes are not fully supported by the source document",
+	      "do not let placeholder typing remove implementable input-boundary meaning"
 	      ],
       "severity": "medium",
       "expected_format": "```typescript\ninterface {PrimaryInputType} {\n  {InputFieldA}: {InputFieldTypeA}\n  {InputFieldB}?: {InputFieldTypeB}\n}\n\ninterface ContractSpec {\n  document_contracts: DocumentContract[]\n  section_contracts: SectionContract[]\n}\n```\n\nNo prose outside code blocks."
@@ -254,7 +264,8 @@
       "define internal runtime structures only when they are necessary for understanding the design item",
       "when present, express runtime types in a TypeScript code block",
       "runtime types may use interface, type, class, or other concise TypeScript structures",
-      "this subsection may be omitted when the design item does not own meaningful runtime types"
+      "this subsection may be omitted when the design item does not own meaningful runtime types",
+      "when present, runtime types should help the reader understand internal stage boundaries, working context, or runtime handoff structure"
     ],
     "severity": "medium",
     "expected_format": "```typescript\ninterface {RuntimeTypeA} {\n  {RuntimeFieldA}: {RuntimeFieldTypeA}\n}\n\ntype {RuntimeTypeB} = {\n  {RuntimeFieldB}: {RuntimeFieldTypeB}\n}\n```\n\nThis subsection may be omitted when runtime types are not needed."
@@ -275,7 +286,9 @@
 	        "output format must be defined explicitly in code blocks",
 	        "do not use natural-language prose to describe output structure",
 	        "TypeScript type definitions must remain the primary content; short code comments are optional but must not replace the type definitions",
-	        "do not add explanatory prose before or after the code block in this subsection"
+	        "do not add explanatory prose before or after the code block in this subsection",
+	        "prefer semantic placeholder type names over repeated unstructured catch-all fields when exact field shapes are not fully supported by the source document",
+	        "do not let placeholder typing remove implementable output-boundary meaning"
 	      ],
       "severity": "medium",
       "expected_format": "```typescript\ninterface {PrimaryOutputType} {\n  {OutputFieldA}: {OutputFieldTypeA}\n  {OutputFieldB}?: {OutputFieldTypeB}\n}\n```\n\nNo prose outside code blocks."
@@ -313,7 +326,10 @@
       "describe the internal runtime skeleton of the design item",
       "prefer structured code-block expression such as `plantuml` or other compact skeleton notation over natural-language prose",
       "show the main internal stages, decision points, and handoff points that connect the public API to the internal runtime path",
-      "keep the skeleton at item-design level rather than implementation trivia"
+      "keep the skeleton at item-design level rather than implementation trivia",
+      "show module-internal runtime stages rather than only architecture-level interaction hops",
+      "include terminal paths for the main success path and meaningful branch exits",
+      "make the skeleton specific enough to guide major implementation-stage decomposition"
     ],
     "severity": "medium",
     "expected_format": "```plantuml\n@startuml\nstart\n:{RuntimeStepA};\nif ({DecisionA}?) then (yes)\n  :{RuntimeStepB};\nelse (no)\n  :{RuntimeStepC};\nendif\n:{RuntimeStepD};\nstop\n@enduml\n```"
@@ -333,7 +349,10 @@
       "prefer organizing this section by concrete runtime item, basic unit, or operation rather than by cross-cutting prose-only categories",
       "keep the description at design level and make read/process/write boundaries explicit",
       "use short labeled blocks such as input loading, processing, and output emission",
-      "do not repeat public API signatures or full type definitions here"
+      "do not repeat public API signatures or full type definitions here",
+      "treat this section as the primary code-generation-readiness section",
+      "the processing block should describe module-internal ordered steps, stage transitions, or decision handling rather than restating responsibilities only",
+      "the content should be concrete enough that a reader can derive major functions, stages, or internal code skeletons from it"
     ],
     "severity": "medium",
     "expected_format": "#### 4.3.x `{RuntimeItemA}`\n\nInput loading:\n\n- `{InputSourceA}`\n- `{InputSourceB}`\n\nProcessing:\n\n- `{ProcessingStepA}`\n- `{ProcessingStepB}`\n\nOutput emission:\n\n- `{OutputA}`\n- `{OutputB}`\n\n#### 4.3.y `{RuntimeItemB}`\n\nInput loading:\n\n- `{InputSourceC}`\n\nProcessing:\n\n- `{ProcessingStepC}`\n\nOutput emission:\n\n- `{OutputC}`"
@@ -351,7 +370,10 @@
     "checkitems": [
       "describe the main failure paths and recovery-entry shapes of the design item",
       "prefer structured code-block expression such as `plantuml` over natural-language prose",
-      "show only the important error branches, error-result shapes, or resume/retry entry points"
+      "show only the important error branches, error-result shapes, or resume/retry entry points",
+      "identify meaningful failure points that are relevant to the covered module or item",
+      "show what happens after each important failure point, such as stop, bounded failure return, normalization, degradation, retry entry, or recovery handoff",
+      "do not reduce the error path to generic failure-return statements when the source design provides enough behavioral basis to go deeper"
     ],
     "severity": "medium",
     "expected_format": "```plantuml\n@startuml\nstart\nif ({ErrorConditionA}?) then (yes)\n  :{ErrorHandlingStepA};\n  stop\nendif\nif ({ErrorConditionB}?) then (yes)\n  :{ErrorHandlingStepB};\n  stop\nendif\n:{RetryOrResumeRule};\nstop\n@enduml\n```"

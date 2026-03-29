@@ -3,9 +3,15 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createRuntime, MultiAgentProtocol, RunCheckpoint } from "../src_new/index.js";
+import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
+import type { McpGateway, ToolCallInput, ToolCallResult } from "../src_new/capability/types.js";
+import { ExecutionStep } from "../src_new/orchestration/peo_agent/peo_execution_step.js";
+import { ActionStep } from "../src_new/orchestration/react_agent/react_action_step.js";
+import { validateToolCallArguments } from "../src_new/orchestration/tool_call_argument_validator.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runOrchestrationP1SrcNewTests(): Promise<void> {
+  await testChatPromptUsesUnifiedContract();
   await testSelectorAndChatExecutionPath();
   await testDynamicModeSelectsReactForThoughtDrivenToolRequests();
   await testDynamicModeSelectsPeoForSlashPlanCommand();
@@ -17,7 +23,42 @@ export async function runOrchestrationP1SrcNewTests(): Promise<void> {
   await testPeoDoesNotCallToolWithoutPlanAction();
   await testPeoCanContinueToSecondStepBeforeCompletion();
   await testPeoToolFailureStillFlowsIntoObserve();
+  await testToolArgumentValidatorRejectsInvalidArguments();
+  await testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall();
+  await testPeoExecutionRoutesReactTaskToReactExecutor();
   await testReservedPlaceholdersStayCallable();
+}
+
+async function testChatPromptUsesUnifiedContract(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-chat-prompt-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          respond: (prompt: Record<string, unknown>) => {
+            assert.equal(prompt.stage, "chat");
+            assert.equal(typeof prompt.question, "object");
+            assert.equal(typeof prompt.contextBasis, "object");
+            assert.equal(typeof prompt.expectedSchema, "object");
+            assert.equal(typeof prompt.runtimeState, "object");
+            assert.equal("tools" in prompt, false);
+            return "chat result";
+          },
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "what is hello",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.equal(result.content, "chat result");
 }
 
 async function testSelectorAndChatExecutionPath(): Promise<void> {
@@ -57,10 +98,8 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
           respond: () => JSON.stringify({
             thought: "Use echo tool",
             actionType: "tool",
-            toolName: "echo",
-            actionPayload: {
-              content: "tool output",
-            },
+            toolName: "echo_hello",
+            actionPayload: {},
             finalAnswer: "react result",
             shouldContinue: true,
           }),
@@ -92,16 +131,8 @@ async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
         mockInfo: {
           responses: {
             peo_plan: JSON.stringify({
-              plan: "Slash plan resolved to peo",
-              finalAnswer: "peo from slash command",
-            }),
-            peo_execution: JSON.stringify({
-              executionObservation: "peo from slash command",
-              finalAnswer: "peo from slash command",
-            }),
-            peo_observe: JSON.stringify({
-              summary: "completed",
-              completed: true,
+              planSummary: "Slash plan resolved to peo",
+              tasks: [],
               finalAnswer: "peo from slash command",
             }),
           },
@@ -195,7 +226,7 @@ async function testReactDoesNotCallToolWithoutThoughtAction(): Promise<void> {
   const result = await session.execute({
     content: {
       task: "/react do not use tool",
-      toolName: "echo",
+      toolName: "echo_hello",
       toolPayload: {
         content: "should not run",
       },
@@ -218,20 +249,34 @@ async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void>
         mock: true,
         mockInfo: {
           respond: (prompt: Record<string, unknown>) => {
-            if (prompt.stage === "react_thought" && prompt.stepIndex === 1) {
+            if (
+              prompt.stage === "react_thought"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 1
+            ) {
+              assert.equal(typeof prompt.question, "object");
+              assert.equal(typeof prompt.contextBasis, "object");
+              assert.equal(typeof prompt.tools, "object");
+              assert.equal(typeof prompt.expectedSchema, "object");
+              assert.equal(typeof prompt.runtimeState, "object");
               return JSON.stringify({
                 thought: "Inspect first",
                 actionType: "respond",
                 shouldContinue: true,
               });
             }
-            if (prompt.stage === "react_observation" && prompt.stepIndex === 1) {
+            if (
+              prompt.stage === "react_observation"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 1
+            ) {
               return JSON.stringify({
                 summary: "Need another react step",
                 completed: false,
               });
             }
-            if (prompt.stage === "react_thought" && prompt.stepIndex === 2) {
+            if (
+              prompt.stage === "react_thought"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
+            ) {
               return JSON.stringify({
                 thought: "Finish now",
                 actionType: "respond",
@@ -239,7 +284,10 @@ async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void>
                 shouldContinue: false,
               });
             }
-            if (prompt.stage === "react_observation" && prompt.stepIndex === 2) {
+            if (
+              prompt.stage === "react_observation"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
+            ) {
               return JSON.stringify({
                 summary: "Completed in step 2",
                 completed: true,
@@ -273,20 +321,38 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
       model: {
         mock: true,
         mockInfo: {
-          responses: {
-            peo_plan: JSON.stringify({
-              plan: "Use echo to execute plan",
-              toolCall: {
-                toolName: "echo",
-                arguments: {
-                  content: "peo tool output",
-                },
-              },
-            }),
-            peo_execution: JSON.stringify({
-              executionObservation: "peo execution result",
-            }),
-            peo_observe: "peo observation",
+          respond: (prompt: Record<string, unknown>) => {
+            if (prompt.stage === "peo_plan") {
+              return JSON.stringify({
+                planSummary: "Use react subtask to execute plan",
+                tasks: [
+                  {
+                    taskId: "task-1",
+                    description: "use echo_hello and finish the subtask",
+                    type: "react",
+                    status: "pending",
+                  },
+                ],
+                finalAnswer: "peo observation",
+              });
+            }
+            if (prompt.stage === "react_thought") {
+              return JSON.stringify({
+                thought: "Use echo tool",
+                actionType: "tool",
+                toolName: "echo_hello",
+                actionPayload: {},
+                shouldContinue: true,
+              });
+            }
+            if (prompt.stage === "react_observation") {
+              return JSON.stringify({
+                summary: "react subtask completed",
+                completed: true,
+                finalAnswer: "react subtask completed",
+              });
+            }
+            throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
           },
         },
       },
@@ -322,14 +388,10 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
         mockInfo: {
           responses: {
             peo_plan: JSON.stringify({
-              plan: "Respond directly",
+              planSummary: "Respond directly",
+              tasks: [],
               finalAnswer: "peo direct answer",
             }),
-            peo_execution: JSON.stringify({
-              executionObservation: "peo direct answer",
-              finalAnswer: "peo direct answer",
-            }),
-            peo_observe: "peo direct answer",
           },
         },
       },
@@ -339,7 +401,7 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
   const result = await session.execute({
     content: {
       task: "/plan respond directly",
-      toolName: "echo",
+      toolName: "echo_hello",
       toolPayload: {
         content: "should not run",
       },
@@ -362,9 +424,16 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
         mock: true,
         mockInfo: {
           respond: (prompt: Record<string, unknown>, request?: { responseFormat?: string }) => {
-            if (prompt.stage === "peo_plan" && prompt.stepIndex === 1) {
+            if (
+              prompt.stage === "peo_plan"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 1
+            ) {
+              const tools = prompt.tools as Record<string, unknown>;
               assert.equal(request?.responseFormat, "json");
-              assert.deepEqual(prompt.availableTools, [
+              assert.equal(typeof prompt.question, "object");
+              assert.equal(typeof prompt.contextBasis, "object");
+              assert.equal(typeof prompt.tools, "object");
+              assert.deepEqual(tools.availableTools, [
                 {
                   name: "echo_hello",
                   description: "Return the fixed text hello. Test-only built-in tool.",
@@ -382,41 +451,41 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
                   },
                 },
               ]);
+              assert.deepEqual(tools.taskTypeRules, [
+                "Use task type react for tool-oriented sub-problems.",
+                "Use task type direct for bounded direct work.",
+                "Keep tasks abstract and do not output direct toolCall payloads.",
+              ]);
               assert.equal(typeof prompt.expectedSchema, "object");
+              assert.equal(typeof prompt.runtimeState, "object");
               return JSON.stringify({
-                plan: "First step: inspect state",
+                planSummary: "Two-step peo flow",
+                tasks: [
+                  {
+                    taskId: "task-1",
+                    description: "Inspect state",
+                    type: "direct",
+                    status: "pending",
+                  },
+                  {
+                    taskId: "task-2",
+                    description: "Finish response",
+                    type: "direct",
+                    status: "pending",
+                    dependsOn: ["task-1"],
+                  },
+                ],
               });
             }
-            if (prompt.stage === "peo_execution" && prompt.stepIndex === 1) {
-              assert.equal(typeof prompt.toolResult, "object");
+            if (
+              prompt.stage === "peo_plan"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
+            ) {
+              const contextBasis = prompt.contextBasis as Record<string, unknown>;
+              assert.equal(Array.isArray(contextBasis.priorExecutionSummaries), true);
               return JSON.stringify({
-                executionObservation: "Executed first step",
-              });
-            }
-            if (prompt.stage === "peo_observe" && prompt.stepIndex === 1) {
-              assert.equal(typeof prompt.executionResult, "object");
-              return JSON.stringify({
-                summary: "Need another step",
-                completed: false,
-              });
-            }
-            if (prompt.stage === "peo_plan" && prompt.stepIndex === 2) {
-              return JSON.stringify({
-                plan: "Second step: finish response",
-                finalAnswer: "peo two-step answer",
-              });
-            }
-            if (prompt.stage === "peo_execution" && prompt.stepIndex === 2) {
-              return JSON.stringify({
-                executionObservation: "Executed second step",
-                finalAnswer: "peo two-step answer",
-              });
-            }
-            if (prompt.stage === "peo_observe" && prompt.stepIndex === 2) {
-              assert.equal(typeof prompt.executionResult, "object");
-              return JSON.stringify({
-                summary: "Completed in step 2",
-                completed: true,
+                planSummary: "Second step: finish response",
+                tasks: [],
                 finalAnswer: "peo two-step answer",
               });
             }
@@ -449,26 +518,49 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
         mock: true,
         mockInfo: {
           respond: (prompt: Record<string, unknown>) => {
-            if (prompt.stage === "peo_plan") {
+            if (
+              prompt.stage === "peo_plan"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 1
+            ) {
               return JSON.stringify({
-                plan: "Try a missing tool then observe the failure",
-                toolCall: {
-                  toolName: "missing_tool",
-                  arguments: {},
-                },
+                planSummary: "Try a missing tool then observe the failure",
+                tasks: [
+                  {
+                    taskId: "task-1",
+                    description: "use missing_tool and continue",
+                    type: "react",
+                    status: "pending",
+                  },
+                ],
               });
             }
-            if (prompt.stage === "peo_execution") {
-              assert.equal(typeof prompt.toolResult, "object");
+            if (prompt.stage === "react_thought") {
               return JSON.stringify({
-                executionObservation: "Tool failed during execution",
+                thought: "Use missing tool",
+                actionType: "tool",
+                toolName: "missing_tool",
+                actionPayload: {},
+                shouldContinue: true,
               });
             }
-            if (prompt.stage === "peo_observe") {
-              assert.equal(typeof prompt.executionResult, "object");
+            if (prompt.stage === "react_observation") {
               return JSON.stringify({
-                summary: "Observed missing tool failure",
+                summary: "react child observed tool failure",
                 completed: true,
+                finalAnswer: "react child observed tool failure",
+              });
+            }
+            if (
+              prompt.stage === "peo_plan"
+              && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
+            ) {
+              const contextBasis = prompt.contextBasis as Record<string, unknown>;
+              const priorExecutionSummaries = contextBasis.priorExecutionSummaries as unknown[];
+              assert.equal(Array.isArray(priorExecutionSummaries), true);
+              assert.equal(String(priorExecutionSummaries[0] ?? "").includes("task-1"), true);
+              return JSON.stringify({
+                planSummary: "Handle missing tool failure",
+                tasks: [],
                 finalAnswer: "peo handled tool failure",
               });
             }
@@ -487,6 +579,155 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "peo handled tool failure");
+}
+
+async function testToolArgumentValidatorRejectsInvalidArguments(): Promise<void> {
+  const registry = new McpToolRegistry([
+    {
+      name: "read_text_file",
+      inputSchema: {
+        type: "object",
+        required: ["path"],
+        properties: {
+          path: { type: "string" },
+        },
+      },
+      handler: {
+        async handle(): Promise<ToolCallResult> {
+          return { content: "" };
+        },
+      },
+    },
+  ]);
+
+  const missingPath = await validateToolCallArguments({
+    toolRegistry: registry,
+    toolName: "read_text_file",
+    arguments: {},
+  });
+  const wrongType = await validateToolCallArguments({
+    toolRegistry: registry,
+    toolName: "read_text_file",
+    arguments: { path: 1 },
+  });
+  const unknownField = await validateToolCallArguments({
+    toolRegistry: registry,
+    toolName: "read_text_file",
+    arguments: { path: "/tmp/a.txt", extra: true },
+  });
+
+  assert.equal(missingPath.valid, false);
+  assert.equal(missingPath.errors.includes("Missing required argument \"path\"."), true);
+  assert.equal(wrongType.valid, false);
+  assert.equal(wrongType.errors.includes("Argument \"path\" must be of type string."), true);
+  assert.equal(unknownField.valid, false);
+  assert.equal(unknownField.errors.includes("Unknown argument \"extra\"."), true);
+}
+
+async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Promise<void> {
+  let called = 0;
+  const gateway: McpGateway = {
+    async call(_input: ToolCallInput): Promise<ToolCallResult> {
+      called += 1;
+      return { content: "unexpected" };
+    },
+  };
+  const registry = new McpToolRegistry([
+    {
+      name: "read_text_file",
+      inputSchema: {
+        type: "object",
+        required: ["path"],
+        properties: {
+          path: { type: "string" },
+        },
+      },
+      handler: {
+        async handle(): Promise<ToolCallResult> {
+          return { content: "" };
+        },
+      },
+    },
+  ]);
+  const step = new ActionStep(gateway, registry);
+
+  const result = await step.run(
+    createMinimalAgentContext("react"),
+    "run-1",
+    1,
+    {
+      thought: "read file",
+      actionType: "tool",
+      toolName: "read_text_file",
+      actionPayload: {},
+      shouldContinue: true,
+    },
+  );
+
+  assert.equal(called, 0);
+  assert.equal(result.toolCalls, 0);
+  assert.equal(result.failedToolCalls, 0);
+  assert.equal(result.shouldContinue, true);
+  assert.equal(result.observation.includes("Tool argument validation failed for read_text_file"), true);
+}
+
+async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
+  let directCalled = 0;
+  let reactCalled = 0;
+  const step = new ExecutionStep(
+    {
+      async execute() {
+        directCalled += 1;
+        return {
+          taskId: "task-1",
+          taskStatus: "completed",
+          output: "direct output",
+          executionFacts: {
+            toolCalls: 0,
+            failedToolCalls: 0,
+          },
+        };
+      },
+    },
+    {
+      async execute() {
+        reactCalled += 1;
+        return {
+          taskId: "task-2",
+          taskStatus: "completed",
+          output: "react output",
+          executionFacts: {
+            toolCalls: 1,
+            failedToolCalls: 0,
+          },
+        };
+      },
+    },
+  );
+
+  const result = await step.run(
+    createMinimalAgentContext("peo"),
+    "run-1",
+    1,
+    {
+      planSummary: "execute react task",
+      tasks: [
+        {
+          taskId: "task-2",
+          description: "read file with tools",
+          type: "react",
+          status: "pending",
+        },
+      ],
+      finalAnswer: undefined,
+    },
+  );
+
+  assert.equal(directCalled, 0);
+  assert.equal(reactCalled, 1);
+  assert.equal(result.task?.taskId, "task-2");
+  assert.equal(result.taskExecution.output, "react output");
+  assert.equal(result.taskExecution.executionFacts?.toolCalls, 1);
 }
 
 async function testReservedPlaceholdersStayCallable(): Promise<void> {
@@ -527,4 +768,32 @@ async function findOnlyTraceFile(workdir: string): Promise<string> {
   const entries = await readdir(traceDir);
   assert.equal(entries.length, 1);
   return path.join(traceDir, entries[0]!);
+}
+
+function createMinimalAgentContext(requestedMode: "react" | "peo") {
+  return {
+    originalContext: {
+      transcriptContext: { turns: [] },
+      runtimeMemoryContext: { summaryItems: [] },
+      retrievalContext: { fragments: [] },
+    },
+    boundedContext: {
+      transcriptContext: { turns: [] },
+      runtimeMemoryContext: { summaryItems: [] },
+      retrievalContext: { fragments: [] },
+    },
+    runtimeContext: {
+      requestedMode,
+      sessionId: "session-1",
+      userInput: {
+        content: {
+          task: "test",
+        },
+      },
+      modelConfig: {
+        mock: true,
+        modeSelection: {},
+      },
+    },
+  } as unknown as Parameters<ActionStep["run"]>[0];
 }

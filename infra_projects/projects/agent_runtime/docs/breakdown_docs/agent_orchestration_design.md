@@ -199,6 +199,7 @@ No additional published contract beyond `IAgent`.
 - responsibilities:
   - consume assembled `AgentContext`
   - coordinate prompt building and result checking for the chat path
+  - execute one model call for the current request
   - return chat-oriented runtime result together with internal execution state
 - public methods:
   - `isRunning(): boolean`
@@ -208,6 +209,7 @@ No additional published contract beyond `IAgent`.
 - role: module-internal builder for chat-oriented model requests
 - responsibilities:
   - build the chat request from `AgentContext`
+  - shape the chat prompt around the current question and context basis
   - keep chat prompt construction separate from model invocation
 - public methods:
   - `buildPrompt(context: AgentContext): Promise<Record<string, unknown>>`
@@ -216,6 +218,7 @@ No additional published contract beyond `IAgent`.
 - role: module-internal checker for chat model outputs
 - responsibilities:
   - validate returned chat content before runtime result assembly
+  - normalize returned text or JSON payload
   - reject incomplete or invalid chat outputs
 - public methods:
   - `check(result: Record<string, unknown>): Promise<Record<string, unknown>>`
@@ -308,46 +311,33 @@ No additional published contract beyond `IAgent`.
   - `isRunning(): boolean`
   - `run(context: AgentContext): Promise<AgentRuntimeResult>`
 
-##### `ThoughtPromptBuilder`
-- role: module-internal builder for thought-oriented model requests
+##### `ThoughtStep`
+- role: module-internal thought stage for ReAct
 - responsibilities:
-  - build the next thought request from the current context and prior observations
-  - keep thought request construction separate from model invocation
+  - build the next thought request from the current question, context basis, tool definitions, and prior observations
+  - invoke the model for the current thought stage
+  - parse and validate the returned thought result before action execution
 - public methods:
-  - `buildPrompt(context: AgentContext, priorObservation?: Record<string, unknown>): Promise<Record<string, unknown>>`
+  - `run(context: AgentContext, runId: string, stepIndex: number, state: Record<string, unknown>): Promise<Record<string, unknown>>`
 
-##### `ThoughtChecker`
-- role: module-internal checker for ReAct thought outputs
+##### `ActionStep`
+- role: module-internal action stage for ReAct
 - responsibilities:
-  - validate the generated thought before action execution
-  - reject thoughts that are incomplete or outside current loop boundaries
+  - execute the current bounded action step without invoking the model
+  - convert checked thought output into direct response or tool-backed action
+  - validate tool arguments before tool execution
+  - keep invalid tool arguments inside the current ReAct loop rather than sending them to the tool boundary
 - public methods:
-  - `check(thought: Record<string, unknown>): Promise<Record<string, unknown>>`
+  - `run(context: AgentContext, runId: string, stepIndex: number, thought: Record<string, unknown>): Promise<Record<string, unknown>>`
 
-##### `TaskExecutor`
-- role: module-internal executor for bounded ReAct tasks
+##### `ObservationStep`
+- role: module-internal observation stage for ReAct
 - responsibilities:
-  - execute the current action step through model or tool boundaries
-  - keep action execution separate from reasoning and observation shaping
-  - return the raw action result for observation building
+  - invoke the model to summarize the current action observation
+  - determine whether the current loop is complete or should continue
+  - produce the current loop summary and final answer when available
 - public methods:
-  - `execute(task: Record<string, unknown>, context: AgentContext): Promise<Record<string, unknown>>`
-
-##### `ActionResultChecker`
-- role: module-internal checker for ReAct action outputs
-- responsibilities:
-  - validate raw action results before observation checking
-  - reject action results that cannot support the next loop decision
-- public methods:
-  - `check(actionResult: Record<string, unknown>): Promise<Record<string, unknown>>`
-
-##### `ObservationChecker`
-- role: module-internal checker for ReAct observation state
-- responsibilities:
-  - validate checked action output as the current observation state before the next loop decision
-  - determine whether the loop should continue or stop
-- public methods:
-  - `check(observation: Record<string, unknown>): Promise<Record<string, unknown>>`
+  - `run(context: AgentContext, runId: string, stepIndex: number, input: Record<string, unknown>): Promise<Record<string, unknown>>`
 
 #### 3.3.4 Runtime Processing Flow
 
@@ -355,11 +345,9 @@ No additional published contract beyond `IAgent`.
 @startuml
 actor AgentSession
 participant ReActAgent
-participant ThoughtPromptBuilder
-participant ThoughtChecker
-participant TaskExecutor
-participant ActionResultChecker
-participant ObservationChecker
+participant ThoughtStep
+participant ActionStep
+participant ObservationStep
 participant ModelFactory
 participant IModel
 participant McpGateway
@@ -368,29 +356,26 @@ participant Trace
 AgentSession -> ReActAgent: run(context)
 loop bounded reasoning-action-observation
   ReActAgent -> Trace: record step trace
-  ReActAgent -> ThoughtPromptBuilder: buildPrompt(context, priorObservation)
-  ThoughtPromptBuilder --> ReActAgent: thought request
-  ReActAgent -> ModelFactory: createModel(input)
-  ModelFactory --> ReActAgent: IModel
-  ReActAgent -> IModel: execute(input)
-  IModel --> ReActAgent: raw thought
-  ReActAgent -> ThoughtChecker: check(thought)
-  ThoughtChecker --> ReActAgent: checked thought
-  ReActAgent -> TaskExecutor: execute(thought, context)
-  alt model-backed action
-    TaskExecutor -> ModelFactory: createModel(input)
-    ModelFactory --> TaskExecutor: IModel
-    TaskExecutor -> IModel: execute(input)
-    IModel --> TaskExecutor: normalized model response
-  else tool-backed step
-    TaskExecutor -> McpGateway: call tool step
-    McpGateway --> TaskExecutor: tool result
+  ReActAgent -> ThoughtStep: run(context, runId, stepIndex, state)
+  ThoughtStep -> ModelFactory: createModel(input)
+  ModelFactory --> ThoughtStep: IModel
+  ThoughtStep -> IModel: execute(input)
+  IModel --> ThoughtStep: raw thought
+  ThoughtStep --> ReActAgent: checked thought
+  ReActAgent -> ActionStep: run(context, runId, stepIndex, thought)
+  alt tool-backed action
+    ActionStep -> McpGateway: call tool step
+    McpGateway --> ActionStep: tool result
+  else direct response
+    ActionStep -> ActionStep: build bounded action observation
   end
-  TaskExecutor --> ReActAgent: raw action result
-  ReActAgent -> ActionResultChecker: check(actionResult)
-  ActionResultChecker --> ReActAgent: checked action result
-  ReActAgent -> ObservationChecker: check(actionResult)
-  ObservationChecker --> ReActAgent: checked observation
+  ActionStep --> ReActAgent: action result
+  ReActAgent -> ObservationStep: run(context, runId, stepIndex, action result)
+  ObservationStep -> ModelFactory: createModel(input)
+  ModelFactory --> ObservationStep: IModel
+  ObservationStep -> IModel: execute(input)
+  IModel --> ObservationStep: raw observation
+  ObservationStep --> ReActAgent: checked observation
 end
 ReActAgent --> AgentSession: AgentRuntimeResult
 @enduml
@@ -405,15 +390,7 @@ if (AgentContext is incomplete?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
-if (thought prompt building fails?) then (yes)
-  :Return failure result with diagnostics;
-  stop
-endif
-if (thought generation fails?) then (yes)
-  :Return failure result with diagnostics;
-  stop
-endif
-if (thought checking fails?) then (yes)
+if (thought step fails?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
@@ -421,11 +398,7 @@ if (action step fails?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
-if (action result checking fails?) then (yes)
-  :Return failure result with diagnostics;
-  stop
-endif
-if (observation checking fails?) then (yes)
+if (observation step fails?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
@@ -440,9 +413,12 @@ stop
 
 - run explicit plan-execute-observe orchestration
 - build planning requests from the current context
+- produce abstract plan steps rather than direct tool calls
 - check planning outputs before execution
-- coordinate model and tool boundaries across planning, execution, and observation stages
-- check execution outputs and observation state before final result assembly
+- let execution convert one plan step into concrete tool-backed work when needed
+- let later plan steps consume prior execution results as context basis
+- keep tool-call failure handling inside execution
+- let observation decide whether the current plan is completed
 - return plan-execute-observe `AgentRuntimeResult`
 
 #### 3.4.2 API
@@ -460,50 +436,43 @@ export interface PEOAgent extends IAgent {
 - responsibilities:
   - consume assembled `AgentContext`
   - coordinate planning, execution, and observation sub-roles
+  - keep planning outputs at abstract task-decomposition level
+  - pass prior execution results forward for later steps
   - return runtime result together with internal execution state
 - public methods:
   - `isRunning(): boolean`
   - `run(context: AgentContext): Promise<AgentRuntimeResult>`
 
-##### `PlanPromptBuilder`
-- role: module-internal builder for plan-oriented model requests
+##### `PlanStep`
+- role: module-internal planning stage for PEO
 - responsibilities:
   - build planning requests from `AgentContext`
-  - keep planning request construction separate from model invocation
+  - invoke the model for the current planning stage
+  - express planning outputs as high-level plan steps
+  - keep planning outputs abstract rather than direct tool-call payloads
 - public methods:
-  - `buildPrompt(context: AgentContext): Promise<Record<string, unknown>>`
+  - `run(context: AgentContext, runId: string, stepIndex: number, state: Record<string, unknown>): Promise<Record<string, unknown>>`
 
-##### `PlanChecker`
-- role: module-internal checker for planning outputs
+##### `ExecutionStep`
+- role: module-internal execution stage for PEO
 - responsibilities:
-  - validate the generated plan before execution
-  - reject plans that are incomplete or outside the bounded execution scope
+  - select the current executable plan step
+  - convert that plan step into concrete execution work
+  - perform tool-backed work when the current step requires tools
+  - optionally reuse `ReActAgent` as an internal executor for tool-oriented sub-problems
+  - keep tool-call failure handling inside the execution boundary
+  - return execution results for later observation
 - public methods:
-  - `check(plan: Record<string, unknown>): Promise<Record<string, unknown>>`
+  - `run(context: AgentContext, runId: string, stepIndex: number, plan: Record<string, unknown>): Promise<Record<string, unknown>>`
 
-##### `TaskExecutor`
-- role: module-internal executor for bounded PEO tasks
+##### `ObserveStep`
+- role: module-internal observation stage for PEO
 - responsibilities:
-  - execute the checked plan through model or tool boundaries
-  - return raw execution results for later checking
+  - evaluate the current execution result without invoking the model
+  - decide whether the current plan is completed
+  - determine whether another plan step should be executed
 - public methods:
-  - `execute(plan: Record<string, unknown>, context: AgentContext): Promise<Record<string, unknown>>`
-
-##### `ExecutionResultChecker`
-- role: module-internal checker for execution results
-- responsibilities:
-  - validate execution outputs before observation checking
-  - reject execution outputs that cannot support final result assembly
-- public methods:
-  - `check(executionResult: Record<string, unknown>): Promise<Record<string, unknown>>`
-
-##### `ObservationChecker`
-- role: module-internal checker for PEO observation state
-- responsibilities:
-  - validate checked execution output as the current observation state before final result assembly
-  - reject observation state that is incomplete or inconsistent
-- public methods:
-  - `check(observation: Record<string, unknown>): Promise<Record<string, unknown>>`
+  - `run(context: AgentContext, runId: string, stepIndex: number, input: Record<string, unknown>): Promise<Record<string, unknown>>`
 
 #### 3.4.4 Runtime Processing Flow
 
@@ -511,11 +480,9 @@ export interface PEOAgent extends IAgent {
 @startuml
 actor AgentSession
 participant PEOAgent
-participant PlanPromptBuilder
-participant PlanChecker
-participant TaskExecutor
-participant ExecutionResultChecker
-participant ObservationChecker
+participant PlanStep
+participant ExecutionStep
+participant ObserveStep
 participant ModelFactory
 participant IModel
 participant McpGateway
@@ -523,31 +490,35 @@ participant Trace
 
 AgentSession -> PEOAgent: run(context)
 PEOAgent -> Trace: record plan trace
-PEOAgent -> PlanPromptBuilder: buildPrompt(context)
-PlanPromptBuilder --> PEOAgent: plan request
-PEOAgent -> ModelFactory: createModel(input)
-ModelFactory --> PEOAgent: IModel
-PEOAgent -> IModel: execute(input)
-IModel --> PEOAgent: raw plan
-PEOAgent -> PlanChecker: check(plan)
-PlanChecker --> PEOAgent: checked plan
-PEOAgent -> TaskExecutor: execute(plan, context)
-alt model-backed execution
-  TaskExecutor -> ModelFactory: createModel(input)
-  ModelFactory --> TaskExecutor: IModel
-  TaskExecutor -> IModel: execute(input)
-  IModel --> TaskExecutor: execution result
-else tool-backed execution
-  TaskExecutor -> McpGateway: call execute step
-  McpGateway --> TaskExecutor: tool result
+PEOAgent -> PlanStep: run(context, runId, stepIndex, state)
+PlanStep -> ModelFactory: createModel(input)
+ModelFactory --> PlanStep: IModel
+PlanStep -> IModel: execute(input)
+IModel --> PlanStep: raw plan
+PlanStep --> PEOAgent: checked plan
+PEOAgent -> ExecutionStep: run(context, runId, stepIndex, plan)
+ExecutionStep -> ExecutionStep: select current executable plan step
+alt step requires tool-backed work
+  alt direct bounded tool execution
+    ExecutionStep -> McpGateway: call execute step
+    McpGateway --> ExecutionStep: tool result
+  else tool-oriented sub-problem
+    ExecutionStep -> ReActAgent: run bounded sub-problem
+    ReActAgent --> ExecutionStep: sub-problem result
+  end
+else step is non-tool bounded work
+  ExecutionStep -> ExecutionStep: execute bounded runtime work
 end
-TaskExecutor --> PEOAgent: raw execution result
-PEOAgent -> ExecutionResultChecker: check(executionResult)
-ExecutionResultChecker --> PEOAgent: checked execution result
-PEOAgent -> ObservationChecker: check(executionResult)
-ObservationChecker --> PEOAgent: checked observation
-PEOAgent -> Trace: record observation trace
-PEOAgent --> AgentSession: AgentRuntimeResult
+ExecutionStep --> PEOAgent: execution result
+PEOAgent -> ObserveStep: run(context, runId, stepIndex, execution result)
+ObserveStep --> PEOAgent: checked observation
+alt plan completed
+  PEOAgent -> Trace: record observation trace
+  PEOAgent --> AgentSession: AgentRuntimeResult
+else plan not completed
+  PEOAgent -> Trace: record observation trace
+  PEOAgent -> PEOAgent: continue with next plan step using prior execution results
+end
 @enduml
 ```
 
@@ -560,15 +531,7 @@ if (AgentContext is incomplete?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
-if (plan prompt building fails?) then (yes)
-  :Return failure result with diagnostics;
-  stop
-endif
-if (planning step fails?) then (yes)
-  :Return failure result with diagnostics;
-  stop
-endif
-if (plan checking fails?) then (yes)
+if (plan step fails?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
@@ -576,11 +539,7 @@ if (execution step fails?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif
-if (execution result checking fails?) then (yes)
-  :Return failure result with diagnostics;
-  stop
-endif
-if (observation checking fails?) then (yes)
+if (observation step fails?) then (yes)
   :Return failure result with diagnostics;
   stop
 endif

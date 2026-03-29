@@ -1,32 +1,53 @@
+import type { AgentContext } from "../../context/types.js";
+
+export type PlanTaskType = "direct" | "react";
+export type PlanTaskStatus = "pending" | "completed" | "failed" | "blocked";
+
+export interface PlanTask {
+  taskId: string;
+  description: string;
+  type: PlanTaskType;
+  status: PlanTaskStatus;
+  dependsOn?: string[];
+}
+
 export interface PlanStepResult {
-  plan: string;
-  toolCall?: {
-    toolCallId: string;
-    toolName: string;
-    arguments: Record<string, unknown>;
-  };
+  planSummary: string;
+  tasks: PlanTask[];
   finalAnswer?: string;
+}
+
+export interface TaskExecutionResult {
+  taskId: string;
+  taskStatus: Exclude<PlanTaskStatus, "pending">;
+  output?: string;
+  error?: {
+    code: string;
+    message: string;
+  };
+  executionFacts?: {
+    toolCalls: number;
+    failedToolCalls: number;
+  };
 }
 
 export interface ExecutionStepResult {
-  executionObservation: string;
+  planSummary: string;
+  task?: PlanTask;
+  taskExecution: TaskExecutionResult;
   finalAnswer?: string;
-  toolCalls: number;
-  failedToolCalls: number;
-  toolCall?: {
-    toolCallId: string;
-    toolName: string;
-    arguments: Record<string, unknown>;
-  };
-  toolResult?: {
-    content: string;
-    errorCode?: string;
-    errorMessage?: string;
-  };
 }
 
 export interface ObserveStepInput {
-  plan: string;
+  plan: PlanStepResult;
   executionResult: ExecutionStepResult;
   priorObservation?: string;
+}
+
+export interface ITaskExecutor {
+  execute(input: {
+    plan: PlanStepResult;
+    task: PlanTask;
+    context: AgentContext;
+  }): Promise<TaskExecutionResult>;
 }

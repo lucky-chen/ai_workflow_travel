@@ -85,7 +85,7 @@ export function createReActAgent(input: {
 }): IAgent {
   return new ReActAgent(
     new ThoughtStep(input.modelFactory, input.trace, input.toolRegistry),
-    new ActionStep(input.gateway),
+    new ActionStep(input.gateway, input.toolRegistry),
     new ObservationStep(input.modelFactory, input.trace),
   );
 }

@@ -16,6 +16,8 @@ import { ExecutionStep } from "./peo_execution_step.js";
 import { PEO_STAGE_COUNT, PlanStep } from "./peo_plan_step.js";
 import { ObserveStep } from "./peo_observe_step.js";
 import type { ExecutionStepResult } from "./peo_types.js";
+import { DirectTaskExecutor, ReactTaskExecutor } from "./peo_task_executor.js";
+import { createReActAgent } from "../react_agent/index.js";
 
 class PEOAgent implements IAgent {
   readonly pattern = "peo" as const;
@@ -45,14 +47,18 @@ class PEOAgent implements IAgent {
       for (let stepIndex = 1; stepIndex <= PEO_STAGE_COUNT; stepIndex += 1) {
         const plan = await this.planStep.run(context, runId, stepIndex, state);
         const execution = await this.executionStep.run(context, runId, stepIndex, plan);
-        toolCalls += asNumber(execution.toolCalls);
-        failedToolCalls += asNumber(execution.failedToolCalls);
-        if (execution.toolCall && execution.executionObservation) {
-          transcriptAppend.push(createToolTranscriptTurn(execution.executionObservation));
+        toolCalls += asNumber(execution.taskExecution.executionFacts?.toolCalls);
+        failedToolCalls += asNumber(execution.taskExecution.executionFacts?.failedToolCalls);
+        if (
+          execution.taskExecution.executionFacts?.toolCalls
+          && typeof execution.taskExecution.output === "string"
+          && execution.taskExecution.output.trim()
+        ) {
+          transcriptAppend.push(createToolTranscriptTurn(execution.taskExecution.output));
         }
         state.priorExecutionSummaries.push(summarizeExecutionResult(execution));
         const observation = await this.observeStep.run(context, runId, stepIndex, {
-          plan: plan.plan,
+          plan,
           executionResult: execution,
           priorObservation: state.lastObservation?.summary,
         });
@@ -62,7 +68,7 @@ class PEOAgent implements IAgent {
         };
         if (observation.completed) {
           transcriptAppend.push(createAssistantTranscriptTurn(observation.finalAnswer));
-          return createPeoSuccessResult(this.pattern, context, runId, plan.plan, observation.finalAnswer, transcriptAppend, toolCalls, failedToolCalls);
+          return createPeoSuccessResult(this.pattern, context, runId, plan.planSummary, observation.finalAnswer, transcriptAppend, toolCalls, failedToolCalls);
         }
       }
       return createPeoMaxStepResult(this.pattern, context, runId, createBaseTranscript(context), toolCalls, failedToolCalls, state);
@@ -80,10 +86,19 @@ export function createPEOAgent(input: {
   trace: Trace;
   toolRegistry: McpToolRegistry;
 }): IAgent {
+  const internalReactAgent = createReActAgent({
+    modelFactory: input.modelFactory,
+    gateway: input.gateway,
+    trace: input.trace,
+    toolRegistry: input.toolRegistry,
+  });
   return new PEOAgent(
     new PlanStep(input.modelFactory, input.trace, input.toolRegistry),
-    new ExecutionStep(input.gateway, input.modelFactory, input.trace),
-    new ObserveStep(input.modelFactory, input.trace),
+    new ExecutionStep(
+      new DirectTaskExecutor(),
+      new ReactTaskExecutor(internalReactAgent),
+    ),
+    new ObserveStep(),
   );
 }
 
@@ -185,8 +200,8 @@ function createAgentMetadata(pattern: IAgent["pattern"], context: AgentContext):
 }
 
 function summarizeExecutionResult(result: ExecutionStepResult): string {
-  if (result.toolCall) {
-    return `${result.toolCall.toolName}:${result.executionObservation}`;
+  if (result.task) {
+    return `${result.task.taskId}:${result.taskExecution.output ?? result.taskExecution.error?.message ?? ""}`;
   }
-  return result.executionObservation;
+  return result.taskExecution.output ?? result.planSummary;
 }

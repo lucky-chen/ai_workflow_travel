@@ -4,6 +4,8 @@ import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import type { Trace } from "../../observability/trace.js";
 import {
+  createContextBasis,
+  createToolUsageRules,
   ensureSuccessfulModelResponse,
   getRuntimeContext,
   isRecord,
@@ -43,8 +45,8 @@ export class ThoughtStep {
     const response = await this.executeModel(context, runId, stepIndex, request);
     return this.check({
       content: response.content,
-      availableTools: Array.isArray(request.userPrompt.availableTools)
-        ? request.userPrompt.availableTools
+      availableTools: isRecord(request.userPrompt.tools) && Array.isArray(request.userPrompt.tools.availableTools)
+        ? request.userPrompt.tools.availableTools
           .map((value) => isRecord(value) && typeof value.name === "string" ? value.name : undefined)
           .filter((value): value is string => typeof value === "string")
         : [],
@@ -59,25 +61,37 @@ export class ThoughtStep {
       priorActionSummaries: string[];
     },
   ): Promise<ModuleRequest> {
-    const activeContext = context.boundedContext ?? context.originalContext;
     const runtimeContext = getRuntimeContext(context);
     const toolDefinitions = await this.toolRegistry.listToolDefinitions();
-    const availableTools = toolDefinitions.map((tool) => tool.name);
     return {
       systemPrompt: [
         "Return valid JSON only.",
         "Decide whether the next action is a tool call or a direct response.",
+        "Do not output a tool call with missing required arguments.",
       ],
       responseFormat: "json",
       userPrompt: {
         stage: "react_thought",
-        iterationLimit: REACT_MAX_STEPS,
-        stepIndex,
-        transcript: activeContext.transcriptContext.turns,
-        userInput: runtimeContext.userInput.content,
-        availableTools: summarizeToolDefinitions(toolDefinitions),
-        priorObservation: state.lastObservation?.summary,
-        priorActionSummaries: state.priorActionSummaries,
+        question: runtimeContext.userInput.content,
+        contextBasis: createContextBasis({
+          context,
+          priorObservation: state.lastObservation?.summary,
+          priorActionSummaries: state.priorActionSummaries,
+        }),
+        tools: {
+          availableTools: summarizeToolDefinitions(toolDefinitions),
+          toolUsageRules: createToolUsageRules("react"),
+        },
+        expectedSchema: {
+          actionType: "\"tool\" | \"respond\"",
+          toolName: "string required when actionType is tool",
+          actionPayload: "object required when actionType is tool",
+          finalAnswer: "string required when actionType is respond",
+        },
+        runtimeState: {
+          stepIndex,
+          iterationLimit: REACT_MAX_STEPS,
+        },
       },
       stream: false,
     };

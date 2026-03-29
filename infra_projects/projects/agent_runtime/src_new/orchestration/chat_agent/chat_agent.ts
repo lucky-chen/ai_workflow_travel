@@ -6,6 +6,7 @@ import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
 import type { Trace } from "../../observability/trace.js";
 import type { AgentRuntimeResult, IAgent } from "../types.js";
 import {
+  createContextBasis,
   createAssistantTranscriptTurn as createAssistantTurn,
   createUserTranscriptTurn as createUserTurn,
   getRuntimeContext,
@@ -15,18 +16,20 @@ import {
 
 class ChatPromptBuilder {
   async buildPrompt(context: AgentContext): Promise<ModuleRequest> {
-    const activeContext = context.boundedContext ?? context.originalContext;
     const runtimeContext = getRuntimeContext(context);
     return {
       systemPrompt: [],
       responseFormat: "text",
       userPrompt: {
-        sessionId: runtimeContext.sessionId,
-        requestedMode: runtimeContext.requestedMode,
-        transcript: activeContext.transcriptContext.turns,
-        memory: activeContext.runtimeMemoryContext.summaryItems,
-        retrieval: activeContext.retrievalContext?.fragments ?? [],
-        userInput: runtimeContext.userInput.content,
+        stage: "chat",
+        question: runtimeContext.userInput.content,
+        contextBasis: createContextBasis({ context }),
+        expectedSchema: {
+          finalAnswer: "required string",
+        },
+        runtimeState: {
+          requestedMode: runtimeContext.requestedMode,
+        },
       },
       stream: false,
     };

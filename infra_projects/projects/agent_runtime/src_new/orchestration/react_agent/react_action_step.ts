@@ -1,9 +1,13 @@
-import type { McpGateway } from "../../capability/types.js";
+import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
 import type { AgentContext } from "../../context/types.js";
 import { getRuntimeContext, isRecord } from "../agent_orchestration_helpers.js";
+import { validateToolCallArguments } from "../tool_call_argument_validator.js";
 
 export class ActionStep {
-  constructor(private readonly gateway: McpGateway) {}
+  constructor(
+    private readonly gateway: McpGateway,
+    private readonly toolRegistry: McpToolRegistry,
+  ) {}
 
   async run(
     context: AgentContext,
@@ -34,14 +38,28 @@ export class ActionStep {
       };
     }
     const runtimeContext = getRuntimeContext(context);
+    const argumentsValue = isRecord(thought.actionPayload)
+      ? thought.actionPayload
+      : isRecord(runtimeContext.userInput.content.toolPayload)
+        ? runtimeContext.userInput.content.toolPayload
+        : {};
+    const validation = await validateToolCallArguments({
+      toolRegistry: this.toolRegistry,
+      toolName: thought.toolName,
+      arguments: argumentsValue,
+    });
+    if (!validation.valid) {
+      return {
+        observation: `Tool argument validation failed for ${thought.toolName}: ${validation.errors.join(" ")}`,
+        shouldContinue: true,
+        toolCalls: 0,
+        failedToolCalls: 0,
+      };
+    }
     const result = await this.gateway.call({
       toolCallId: `${runId}:react:${stepIndex}:${thought.toolName}`,
       toolName: thought.toolName,
-      arguments: isRecord(thought.actionPayload)
-        ? thought.actionPayload
-        : isRecord(runtimeContext.userInput.content.toolPayload)
-        ? runtimeContext.userInput.content.toolPayload
-        : {},
+      arguments: argumentsValue,
     });
     return {
       observation: result.error ? result.error.message : result.content,

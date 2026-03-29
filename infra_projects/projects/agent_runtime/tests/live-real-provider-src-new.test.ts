@@ -11,48 +11,83 @@ interface LiveProviderCase {
 
 export async function runLiveRealProviderSrcNewTests(cases: LiveProviderCase[]): Promise<void> {
   for (const item of cases) {
-    const existingTraceFiles = await listTraceFiles(item.workdir);
-    const runtime = createRuntime({
+    await runLiveModeCase({
+      provider: item.provider,
       workdir: item.workdir,
-      defaultModelMode: "real_from_local_env",
+      task: `/chat reply with provider name ${item.provider} only`,
+      expectedContent: item.provider,
+      requireToolCall: false,
+      label: "chat",
     });
-    const session = await runtime.createSession({});
-    const result = await session.execute({
-      content: {
-        task: `reply with provider name ${item.provider}`,
-      },
+    await runLiveModeCase({
+      provider: item.provider,
+      workdir: item.workdir,
+      task: `/react read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} and reply with exactly hello-service fixture file only`,
+      expectedContent: "hello-service fixture file",
+      requireToolCall: true,
+      label: "react",
     });
-    assert.equal(result.errorCode, undefined, `${item.provider} returned error: ${result.errorMessage}`);
-    assert.equal(Boolean(result.content), true, `${item.provider} returned empty content`);
+    await runLiveModeCase({
+      provider: item.provider,
+      workdir: item.workdir,
+      task: `/plan first read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} then reply with exactly PEO_OK:hello-service fixture file only`,
+      expectedContent: "PEO_OK:hello-service fixture file",
+      requireToolCall: true,
+      label: "peo",
+    });
+  }
+}
 
-    const readFileResult = await session.execute({
-      content: {
-        task: `read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} and reply with that line only`,
-      },
-    });
+async function runLiveModeCase(input: {
+  provider: LiveProviderCase["provider"];
+  workdir: string;
+  task: string;
+  expectedContent: string;
+  requireToolCall: boolean;
+  label: "chat" | "react" | "peo";
+}): Promise<void> {
+  const existingTraceFiles = await listTraceFiles(input.workdir);
+  const runtime = createRuntime({
+    workdir: input.workdir,
+    defaultModelMode: "real_from_local_env",
+  });
+  const session = await runtime.createSession({});
+  const result = await session.execute({
+    content: {
+      task: input.task,
+    },
+  });
+  assert.equal(
+    result.errorCode,
+    undefined,
+    `${input.provider} ${input.label} returned error: ${result.errorMessage}`,
+  );
+  const content = String(result.content ?? "").trim();
+  if (input.label === "react" || input.label === "peo") {
     assert.equal(
-      readFileResult.errorCode,
-      undefined,
-      `${item.provider} file-read returned error: ${readFileResult.errorMessage}`,
-    );
-    assert.equal(
-      readFileResult.content,
-      "hello-service fixture file",
-      `${item.provider} file-read returned unexpected content`,
-    );
-
-    const trace = await loadNewTrace(item.workdir, existingTraceFiles);
-    assert.equal(
-      trace.events.some((event) => event.eventType === "model_called"),
+      content.includes(input.expectedContent),
       true,
-      `${item.provider} trace missing model_called`,
+      `${input.provider} ${input.label} returned unexpected content`,
     );
+  } else {
     assert.equal(
-      trace.events.some((event) => event.eventType === "tool_called"),
-      true,
-      `${item.provider} trace missing tool_called`,
+      content,
+      input.expectedContent,
+      `${input.provider} ${input.label} returned unexpected content`,
     );
   }
+
+  const trace = await loadNewTrace(input.workdir, existingTraceFiles);
+  assert.equal(
+    trace.events.some((event) => event.eventType === "model_called"),
+    true,
+    `${input.provider} ${input.label} trace missing model_called`,
+  );
+  assert.equal(
+    trace.events.some((event) => event.eventType === "tool_called"),
+    input.requireToolCall,
+    `${input.provider} ${input.label} trace tool_called mismatch`,
+  );
 }
 
 async function listTraceFiles(workdir: string): Promise<string[]> {

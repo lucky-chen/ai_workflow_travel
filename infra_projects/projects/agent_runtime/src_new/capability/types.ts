@@ -35,6 +35,7 @@ export interface ExternalMcpEndpointConfig {
 export interface McpToolRegistry {
   register(definition: ToolDefinition): Promise<void>;
   resolve(toolName: string): Promise<ToolHandler>;
+  getDefinition(toolName: string): Promise<ToolDefinition | undefined>;
   listToolNames(): Promise<string[]>;
   listToolDefinitions(): Promise<ToolDefinition[]>;
 }

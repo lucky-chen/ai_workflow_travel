@@ -140,6 +140,40 @@ export function summarizeToolDefinitions(toolDefinitions: ToolDefinition[]): Arr
   }));
 }
 
+export function createContextBasis(input: {
+  context: AgentContext;
+  priorObservation?: string;
+  priorActionSummaries?: string[];
+  priorExecutionSummaries?: string[];
+}): Record<string, unknown> {
+  const activeContext = input.context.boundedContext ?? input.context.originalContext;
+  return omitUndefined({
+    transcript: activeContext.transcriptContext.turns,
+    memory: activeContext.runtimeMemoryContext.summaryItems,
+    retrieval: activeContext.retrievalContext?.fragments ?? [],
+    priorObservation: input.priorObservation,
+    priorActionSummaries: input.priorActionSummaries,
+    priorExecutionSummaries: input.priorExecutionSummaries,
+  });
+}
+
+export function createToolUsageRules(
+  promptType: "react" | "peo",
+): string[] {
+  const baseRules = [
+    "Select a tool only from availableTools.name.",
+    "Arguments must satisfy the selected tool inputSchema.",
+    "All required fields in inputSchema.required must be present.",
+    "Use only argument names defined in inputSchema.properties.",
+  ];
+  if (promptType === "peo") {
+    return baseRules.concat(
+      "If required arguments are missing, do not output toolCall; explain the missing information in plan.",
+    );
+  }
+  return baseRules;
+}
+
 function truncatePreview(value: string, maxLength = 240): string {
   if (!value) {
     return "";
