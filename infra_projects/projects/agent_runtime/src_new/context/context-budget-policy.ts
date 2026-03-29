@@ -4,7 +4,7 @@ export interface ContextBudgetPolicy {
   bound(originalContext: ContextView, runtimeLimits: ContextBudgetLimits): Promise<ContextView>;
 }
 
-export class DefaultContextBudgetPolicy implements ContextBudgetPolicy {
+export class ContextBudgetPolicy implements ContextBudgetPolicy {
   async bound(originalContext: ContextView, runtimeLimits: ContextBudgetLimits): Promise<ContextView> {
     return {
       transcriptContext: {
@@ -21,4 +21,3 @@ export class DefaultContextBudgetPolicy implements ContextBudgetPolicy {
     };
   }
 }
-

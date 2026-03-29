@@ -1,7 +1,11 @@
-import type { ExecutionEnvironment, ToolCallInput, ToolCallResult, ToolHandler } from "./types.js";
+import type {
+  ExecutionEnvironment as ExecutionEnvironmentContract,
+  ExecutionEnvironmentInput,
+  ToolCallResult,
+} from "./types.js";
 
-export class LocalExecutionEnvironment implements ExecutionEnvironment {
-  async execute(toolCall: ToolCallInput, handler: ToolHandler): Promise<ToolCallResult> {
-    return handler.handle(toolCall);
+export class ExecutionEnvironment implements ExecutionEnvironmentContract {
+  async execute(input: ExecutionEnvironmentInput): Promise<ToolCallResult> {
+    return input.handler.handle(input.toolCall);
   }
 }

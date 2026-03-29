@@ -56,7 +56,7 @@ const EMPTY_SUMMARY = (): MetricsSummary => ({
   },
 });
 
-export class StorageBackedMetrics implements Metrics {
+export class Metrics implements Metrics {
   private readonly sessionMetrics = new Map<string, MetricsSummary>();
   private totalMetrics = EMPTY_SUMMARY();
 

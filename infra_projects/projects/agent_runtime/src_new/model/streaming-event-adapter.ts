@@ -4,7 +4,7 @@ export interface StreamingEventAdapter {
   adapt(event: ProviderStreamEvent): StreamEvent;
 }
 
-export class DefaultStreamingEventAdapter implements StreamingEventAdapter {
+export class StreamingEventAdapter {
   adapt(event: ProviderStreamEvent): StreamEvent {
     return {
       content: typeof event.payload.content === "string" ? event.payload.content : "",
@@ -25,4 +25,3 @@ function parseError(value: unknown): StreamEvent["error"] | undefined {
   }
   return { code, message };
 }
-

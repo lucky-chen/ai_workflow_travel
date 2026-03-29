@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 
 import {
-  DefaultModelFactory,
-  DefaultStreamingEventAdapter,
+  ModelFactory,
+  StreamingEventAdapter,
   type FetchLike,
 } from "../src_new/index.js";
 
@@ -13,7 +13,7 @@ export async function runModelFoundationSrcNewTests(): Promise<void> {
 }
 
 async function testModelFactoryCreatesMockModel(): Promise<void> {
-  const factory = new DefaultModelFactory();
+  const factory = new ModelFactory();
   const model = factory.createModel({
     mock: true,
     modeSelection: {},
@@ -32,7 +32,7 @@ async function testModelFactoryCreatesMockModel(): Promise<void> {
 }
 
 async function testModelFactoryCreatesHttpModel(): Promise<void> {
-  const factory = new DefaultModelFactory();
+  const factory = new ModelFactory();
   const fetchFn: FetchLike = async () => ({
     ok: true,
     status: 200,
@@ -79,7 +79,7 @@ async function testModelFactoryCreatesHttpModel(): Promise<void> {
 }
 
 async function testStreamingEventAdapterNormalizesProviderPayload(): Promise<void> {
-  const adapter = new DefaultStreamingEventAdapter();
+  const adapter = new StreamingEventAdapter();
   const event = adapter.adapt({
     payload: {
       content: "chunk",
@@ -95,4 +95,3 @@ async function testStreamingEventAdapterNormalizesProviderPayload(): Promise<voi
   assert.equal(event.done, true);
   assert.equal(event.error?.code, "E_STREAM");
 }
-

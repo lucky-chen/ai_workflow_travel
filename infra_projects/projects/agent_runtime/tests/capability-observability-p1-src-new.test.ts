@@ -4,12 +4,13 @@ import path from "node:path";
 
 import {
   FileStorage,
-  InMemoryMcpToolRegistry,
-  DefaultMcpGateway,
-  DefaultRuntimePermissionPolicy,
-  LocalExecutionEnvironment,
-  StorageBackedMetrics,
-  StorageBackedTrace,
+  McpToolRegistry,
+  McpGateway,
+  RuntimePermissionPolicy,
+  ExecutionEnvironment,
+  Metrics,
+  Trace,
+  type ToolCallInput,
 } from "../src_new/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
@@ -20,9 +21,9 @@ export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
-  const registry = new InMemoryMcpToolRegistry({
+  const registry = new McpToolRegistry({
     echo: {
-      async handle(input) {
+      async handle(input: ToolCallInput) {
         return {
           content: String(input.payload.content ?? ""),
           exitCode: 0,
@@ -30,10 +31,10 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
       },
     },
   });
-  const gateway = new DefaultMcpGateway(
-    new DefaultRuntimePermissionPolicy(["/tmp/allowed"]),
+  const gateway = new McpGateway(
+    new RuntimePermissionPolicy(["/tmp/allowed"]),
     registry,
-    new LocalExecutionEnvironment(),
+    new ExecutionEnvironment(),
   );
 
   const allowed = await gateway.call({
@@ -57,7 +58,7 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
 
 async function testMetricsAggregateSessionAndTotal(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-metrics-");
-  const metrics = new StorageBackedMetrics(new FileStorage(path.join(workdir, ".agent_runtime")));
+  const metrics = new Metrics(new FileStorage(path.join(workdir, ".agent_runtime")));
 
   await metrics.collect({
     sessionId: "session-1",
@@ -87,7 +88,7 @@ async function testMetricsAggregateSessionAndTotal(): Promise<void> {
 async function testTracePersistsFlushState(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-trace-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const trace = new StorageBackedTrace(storage);
+  const trace = new Trace(storage);
 
   await trace.record({
     traceId: "trace-1",

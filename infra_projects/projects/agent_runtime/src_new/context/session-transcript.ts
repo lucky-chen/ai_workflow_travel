@@ -6,7 +6,7 @@ export interface SessionTranscript {
   update(sessionId: string, turns: TranscriptTurn[]): Promise<void>;
 }
 
-export class StorageBackedSessionTranscript implements SessionTranscript {
+export class SessionTranscript {
   constructor(private readonly storage: Storage) {}
 
   async load(sessionId: string): Promise<TranscriptContext> {
@@ -69,4 +69,3 @@ function transcriptStorageKey(sessionId: string): string {
 function isMissingStorageError(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
-

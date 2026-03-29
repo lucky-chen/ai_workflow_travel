@@ -706,15 +706,21 @@ Different design documents have different focus. All of them must still follow t
 
 ### 8.2 Phase P1 Single-Agent Production Hardening
 
-- Harden request routing, internal step decisions, and repair policy boundaries so the implementation follows the already-defined architecture more directly.
-- Add capability governance modules for tool allowlist, permission policy, path policy, and execution policy.
-- Expand built-in capabilities beyond file operations while keeping the same gateway contract.
-- Add streaming, cancellation, timeout, and richer execution-observation policy without redefining the external runtime result contract.
-- Add run checkpoint persistence and resume-ready state boundaries.
-- Strengthen usage and metrics collection for provider and tool execution.
+- Keep the single-agent mainline usable on top of the existing runtime-controller, orchestration, capability, observability, and application boundaries.
+- Add workspace-local real-provider configuration loading and runtime-owned real-provider mode selection.
+- Add synchronous real-provider execution through the current `ModelFactory` / `IModel` boundary for at least `openai` and `deepseek`.
+- Keep `McpGateway`, `McpToolRegistry`, `RuntimePermissionPolicy` baseline, and local `ExecutionEnvironment` in the current mainline scope.
+- Add terminal and CLI real-provider entry paths without introducing a second runtime stack.
+- Treat end-to-end real-provider validation as part of the current P1 acceptance boundary.
 
 ### 8.3 Phase P2 Runtime Platform Expansion
 
+- Harden request routing, internal step decisions, and repair policy boundaries so the implementation follows the already-defined architecture more directly.
+- Add capability governance hardening for tool allowlist, path policy, and execution policy beyond the P1 baseline.
+- Expand built-in capabilities beyond the current local baseline while keeping the same gateway contract.
+- Add streaming, cancellation, timeout, and richer execution-observation policy without redefining the external runtime result contract.
+- Add run checkpoint persistence and resume-ready state boundaries.
+- Strengthen usage and metrics collection for provider and tool execution.
 - Add context budgeting, transcript compression, memory optimization, and richer retrieval coordination.
 - Add sandboxed or remote execution-environment adapters behind the capability boundary.
 - Add background execution, durable run checkpoints, and long-running coordination.
@@ -725,10 +731,10 @@ Different design documents have different focus. All of them must still follow t
 
 ## 9. Open Issues
 
-- Request-level routing and internal step decisions are still partly implicit in the current implementation and need clearer implementation boundaries later.
+- Request-level routing and internal step decisions still need explicit hardening boundaries beyond the current mainline selection path.
 - The current code still centralizes too much session-bound execution logic outside `AgentSession`; implementation must be aligned with this architecture.
-- Capability governance is defined at architecture level but does not yet have implementation-ready permission, sandbox, or execution-policy modules.
-- Retrieval, memory optimization, context budgeting or compression, checkpoint resume, and multi-agent orchestration remain architecture-defined capabilities that still need implementation-ready detail.
+- Capability governance still needs policy hardening beyond the current P1 baseline, especially for sandbox, path, and execution-policy expansion.
+- Retrieval optimization, context budgeting or compression, checkpoint resume, and multi-agent orchestration remain architecture-defined capabilities that still need implementation-ready detail.
 - The current architecture keeps file-backed runtime storage in one SDK process; separation of storage, background execution, or remote execution environments is still open.
 
 ---

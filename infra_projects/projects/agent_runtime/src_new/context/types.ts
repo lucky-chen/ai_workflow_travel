@@ -1,4 +1,6 @@
 import type { UserInput } from "../interface/api.js";
+import type { AgentRunMode } from "../interface/api.js";
+import type { RuntimeModelConfig } from "../runtime/types.js";
 
 export interface ContextAssemblyInput {
   sessionId: string;
@@ -15,6 +17,20 @@ export interface ContextBudgetLimits {
 export interface AgentContext {
   originalContext: ContextView;
   boundedContext?: ContextView;
+  runtimeContext?: AgentRuntimeContext;
+}
+
+export interface AgentRuntimeContext {
+  sessionId: string;
+  userInput: UserInput;
+  requestedMode: AgentRunMode;
+  sessionState: {
+    sessionId: string;
+    transcriptTurnCount: number;
+    hasToolHistory: boolean;
+  };
+  modelConfig?: RuntimeModelConfig;
+  allowedWorkingDirectories?: string[];
 }
 
 export interface ContextView {
@@ -51,4 +67,3 @@ export interface RetrievalFragment {
 export interface RetrievalContext {
   fragments: RetrievalFragment[];
 }
-

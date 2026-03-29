@@ -1,8 +1,5 @@
 import type { UserInput } from "../interface/api.js";
-import {
-  DefaultContextBudgetPolicy,
-  type ContextBudgetPolicy,
-} from "./context-budget-policy.js";
+import { ContextBudgetPolicy } from "./context-budget-policy.js";
 import type { RetrievalProvider } from "./retrieval-provider.js";
 import type { RuntimeMemory } from "./runtime-memory.js";
 import type { SessionTranscript } from "./session-transcript.js";
@@ -17,7 +14,7 @@ export class ContextAssembler {
     private readonly sessionTranscript: SessionTranscript,
     private readonly runtimeMemory: RuntimeMemory,
     private readonly retrievalProvider: RetrievalProvider,
-    private readonly contextBudgetPolicy: ContextBudgetPolicy = new DefaultContextBudgetPolicy(),
+    private readonly contextBudgetPolicy: ContextBudgetPolicy = new ContextBudgetPolicy(),
   ) {}
 
   async assemble(input: ContextAssemblyInput): Promise<AgentContext> {
@@ -57,4 +54,3 @@ export class ContextAssembler {
     return result.fragments.length > 0 ? result : undefined;
   }
 }
-

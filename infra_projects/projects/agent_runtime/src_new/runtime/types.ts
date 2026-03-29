@@ -1,3 +1,4 @@
+import type { FetchLike, RealLlmProvider } from "../model/types.js";
 import type {
   AgentSessionAccessInput,
   AgentRunMode,
@@ -20,13 +21,24 @@ export interface RuntimeDependencies {
 }
 
 export interface RuntimeModelConfig {
-  mock?: boolean;
+  mock: boolean;
   modeSelection?: {
+    provider?: RealLlmProvider;
     url?: string;
     key?: string;
     model?: string;
+    timeoutMs?: number;
   };
   mockInfo?: Record<string, unknown>;
+}
+
+export interface RealProviderConfig {
+  provider: RealLlmProvider;
+  apiKey: string;
+  baseUrl?: string;
+  model: string;
+  timeoutMs?: number;
+  fetchFn?: FetchLike;
 }
 
 export interface RuntimeSessionConfig extends Record<string, unknown> {
@@ -66,6 +78,7 @@ export interface RuntimeServices {
   metrics: Metrics;
   trace: Trace;
   checkpoint: RunCheckpoint;
+  resolveDefaultModelConfig(): Promise<RuntimeModelConfig>;
 }
 
 export interface AgentSessionExecutionContext {

@@ -5,6 +5,9 @@
   "type": "module",
   "main": "dist/src_new/index.js",
   "types": "dist/src_new/index.d.ts",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "bin": {
     "agent-runtime-terminal-demo": "dist/bin/terminal-session-demo.js"
   },
@@ -12,10 +15,11 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node dist/tests/run-tests.js",
-    "demo:terminal": "npm run build && node dist/bin/terminal-session-demo.js"
+    "demo:terminal": "npm run build && node dist/bin/terminal-session-demo.js",
+    "test:live:real-provider": "npm run build && node dist/tests/live-real-provider-src-new.test.js"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^20.19.0",
     "typescript": "^5.8.2"
   }
 }

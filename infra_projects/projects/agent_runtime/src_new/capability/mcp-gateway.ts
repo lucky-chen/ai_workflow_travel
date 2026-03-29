@@ -1,17 +1,17 @@
 import type {
-  ExecutionEnvironment,
-  McpGateway,
-  McpToolRegistry,
-  RuntimePermissionPolicy,
+  ExecutionEnvironment as ExecutionEnvironmentContract,
+  McpGateway as McpGatewayContract,
+  McpToolRegistry as McpToolRegistryContract,
+  RuntimePermissionPolicy as RuntimePermissionPolicyContract,
   ToolCallInput,
   ToolCallResult,
 } from "./types.js";
 
-export class DefaultMcpGateway implements McpGateway {
+export class McpGateway implements McpGatewayContract {
   constructor(
-    private readonly permissionPolicy: RuntimePermissionPolicy,
-    private readonly toolRegistry: McpToolRegistry,
-    private readonly executionEnvironment: ExecutionEnvironment,
+    private readonly permissionPolicy: RuntimePermissionPolicyContract,
+    private readonly toolRegistry: McpToolRegistryContract,
+    private readonly executionEnvironment: ExecutionEnvironmentContract,
   ) {}
 
   async call(input: ToolCallInput): Promise<ToolCallResult> {
@@ -32,7 +32,10 @@ export class DefaultMcpGateway implements McpGateway {
 
     try {
       const handler = await this.toolRegistry.resolve(input.toolName);
-      return await this.executionEnvironment.execute(input, handler);
+      return await this.executionEnvironment.execute({
+        toolCall: input,
+        handler,
+      });
     } catch (error) {
       return {
         content: "",

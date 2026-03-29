@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createRuntime, type RuntimeApi } from "../src_new/index.js";
@@ -10,6 +10,9 @@ export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testCreateSessionReturnsStableSessionHandle();
   await testOpenSessionReloadsPersistedSession();
   await testCloseSessionPersistsClosedState();
+  await testOpenSessionReactivatesClosedSession();
+  await testCloseSessionDoesNotEmitOpenEvents();
+  await testOpenSessionSynchronizesTranscriptHistory();
 }
 
 async function testRuntimeExposesStableApi(): Promise<void> {
@@ -73,4 +76,81 @@ async function testCloseSessionPersistsClosedState(): Promise<void> {
   const persisted = JSON.parse(persistedRaw) as { status?: string };
 
   assert.equal(persisted.status, "closed");
+}
+
+async function testOpenSessionReactivatesClosedSession(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-reopen-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          content: "reopened response",
+        },
+      },
+    },
+  });
+  const state = await session.load();
+
+  await runtime.closeSession(state.sessionId);
+
+  const reopened = await runtime.openSession(state.sessionId);
+  const reopenedState = await reopened.load();
+  const result = await reopened.execute({
+    content: {
+      task: "continue session",
+    },
+    mode: "chat",
+  });
+
+  assert.equal(reopenedState.sessionId, state.sessionId);
+  assert.equal(result.errorCode, undefined);
+  assert.equal(result.content, "reopened response");
+
+  const persistedPath = path.join(workdir, ".agent_runtime", "sessions", `${state.sessionId}.json`);
+  const persistedRaw = await readFile(persistedPath, "utf8");
+  const persisted = JSON.parse(persistedRaw) as { status?: string };
+
+  assert.equal(persisted.status, "active");
+}
+
+async function testCloseSessionDoesNotEmitOpenEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-close-trace-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({});
+  const state = await session.load();
+
+  await runtime.closeSession(state.sessionId);
+  await runtime.closeSession(state.sessionId);
+
+  const tracePath = path.join(workdir, ".agent_runtime", "trace", "events.json");
+  const tracePayload = JSON.parse(await readFile(tracePath, "utf8")) as {
+    events?: Array<{ eventType?: string; sessionId?: string }>;
+  };
+  const sessionEvents = (tracePayload.events ?? []).filter((event) => event.sessionId === state.sessionId);
+
+  assert.equal(sessionEvents.some((event) => event.eventType === "session_open_requested"), false);
+  assert.equal(sessionEvents.some((event) => event.eventType === "session_opened"), false);
+  assert.equal(sessionEvents.filter((event) => event.eventType === "session_closed").length, 2);
+}
+
+async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-sync-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({
+    sysPrompt: ["system prompt"],
+  });
+  const state = await session.load();
+  const sessionPath = path.join(workdir, ".agent_runtime", "sessions", `${state.sessionId}.json`);
+
+  const persistedRaw = await readFile(sessionPath, "utf8");
+  const persisted = JSON.parse(persistedRaw) as { history?: Array<{ role: string; content: string }> };
+  persisted.history = [{ role: "user", content: "mismatched-history" }];
+  await writeFile(sessionPath, JSON.stringify(persisted, null, 2), "utf8");
+
+  const reopened = await createRuntime({ workdir }).openSession(state.sessionId);
+  const reopenedState = await reopened.load();
+
+  assert.equal(reopenedState.history[0]?.content, "system prompt");
 }

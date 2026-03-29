@@ -38,7 +38,22 @@ async function testTerminalDemoCreateExecuteClose(): Promise<void> {
 async function testTerminalDemoOpenExistingSession(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-app-open-");
   const runtime = createRuntime({ workdir });
-  const session = await runtime.createSession({});
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          content: "existing assistant output",
+        },
+      },
+    },
+  });
+  await session.execute({
+    content: {
+      task: "seed history",
+    },
+    mode: "chat",
+  });
   const state = await session.load();
   const outputs: string[] = [];
   const demo = createTerminalSessionDemo({
@@ -59,5 +74,6 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
   });
 
   assert.equal(result.sessionId, state.sessionId);
+  assert.equal(outputs.includes("[assistant] existing assistant output"), true);
   assert.equal(outputs.at(-1), `Session closed: ${state.sessionId}`);
 }

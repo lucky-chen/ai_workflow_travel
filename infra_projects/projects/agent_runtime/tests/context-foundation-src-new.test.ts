@@ -4,11 +4,11 @@ import path from "node:path";
 
 import {
   ContextAssembler,
-  DefaultContextBudgetPolicy,
+  ContextBudgetPolicy,
   FileStorage,
-  LocalFileRetrievalProvider,
-  StorageBackedRuntimeMemory,
-  StorageBackedSessionTranscript,
+  RetrievalProvider,
+  RuntimeMemory,
+  SessionTranscript,
 } from "../src_new/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
@@ -21,7 +21,7 @@ export async function runContextFoundationSrcNewTests(): Promise<void> {
 async function testSessionTranscriptBoundary(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-transcript-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const transcript = new StorageBackedSessionTranscript(storage);
+  const transcript = new SessionTranscript(storage);
 
   await transcript.update("session-1", [
     { role: "system", content: "system prompt" },
@@ -40,7 +40,7 @@ async function testSessionTranscriptBoundary(): Promise<void> {
 async function testRuntimeMemoryBoundary(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-memory-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const memory = new StorageBackedRuntimeMemory(storage);
+  const memory = new RuntimeMemory(storage);
 
   await memory.update("session-1", [
     { summary: "priority p0" },
@@ -57,14 +57,14 @@ async function testContextAssemblerBuildsOriginalAndBoundedContext(): Promise<vo
   await writeFile(path.join(docsDir, "design.md"), "agent runtime design context assembly", "utf8");
 
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const transcript = new StorageBackedSessionTranscript(storage);
-  const memory = new StorageBackedRuntimeMemory(storage);
-  const retrieval = new LocalFileRetrievalProvider(workdir);
+  const transcript = new SessionTranscript(storage);
+  const memory = new RuntimeMemory(storage);
+  const retrieval = new RetrievalProvider(workdir);
   const assembler = new ContextAssembler(
     transcript,
     memory,
     retrieval,
-    new DefaultContextBudgetPolicy(),
+    new ContextBudgetPolicy(),
   );
 
   await transcript.update("session-1", [
@@ -98,4 +98,3 @@ async function testContextAssemblerBuildsOriginalAndBoundedContext(): Promise<vo
   assert.equal(context.boundedContext?.runtimeMemoryContext.summaryItems.length, 1);
   assert.equal(context.boundedContext?.retrievalContext?.fragments.length, 1);
 }
-

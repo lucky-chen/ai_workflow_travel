@@ -23,17 +23,22 @@ export interface RunCheckpointState {
 export interface RunRecoveryMetadata {
   resumeToken: string;
   capturedAt: string;
+  enabled?: boolean;
+  reasonCode?: string;
 }
 
-export class ReservedRunCheckpoint implements RunCheckpoint {
-  constructor(private readonly storage: Storage) {}
+export class RunCheckpoint implements RunCheckpoint {
+  constructor(private readonly _storage: Storage) {}
 
   async capture(input: RunCheckpointInput): Promise<RunCheckpointState> {
-    const state: RunCheckpointState = {
+    return {
       ...input,
+      recoveryMetadata: {
+        ...input.recoveryMetadata,
+        enabled: false,
+        reasonCode: "RUN_CHECKPOINT_NOT_ENABLED",
+      },
     };
-    await this.storage.save(`checkpoints/${input.sessionId}/${input.runId}/${input.stepIndex}`, state as unknown as Record<string, unknown>);
-    return state;
   }
 }
 

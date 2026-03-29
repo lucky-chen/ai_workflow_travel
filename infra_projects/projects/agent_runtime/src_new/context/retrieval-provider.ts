@@ -8,7 +8,7 @@ export interface RetrievalProvider {
   retrieve(userInput: UserInput, sessionId: string, queryText: string): Promise<RetrievalContext>;
 }
 
-export class LocalFileRetrievalProvider implements RetrievalProvider {
+export class RetrievalProvider {
   constructor(private readonly workdir: string) {}
 
   async retrieve(_userInput: UserInput, _sessionId: string, queryText: string): Promise<RetrievalContext> {
@@ -58,4 +58,3 @@ function scoreContent(content: string, normalizedQuery: string): number {
 function isMissingStorageError(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
-

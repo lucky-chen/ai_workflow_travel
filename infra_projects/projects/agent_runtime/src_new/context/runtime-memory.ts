@@ -6,7 +6,7 @@ export interface RuntimeMemory {
   update(sessionId: string, summaryItems: MemorySummaryItem[]): Promise<void>;
 }
 
-export class StorageBackedRuntimeMemory implements RuntimeMemory {
+export class RuntimeMemory {
   constructor(private readonly storage: Storage) {}
 
   async load(sessionId: string): Promise<MemoryContext> {
@@ -58,4 +58,3 @@ function memoryStorageKey(sessionId: string): string {
 function isMissingStorageError(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
-

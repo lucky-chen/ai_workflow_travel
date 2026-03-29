@@ -1,10 +1,6 @@
-import http from "node:http";
-import https from "node:https";
-import { URL } from "node:url";
-
 import {
-  DefaultStreamingEventAdapter,
-  type StreamingEventAdapter,
+  StreamingEventAdapter,
+  type StreamingEventAdapter as StreamingEventAdapterContract,
 } from "./streaming-event-adapter.js";
 import type {
   FetchLike,
@@ -12,22 +8,22 @@ import type {
   IModel,
   ModeSelection,
   ModelCreationInput,
-  ModelFactory,
+  ModelFactory as ModelFactoryContract,
   ModuleRequest,
   ModuleResponse,
   ProviderStreamEvent,
   StreamEvent,
 } from "./types.js";
 
-export class DefaultModelFactory implements ModelFactory {
+export class ModelFactory implements ModelFactoryContract {
   createModel(input: ModelCreationInput): IModel {
     if (input.mock) {
-      return new MockModel(input.mockInfo, new DefaultStreamingEventAdapter());
+      return new MockModel(input.mockInfo, new StreamingEventAdapter());
     }
 
     validateModeSelection(input.modeSelection);
     const fetchFn = getFetchOverride(input.mockInfo);
-    return new HttpModel(input.modeSelection, fetchFn, new DefaultStreamingEventAdapter());
+    return new HttpModel(input.modeSelection, fetchFn, new StreamingEventAdapter());
   }
 }
 
@@ -36,7 +32,7 @@ class MockModel implements IModel {
 
   constructor(
     private readonly mockInfo: Record<string, unknown> | undefined,
-    private readonly streamingAdapter: StreamingEventAdapter,
+    private readonly streamingAdapter: StreamingEventAdapterContract,
   ) {}
 
   isRunning(): boolean {
@@ -46,10 +42,9 @@ class MockModel implements IModel {
   async execute(_input: ModuleRequest): Promise<ModuleResponse> {
     this.running = true;
     try {
+      const resolvedContent = resolveMockContent(this.mockInfo, _input);
       return {
-        content: typeof this.mockInfo?.content === "string"
-          ? this.mockInfo.content
-          : JSON.stringify(this.mockInfo ?? { ok: true }),
+        content: resolvedContent,
         error: {
           code: "",
           message: "",
@@ -71,13 +66,35 @@ class MockModel implements IModel {
   }
 }
 
+function resolveMockContent(mockInfo: Record<string, unknown> | undefined, input: ModuleRequest): string {
+  const responder = mockInfo?.respond;
+  if (typeof responder === "function") {
+    const resolved = responder(input.prompt, input);
+    return typeof resolved === "string" ? resolved : JSON.stringify(resolved ?? { ok: true });
+  }
+
+  const stage = isRecord(input.prompt) && typeof input.prompt.stage === "string"
+    ? input.prompt.stage
+    : undefined;
+  const responses = isRecord(mockInfo?.responses) ? mockInfo?.responses : undefined;
+  if (stage && responses && typeof responses[stage] === "string") {
+    return String(responses[stage]);
+  }
+
+  if (typeof mockInfo?.content === "string") {
+    return mockInfo.content;
+  }
+
+  return JSON.stringify(mockInfo ?? { ok: true });
+}
+
 class HttpModel implements IModel {
   private running = false;
 
   constructor(
     private readonly modeSelection: ModeSelection,
     private readonly fetchFn: FetchLike,
-    private readonly streamingAdapter: StreamingEventAdapter,
+    private readonly streamingAdapter: StreamingEventAdapterContract,
   ) {}
 
   isRunning(): boolean {
@@ -87,17 +104,14 @@ class HttpModel implements IModel {
   async execute(input: ModuleRequest): Promise<ModuleResponse> {
     this.running = true;
     try {
+      const requestBody = buildProviderRequestBody(this.modeSelection, input);
       const response = await this.fetchFn(this.modeSelection.url!, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${this.modeSelection.key!}`,
         },
-        body: JSON.stringify({
-          model: this.modeSelection.model,
-          prompt: input.prompt,
-          stream: input.stream,
-        }),
+        body: JSON.stringify(requestBody),
       });
       const rawText = await response.text();
       if (!response.ok) {
@@ -144,12 +158,64 @@ function validateModeSelection(modeSelection: ModeSelection): void {
   }
 }
 
+function buildProviderRequestBody(modeSelection: ModeSelection, input: ModuleRequest): Record<string, unknown> {
+  return {
+    model: modeSelection.model,
+    messages: buildMessages(input.prompt),
+    stream: input.stream,
+  };
+}
+
+function buildMessages(prompt: Record<string, unknown>): Array<{ role: string; content: string }> {
+  const transcript = prompt.transcript;
+  if (Array.isArray(transcript) && transcript.length > 0) {
+    const messages = transcript
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      .map((item) => ({
+        role: normalizeMessageRole(Reflect.get(item, "role")),
+        content: typeof Reflect.get(item, "content") === "string"
+          ? String(Reflect.get(item, "content"))
+          : JSON.stringify(item),
+      }));
+
+    const userInput = isRecord(prompt.userInput) ? prompt.userInput : undefined;
+    if (userInput) {
+      messages.push({
+        role: "user",
+        content: JSON.stringify(userInput),
+      });
+    }
+    return messages;
+  }
+
+  return [
+    {
+      role: "user",
+      content: JSON.stringify(prompt),
+    },
+  ];
+}
+
+function normalizeMessageRole(role: unknown): string {
+  if (role === "system" || role === "assistant" || role === "user") {
+    return role;
+  }
+  if (role === "tool") {
+    return "assistant";
+  }
+  return "user";
+}
+
 function getFetchOverride(mockInfo?: Record<string, unknown>): FetchLike {
   const candidate = mockInfo?.fetchFn;
   if (typeof candidate === "function") {
     return candidate as FetchLike;
   }
-  return nodeFetch;
+  return fetch as FetchLike;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function extractResponseContent(rawText: string): string {
@@ -174,39 +240,3 @@ function extractResponseContent(rawText: string): string {
 
   throw new Error("Provider response does not contain supported content.");
 }
-
-const nodeFetch: FetchLike = async (input, init) => {
-  const url = new URL(input);
-  const transport = url.protocol === "https:" ? https : http;
-
-  return new Promise((resolve, reject) => {
-    const request = transport.request(
-      url,
-      {
-        method: init.method,
-        headers: init.headers,
-      },
-      (response) => {
-        let data = "";
-        response.setEncoding("utf8");
-        response.on("data", (chunk) => {
-          data += chunk;
-        });
-        response.on("end", () => {
-          resolve({
-            ok: (response.statusCode ?? 500) >= 200 && (response.statusCode ?? 500) < 300,
-            status: response.statusCode ?? 500,
-            async text() {
-              return data;
-            },
-          });
-        });
-      },
-    );
-
-    request.on("error", reject);
-    request.write(init.body);
-    request.end();
-  });
-};
-

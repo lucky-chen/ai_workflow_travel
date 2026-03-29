@@ -8,7 +8,7 @@ export interface AgentSelector {
 export interface IAgent {
   readonly pattern: "chat" | "react" | "peo";
   isRunning(): boolean;
-  run(context: AgentRunContext): Promise<AgentRuntimeResult>;
+  run(context: AgentContext): Promise<AgentRuntimeResult>;
 }
 
 export interface AgentRuntimeResult {
@@ -54,24 +54,6 @@ export interface AgentSessionState {
   sessionId: string;
   transcriptTurnCount: number;
   hasToolHistory: boolean;
-}
-
-export interface AgentRunContext {
-  context: AgentContext;
-  sessionId: string;
-  userInput: UserInput;
-  requestedMode: AgentRunMode;
-  sessionState: AgentSessionState;
-  modelConfig?: {
-    mock: boolean;
-    modeSelection: {
-      url?: string;
-      key?: string;
-      model?: string;
-    };
-    mockInfo?: Record<string, unknown>;
-  };
-  allowedWorkingDirectories?: string[];
 }
 
 export interface DelegationInput {

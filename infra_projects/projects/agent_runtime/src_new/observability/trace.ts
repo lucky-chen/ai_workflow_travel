@@ -49,7 +49,7 @@ export interface Trace {
   flush(): Promise<void>;
 }
 
-export class StorageBackedTrace implements Trace {
+export class Trace implements Trace {
   private events: TraceEvent[] = [];
 
   constructor(private readonly storage: Storage) {}

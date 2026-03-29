@@ -3,8 +3,11 @@ import { createInterface } from "node:readline/promises";
 import { stdin as processInput, stdout as processOutput, stderr } from "node:process";
 
 import type { RuntimeApi } from "../src_new/interface/api.js";
-import { createRuntime } from "../src_new/runtime/runtime.js";
-import { createTerminalSessionDemo } from "../src_new/application/terminal-session-demo.js";
+import { createApi } from "../src_new/interface/api-facade.js";
+import {
+  TerminalInputHandler,
+  createTerminalSessionDemo,
+} from "../src_new/application/terminal-session-demo.js";
 
 export interface TerminalSessionCliOptions {
   argv?: string[];
@@ -17,7 +20,9 @@ export interface TerminalSessionCliOptions {
 export async function runTerminalSessionCli(
   options: TerminalSessionCliOptions = {},
 ): Promise<number> {
-  const parsed = parseArgs(options.argv ?? process.argv.slice(2));
+  const startupInputHandler = new TerminalInputHandler(async () => ({ rawText: "", closeRequested: true }));
+  const parsedArgs = parseArgs(options.argv ?? process.argv.slice(2));
+  const startup = await startupInputHandler.parseStartupInput(options.argv ?? process.argv.slice(2));
   const writeLine = options.writeLine ?? (async (line: string) => {
     processOutput.write(`${line}\n`);
   });
@@ -25,7 +30,7 @@ export async function runTerminalSessionCli(
     stderr.write(`${line}\n`);
   });
 
-  if (!parsed.workdir) {
+  if (!parsedArgs.workdir) {
     await writeError("Missing required --workdir.");
     return 1;
   }
@@ -41,13 +46,14 @@ export async function runTerminalSessionCli(
   })();
 
   try {
-    const runtime = (options.createRuntime ?? createRuntime)({
-      workdir: parsed.workdir,
+    const runtime = (options.createRuntime ?? createApi)({
+      workdir: parsedArgs.workdir,
+      defaultModelMode: "real_from_local_env",
     });
     const demo = createTerminalSessionDemo({
       runtime,
-      workdir: parsed.workdir,
-      sessionId: parsed.sessionId,
+      workdir: parsedArgs.workdir,
+      sessionId: startup.sessionId,
       readInput: async () => {
         const rawText = await readInput();
         if (rawText === null) {
@@ -68,11 +74,11 @@ export async function runTerminalSessionCli(
       writeLine,
     });
 
-    await writeLine(`Runtime ready: ${parsed.workdir}`);
+    await writeLine(`Runtime ready: ${parsedArgs.workdir}`);
     await demo.run({
       runtime,
-      workdir: parsed.workdir,
-      sessionId: parsed.sessionId,
+      workdir: parsedArgs.workdir,
+      sessionId: startup.sessionId,
     });
     return 0;
   } catch (error: unknown) {

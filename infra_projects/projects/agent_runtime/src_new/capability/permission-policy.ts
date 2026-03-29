@@ -3,10 +3,10 @@ import path from "node:path";
 import type {
   PermissionCheckInput,
   PermissionDecision,
-  RuntimePermissionPolicy,
+  RuntimePermissionPolicy as RuntimePermissionPolicyContract,
 } from "./types.js";
 
-export class DefaultRuntimePermissionPolicy implements RuntimePermissionPolicy {
+export class RuntimePermissionPolicy implements RuntimePermissionPolicyContract {
   constructor(private readonly defaultAllowedWorkingDirectories: string[] = []) {}
 
   async evaluate(input: PermissionCheckInput): Promise<PermissionDecision> {

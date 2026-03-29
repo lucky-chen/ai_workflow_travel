@@ -44,7 +44,12 @@ export interface RuntimePermissionPolicy {
 }
 
 export interface ExecutionEnvironment {
-  execute(toolCall: ToolCallInput, handler: ToolHandler): Promise<ToolCallResult>;
+  execute(input: ExecutionEnvironmentInput): Promise<ToolCallResult>;
+}
+
+export interface ExecutionEnvironmentInput {
+  toolCall: ToolCallInput;
+  handler: ToolHandler;
 }
 
 export interface McpGateway {

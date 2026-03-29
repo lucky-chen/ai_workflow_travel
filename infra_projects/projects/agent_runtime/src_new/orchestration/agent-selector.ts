@@ -1,5 +1,5 @@
 import type { AgentRunMode } from "../interface/api.js";
-import type { AgentSelectionInput, AgentSelector, IAgent } from "./types.js";
+import type { AgentSelectionInput, AgentSelector as AgentSelectorContract, IAgent } from "./types.js";
 
 export interface AgentSelectorOptions {
   chatAgent: IAgent;
@@ -7,7 +7,7 @@ export interface AgentSelectorOptions {
   peoAgent: IAgent;
 }
 
-export class DefaultAgentSelector implements AgentSelector {
+export class AgentSelector implements AgentSelectorContract {
   constructor(private readonly options: AgentSelectorOptions) {}
 
   async select(input: AgentSelectionInput): Promise<IAgent> {

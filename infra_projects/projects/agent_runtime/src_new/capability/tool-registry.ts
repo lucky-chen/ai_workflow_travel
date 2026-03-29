@@ -1,6 +1,6 @@
-import type { McpToolRegistry, ToolHandler } from "./types.js";
+import type { McpToolRegistry as McpToolRegistryContract, ToolHandler } from "./types.js";
 
-export class InMemoryMcpToolRegistry implements McpToolRegistry {
+export class McpToolRegistry implements McpToolRegistryContract {
   private readonly handlers = new Map<string, ToolHandler>();
 
   constructor(initialHandlers?: Record<string, ToolHandler>) {

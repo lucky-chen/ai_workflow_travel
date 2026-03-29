@@ -1,6 +1,6 @@
-import type { DelegationInput, DelegationResult, MultiAgentProtocol } from "./types.js";
+import type { DelegationInput, DelegationResult, MultiAgentProtocol as MultiAgentProtocolContract } from "./types.js";
 
-export class ReservedMultiAgentProtocol implements MultiAgentProtocol {
+export class MultiAgentProtocol implements MultiAgentProtocolContract {
   async delegate(input: DelegationInput): Promise<DelegationResult> {
     return {
       result: {

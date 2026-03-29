@@ -18,10 +18,10 @@ context:
     integration observability data and application-layer design
 workflow:
   current_focus:
-    milestone_id: milestone_p2_runtime_platform_expansion
-    stage_id: routing and execution policy hardening
-    batch_id: batch_6_1_routing_policy_implementation
-    task_name: implement request routing policy
+    milestone_id: milestone_p1_single_agent_production_hardening
+    stage_id: real provider mainline usable
+    batch_id: batch_5_5_real_provider_verification
+    task_name: verify live real-provider behavior
   execution_rules:
   - finish all tasks in the current batch before advancing to the next batch in the
     same stage
@@ -328,8 +328,9 @@ milestones:
   name: p1 single-agent mainline completion
   goal: deliver the single-agent runtime mainline on top of the p0 foundation, including
     AgentSession execution, agent orchestration, capability and tooling boundaries,
-    observability, and application-layer integration
-  status: completed
+    observability, application-layer integration, and real-provider end-to-end synchronous
+    execution
+  status: in_progress
   stages:
   - stage_id: session execution and orchestration usable
     goal: make AgentSession and the single-agent orchestration family directly usable
@@ -716,6 +717,97 @@ milestones:
         involved_files:
         - infra_projects/projects/agent_runtime/tests
         - infra_projects/projects/agent_runtime/src_new/data
+  - stage_id: real provider mainline usable
+    goal: make real-provider configuration loading synchronous provider execution
+      and terminal-facing real-provider paths usable on top of the current single-agent
+      mainline
+    status: in_progress
+    delivered_feature: real-provider mainline
+    feature_scope:
+    - local_env_real_provider_loading
+    - real_provider_mode_selection
+    - real_provider_sync_execute_path
+    - real_provider_cli_demo_integration
+    - live_real_provider_validation
+    batches:
+    - batch_id: batch_5_3_real_provider_runtime_implementation
+      batch_type: implementation
+      name: implementation
+      goal: implement real-provider configuration loading and runtime-owned mode selection
+      status: completed
+      covers:
+      - local_env_real_provider_loading
+      - real_provider_mode_selection
+      tasks:
+      - task_name: implement local env real-provider loading
+        summary: add src_new workspace local env loading for openai and deepseek provider
+          config
+        status: completed
+        involved_files:
+        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/bin/terminal-session-demo.ts
+      - task_name: implement runtime-owned real-provider mode selection
+        summary: merge runtime-level defaults and session config into a stable real-provider
+          model config resolver
+        status: completed
+        involved_files:
+        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src_new/model
+    - batch_id: batch_5_4_real_provider_execution_implementation
+      batch_type: implementation
+      name: implementation
+      goal: implement synchronous real-provider execution and terminal real-provider
+        entry paths
+      status: completed
+      covers:
+      - real_provider_sync_execute_path
+      - real_provider_cli_demo_integration
+      tasks:
+      - task_name: implement real-provider sync execute path
+        summary: make DefaultModelFactory and HttpModel compatible with openai and
+          deepseek chat-completions style synchronous execution
+        status: completed
+        involved_files:
+        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src_new/runtime
+      - task_name: implement terminal and cli real-provider path
+        summary: make terminal demo and cli automatically enter real-provider mode
+          from workdir local env config
+        status: completed
+        involved_files:
+        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/bin
+    - batch_id: batch_5_5_real_provider_verification
+      batch_type: verification
+      name: verification
+      goal: verify real-provider configuration sync execution and live validation
+      status: in_progress
+      covers:
+      - local_env_real_provider_loading
+      - real_provider_sync_execute_path
+      - live_real_provider_validation
+      tasks:
+      - task_name: verify local env config loading behavior
+        summary: verify local env presence missing-field and invalid-json behavior
+          for real-provider configuration loading
+        status: completed
+        involved_files:
+        - infra_projects/projects/agent_runtime/tests
+        - infra_projects/projects/agent_runtime/src_new/runtime
+      - task_name: verify real-provider sync mainline behavior
+        summary: verify runtime and terminal-facing real-provider paths execute synchronously
+          without falling back to mock mode
+        status: completed
+        involved_files:
+        - infra_projects/projects/agent_runtime/tests
+        - infra_projects/projects/agent_runtime/src_new
+      - task_name: verify live real-provider behavior
+        summary: verify one deepseek fixture path and one openai-configured path can
+          complete a real session execute call
+        status: pending
+        involved_files:
+        - infra_projects/projects/agent_runtime/tests
+        - infra_projects/projects/agent_runtime/tests/fixtures
 - milestone_id: milestone_p2_runtime_platform_expansion
   name: p2 production hardening and runtime platform expansion
   goal: deliver the later-phase hardening and platform expansion scope, including

@@ -1,3 +1,5 @@
+export type RealLlmProvider = "openai" | "deepseek";
+
 export interface ModelFactory {
   createModel(input: ModelCreationInput): IModel;
 }
@@ -9,9 +11,11 @@ export interface ModelCreationInput {
 }
 
 export interface ModeSelection {
+  provider?: RealLlmProvider;
   url?: string;
   key?: string;
   model?: string;
+  timeoutMs?: number;
 }
 
 export interface IModel {
@@ -60,4 +64,3 @@ export type FetchLike = (
     body: string;
   },
 ) => Promise<FetchResponseLike>;
-

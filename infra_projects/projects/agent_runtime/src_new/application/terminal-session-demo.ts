@@ -1,10 +1,11 @@
 import type {
+  ChatHistoryItem,
   CloseSessionResult,
   RuntimeApi,
   SessionResult,
   UserInput,
 } from "../interface/api.js";
-import { createRuntime } from "../runtime/runtime.js";
+import { createApi } from "../interface/api-facade.js";
 
 export interface TerminalSessionDemoEntry {
   run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult>;
@@ -29,6 +30,13 @@ export interface TerminalSessionDemoResult {
 export class TerminalInputHandler {
   constructor(private readonly readInputImpl: () => Promise<{ rawText: string; closeRequested: boolean }>) {}
 
+  async parseStartupInput(argv: string[]): Promise<{ mode: "create" | "open"; sessionId?: string }> {
+    const sessionId = parseSessionIdArg(argv);
+    return sessionId
+      ? { mode: "open", sessionId }
+      : { mode: "create" };
+  }
+
   async readUserInput(): Promise<{ rawText: string; closeRequested: boolean }> {
     return this.readInputImpl();
   }
@@ -44,6 +52,16 @@ export class TerminalInputHandler {
 
 export class TerminalOutputRenderer {
   constructor(private readonly writeLine: (line: string) => Promise<void> | void) {}
+
+  renderHistory(history: ChatHistoryItem[]): Promise<void> {
+    return history.reduce<Promise<void>>(
+      async (previous, item) => {
+        await previous;
+        await this.writeLine(formatHistoryItem(item));
+      },
+      Promise.resolve(),
+    );
+  }
 
   renderAgentOutput(output: SessionResult): void | Promise<void> {
     if (typeof output.content === "string") {
@@ -81,6 +99,11 @@ export class TerminalSessionDemo implements TerminalSessionDemoEntry {
           config: input.config,
         });
 
+    if (input.sessionId) {
+      const state = await session.load();
+      await this.outputRenderer.renderHistory(state.history);
+    }
+
     while (true) {
       const nextInput = await this.inputHandler.readUserInput();
       if (nextInput.closeRequested) {
@@ -108,8 +131,9 @@ export class TerminalSessionDemo implements TerminalSessionDemoEntry {
 }
 
 export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): TerminalSessionDemo {
-  const runtime = input.runtime ?? createRuntime({
+  const runtime = input.runtime ?? createApi({
     workdir: input.workdir ?? process.cwd(),
+    defaultModelMode: "real_from_local_env",
   });
   const inputHandler = new TerminalInputHandler(
     input.readInput ?? (async () => ({ rawText: "", closeRequested: true })),
@@ -118,4 +142,17 @@ export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): Te
     input.writeLine ?? (() => {}),
   );
   return new TerminalSessionDemo(runtime, inputHandler, outputRenderer);
+}
+
+function formatHistoryItem(item: ChatHistoryItem): string {
+  return `[${item.role}] ${item.content}`;
+}
+
+function parseSessionIdArg(argv: string[]): string | undefined {
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === "--session-id" && argv[index + 1]) {
+      return argv[index + 1];
+    }
+  }
+  return undefined;
 }
