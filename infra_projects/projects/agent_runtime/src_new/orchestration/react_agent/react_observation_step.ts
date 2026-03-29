@@ -109,7 +109,6 @@ export class ObservationStep {
       timestamp: new Date().toISOString(),
       summary: "react observation model called",
       sessionId: runtimeContext.sessionId,
-      runId,
       stepIndex,
     });
     const response = await model.execute(request);

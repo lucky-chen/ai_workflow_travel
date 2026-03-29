@@ -101,7 +101,6 @@ export class ObserveStep {
       timestamp: new Date().toISOString(),
       summary: "peo observe model called",
       sessionId: runtimeContext.sessionId,
-      runId,
       stepIndex,
     });
     const response = await model.execute(request);

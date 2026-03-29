@@ -50,9 +50,8 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
   });
   await session.execute({
     content: {
-      task: "seed history",
+      task: "what is seed history",
     },
-    mode: "chat",
   });
   const state = await session.load();
   const outputs: string[] = [];

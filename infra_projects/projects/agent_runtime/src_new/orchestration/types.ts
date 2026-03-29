@@ -1,8 +1,15 @@
 import type { AgentRunMode, UserInput } from "../interface/api.js";
 import type { AgentContext, MemorySummaryItem, TranscriptTurn } from "../context/types.js";
 
-export interface AgentSelector {
-  select(input: AgentSelectionInput): Promise<IAgent>;
+export interface AgentFactory {
+  create(mode: AgentRunMode): Promise<IAgent>;
+}
+
+export interface IntentRouter {
+  resolve(input: AgentSelectionInput): Promise<{
+    mode: IAgent["pattern"];
+    reasonCode: string;
+  }>;
 }
 
 export interface IAgent {
@@ -12,7 +19,6 @@ export interface IAgent {
 }
 
 export interface AgentRuntimeResult {
-  runId: string;
   traceId?: string;
   content?: {
     data: string | Record<string, unknown>;
@@ -47,7 +53,6 @@ export interface AgentRuntimeResult {
 export interface AgentSelectionInput {
   userInput: UserInput;
   sessionState: AgentSessionState;
-  requestedMode: AgentRunMode;
 }
 
 export interface AgentSessionState {

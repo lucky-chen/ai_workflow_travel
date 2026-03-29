@@ -133,7 +133,6 @@ export class ThoughtStep {
       timestamp: new Date().toISOString(),
       summary: "react model called",
       sessionId: runtimeContext.sessionId,
-      runId,
       stepIndex,
     });
     const response = await model.execute(request);

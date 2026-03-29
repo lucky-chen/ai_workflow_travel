@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -38,13 +38,13 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
     new RuntimePermissionPolicy("/tmp/allowed", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
-    new Trace(new FileStorage(path.join(workdir, ".agent_runtime"))),
+    new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-allowed"),
   );
   const blockedGateway = new McpGateway(
     new RuntimePermissionPolicy("/tmp/blocked", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
-    new Trace(new FileStorage(path.join(workdir, ".agent_runtime"))),
+    new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-blocked"),
   );
 
   const allowed = await gateway.call({
@@ -70,7 +70,6 @@ async function testMetricsAggregateSessionAndTotal(): Promise<void> {
     sessionId: "session-1",
     result: {
       sessionId: "session-1",
-      runId: "run-1",
       content: "ok",
       format: "text",
     },
@@ -100,7 +99,6 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
     sessionId: "session-1",
     result: {
       sessionId: "session-1",
-      runId: "run-1",
       content: "ok-1",
       format: "text",
     },
@@ -115,7 +113,6 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
     sessionId: "session-1",
     result: {
       sessionId: "session-1",
-      runId: "run-2",
       content: "ok-2",
       format: "text",
     },
@@ -130,7 +127,6 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
     sessionId: "session-1",
     result: {
       sessionId: "session-1",
-      runId: "run-3",
       content: "ok-3",
       format: "text",
     },
@@ -150,7 +146,6 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
     sessionId: "session-2",
     result: {
       sessionId: "session-2",
-      runId: "run-4",
       content: "ok-4",
       format: "text",
     },
@@ -169,7 +164,7 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
 async function testTracePersistsFlushState(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-trace-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const trace = new Trace(storage);
+  const trace = new Trace(storage, "trace-persist");
 
   await trace.record({
     traceId: "trace-1",
@@ -178,21 +173,20 @@ async function testTracePersistsFlushState(): Promise<void> {
     timestamp: new Date().toISOString(),
     summary: "run started",
     sessionId: "session-1",
-    runId: "run-1",
   });
   await trace.flush();
 
   const persisted = JSON.parse(
-    await readFile(path.join(workdir, ".agent_runtime", "trace", "events.json"), "utf8"),
+    await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_trace-persist.json"), "utf8"),
   ) as { events?: Array<{ eventType?: string }> };
   assert.equal(persisted.events?.[0]?.eventType, "run_started");
 }
 
 async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-trace-autoflush-");
-  const tracePath = path.join(workdir, ".agent_runtime", "trace", "events.json");
+  const tracePath = path.join(workdir, ".agent_runtime", "traces", "trace_trace-autoflush.json");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const trace = new Trace(storage);
+  const trace = new Trace(storage, "trace-autoflush");
 
   await trace.record(createTraceEvent("run_started"));
   await assertRejectsFileRead(tracePath);
@@ -209,7 +203,7 @@ async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<vo
     ["run_started", "context_assembled", "agent_selected"],
   );
 
-  const terminalTrace = new Trace(storage);
+  const terminalTrace = new Trace(storage, "trace-autoflush");
   await terminalTrace.record(createTraceEvent("run_finished"));
   const terminalPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
     events?: Array<{ eventType?: string }>;
@@ -225,7 +219,6 @@ function createTraceEvent(eventType: Parameters<Trace["record"]>[0]["eventType"]
     timestamp: new Date().toISOString(),
     summary: eventType,
     sessionId: "session-1",
-    runId: "run-1",
   };
 }
 

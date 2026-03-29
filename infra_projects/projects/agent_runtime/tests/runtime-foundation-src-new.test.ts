@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createRuntime, type RuntimeApi } from "../src_new/index.js";
@@ -99,9 +99,8 @@ async function testOpenSessionReactivatesClosedSession(): Promise<void> {
   const reopenedState = await reopened.load();
   const result = await reopened.execute({
     content: {
-      task: "continue session",
+      task: "what is continue session",
     },
-    mode: "chat",
   });
 
   assert.equal(reopenedState.sessionId, state.sessionId);
@@ -124,7 +123,7 @@ async function testCloseSessionDoesNotEmitOpenEvents(): Promise<void> {
   await runtime.closeSession(state.sessionId);
   await runtime.closeSession(state.sessionId);
 
-  const tracePath = path.join(workdir, ".agent_runtime", "trace", "events.json");
+  const tracePath = await findOnlyTraceFile(workdir);
   const tracePayload = JSON.parse(await readFile(tracePath, "utf8")) as {
     events?: Array<{ eventType?: string; sessionId?: string }>;
   };
@@ -153,4 +152,11 @@ async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {
   const reopenedState = await reopened.load();
 
   assert.equal(reopenedState.history[0]?.content, "system prompt");
+}
+
+async function findOnlyTraceFile(workdir: string): Promise<string> {
+  const traceDir = path.join(workdir, ".agent_runtime", "traces");
+  const entries = await readdir(traceDir);
+  assert.equal(entries.length, 1);
+  return path.join(traceDir, entries[0]!);
 }

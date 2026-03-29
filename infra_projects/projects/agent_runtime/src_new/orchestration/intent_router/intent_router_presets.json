@@ -1,0 +1,77 @@
+{
+  "slashCommands": {
+    "/chat": {
+      "mode": "chat",
+      "reasonCode": "rule_slash_chat"
+    },
+    "/react": {
+      "mode": "react",
+      "reasonCode": "rule_slash_react"
+    },
+    "/plan": {
+      "mode": "peo",
+      "reasonCode": "rule_slash_plan"
+    }
+  },
+  "fixedRules": [
+    {
+      "mode": "peo",
+      "reasonCode": "rule_multi_step_plan",
+      "mainKeywords": [
+        "step by step",
+        "multi-step",
+        "multiple steps",
+        "plan",
+        "first ",
+        "then ",
+        "after that",
+        "retry",
+        "if failed",
+        "if it fails"
+      ]
+    },
+    {
+      "mode": "react",
+      "reasonCode": "rule_simple_tool_call",
+      "mainKeywords": [
+        "run ",
+        "execute ",
+        "list files",
+        "open file",
+        "read file",
+        "show file",
+        "compile",
+        "build",
+        "test"
+      ]
+    },
+    {
+      "mode": "chat",
+      "reasonCode": "rule_chat_question",
+      "mainKeywords": [
+        "what is",
+        "what's",
+        "why",
+        "how to explain",
+        "explain",
+        "tell me about",
+        "introduce",
+        "definition"
+      ]
+    }
+  ],
+  "schemas": {
+    "chat": {
+      "label": "chat",
+      "description": "Only internal knowledge is needed and no multi-step operation is required."
+    },
+    "react": {
+      "label": "react",
+      "description": "External query or a simple tool call is required."
+    },
+    "peo": {
+      "label": "peo",
+      "description": "Multi-step planning, retries, or step dependencies are required."
+    }
+  }
+}

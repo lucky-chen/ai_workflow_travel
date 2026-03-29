@@ -30,7 +30,6 @@ export interface TraceEvent {
   timestamp: string;
   summary: string;
   sessionId?: string;
-  runId?: string;
   stepIndex?: number;
   payload?: Record<string, unknown>;
   diagnostics?: Array<{
@@ -45,15 +44,17 @@ export interface TraceResult {
 
 export interface Trace {
   record(event: TraceEvent): Promise<void>;
-  get(sessionId?: string, runId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult>;
+  get(sessionId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult>;
   flush(): Promise<void>;
 }
 
 export class Trace extends PersistentObservabilityBuffer implements Trace {
   private events: TraceEvent[] = [];
+  private readonly runId: string;
 
-  constructor(storage: Storage) {
-    super(storage, "trace/events");
+  constructor(storage: Storage, runId: string) {
+    super(storage, `traces/trace_${runId}`);
+    this.runId = runId;
     this.initializeLoading(() => this.loadPersisted());
   }
 
@@ -64,15 +65,12 @@ export class Trace extends PersistentObservabilityBuffer implements Trace {
     await this.recordMutation(isImmediateFlushEvent(normalized.eventType));
   }
 
-  async get(sessionId?: string, runId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult> {
+  async get(sessionId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult> {
     await this.ensureLoaded();
 
     return {
       events: this.events.filter((event) => {
         if (sessionId && event.sessionId !== sessionId) {
-          return false;
-        }
-        if (runId && event.runId !== runId) {
           return false;
         }
         if (traceId && event.traceId !== traceId) {
@@ -101,6 +99,10 @@ export class Trace extends PersistentObservabilityBuffer implements Trace {
       .filter((event): event is Record<string, unknown> => Boolean(event) && typeof event === "object")
       .map((event) => normalizeTraceEvent(event as unknown as TraceEvent));
     this.resetDirtyEntryCount();
+  }
+
+  getTraceId(): string {
+    return this.runId;
   }
 }
 

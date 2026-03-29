@@ -100,7 +100,6 @@ function createReactSuccessResult(
   failedToolCalls: number,
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     content: {
       data: content,
@@ -129,7 +128,6 @@ function createReactFailureResult(
   failedToolCalls: number,
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     errorInfo: {
       code: "REACT_AGENT_FAILED",
@@ -159,7 +157,6 @@ function createReactMaxStepResult(
   },
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     errorInfo: {
       code: "REACT_AGENT_MAX_STEPS",

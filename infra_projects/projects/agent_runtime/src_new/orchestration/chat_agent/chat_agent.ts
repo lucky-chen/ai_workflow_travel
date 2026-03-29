@@ -101,7 +101,6 @@ class ChatAgent implements IAgent {
       timestamp: new Date().toISOString(),
       summary: "chat model called",
       sessionId: runtimeContext.sessionId,
-      runId,
     });
     const response = await model.execute(request);
     return response;
@@ -127,7 +126,6 @@ function createChatSuccessResult(
   checked: { data: string | Record<string, unknown>; format: "text" | "json" },
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     content: checked,
     agent: createAgentMetadata(pattern, context),
@@ -154,7 +152,6 @@ function createChatFailureResult(
   error: unknown,
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     errorInfo: {
       code: "CHAT_AGENT_FAILED",

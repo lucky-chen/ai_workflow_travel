@@ -27,6 +27,7 @@ const SESSION_STORAGE_PREFIX = "sessions";
 
 export class AgentSession implements AgentSessionLike {
   private running = false;
+  private readonly agentCacheMap = new Map<AgentRunMode, IAgent>();
 
   private constructor(
     public readonly sessionId: string,
@@ -93,19 +94,22 @@ export class AgentSession implements AgentSessionLike {
   async execute(userInput: UserInput): Promise<SessionResult> {
     this.ensureActive();
     this.running = true;
-    const requestedMode = normalizeRequestedMode(userInput.mode);
-    const runId = randomUUID();
     const traceId = randomUUID();
     try {
-      await this.recordRunStarted(traceId, runId);
-      const context = await this.assembleContext(userInput, traceId, runId);
+      await this.recordRunStarted(traceId);
+      const context = await this.assembleContext(userInput, traceId);
       const sessionState = buildAgentSessionState(this.state);
-      const agent = await this.selectAgent(userInput, requestedMode, sessionState, traceId, runId);
+      const routing = await this.services.intentRouter.resolve({
+        userInput,
+        sessionState,
+      });
+      const requestedMode = routing.mode;
+      const agent = await this.selectAgent(requestedMode, traceId);
       const result = await agent.run(await this.buildAgentContext(context, userInput, requestedMode, sessionState));
-      await this.applyStateUpdate(result.stateUpdate, traceId, runId);
-      return this.finalizeSuccess(result, requestedMode, agent, traceId, runId);
+      await this.applyStateUpdate(result.stateUpdate, traceId);
+      return this.finalizeSuccess(result, requestedMode, agent, traceId);
     } catch (error) {
-      return this.finalizeFailure(error, traceId, runId);
+      return this.finalizeFailure(error, traceId);
     } finally {
       this.running = false;
     }
@@ -151,7 +155,7 @@ export class AgentSession implements AgentSessionLike {
     return transcript;
   }
 
-  private async recordRunStarted(traceId: string, runId: string): Promise<void> {
+  private async recordRunStarted(traceId: string): Promise<void> {
     await this.services.trace.record({
       traceId,
       scope: "session",
@@ -159,12 +163,11 @@ export class AgentSession implements AgentSessionLike {
       timestamp: new Date().toISOString(),
       summary: "session run started",
       sessionId: this.sessionId,
-      runId,
     });
   }
 
-  private async assembleContext(userInput: UserInput, traceId: string, runId: string) {
-    await this.recordContextAssembled(traceId, runId);
+  private async assembleContext(userInput: UserInput, traceId: string) {
+    await this.recordContextAssembled(traceId);
     return this.services.contextAssembler.assemble({
       sessionId: this.sessionId,
       userInput,
@@ -172,7 +175,7 @@ export class AgentSession implements AgentSessionLike {
     });
   }
 
-  private async recordContextAssembled(traceId: string, runId: string): Promise<void> {
+  private async recordContextAssembled(traceId: string): Promise<void> {
     await this.services.trace.record({
       traceId,
       scope: "session",
@@ -180,27 +183,24 @@ export class AgentSession implements AgentSessionLike {
       timestamp: new Date().toISOString(),
       summary: "context assembled",
       sessionId: this.sessionId,
-      runId,
     });
   }
 
   private async selectAgent(
-    userInput: UserInput,
     requestedMode: AgentRunMode,
-    sessionState: AgentSessionState,
     traceId: string,
-    runId: string,
   ): Promise<IAgent> {
-    const selectionInput: AgentSelectionInput = {
-      userInput,
-      sessionState,
-      requestedMode,
-    };
-    await this.recordAgentSelected(traceId, runId, requestedMode);
-    return this.services.agentSelector.select(selectionInput);
+    await this.recordAgentSelected(traceId, requestedMode);
+    const cached = this.agentCacheMap.get(requestedMode);
+    if (cached) {
+      return cached;
+    }
+    const agent = await this.services.agentFactory.create(requestedMode);
+    this.agentCacheMap.set(requestedMode, agent);
+    return agent;
   }
 
-  private async recordAgentSelected(traceId: string, runId: string, requestedMode: AgentRunMode): Promise<void> {
+  private async recordAgentSelected(traceId: string, requestedMode: AgentRunMode): Promise<void> {
     await this.services.trace.record({
       traceId,
       scope: "session",
@@ -208,7 +208,6 @@ export class AgentSession implements AgentSessionLike {
       timestamp: new Date().toISOString(),
       summary: `agent selection requested: ${requestedMode}`,
       sessionId: this.sessionId,
-      runId,
     });
   }
 
@@ -234,7 +233,6 @@ export class AgentSession implements AgentSessionLike {
   private async applyStateUpdate(
     stateUpdate: AgentRuntimeResult["stateUpdate"],
     traceId: string,
-    runId: string,
   ): Promise<void> {
     await this.updateTranscript(stateUpdate.transcriptAppend);
     await this.updateRuntimeMemory(stateUpdate.runtimeMemorySummaryItems);
@@ -262,18 +260,16 @@ export class AgentSession implements AgentSessionLike {
     requestedMode: AgentRunMode,
     agent: IAgent,
     traceId: string,
-    runId: string,
   ): Promise<SessionResult> {
     const normalized = normalizeSessionResult(this.sessionId, traceId, {
       requestedMode,
       result: {
         ...result,
-        runId,
         traceId,
       },
       sessionConfig: this.state.config,
     });
-    await this.collectSuccessMetrics(normalized, result, agent.pattern, runId);
+    await this.collectSuccessMetrics(normalized, result, agent.pattern, traceId);
     await this.flushObservability();
     return normalized;
   }
@@ -282,7 +278,7 @@ export class AgentSession implements AgentSessionLike {
     normalized: SessionResult,
     result: AgentRuntimeResult,
     agentName: IAgent["pattern"],
-    runId: string,
+    traceId: string,
   ): Promise<void> {
     await this.services.metrics.collect({
       sessionId: this.sessionId,
@@ -293,14 +289,14 @@ export class AgentSession implements AgentSessionLike {
       },
       toolExecutionFacts: result.executionFacts,
       runScope: {
-        runId,
+        runId: traceId,
         agentName,
       },
     });
   }
 
-  private async finalizeFailure(error: unknown, traceId: string, runId: string): Promise<SessionResult> {
-    const failure = normalizeFailureSessionResult(this.sessionId, runId, traceId, error);
+  private async finalizeFailure(error: unknown, traceId: string): Promise<SessionResult> {
+    const failure = normalizeFailureSessionResult(this.sessionId, traceId, error);
     await this.services.metrics.collect({
       sessionId: this.sessionId,
       result: failure,
@@ -309,7 +305,7 @@ export class AgentSession implements AgentSessionLike {
         failedToolCalls: 0,
       },
       runScope: {
-        runId,
+        runId: traceId,
         agentName: "session",
       },
     });
@@ -401,10 +397,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function normalizeRequestedMode(mode?: AgentRunMode): AgentRunMode {
-  return mode ?? "dynamic";
-}
-
 function buildAgentSessionState(state: StoredSessionState): AgentSessionState {
   return {
     sessionId: state.sessionId,
@@ -437,7 +429,6 @@ function normalizeSessionResult(
 ): SessionResult {
   return {
     sessionId,
-    runId: context.result.runId,
     traceId,
     content: context.result.content?.data,
     format: context.result.content?.format,
@@ -448,13 +439,11 @@ function normalizeSessionResult(
 
 function normalizeFailureSessionResult(
   sessionId: string,
-  runId: string,
   traceId: string,
   error: unknown,
 ): SessionResult {
   return {
     sessionId,
-    runId,
     traceId,
     format: "text",
     errorCode: "SESSION_EXECUTION_FAILED",

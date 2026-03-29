@@ -95,7 +95,6 @@ export class ExecutionStep {
       timestamp: new Date().toISOString(),
       summary: "peo execution model called",
       sessionId: runtimeContext.sessionId,
-      runId,
       stepIndex,
     });
     const response = await model.execute(prompt);

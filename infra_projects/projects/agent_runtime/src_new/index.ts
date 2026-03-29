@@ -25,14 +25,16 @@ export type {
 export * from "./model/streaming-event-adapter.js";
 export * from "./model/model-factory.js";
 export type {
+  AgentFactory as AgentFactoryContract,
   AgentRuntimeResult,
-  AgentSelectionInput,
   AgentSessionState,
   DelegationInput,
   DelegationResult,
   IAgent,
+  IntentRouter,
 } from "./orchestration/types.js";
-export * from "./orchestration/agent_selector.js";
+export * from "./orchestration/agent_factory.js";
+export { createIntentRouter } from "./orchestration/intent_router/index.js";
 export { createChatAgent } from "./orchestration/chat_agent/index.js";
 export { createReActAgent } from "./orchestration/react_agent/index.js";
 export { createPEOAgent } from "./orchestration/peo_agent/index.js";

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createRuntime, MultiAgentProtocol, RunCheckpoint } from "../src_new/index.js";
@@ -8,6 +8,9 @@ import { createTestWorkdir } from "./test-workdir.js";
 export async function runOrchestrationP1SrcNewTests(): Promise<void> {
   await testSelectorAndChatExecutionPath();
   await testDynamicModeSelectsReactForThoughtDrivenToolRequests();
+  await testDynamicModeSelectsPeoForSlashPlanCommand();
+  await testDynamicModeSelectsReactForFixedBuildKeyword();
+  await testDynamicModeSelectsChatForFixedQuestionKeyword();
   await testReactDoesNotCallToolWithoutThoughtAction();
   await testReactCanContinueToSecondStepBeforeCompletion();
   await testExplicitPeoModeRunsPlanDrivenToolPathWithTrace();
@@ -33,9 +36,8 @@ async function testSelectorAndChatExecutionPath(): Promise<void> {
 
   const result = await session.execute({
     content: {
-      task: "say hello",
+      task: "what is hello",
     },
-    mode: "chat",
   });
   const state = await session.load();
 
@@ -69,11 +71,8 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
 
   const result = await session.execute({
     content: {
-      task: "use tool",
+      task: "/react use tool",
       workingDirectory: workdir,
-    },
-    metadata: {
-      useTools: true,
     },
   });
   const state = await session.load();
@@ -81,6 +80,97 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "react result");
   assert.equal(state.history.some((item) => item.role === "tool"), true);
+}
+
+async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-dynamic-slash-plan-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          responses: {
+            peo_plan: JSON.stringify({
+              plan: "Slash plan resolved to peo",
+              finalAnswer: "peo from slash command",
+            }),
+            peo_execution: JSON.stringify({
+              executionObservation: "peo from slash command",
+              finalAnswer: "peo from slash command",
+            }),
+            peo_observe: JSON.stringify({
+              summary: "completed",
+              completed: true,
+              finalAnswer: "peo from slash command",
+            }),
+          },
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "/plan summarize the task",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.equal(result.content, "peo from slash command");
+}
+
+async function testDynamicModeSelectsReactForFixedBuildKeyword(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-dynamic-build-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          respond: () => JSON.stringify({
+            thought: "Run build tool flow",
+            actionType: "respond",
+            finalAnswer: "react from build keyword",
+            shouldContinue: false,
+          }),
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "build the project",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.equal(result.content, "react from build keyword");
+}
+
+async function testDynamicModeSelectsChatForFixedQuestionKeyword(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-dynamic-chat-keyword-");
+  const runtime = createRuntime({ workdir });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          content: "chat from keyword",
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "what is agent runtime",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.equal(result.content, "chat from keyword");
 }
 
 async function testReactDoesNotCallToolWithoutThoughtAction(): Promise<void> {
@@ -104,14 +194,13 @@ async function testReactDoesNotCallToolWithoutThoughtAction(): Promise<void> {
 
   const result = await session.execute({
     content: {
-      task: "do not use tool",
+      task: "/react do not use tool",
       toolName: "echo",
       toolPayload: {
         content: "should not run",
       },
       workingDirectory: workdir,
     },
-    mode: "react",
   });
   const state = await session.load();
 
@@ -166,9 +255,8 @@ async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void>
 
   const result = await session.execute({
     content: {
-      task: "need more than one react step",
+      task: "/react need more than one react step",
     },
-    mode: "react",
   });
   const state = await session.load();
 
@@ -207,14 +295,13 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
 
   const result = await session.execute({
     content: {
-      task: "plan execute observe",
+      task: "/plan execute observe",
       workingDirectory: workdir,
     },
-    mode: "peo",
   });
   const state = await session.load();
   const tracePayload = JSON.parse(
-    await readFile(path.join(workdir, ".agent_runtime", "trace", "events.json"), "utf8"),
+    await readFile(await findOnlyTraceFile(workdir), "utf8"),
   ) as { events?: Array<{ eventType?: string }> };
   const eventTypes = (tracePayload.events ?? []).map((event) => event.eventType);
 
@@ -251,14 +338,13 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
 
   const result = await session.execute({
     content: {
-      task: "respond directly",
+      task: "/plan respond directly",
       toolName: "echo",
       toolPayload: {
         content: "should not run",
       },
       workingDirectory: workdir,
     },
-    mode: "peo",
   });
   const state = await session.load();
 
@@ -326,9 +412,8 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
 
   const result = await session.execute({
     content: {
-      task: "need more than one peo step",
+      task: "/plan need more than one peo step",
     },
-    mode: "peo",
   });
   const state = await session.load();
 
@@ -379,9 +464,8 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
 
   const result = await session.execute({
     content: {
-      task: "fail tool and continue",
+      task: "/plan fail tool and continue",
     },
-    mode: "peo",
   });
 
   assert.equal(result.errorCode, undefined);
@@ -419,4 +503,11 @@ async function testReservedPlaceholdersStayCallable(): Promise<void> {
   assert.equal(delegation.result.enabled, false);
   assert.equal(captured.sessionId, loaded.sessionId);
   assert.equal(captured.recoveryMetadata.enabled, false);
+}
+
+async function findOnlyTraceFile(workdir: string): Promise<string> {
+  const traceDir = path.join(workdir, ".agent_runtime", "traces");
+  const entries = await readdir(traceDir);
+  assert.equal(entries.length, 1);
+  return path.join(traceDir, entries[0]!);
 }

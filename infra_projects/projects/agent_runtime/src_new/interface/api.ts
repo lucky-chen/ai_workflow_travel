@@ -1,4 +1,4 @@
-export type AgentRunMode = "chat" | "react" | "peo" | "dynamic";
+export type AgentRunMode = "chat" | "react" | "peo";
 
 export interface RuntimeApi {
   createSession(input: AgentSessionAccessInput): Promise<ISession>;
@@ -14,7 +14,6 @@ export interface ISession {
 
 export interface UserInput {
   content: Record<string, unknown>;
-  mode?: AgentRunMode;
   metadata?: Record<string, unknown>;
 }
 
@@ -37,7 +36,6 @@ export interface AgentSessionAccessInput {
 
 export interface SessionResult {
   sessionId: string;
-  runId: string;
   traceId?: string;
   content?: string | Record<string, unknown>;
   format?: "text" | "json";
@@ -48,4 +46,3 @@ export interface SessionResult {
 export interface CloseSessionResult {
   sessionId: string;
 }
-

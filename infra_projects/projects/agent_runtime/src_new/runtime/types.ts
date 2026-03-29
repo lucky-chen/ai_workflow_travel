@@ -11,7 +11,7 @@ import type { ContextBudgetLimits } from "../context/types.js";
 import type { ContextAssembler } from "../context/context-assembler.js";
 import type { SessionTranscript } from "../context/session-transcript.js";
 import type { RuntimeMemory } from "../context/runtime-memory.js";
-import type { AgentRuntimeResult, AgentSelector } from "../orchestration/types.js";
+import type { AgentFactory, AgentRuntimeResult, IntentRouter } from "../orchestration/types.js";
 import type { Metrics } from "../observability/metrics.js";
 import type { Trace } from "../observability/trace.js";
 import type { RunCheckpoint } from "./run-checkpoint.js";
@@ -74,7 +74,8 @@ export interface RuntimeServices {
   contextAssembler: ContextAssembler;
   sessionTranscript: SessionTranscript;
   runtimeMemory: RuntimeMemory;
-  agentSelector: AgentSelector;
+  intentRouter: IntentRouter;
+  agentFactory: AgentFactory;
   metrics: Metrics;
   trace: Trace;
   checkpoint: RunCheckpoint;

@@ -98,7 +98,6 @@ function createPeoSuccessResult(
   failedToolCalls: number,
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     content: {
       data: observeContent,
@@ -127,7 +126,6 @@ function createPeoFailureResult(
   failedToolCalls: number,
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     errorInfo: {
       code: "PEO_AGENT_FAILED",
@@ -157,7 +155,6 @@ function createPeoMaxStepResult(
   },
 ): AgentRuntimeResult {
   return {
-    runId,
     traceId: runId,
     errorInfo: {
       code: "PEO_AGENT_MAX_STEPS",

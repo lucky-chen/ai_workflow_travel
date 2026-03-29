@@ -16,10 +16,8 @@ import { ExecutionEnvironment } from "../capability/execution-environment.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
-import { AgentSelector } from "../orchestration/agent_selector.js";
-import { createChatAgent } from "../orchestration/chat_agent/index.js";
-import { createPEOAgent } from "../orchestration/peo_agent/index.js";
-import { createReActAgent } from "../orchestration/react_agent/index.js";
+import { AgentFactory } from "../orchestration/agent_factory.js";
+import { createIntentRouter } from "../orchestration/intent_router/index.js";
 import { Metrics } from "../observability/metrics.js";
 import { Trace } from "../observability/trace.js";
 import { ModelFactory } from "../model/model-factory.js";
@@ -45,6 +43,7 @@ export class Runtime implements RuntimeApi {
   private readonly storage: Storage;
   private readonly sessionManager = new AgentSessionManager();
   private readonly services: RuntimeServices;
+  private readonly runtimeRunId = randomUUID();
 
   constructor(private readonly options: RuntimeOptions) {
     if (!options.workdir) {
@@ -61,38 +60,42 @@ export class Runtime implements RuntimeApi {
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolHandlers(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
-    const trace = new Trace(this.storage);
+    const trace = new Trace(this.storage, this.runtimeRunId);
     const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, trace);
     const modelFactory = new ModelFactory();
-    const chatAgent = createChatAgent({ modelFactory, trace });
-    const reactAgent = createReActAgent({ modelFactory, gateway, trace, toolRegistry });
-    const peoAgent = createPEOAgent({ modelFactory, gateway, trace, toolRegistry });
+    const resolveDefaultModelConfig = async (): Promise<RuntimeModelConfig> => {
+      if (options.defaultModelMode === "real_from_local_env") {
+        const config = await loadRequiredRealProviderConfig(options.workdir);
+        return toRuntimeModelConfig({
+          ...config,
+          fetchFn: options.realProviderFetchFn,
+        });
+      }
+      return {
+        mock: true,
+        modeSelection: {},
+      };
+    };
+    const intentRouter = createIntentRouter({
+      modelFactory,
+      resolveModelConfig: resolveDefaultModelConfig,
+    });
     this.services = {
       storageRoot: path.join(options.workdir, ".agent_runtime"),
       contextAssembler,
       sessionTranscript,
       runtimeMemory,
-      agentSelector: new AgentSelector({
-        chatAgent,
-        reactAgent,
-        peoAgent,
+      intentRouter,
+      agentFactory: new AgentFactory({
+        modelFactory,
+        gateway,
+        trace,
+        toolRegistry,
       }),
       metrics: new Metrics(this.storage),
       trace,
       checkpoint: new RunCheckpoint(this.storage),
-      resolveDefaultModelConfig: async (): Promise<RuntimeModelConfig> => {
-        if (options.defaultModelMode === "real_from_local_env") {
-          const config = await loadRequiredRealProviderConfig(options.workdir);
-          return toRuntimeModelConfig({
-            ...config,
-            fetchFn: options.realProviderFetchFn,
-          });
-        }
-        return {
-          mock: true,
-          modeSelection: {},
-        };
-      },
+      resolveDefaultModelConfig,
     };
   }
 
