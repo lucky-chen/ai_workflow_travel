@@ -2,6 +2,7 @@ export * from "./interface/api.js";
 export * from "./runtime/runtime.js";
 export * from "./runtime/agent-session.js";
 export * from "./runtime/agent-session-manager.js";
+export * from "./runtime/external-tool-registration.js";
 export * from "./runtime/run-checkpoint.js";
 export * from "./runtime/workspace-local-env.js";
 export * from "./data/storage.js";
@@ -40,7 +41,7 @@ export { createReActAgent } from "./orchestration/react_agent/index.js";
 export { createPEOAgent } from "./orchestration/peo_agent/index.js";
 export * from "./orchestration/multi_agent_protocol.js";
 export type {
-  ExternalMcpServerConfig,
+  ExternalMcpEndpointConfig,
   ExecutionEnvironmentInput,
   PermissionCheckInput,
   PermissionDecision,

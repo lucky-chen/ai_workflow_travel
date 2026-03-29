@@ -7,6 +7,8 @@ import {
   ensureSuccessfulModelResponse,
   getRuntimeContext,
   isRecord,
+  summarizeModuleRequest,
+  summarizeModuleResponse,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
 import type { ExecutionStepResult, PlanStepResult } from "./peo_types.js";
@@ -89,17 +91,47 @@ export class ExecutionStep {
       stream: false,
     };
     await this.trace.record({
-      traceId: runId,
       scope: "session",
       eventType: "model_called",
-      timestamp: new Date().toISOString(),
-      summary: "peo execution model called",
       sessionId: runtimeContext.sessionId,
-      stepIndex,
+      payload: {
+        stage: "peo_execution",
+        stepIndex,
+      },
+      metadata: {
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+      },
     });
-    const response = await model.execute(prompt);
-    ensureSuccessfulModelResponse(response);
-    return this.checkExecutionResult(response.content, plan, toolCall, toolResult);
+    try {
+      const response = await model.execute(prompt);
+      ensureSuccessfulModelResponse(response);
+      return this.checkExecutionResult(response.content, plan, toolCall, toolResult);
+    } catch (error) {
+      const response = error && typeof error === "object" && "content" in error && "error" in error
+        ? error as { content: string; error: { code: string; message: string } }
+        : undefined;
+      await this.trace.record({
+        scope: "session",
+        eventType: "model_result_recorded",
+        sessionId: runtimeContext.sessionId,
+        payload: {
+          stage: "peo_execution",
+          stepIndex,
+          requestSummary: summarizeModuleRequest(prompt),
+          responseSummary: response ? summarizeModuleResponse(response) : undefined,
+          error: {
+            code: response?.error.code ?? "MODEL_CALL_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+        metadata: {
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      throw error;
+    }
   }
 
   private checkExecutionResult(

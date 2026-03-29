@@ -8,6 +8,11 @@ interface LocalEnvOverrides {
   baseUrl?: string;
   model?: string;
   timeoutMs?: number;
+  externalMcpEndpoints?: Array<{
+    name?: string;
+    url: string;
+    headers?: Record<string, string>;
+  }>;
 }
 
 export async function createTestWorkdir(prefix = "agent-runtime-"): Promise<string> {
@@ -26,10 +31,11 @@ export async function writeTestLocalEnv(
       llm: {
         provider: overrides.provider ?? "openai",
         api_key: overrides.apiKey ?? "test-api-key",
-        base_url: overrides.baseUrl ?? "https://api.openai.com/v1",
+        base_url: overrides.baseUrl ?? "https://api.openai.com/v1/chat/completions",
         model: overrides.model ?? "gpt-4.1-mini",
         timeout_ms: overrides.timeoutMs ?? 30000,
       },
+      externalMcpEndpoints: overrides.externalMcpEndpoints,
     }, null, 2)}\n`,
     "utf8",
   );

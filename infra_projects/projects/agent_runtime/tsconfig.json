@@ -20,7 +20,6 @@
     "src_new/**/*.ts",
     "tests/run-tests.ts",
     "tests/*src-new*.test.ts",
-    "tests/mcp-echo-server.ts",
     "tests/test-workdir.ts",
     "examples/**/*.ts",
     "bin/**/*.ts"

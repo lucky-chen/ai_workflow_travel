@@ -1,27 +1,31 @@
-import type { McpToolRegistry as McpToolRegistryContract, ToolHandler } from "./types.js";
+import type { McpToolRegistry as McpToolRegistryContract, ToolDefinition, ToolHandler } from "./types.js";
 
 export class McpToolRegistry implements McpToolRegistryContract {
-  private readonly handlers = new Map<string, ToolHandler>();
+  private readonly definitions = new Map<string, ToolDefinition>();
 
-  constructor(initialHandlers?: Record<string, ToolHandler>) {
-    for (const [toolName, handler] of Object.entries(initialHandlers ?? {})) {
-      this.handlers.set(toolName, handler);
+  constructor(initialDefinitions?: ToolDefinition[]) {
+    for (const definition of initialDefinitions ?? []) {
+      this.definitions.set(definition.name, definition);
     }
   }
 
-  async register(toolName: string, handler: ToolHandler): Promise<void> {
-    this.handlers.set(toolName, handler);
+  async register(definition: ToolDefinition): Promise<void> {
+    this.definitions.set(definition.name, definition);
   }
 
   async resolve(toolName: string): Promise<ToolHandler> {
-    const handler = this.handlers.get(toolName);
-    if (!handler) {
+    const definition = this.definitions.get(toolName);
+    if (!definition) {
       throw new Error(`Tool handler not found for ${toolName}.`);
     }
-    return handler;
+    return definition.handler;
   }
 
   async listToolNames(): Promise<string[]> {
-    return [...this.handlers.keys()].sort();
+    return [...this.definitions.keys()].sort();
+  }
+
+  async listToolDefinitions(): Promise<ToolDefinition[]> {
+    return [...this.definitions.values()].sort((left, right) => left.name.localeCompare(right.name));
   }
 }

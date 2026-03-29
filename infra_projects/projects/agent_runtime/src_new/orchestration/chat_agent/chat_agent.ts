@@ -9,6 +9,8 @@ import {
   createAssistantTranscriptTurn as createAssistantTurn,
   createUserTranscriptTurn as createUserTurn,
   getRuntimeContext,
+  summarizeModuleRequest,
+  summarizeModuleResponse,
 } from "../agent_orchestration_helpers.js";
 
 class ChatPromptBuilder {
@@ -95,15 +97,43 @@ class ChatAgent implements IAgent {
       mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     await this.trace.record({
-      traceId: runId,
       scope: "session",
       eventType: "model_called",
-      timestamp: new Date().toISOString(),
-      summary: "chat model called",
       sessionId: runtimeContext.sessionId,
+      payload: {
+        stage: "chat",
+      },
+      metadata: {
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+      },
     });
-    const response = await model.execute(request);
-    return response;
+    try {
+      return await model.execute(request);
+    } catch (error) {
+      const response = error && typeof error === "object" && "content" in error && "error" in error
+        ? error as { content: string; error: { code: string; message: string } }
+        : undefined;
+      await this.trace.record({
+        scope: "session",
+        eventType: "model_result_recorded",
+        sessionId: runtimeContext.sessionId,
+        payload: {
+          stage: "chat",
+          requestSummary: summarizeModuleRequest(request),
+          responseSummary: response ? summarizeModuleResponse(response) : undefined,
+          error: {
+            code: response?.error.code ?? "MODEL_CALL_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+        metadata: {
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      throw error;
+    }
   }
 }
 

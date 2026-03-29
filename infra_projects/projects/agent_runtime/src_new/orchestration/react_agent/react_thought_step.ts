@@ -8,6 +8,9 @@ import {
   getRuntimeContext,
   isRecord,
   matchAvailableToolName,
+  summarizeModuleRequest,
+  summarizeModuleResponse,
+  summarizeToolDefinitions,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
 
@@ -41,7 +44,9 @@ export class ThoughtStep {
     return this.check({
       content: response.content,
       availableTools: Array.isArray(request.userPrompt.availableTools)
-        ? request.userPrompt.availableTools.filter((value): value is string => typeof value === "string")
+        ? request.userPrompt.availableTools
+          .map((value) => isRecord(value) && typeof value.name === "string" ? value.name : undefined)
+          .filter((value): value is string => typeof value === "string")
         : [],
     });
   }
@@ -56,7 +61,8 @@ export class ThoughtStep {
   ): Promise<ModuleRequest> {
     const activeContext = context.boundedContext ?? context.originalContext;
     const runtimeContext = getRuntimeContext(context);
-    const availableTools = await this.toolRegistry.listToolNames();
+    const toolDefinitions = await this.toolRegistry.listToolDefinitions();
+    const availableTools = toolDefinitions.map((tool) => tool.name);
     return {
       systemPrompt: [
         "Return valid JSON only.",
@@ -69,7 +75,7 @@ export class ThoughtStep {
         stepIndex,
         transcript: activeContext.transcriptContext.turns,
         userInput: runtimeContext.userInput.content,
-        availableTools,
+        availableTools: summarizeToolDefinitions(toolDefinitions),
         priorObservation: state.lastObservation?.summary,
         priorActionSummaries: state.priorActionSummaries,
       },
@@ -127,16 +133,46 @@ export class ThoughtStep {
       mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     await this.trace.record({
-      traceId: runId,
       scope: "session",
       eventType: "model_called",
-      timestamp: new Date().toISOString(),
-      summary: "react model called",
       sessionId: runtimeContext.sessionId,
-      stepIndex,
+      payload: {
+        stage: "react_thought",
+        stepIndex,
+      },
+      metadata: {
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+      },
     });
-    const response = await model.execute(request);
-    ensureSuccessfulModelResponse(response);
-    return response;
+    try {
+      const response = await model.execute(request);
+      ensureSuccessfulModelResponse(response);
+      return response;
+    } catch (error) {
+      const response = error && typeof error === "object" && "content" in error && "error" in error
+        ? error as { content: string; error: { code: string; message: string } }
+        : undefined;
+      await this.trace.record({
+        scope: "session",
+        eventType: "model_result_recorded",
+        sessionId: runtimeContext.sessionId,
+        payload: {
+          stage: "react_thought",
+          stepIndex,
+          requestSummary: summarizeModuleRequest(request),
+          responseSummary: response ? summarizeModuleResponse(response) : undefined,
+          error: {
+            code: response?.error.code ?? "MODEL_CALL_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+        metadata: {
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      throw error;
+    }
   }
 }

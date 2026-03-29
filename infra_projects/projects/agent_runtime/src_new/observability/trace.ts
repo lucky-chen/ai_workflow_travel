@@ -9,6 +9,7 @@ export type TraceEventType =
   | "session_open_requested"
   | "session_opened"
   | "session_closed"
+  | "external_mcp_registered"
   | "run_started"
   | "context_assembled"
   | "agent_selected"
@@ -24,18 +25,18 @@ export type TraceEventType =
 export type TraceScope = "sdk" | "session";
 
 export interface TraceEvent {
-  traceId: string;
   scope: TraceScope;
   eventType: TraceEventType;
-  timestamp: string;
-  summary: string;
   sessionId?: string;
-  stepIndex?: number;
   payload?: Record<string, unknown>;
   diagnostics?: Array<{
     code: string;
     message: string;
   }>;
+  metadata?: {
+    traceId: string;
+    timestamp: string;
+  };
 }
 
 export interface TraceResult {
@@ -46,6 +47,7 @@ export interface Trace {
   record(event: TraceEvent): Promise<void>;
   get(sessionId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult>;
   flush(): Promise<void>;
+  getTraceId(): string;
 }
 
 export class Trace extends PersistentObservabilityBuffer implements Trace {
@@ -73,7 +75,7 @@ export class Trace extends PersistentObservabilityBuffer implements Trace {
         if (sessionId && event.sessionId !== sessionId) {
           return false;
         }
-        if (traceId && event.traceId !== traceId) {
+        if (traceId && event.metadata?.traceId !== traceId) {
           return false;
         }
         if (scope && event.scope !== scope) {
@@ -111,10 +113,13 @@ export function createTraceId(): string {
 }
 
 function normalizeTraceEvent(event: TraceEvent): TraceEvent {
+  const now = new Date().toISOString();
   return {
     ...event,
-    traceId: event.traceId || createTraceId(),
-    timestamp: event.timestamp || new Date().toISOString(),
+    metadata: {
+      traceId: event.metadata?.traceId || createTraceId(),
+      timestamp: event.metadata?.timestamp || now,
+    },
   };
 }
 

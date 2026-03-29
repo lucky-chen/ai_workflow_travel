@@ -11,9 +11,9 @@ import { ContextAssembler } from "../context/context-assembler.js";
 import { RetrievalProvider } from "../context/retrieval-provider.js";
 import { RuntimeMemory } from "../context/runtime-memory.js";
 import { SessionTranscript } from "../context/session-transcript.js";
-import { createBuiltInToolHandlers } from "../capability/built-in-tools.js";
+import { createBuiltInToolDefinitions } from "../capability/built-in-tools.js";
 import { ExecutionEnvironment } from "../capability/execution-environment.js";
-import { registerExternalMcpServers } from "../capability/external_mcp_tool_adapter.js";
+import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
@@ -24,10 +24,11 @@ import { Trace } from "../observability/trace.js";
 import { ModelFactory } from "../model/model-factory.js";
 import { AgentSession } from "./agent-session.js";
 import { AgentSessionManager } from "./agent-session-manager.js";
+import { registerExternalToolProviders } from "./external-tool-registration.js";
 import { RunCheckpoint } from "./run-checkpoint.js";
 import {
-  loadRequiredRealProviderConfig,
   toRuntimeModelConfig,
+  WorkspaceLocalEnv,
 } from "./workspace-local-env.js";
 import type {
   RuntimeModelConfig,
@@ -38,7 +39,7 @@ export interface RuntimeOptions {
   workdir: string;
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: import("../model/types.js").FetchLike;
-  externalMcpServers?: import("../capability/types.js").ExternalMcpServerConfig[];
+  externalMcpEndpoints?: ExternalMcpEndpointConfig[];
 }
 
 export class Runtime implements RuntimeApi {
@@ -61,14 +62,22 @@ export class Runtime implements RuntimeApi {
       new RetrievalProvider(options.workdir),
     );
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
-    const toolRegistry = new McpToolRegistry(createBuiltInToolHandlers(options.workdir));
+    const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
     const trace = new Trace(this.storage, this.runtimeRunId);
     const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, trace);
     const modelFactory = new ModelFactory();
+    const workspaceLocalEnv = new WorkspaceLocalEnv(options.workdir);
+    const localEnvLoading = workspaceLocalEnv.load({
+      optional: options.defaultModelMode !== "real_from_local_env",
+    });
     const resolveDefaultModelConfig = async (): Promise<RuntimeModelConfig> => {
       if (options.defaultModelMode === "real_from_local_env") {
-        const config = await loadRequiredRealProviderConfig(options.workdir);
+        const loaded = await localEnvLoading;
+        if (!loaded) {
+          throw new Error(`Missing local env file: ${path.join(options.workdir, "sdlc", "local_env.json")}`);
+        }
+        const config = workspaceLocalEnv.getRequiredRealProviderConfig(loaded);
         return toRuntimeModelConfig({
           ...config,
           fetchFn: options.realProviderFetchFn,
@@ -83,7 +92,13 @@ export class Runtime implements RuntimeApi {
       modelFactory,
       resolveModelConfig: resolveDefaultModelConfig,
     });
-    this.initialization = registerExternalMcpServers(toolRegistry, options.externalMcpServers ?? []);
+    this.initialization = registerExternalToolProviders({
+      localEnv: workspaceLocalEnv,
+      configuredMcpEndpoints: options.externalMcpEndpoints,
+      localEnvLoading,
+      toolRegistry,
+      trace,
+    });
     this.services = {
       storageRoot: path.join(options.workdir, ".agent_runtime"),
       contextAssembler,
@@ -106,11 +121,12 @@ export class Runtime implements RuntimeApi {
   async createSession(input: AgentSessionAccessInput): Promise<AgentSession> {
     await this.initialization;
     await this.services.trace.record({
-      traceId: randomUUID(),
       scope: "sdk",
       eventType: "session_create_requested",
-      timestamp: new Date().toISOString(),
-      summary: "session create requested",
+      metadata: {
+        traceId: randomUUID(),
+        timestamp: new Date().toISOString(),
+      },
     });
     const sessionId = randomUUID();
     const session = await AgentSession.create({ ...input, sessionId }, this.storage, this.services);
@@ -125,12 +141,13 @@ export class Runtime implements RuntimeApi {
       throw new Error("Runtime requires sessionId to open a session.");
     }
     await this.services.trace.record({
-      traceId: randomUUID(),
       scope: "sdk",
       eventType: "session_open_requested",
-      timestamp: new Date().toISOString(),
-      summary: "session open requested",
       sessionId,
+      metadata: {
+        traceId: randomUUID(),
+        timestamp: new Date().toISOString(),
+      },
     });
     const cached = await this.sessionManager.get(sessionId);
     if (cached instanceof AgentSession) {
@@ -156,12 +173,13 @@ export class Runtime implements RuntimeApi {
       throw new Error(`Session ${sessionId} is running and cannot be closed.`);
     }
     await this.services.trace.record({
-      traceId: randomUUID(),
       scope: "sdk",
       eventType: "session_closed",
-      timestamp: new Date().toISOString(),
-      summary: "session close requested",
       sessionId,
+      metadata: {
+        traceId: randomUUID(),
+        timestamp: new Date().toISOString(),
+      },
     });
     await session.close();
     await this.sessionManager.remove(sessionId);

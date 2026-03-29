@@ -18,18 +18,25 @@ export interface ToolHandler {
   handle(input: ToolCallInput): Promise<ToolCallResult>;
 }
 
-export interface ExternalMcpServerConfig {
+export interface ToolDefinition {
+  name: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
+  handler: ToolHandler;
+}
+
+export interface ExternalMcpEndpointConfig {
   name?: string;
-  command: string;
-  args?: string[];
-  env?: Record<string, string>;
-  cwd?: string;
+  url: string;
+  headers?: Record<string, string>;
 }
 
 export interface McpToolRegistry {
-  register(toolName: string, handler: ToolHandler): Promise<void>;
+  register(definition: ToolDefinition): Promise<void>;
   resolve(toolName: string): Promise<ToolHandler>;
   listToolNames(): Promise<string[]>;
+  listToolDefinitions(): Promise<ToolDefinition[]>;
 }
 
 export interface PermissionCheckInput {

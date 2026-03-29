@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { runTerminalSessionCli } from "../bin/terminal-session-demo.js";
 import { createRuntime } from "../src_new/runtime/runtime.js";
-import { createTestWorkdir } from "./test-workdir.js";
+import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
 export async function runTerminalSessionCliSrcNewTests(): Promise<void> {
   await testTerminalCliAllowsSelectingExistingSessionFromSavedList();
@@ -11,6 +11,7 @@ export async function runTerminalSessionCliSrcNewTests(): Promise<void> {
 
 async function testTerminalCliAllowsSelectingExistingSessionFromSavedList(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-cli-src-new-list-");
+  await writeTestLocalEnv(workdir);
   const seedRuntime = createRuntime({ workdir });
   const session = await seedRuntime.createSession({
     config: {
@@ -56,6 +57,7 @@ async function testTerminalCliAllowsSelectingExistingSessionFromSavedList(): Pro
 
 async function testTerminalCliFallsBackToSelectionWhenRequestedSessionIsMissing(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-cli-src-new-missing-");
+  await writeTestLocalEnv(workdir);
   const seedRuntime = createRuntime({ workdir });
   const session = await seedRuntime.createSession({
     config: {

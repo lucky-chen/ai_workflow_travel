@@ -5,6 +5,8 @@ import type { Trace } from "../../observability/trace.js";
 import {
   ensureSuccessfulModelResponse,
   getRuntimeContext,
+  summarizeModuleRequest,
+  summarizeModuleResponse,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
 import type { ObserveStepInput } from "./peo_types.js";
@@ -95,16 +97,46 @@ export class ObserveStep {
       mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     await this.trace.record({
-      traceId: runId,
       scope: "session",
       eventType: "model_called",
-      timestamp: new Date().toISOString(),
-      summary: "peo observe model called",
       sessionId: runtimeContext.sessionId,
-      stepIndex,
+      payload: {
+        stage: "peo_observe",
+        stepIndex,
+      },
+      metadata: {
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+      },
     });
-    const response = await model.execute(request);
-    ensureSuccessfulModelResponse(response);
-    return response;
+    try {
+      const response = await model.execute(request);
+      ensureSuccessfulModelResponse(response);
+      return response;
+    } catch (error) {
+      const response = error && typeof error === "object" && "content" in error && "error" in error
+        ? error as { content: string; error: { code: string; message: string } }
+        : undefined;
+      await this.trace.record({
+        scope: "session",
+        eventType: "model_result_recorded",
+        sessionId: runtimeContext.sessionId,
+        payload: {
+          stage: "peo_observe",
+          stepIndex,
+          requestSummary: summarizeModuleRequest(request),
+          responseSummary: response ? summarizeModuleResponse(response) : undefined,
+          error: {
+            code: response?.error.code ?? "MODEL_CALL_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+        metadata: {
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      throw error;
+    }
   }
 }

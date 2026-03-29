@@ -9,6 +9,7 @@ import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 export async function runTerminalSessionCliTests(): Promise<void> {
   await testTerminalSessionCliRunsWithInjectedInput();
   await testTerminalSessionCliSupportsReopenWithinSameRuntime();
+  await testTerminalSessionCliPrintsHintWhenSessionDoesNotExist();
   await testTerminalSessionCliPrintsChatJsonAnswerAsPlainText();
   await testTerminalSessionCliLoadsRealProviderConfigFromLocalEnv();
   await testTerminalSessionCliLoadsRealProviderConfigFromFixtureLocalEnv();
@@ -83,6 +84,47 @@ async function testTerminalSessionCliSupportsReopenWithinSameRuntime(): Promise<
   assert.equal(errorLines.length, 0);
   assert.equal(outputLines[0]?.startsWith("Trace file: "), true);
   assert.equal(outputLines.filter((line) => line.startsWith("Session ready: ")).length >= 2, true);
+}
+
+async function testTerminalSessionCliPrintsHintWhenSessionDoesNotExist(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-cli-");
+  await writeTestLocalEnv(workdir);
+  const outputLines: string[] = [];
+  const errorLines: string[] = [];
+  const missingSessionId = "missing-session";
+
+  const exitCode = await runTerminalSessionCli({
+    argv: ["--workdir", workdir, "--session-id", missingSessionId],
+    readInput: async () => null,
+    writeLine: async (line) => {
+      outputLines.push(line);
+    },
+    writeError: async (line) => {
+      errorLines.push(line);
+    },
+    createRuntime: () => ({
+      async createSession() {
+        throw new Error("not used");
+      },
+      async openSession() {
+        const error = new Error(
+          `ENOENT: no such file or directory, open '${path.join(workdir, ".agent_runtime", "sessions", `${missingSessionId}.json`)}'`,
+        ) as NodeJS.ErrnoException;
+        error.code = "ENOENT";
+        throw error;
+      },
+      async closeSession() {
+        throw new Error("not used");
+      },
+    }),
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(outputLines[0], `Runtime ready: ${workdir}`);
+  assert.equal(
+    errorLines[0],
+    `Session not found: ${missingSessionId}. Start without --session-id to create a new session in ${workdir}.`,
+  );
 }
 
 async function testTerminalSessionCliLoadsRealProviderConfigFromLocalEnv(): Promise<void> {

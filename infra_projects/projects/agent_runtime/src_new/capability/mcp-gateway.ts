@@ -18,17 +18,21 @@ export class McpGateway implements McpGatewayContract {
 
   async call(input: ToolCallInput): Promise<ToolCallResult> {
     await this.trace.record({
-      traceId: input.toolCallId,
       scope: "session",
       eventType: "tool_called",
-      timestamp: new Date().toISOString(),
-      summary: `tool called: ${input.toolName}`,
+      payload: {
+        toolName: input.toolName,
+      },
+      metadata: {
+        traceId: input.toolCallId,
+        timestamp: new Date().toISOString(),
+      },
     });
     const decision = await this.permissionPolicy.evaluate({
       toolCall: input,
     });
     if (!decision.allowed) {
-      return {
+      const result = {
         content: "",
         blockedByPolicy: true,
         error: {
@@ -36,22 +40,69 @@ export class McpGateway implements McpGatewayContract {
           message: decision.message ?? "Tool call blocked by runtime permission policy.",
         },
       };
+      await this.trace.record({
+        scope: "session",
+        eventType: "tool_result_recorded",
+        payload: {
+          toolName: input.toolName,
+          arguments: input.arguments,
+          blockedByPolicy: true,
+          error: result.error,
+        },
+        metadata: {
+          traceId: input.toolCallId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return result;
     }
 
     try {
       const handler = await this.toolRegistry.resolve(input.toolName);
-      return await this.executionEnvironment.execute({
+      const result = await this.executionEnvironment.execute({
         toolCall: input,
         handler,
       });
+      if (result.error || result.blockedByPolicy) {
+        await this.trace.record({
+          scope: "session",
+          eventType: "tool_result_recorded",
+          payload: {
+            toolName: input.toolName,
+            arguments: input.arguments,
+            blockedByPolicy: result.blockedByPolicy ?? false,
+            error: result.error,
+          },
+          metadata: {
+            traceId: input.toolCallId,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+      return result;
     } catch (error) {
-      return {
+      const result = {
         content: "",
         error: {
           code: "TOOL_CALL_FAILED",
           message: error instanceof Error ? error.message : String(error),
         },
       };
+      await this.trace.record({
+        scope: "session",
+        eventType: "tool_result_recorded",
+        payload: {
+          toolName: input.toolName,
+          arguments: input.arguments,
+          blockedByPolicy: false,
+          error: result.error,
+        },
+        metadata: {
+          traceId: input.toolCallId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return result;
     }
   }
 }

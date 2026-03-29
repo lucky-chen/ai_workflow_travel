@@ -8,6 +8,9 @@ import {
   getRuntimeContext,
   isRecord,
   matchAvailableToolName,
+  summarizeModuleRequest,
+  summarizeModuleResponse,
+  summarizeToolDefinitions,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
 import type { PlanStepResult } from "./peo_types.js";
@@ -35,7 +38,9 @@ export class PlanStep {
     return this.check({
       content: response.content,
       availableTools: Array.isArray(request.userPrompt.availableTools)
-        ? request.userPrompt.availableTools.filter((value): value is string => typeof value === "string")
+        ? request.userPrompt.availableTools
+          .map((value) => isRecord(value) && typeof value.name === "string" ? value.name : undefined)
+          .filter((value): value is string => typeof value === "string")
         : [],
     });
   }
@@ -49,7 +54,8 @@ export class PlanStep {
     },
   ): Promise<ModuleRequest> {
     const runtimeContext = getRuntimeContext(context);
-    const availableTools = await this.toolRegistry.listToolNames();
+    const toolDefinitions = await this.toolRegistry.listToolDefinitions();
+    const availableTools = toolDefinitions.map((tool) => tool.name);
     return {
       systemPrompt: [
         "You are the plan stage inside the PEO agent.",
@@ -75,7 +81,7 @@ export class PlanStep {
         userInput: runtimeContext.userInput.content,
         priorObservation: state.lastObservation?.summary,
         priorExecutionSummaries: state.priorExecutionSummaries,
-        availableTools,
+        availableTools: summarizeToolDefinitions(toolDefinitions),
         expectedSchema: {
           plan: "string",
           toolCall: {
@@ -142,16 +148,46 @@ export class PlanStep {
       mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     await this.trace.record({
-      traceId: runId,
       scope: "session",
       eventType: "model_called",
-      timestamp: new Date().toISOString(),
-      summary: "peo plan model called",
       sessionId: runtimeContext.sessionId,
-      stepIndex,
+      payload: {
+        stage: "peo_plan",
+        stepIndex,
+      },
+      metadata: {
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+      },
     });
-    const response = await model.execute(request);
-    ensureSuccessfulModelResponse(response);
-    return response;
+    try {
+      const response = await model.execute(request);
+      ensureSuccessfulModelResponse(response);
+      return response;
+    } catch (error) {
+      const response = error && typeof error === "object" && "content" in error && "error" in error
+        ? error as { content: string; error: { code: string; message: string } }
+        : undefined;
+      await this.trace.record({
+        scope: "session",
+        eventType: "model_result_recorded",
+        sessionId: runtimeContext.sessionId,
+        payload: {
+          stage: "peo_plan",
+          stepIndex,
+          requestSummary: summarizeModuleRequest(request),
+          responseSummary: response ? summarizeModuleResponse(response) : undefined,
+          error: {
+            code: response?.error.code ?? "MODEL_CALL_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+        metadata: {
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      throw error;
+    }
   }
 }

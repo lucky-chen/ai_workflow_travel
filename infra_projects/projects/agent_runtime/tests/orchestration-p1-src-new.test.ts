@@ -364,7 +364,24 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
           respond: (prompt: Record<string, unknown>, request?: { responseFormat?: string }) => {
             if (prompt.stage === "peo_plan" && prompt.stepIndex === 1) {
               assert.equal(request?.responseFormat, "json");
-              assert.deepEqual(prompt.availableTools, ["echo", "read_file", "write_file"]);
+              assert.deepEqual(prompt.availableTools, [
+                {
+                  name: "echo_hello",
+                  description: "Return the fixed text hello. Test-only built-in tool.",
+                  inputSchema: {
+                    type: "object",
+                  },
+                  outputSchema: {
+                    type: "object",
+                    required: ["content"],
+                    properties: {
+                      content: {
+                        type: "string",
+                      },
+                    },
+                  },
+                },
+              ]);
               assert.equal(typeof prompt.expectedSchema, "object");
               return JSON.stringify({
                 plan: "First step: inspect state",

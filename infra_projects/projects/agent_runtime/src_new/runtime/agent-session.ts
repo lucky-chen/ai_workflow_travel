@@ -157,12 +157,13 @@ export class AgentSession implements AgentSessionLike {
 
   private async recordRunStarted(traceId: string): Promise<void> {
     await this.services.trace.record({
-      traceId,
       scope: "session",
       eventType: "run_started",
-      timestamp: new Date().toISOString(),
-      summary: "session run started",
       sessionId: this.sessionId,
+      metadata: {
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
@@ -177,12 +178,13 @@ export class AgentSession implements AgentSessionLike {
 
   private async recordContextAssembled(traceId: string): Promise<void> {
     await this.services.trace.record({
-      traceId,
       scope: "session",
       eventType: "context_assembled",
-      timestamp: new Date().toISOString(),
-      summary: "context assembled",
       sessionId: this.sessionId,
+      metadata: {
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
@@ -202,12 +204,16 @@ export class AgentSession implements AgentSessionLike {
 
   private async recordAgentSelected(traceId: string, requestedMode: AgentRunMode): Promise<void> {
     await this.services.trace.record({
-      traceId,
       scope: "session",
       eventType: "agent_selected",
-      timestamp: new Date().toISOString(),
-      summary: `agent selection requested: ${requestedMode}`,
       sessionId: this.sessionId,
+      payload: {
+        agent: requestedMode,
+      },
+      metadata: {
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
@@ -239,6 +245,19 @@ export class AgentSession implements AgentSessionLike {
     applyTranscriptToState(this.state, stateUpdate.transcriptAppend);
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
+    await this.services.trace.record({
+      scope: "session",
+      eventType: "state_persisted",
+      sessionId: this.sessionId,
+      payload: {
+        transcriptAppendCount: stateUpdate.transcriptAppend.length,
+        runtimeMemorySummaryItemCount: stateUpdate.runtimeMemorySummaryItems.length,
+      },
+      metadata: {
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
+    });
   }
 
   private async updateTranscript(transcriptAppend: TranscriptTurn[]): Promise<void> {
@@ -270,6 +289,20 @@ export class AgentSession implements AgentSessionLike {
       sessionConfig: this.state.config,
     });
     await this.collectSuccessMetrics(normalized, result, agent.pattern, traceId);
+    await this.services.trace.record({
+      scope: "session",
+      eventType: "run_finished",
+      sessionId: this.sessionId,
+      payload: {
+        agent: requestedMode,
+        format: normalized.format,
+        hasError: false,
+      },
+      metadata: {
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
+    });
     await this.flushObservability();
     return normalized;
   }
@@ -307,6 +340,21 @@ export class AgentSession implements AgentSessionLike {
       runScope: {
         runId: traceId,
         agentName: "session",
+      },
+    });
+    await this.services.trace.record({
+      scope: "session",
+      eventType: "run_failed",
+      sessionId: this.sessionId,
+      payload: {
+        error: {
+          code: failure.errorCode ?? "SESSION_EXECUTION_FAILED",
+          message: failure.errorMessage ?? "Session execution failed.",
+        },
+      },
+      metadata: {
+        traceId,
+        timestamp: new Date().toISOString(),
       },
     });
     await this.flushObservability();

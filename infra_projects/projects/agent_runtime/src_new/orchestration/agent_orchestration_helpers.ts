@@ -1,6 +1,7 @@
 import type { AgentContext, TranscriptTurn } from "../context/types.js";
-import type { ModuleResponse } from "../model/types.js";
+import type { ModuleRequest, ModuleResponse } from "../model/types.js";
 import type { AgentRuntimeResult } from "./types.js";
+import type { ToolDefinition } from "../capability/types.js";
 
 export type RuntimeBoundAgentContext = AgentContext & {
   runtimeContext: NonNullable<AgentContext["runtimeContext"]>;
@@ -104,4 +105,76 @@ export function getRequestedToolName(context: AgentContext): string | undefined 
 
 export function cloneTranscriptTurns(turns: TranscriptTurn[]): TranscriptTurn[] {
   return turns.map((turn) => ({ ...turn }));
+}
+
+export function summarizeModuleRequest(request: ModuleRequest): Record<string, unknown> {
+  const userKeys = Object.keys(request.userPrompt ?? {});
+  return {
+    responseFormat: request.responseFormat,
+    systemPromptCount: request.systemPrompt.length,
+    userPromptKeys: userKeys,
+    userPromptPreview: truncatePreview(JSON.stringify(request.userPrompt ?? {})),
+    stream: request.stream,
+  };
+}
+
+export function summarizeModuleResponse(response: ModuleResponse): Record<string, unknown> {
+  return {
+    hasContent: Boolean(response.content),
+    contentPreview: truncatePreview(response.content),
+    error: response.error.code
+      ? {
+        code: response.error.code,
+        message: truncatePreview(response.error.message),
+      }
+      : undefined,
+  };
+}
+
+export function summarizeToolDefinitions(toolDefinitions: ToolDefinition[]): Array<Record<string, unknown>> {
+  return toolDefinitions.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    inputSchema: summarizeSchema(tool.inputSchema),
+    outputSchema: summarizeSchema(tool.outputSchema),
+  }));
+}
+
+function truncatePreview(value: string, maxLength = 240): string {
+  if (!value) {
+    return "";
+  }
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength)}...`;
+}
+
+function summarizeSchema(schema: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!schema) {
+    return undefined;
+  }
+  const properties = isRecord(schema.properties) ? schema.properties : undefined;
+  const summarizedProperties = properties
+    ? Object.fromEntries(
+      Object.entries(properties).slice(0, 12).map(([key, value]) => {
+        const property = isRecord(value) ? value : {};
+        return [
+          key,
+          omitUndefined({
+            type: property.type,
+            description: typeof property.description === "string"
+              ? truncatePreview(property.description, 120)
+              : undefined,
+          }),
+        ];
+      }),
+    )
+    : undefined;
+  return omitUndefined({
+    type: schema.type,
+    required: Array.isArray(schema.required) ? schema.required : undefined,
+    properties: summarizedProperties,
+  });
+}
+
+function omitUndefined(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
 }

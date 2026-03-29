@@ -1,24 +1,73 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
-import type { ExternalMcpServerConfig, McpToolRegistry, ToolCallInput, ToolCallResult, ToolHandler } from "./types.js";
+import type {
+  ExternalMcpEndpointConfig,
+  McpToolRegistry,
+  ToolCallInput,
+  ToolCallResult,
+  ToolDefinition,
+  ToolHandler,
+} from "./types.js";
+import type { Trace } from "../observability/trace.js";
 
-interface ConnectedExternalMcpServer {
+interface ConnectedExternalMcpEndpoint {
   client: Client;
   tools: Tool[];
 }
 
-export async function registerExternalMcpServers(
+export async function registerExternalMcpEndpoints(
   registry: McpToolRegistry,
-  servers: ExternalMcpServerConfig[],
+  endpoints: ExternalMcpEndpointConfig[],
+  trace?: Trace,
 ): Promise<void> {
-  for (const server of servers) {
-    const connected = await connectExternalMcpServer(server);
+  const endpointSummaries: Array<{
+    endpointName: string;
+    toolCount: number;
+    toolNames: string[];
+  }> = [];
+
+  for (const endpoint of endpoints) {
+    const connected = await connectExternalMcpEndpoint(endpoint);
     for (const tool of connected.tools) {
-      await registry.register(tool.name, createExternalMcpToolHandler(connected.client, tool));
+      await registry.register(createExternalMcpToolDefinition(connected.client, tool));
     }
+    endpointSummaries.push({
+      endpointName: endpoint.name ?? endpoint.url,
+      toolCount: connected.tools.length,
+      toolNames: connected.tools.map((tool) => tool.name),
+    });
   }
+
+  if (endpointSummaries.length === 0) {
+    return;
+  }
+
+  await trace?.record({
+    scope: "sdk",
+    eventType: "external_mcp_registered",
+    payload: {
+      endpointCount: endpointSummaries.length,
+      toolCount: endpointSummaries.reduce((total, endpoint) => total + endpoint.toolCount, 0),
+      endpoints: endpointSummaries,
+    },
+    metadata: {
+      traceId: trace.getTraceId(),
+      timestamp: new Date().toISOString(),
+    },
+  });
+}
+
+function createExternalMcpToolDefinition(client: Client, tool: Tool): ToolDefinition {
+  const outputSchema = getOutputSchema(tool);
+  return {
+    name: tool.name,
+    description: tool.description,
+    inputSchema: isRecord(tool.inputSchema) ? tool.inputSchema : undefined,
+    outputSchema: isRecord(outputSchema) ? outputSchema : undefined,
+    handler: createExternalMcpToolHandler(client, tool),
+  };
 }
 
 function createExternalMcpToolHandler(client: Client, tool: Tool): ToolHandler {
@@ -56,16 +105,25 @@ function createExternalMcpToolHandler(client: Client, tool: Tool): ToolHandler {
   };
 }
 
-async function connectExternalMcpServer(server: ExternalMcpServerConfig): Promise<ConnectedExternalMcpServer> {
+function getOutputSchema(tool: Tool): unknown {
+  return Reflect.get(tool, "outputSchema");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function connectExternalMcpEndpoint(endpoint: ExternalMcpEndpointConfig): Promise<ConnectedExternalMcpEndpoint> {
   const client = new Client({
-    name: server.name ?? "agent-runtime-external-mcp",
+    name: endpoint.name ?? "agent-runtime-external-mcp",
     version: "0.1.0",
   });
-  const transport = new StdioClientTransport({
-    command: server.command,
-    args: server.args,
-    env: server.env,
-    cwd: server.cwd,
+  const transport = new StreamableHTTPClientTransport(new URL(endpoint.url), {
+    requestInit: endpoint.headers
+      ? {
+        headers: endpoint.headers,
+      }
+      : undefined,
   });
   await client.connect(transport);
   return {
