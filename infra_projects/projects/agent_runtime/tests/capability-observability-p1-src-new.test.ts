@@ -17,7 +17,9 @@ import { createTestWorkdir } from "./test-workdir.js";
 export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
   await testGatewayDispatchAndPolicyBlock();
   await testMetricsAggregateSessionAndTotal();
+  await testMetricsAutoFlushesAfterThresholdAndToolUsage();
   await testTracePersistsFlushState();
+  await testTraceAutoFlushesAfterThresholdAndTerminalEvents();
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
@@ -85,6 +87,81 @@ async function testMetricsAggregateSessionAndTotal(): Promise<void> {
   assert.equal(result.totalMetrics.tokenUsage.totalTokens, 15);
 }
 
+async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-metrics-autoflush-");
+  const metricsPath = path.join(workdir, ".agent_runtime", "metrics", "summary.json");
+  const metrics = new Metrics(new FileStorage(path.join(workdir, ".agent_runtime")));
+
+  await metrics.collect({
+    sessionId: "session-1",
+    result: {
+      sessionId: "session-1",
+      runId: "run-1",
+      content: "ok-1",
+      format: "text",
+    },
+    toolExecutionFacts: {
+      toolCalls: 0,
+      failedToolCalls: 0,
+    },
+  });
+  await assertRejectsFileRead(metricsPath);
+
+  await metrics.collect({
+    sessionId: "session-1",
+    result: {
+      sessionId: "session-1",
+      runId: "run-2",
+      content: "ok-2",
+      format: "text",
+    },
+    toolExecutionFacts: {
+      toolCalls: 0,
+      failedToolCalls: 0,
+    },
+  });
+  await assertRejectsFileRead(metricsPath);
+
+  await metrics.collect({
+    sessionId: "session-1",
+    result: {
+      sessionId: "session-1",
+      runId: "run-3",
+      content: "ok-3",
+      format: "text",
+    },
+    toolExecutionFacts: {
+      toolCalls: 0,
+      failedToolCalls: 0,
+    },
+  });
+
+  const thresholdPersisted = JSON.parse(await readFile(metricsPath, "utf8")) as {
+    total?: { requestCount?: number };
+  };
+  assert.equal(thresholdPersisted.total?.requestCount, 3);
+
+  const metricsWithToolUsage = new Metrics(new FileStorage(path.join(workdir, ".agent_runtime")));
+  await metricsWithToolUsage.collect({
+    sessionId: "session-2",
+    result: {
+      sessionId: "session-2",
+      runId: "run-4",
+      content: "ok-4",
+      format: "text",
+    },
+    toolExecutionFacts: {
+      toolCalls: 1,
+      failedToolCalls: 0,
+    },
+  });
+
+  const toolPersisted = JSON.parse(await readFile(metricsPath, "utf8")) as {
+    sessions?: Record<string, { toolCallCount?: number }>;
+  };
+  assert.equal(toolPersisted.sessions?.["session-2"]?.toolCallCount, 1);
+}
+
 async function testTracePersistsFlushState(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-trace-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
@@ -106,4 +183,50 @@ async function testTracePersistsFlushState(): Promise<void> {
     await readFile(path.join(workdir, ".agent_runtime", "trace", "events.json"), "utf8"),
   ) as { events?: Array<{ eventType?: string }> };
   assert.equal(persisted.events?.[0]?.eventType, "run_started");
+}
+
+async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-trace-autoflush-");
+  const tracePath = path.join(workdir, ".agent_runtime", "trace", "events.json");
+  const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
+  const trace = new Trace(storage);
+
+  await trace.record(createTraceEvent("run_started"));
+  await assertRejectsFileRead(tracePath);
+
+  await trace.record(createTraceEvent("context_assembled"));
+  await assertRejectsFileRead(tracePath);
+
+  await trace.record(createTraceEvent("agent_selected"));
+  const thresholdPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
+    events?: Array<{ eventType?: string }>;
+  };
+  assert.deepEqual(
+    (thresholdPersisted.events ?? []).map((event) => event.eventType),
+    ["run_started", "context_assembled", "agent_selected"],
+  );
+
+  const terminalTrace = new Trace(storage);
+  await terminalTrace.record(createTraceEvent("run_finished"));
+  const terminalPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
+    events?: Array<{ eventType?: string }>;
+  };
+  assert.equal(terminalPersisted.events?.at(-1)?.eventType, "run_finished");
+}
+
+function createTraceEvent(eventType: Parameters<Trace["record"]>[0]["eventType"]) {
+  return {
+    traceId: `${eventType}-trace`,
+    scope: "session" as const,
+    eventType,
+    timestamp: new Date().toISOString(),
+    caller: "test",
+    summary: eventType,
+    sessionId: "session-1",
+    runId: "run-1",
+  };
+}
+
+async function assertRejectsFileRead(filePath: string): Promise<void> {
+  await assert.rejects(() => readFile(filePath, "utf8"));
 }

@@ -1,5 +1,4 @@
 export * from "./interface/api.js";
-export * from "./interface/api-facade.js";
 export * from "./runtime/runtime.js";
 export * from "./runtime/agent-session.js";
 export * from "./runtime/agent-session-manager.js";

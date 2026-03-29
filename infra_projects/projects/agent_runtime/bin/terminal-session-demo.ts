@@ -3,7 +3,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as processInput, stdout as processOutput, stderr } from "node:process";
 
 import type { RuntimeApi } from "../src_new/interface/api.js";
-import { createApi } from "../src_new/interface/api-facade.js";
+import { createRuntime } from "../src_new/runtime/runtime.js";
 import {
   TerminalInputHandler,
   createTerminalSessionDemo,
@@ -14,7 +14,7 @@ export interface TerminalSessionCliOptions {
   readInput?: () => Promise<string | null>;
   writeLine?: (line: string) => Promise<void> | void;
   writeError?: (line: string) => Promise<void> | void;
-  createRuntime?: (input: { workdir: string }) => RuntimeApi;
+  createRuntime?: (input: { workdir: string; defaultModelMode: "real_from_local_env" }) => RuntimeApi;
 }
 
 export async function runTerminalSessionCli(
@@ -46,7 +46,7 @@ export async function runTerminalSessionCli(
   })();
 
   try {
-    const runtime = (options.createRuntime ?? createApi)({
+    const runtime = (options.createRuntime ?? createRuntime)({
       workdir: parsedArgs.workdir,
       defaultModelMode: "real_from_local_env",
     });

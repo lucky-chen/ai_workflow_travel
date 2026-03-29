@@ -1,5 +1,6 @@
 import type { SessionResult } from "../interface/api.js";
 import type { Storage } from "../data/storage.js";
+import { PersistentObservabilityBuffer } from "./persistent-observability-buffer.js";
 
 export interface MetricsSummary {
   requestCount: number;
@@ -56,13 +57,17 @@ const EMPTY_SUMMARY = (): MetricsSummary => ({
   },
 });
 
-export class Metrics implements Metrics {
+export class Metrics extends PersistentObservabilityBuffer implements Metrics {
   private readonly sessionMetrics = new Map<string, MetricsSummary>();
   private totalMetrics = EMPTY_SUMMARY();
 
-  constructor(private readonly storage: Storage) {}
+  constructor(storage: Storage) {
+    super(storage, "metrics/summary");
+    this.initializeLoading(() => this.loadPersisted());
+  }
 
   async collect(input: MetricsCollectInput): Promise<void> {
+    await this.ensureLoaded();
     const session = cloneSummary(this.sessionMetrics.get(input.sessionId) ?? EMPTY_SUMMARY());
     const total = cloneSummary(this.totalMetrics);
 
@@ -71,12 +76,11 @@ export class Metrics implements Metrics {
 
     this.sessionMetrics.set(input.sessionId, session);
     this.totalMetrics = total;
+    await this.recordMutation(shouldFlushImmediately(input));
   }
 
   async get(sessionId?: string): Promise<MetricsResult> {
-    if (this.sessionMetrics.size === 0 && this.totalMetrics.requestCount === 0) {
-      await this.loadPersisted();
-    }
+    await this.ensureLoaded();
 
     return {
       sessionMetrics: cloneSummary(this.sessionMetrics.get(sessionId ?? "") ?? EMPTY_SUMMARY()),
@@ -84,29 +88,24 @@ export class Metrics implements Metrics {
     };
   }
 
-  async flush(): Promise<void> {
+  protected buildPersistedPayload(): Record<string, unknown> {
     const payload: MetricsStoreState = {
       sessions: Object.fromEntries([...this.sessionMetrics.entries()].map(([key, value]) => [key, cloneSummary(value)])),
       total: cloneSummary(this.totalMetrics),
     };
-    await this.storage.save("metrics/summary", payload as unknown as Record<string, unknown>);
+    return payload as unknown as Record<string, unknown>;
   }
 
   private async loadPersisted(): Promise<void> {
-    try {
-      const payload = await this.storage.load("metrics/summary");
-      const sessions = isRecord(payload.sessions) ? payload.sessions : {};
-      for (const [sessionId, value] of Object.entries(sessions)) {
-        if (isRecord(value)) {
-          this.sessionMetrics.set(sessionId, parseSummary(value));
-        }
-      }
-      this.totalMetrics = isRecord(payload.total) ? parseSummary(payload.total) : EMPTY_SUMMARY();
-    } catch (error) {
-      if (!isMissingStorageError(error)) {
-        throw error;
+    const payload = await this.loadPersistedPayload();
+    const sessions = isRecord(payload?.sessions) ? payload.sessions : {};
+    for (const [sessionId, value] of Object.entries(sessions)) {
+      if (isRecord(value)) {
+        this.sessionMetrics.set(sessionId, parseSummary(value));
       }
     }
+    this.totalMetrics = isRecord(payload?.total) ? parseSummary(payload.total) : EMPTY_SUMMARY();
+    this.resetDirtyEntryCount();
   }
 }
 
@@ -159,6 +158,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function isMissingStorageError(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
+function shouldFlushImmediately(input: MetricsCollectInput): boolean {
+  return Boolean(input.result.errorCode)
+    || (input.toolExecutionFacts?.toolCalls ?? 0) > 0;
 }

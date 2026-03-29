@@ -5,7 +5,7 @@ import type {
   SessionResult,
   UserInput,
 } from "../interface/api.js";
-import { createApi } from "../interface/api-facade.js";
+import { createRuntime } from "../runtime/runtime.js";
 
 export interface TerminalSessionDemoEntry {
   run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult>;
@@ -131,7 +131,7 @@ export class TerminalSessionDemo implements TerminalSessionDemoEntry {
 }
 
 export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): TerminalSessionDemo {
-  const runtime = input.runtime ?? createApi({
+  const runtime = input.runtime ?? createRuntime({
     workdir: input.workdir ?? process.cwd(),
     defaultModelMode: "real_from_local_env",
   });

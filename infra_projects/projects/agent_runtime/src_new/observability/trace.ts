@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { Storage } from "../data/storage.js";
+import { PersistentObservabilityBuffer } from "./persistent-observability-buffer.js";
 
 export type TraceEventType =
   | "session_create_requested"
@@ -49,19 +50,23 @@ export interface Trace {
   flush(): Promise<void>;
 }
 
-export class Trace implements Trace {
+export class Trace extends PersistentObservabilityBuffer implements Trace {
   private events: TraceEvent[] = [];
 
-  constructor(private readonly storage: Storage) {}
+  constructor(storage: Storage) {
+    super(storage, "trace/events");
+    this.initializeLoading(() => this.loadPersisted());
+  }
 
   async record(event: TraceEvent): Promise<void> {
-    this.events.push(normalizeTraceEvent(event));
+    await this.ensureLoaded();
+    const normalized = normalizeTraceEvent(event);
+    this.events.push(normalized);
+    await this.recordMutation(isImmediateFlushEvent(normalized.eventType));
   }
 
   async get(sessionId?: string, runId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult> {
-    if (this.events.length === 0) {
-      await this.loadPersisted();
-    }
+    await this.ensureLoaded();
 
     return {
       events: this.events.filter((event) => {
@@ -82,26 +87,21 @@ export class Trace implements Trace {
     };
   }
 
-  async flush(): Promise<void> {
-    await this.storage.save("trace/events", {
+  protected buildPersistedPayload(): Record<string, unknown> {
+    return {
       events: this.events,
-    });
+    };
   }
 
   private async loadPersisted(): Promise<void> {
-    try {
-      const payload = await this.storage.load("trace/events");
-      if (!Array.isArray(payload.events)) {
-        return;
-      }
-      this.events = payload.events
-        .filter((event): event is Record<string, unknown> => Boolean(event) && typeof event === "object")
-        .map((event) => normalizeTraceEvent(event as unknown as TraceEvent));
-    } catch (error) {
-      if (!isMissingStorageError(error)) {
-        throw error;
-      }
+    const payload = await this.loadPersistedPayload();
+    if (!Array.isArray(payload?.events)) {
+      return;
     }
+    this.events = payload.events
+      .filter((event): event is Record<string, unknown> => Boolean(event) && typeof event === "object")
+      .map((event) => normalizeTraceEvent(event as unknown as TraceEvent));
+    this.resetDirtyEntryCount();
   }
 }
 
@@ -117,6 +117,9 @@ function normalizeTraceEvent(event: TraceEvent): TraceEvent {
   };
 }
 
-function isMissingStorageError(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
+function isImmediateFlushEvent(eventType: TraceEventType): boolean {
+  return eventType === "session_closed"
+    || eventType === "state_persisted"
+    || eventType === "run_failed"
+    || eventType === "run_finished";
 }

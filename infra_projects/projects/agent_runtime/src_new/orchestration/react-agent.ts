@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import type { McpGateway, ToolCallResult } from "../capability/types.js";
 import type { AgentContext } from "../context/types.js";
-import type { ModelFactory, ModuleResponse } from "../model/types.js";
+import type { ModuleResponse } from "../model/types.js";
 import type { Trace } from "../observability/trace.js";
+import type { ModelFactory } from "../model/model-factory.js";
 import type { AgentRuntimeResult, IAgent } from "./types.js";
 import {
   asNumber,
