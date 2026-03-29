@@ -18,6 +18,14 @@ export interface ToolHandler {
   handle(input: ToolCallInput): Promise<ToolCallResult>;
 }
 
+export interface ExternalMcpServerConfig {
+  name?: string;
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+}
+
 export interface McpToolRegistry {
   register(toolName: string, handler: ToolHandler): Promise<void>;
   resolve(toolName: string): Promise<ToolHandler>;

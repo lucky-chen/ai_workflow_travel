@@ -18,6 +18,10 @@
     "demo:terminal": "npm run build && node dist/bin/terminal-session-demo.js",
     "test:live:real-provider": "npm run build && node dist/tests/live-real-provider-src-new.test.js"
   },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "zod": "^3.24.1"
+  },
   "devDependencies": {
     "@types/node": "^20.19.0",
     "typescript": "^5.8.2"

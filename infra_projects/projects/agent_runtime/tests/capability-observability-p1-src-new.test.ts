@@ -10,12 +10,16 @@ import {
   ExecutionEnvironment,
   Metrics,
   Trace,
+  createRuntime,
+  registerExternalMcpServers,
   type ToolCallInput,
 } from "../src_new/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
   await testGatewayDispatchAndPolicyBlock();
+  await testExternalMcpToolAdapterRegistersRemoteTools();
+  await testRuntimeRegistersExternalMcpTools();
   await testMetricsAggregateSessionAndTotal();
   await testMetricsAutoFlushesAfterThresholdAndToolUsage();
   await testTracePersistsFlushState();
@@ -60,6 +64,59 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
 
   assert.equal(allowed.content, "ok");
   assert.equal(denied.blockedByPolicy, true);
+}
+
+async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
+  const registry = new McpToolRegistry();
+  await registerExternalMcpServers(registry, [createExternalMcpServerConfig()]);
+
+  const handler = await registry.resolve("remote_echo");
+  const result = await handler.handle({
+    toolCallId: "remote-1",
+    toolName: "remote_echo",
+    arguments: { content: "ok" },
+  });
+
+  assert.equal(result.content, "remote:ok");
+}
+
+async function testRuntimeRegistersExternalMcpTools(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-external-mcp-");
+  const runtime = createRuntime({
+    workdir,
+    externalMcpServers: [createExternalMcpServerConfig()],
+  });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolName\":\"remote_echo\",\"actionPayload\":{\"content\":\"from runtime\"},\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "/react call remote tool",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  const state = await session.load();
+  assert.equal(
+    state.history.some((item) => item.role === "tool" && item.content.includes("remote:from runtime")),
+    true,
+  );
+}
+
+function createExternalMcpServerConfig() {
+  return {
+    command: "node",
+    args: [path.resolve(process.cwd(), "dist/tests/mcp-echo-server.js")],
+    cwd: process.cwd(),
+  };
 }
 
 async function testMetricsAggregateSessionAndTotal(): Promise<void> {

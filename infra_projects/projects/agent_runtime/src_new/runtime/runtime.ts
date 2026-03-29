@@ -13,6 +13,7 @@ import { RuntimeMemory } from "../context/runtime-memory.js";
 import { SessionTranscript } from "../context/session-transcript.js";
 import { createBuiltInToolHandlers } from "../capability/built-in-tools.js";
 import { ExecutionEnvironment } from "../capability/execution-environment.js";
+import { registerExternalMcpServers } from "../capability/external_mcp_tool_adapter.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
@@ -37,6 +38,7 @@ export interface RuntimeOptions {
   workdir: string;
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: import("../model/types.js").FetchLike;
+  externalMcpServers?: import("../capability/types.js").ExternalMcpServerConfig[];
 }
 
 export class Runtime implements RuntimeApi {
@@ -44,6 +46,7 @@ export class Runtime implements RuntimeApi {
   private readonly sessionManager = new AgentSessionManager();
   private readonly services: RuntimeServices;
   private readonly runtimeRunId = randomUUID();
+  private readonly initialization: Promise<void>;
 
   constructor(private readonly options: RuntimeOptions) {
     if (!options.workdir) {
@@ -80,6 +83,7 @@ export class Runtime implements RuntimeApi {
       modelFactory,
       resolveModelConfig: resolveDefaultModelConfig,
     });
+    this.initialization = registerExternalMcpServers(toolRegistry, options.externalMcpServers ?? []);
     this.services = {
       storageRoot: path.join(options.workdir, ".agent_runtime"),
       contextAssembler,
@@ -100,6 +104,7 @@ export class Runtime implements RuntimeApi {
   }
 
   async createSession(input: AgentSessionAccessInput): Promise<AgentSession> {
+    await this.initialization;
     await this.services.trace.record({
       traceId: randomUUID(),
       scope: "sdk",
@@ -115,6 +120,7 @@ export class Runtime implements RuntimeApi {
   }
 
   async openSession(sessionId: string): Promise<AgentSession> {
+    await this.initialization;
     if (!sessionId) {
       throw new Error("Runtime requires sessionId to open a session.");
     }
@@ -138,6 +144,7 @@ export class Runtime implements RuntimeApi {
   }
 
   async closeSession(sessionId: string): Promise<CloseSessionResult> {
+    await this.initialization;
     if (!sessionId) {
       throw new Error("Runtime requires sessionId to close a session.");
     }

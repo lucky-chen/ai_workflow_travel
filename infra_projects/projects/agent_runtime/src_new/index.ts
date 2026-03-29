@@ -40,6 +40,7 @@ export { createReActAgent } from "./orchestration/react_agent/index.js";
 export { createPEOAgent } from "./orchestration/peo_agent/index.js";
 export * from "./orchestration/multi_agent_protocol.js";
 export type {
+  ExternalMcpServerConfig,
   ExecutionEnvironmentInput,
   PermissionCheckInput,
   PermissionDecision,
@@ -51,6 +52,7 @@ export * from "./capability/tool-registry.js";
 export * from "./capability/permission-policy.js";
 export * from "./capability/execution-environment.js";
 export * from "./capability/mcp-gateway.js";
+export * from "./capability/external_mcp_tool_adapter.js";
 export * from "./capability/built-in-tools.js";
 export * from "./observability/metrics.js";
 export * from "./observability/trace.js";
