@@ -929,9 +929,9 @@ async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
 
   assert.equal(directCalled, 0);
   assert.equal(reactCalled, 1);
-  assert.equal(result.task?.taskId, "task-2");
-  assert.equal(result.taskExecution.output, "react output");
-  assert.equal(result.taskExecution.executionFacts?.toolCalls, 1);
+  assert.equal(result.tasks[0]?.taskId, "task-2");
+  assert.equal(result.taskExecutions[0]?.output, "react output");
+  assert.equal(result.taskExecutions[0]?.executionFacts?.toolCalls, 1);
 }
 
 async function testReservedPlaceholdersStayCallable(): Promise<void> {

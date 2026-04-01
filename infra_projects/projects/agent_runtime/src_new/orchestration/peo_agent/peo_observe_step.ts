@@ -18,7 +18,11 @@ export class ObserveStep {
     const checked = await this.check({
       executionResult: input.executionResult,
     });
-    if (input.executionResult.task) {
+    for (const [index, task] of input.executionResult.tasks.entries()) {
+      const taskExecution = input.executionResult.taskExecutions[index];
+      if (!taskExecution) {
+        continue;
+      }
       await this.eventBus.publish({
         type: "agent",
         agentMessage: {
@@ -31,15 +35,15 @@ export class ObserveStep {
             peo: {
               step: "observation",
               stepIndex,
-              taskId: input.executionResult.task.taskId,
-              taskType: input.executionResult.task.type,
-              taskStatus: input.executionResult.taskExecution.taskStatus,
+              taskId: task.taskId,
+              taskType: task.type,
+              taskStatus: taskExecution.taskStatus,
               taskCount: input.plan.tasks.length,
               taskResult: {
-                taskId: input.executionResult.taskExecution.taskId,
-                taskStatus: input.executionResult.taskExecution.taskStatus,
-                output: input.executionResult.taskExecution.output,
-                error: input.executionResult.taskExecution.error,
+                taskId: taskExecution.taskId,
+                taskStatus: taskExecution.taskStatus,
+                output: taskExecution.output,
+                error: taskExecution.error,
               },
               observationResult: checked,
             },
@@ -59,25 +63,32 @@ export class ObserveStep {
       ? observation.executionResult as {
           planSummary?: unknown;
           finalAnswer?: unknown;
-          taskExecution?: unknown;
+          taskExecutions?: unknown;
         }
       : undefined;
-    const taskExecution = executionResult?.taskExecution && typeof executionResult.taskExecution === "object"
-      ? executionResult.taskExecution as {
-          output?: unknown;
-          error?: unknown;
-          taskStatus?: unknown;
-        }
-      : undefined;
-    const error = taskExecution?.error && typeof taskExecution.error === "object"
-      ? taskExecution.error as {
+    const taskExecutions = Array.isArray(executionResult?.taskExecutions)
+      ? executionResult.taskExecutions as unknown[]
+      : [];
+    const firstFailure = taskExecutions.find((value) => (
+      Boolean(value)
+      && typeof value === "object"
+      && Boolean((value as { error?: unknown }).error)
+    ));
+    const firstOutput = taskExecutions.find((value) => (
+      Boolean(value)
+      && typeof value === "object"
+      && typeof (value as { output?: unknown }).output === "string"
+      && String((value as { output?: unknown }).output).trim()
+    ));
+    const error = firstFailure && typeof firstFailure === "object" && typeof (firstFailure as { error?: unknown }).error === "object"
+      ? (firstFailure as { error: { message?: unknown } }).error as {
           message?: unknown;
         }
       : undefined;
     const summary = typeof error?.message === "string" && error.message.trim()
       ? error.message
-      : typeof taskExecution?.output === "string" && taskExecution.output.trim()
-        ? taskExecution.output
+      : firstOutput && typeof firstOutput === "object" && typeof (firstOutput as { output?: unknown }).output === "string"
+        ? String((firstOutput as { output?: unknown }).output)
         : typeof executionResult?.planSummary === "string"
           ? executionResult.planSummary
           : typeof observation.priorObservation === "string"

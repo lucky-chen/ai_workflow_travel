@@ -33,8 +33,8 @@ export interface TaskExecutionResult {
 
 export interface ExecutionStepResult {
   planSummary: string;
-  task?: PlanTask;
-  taskExecution: TaskExecutionResult;
+  tasks: PlanTask[];
+  taskExecutions: TaskExecutionResult[];
   finalAnswer?: string;
 }
 

@@ -47,14 +47,16 @@ class PEOAgent implements IAgent {
       for (let stepIndex = 1; stepIndex <= PEO_STAGE_COUNT; stepIndex += 1) {
         const plan = await this.planStep.run(context, runId, stepIndex, state);
         const execution = await this.executionStep.run(context, runId, stepIndex, plan);
-        toolCalls += asNumber(execution.taskExecution.executionFacts?.toolCalls);
-        failedToolCalls += asNumber(execution.taskExecution.executionFacts?.failedToolCalls);
-        if (
-          execution.taskExecution.executionFacts?.toolCalls
-          && typeof execution.taskExecution.output === "string"
-          && execution.taskExecution.output.trim()
-        ) {
-          transcriptAppend.push(createToolTranscriptTurn(execution.taskExecution.output));
+        for (const taskExecution of execution.taskExecutions) {
+          toolCalls += asNumber(taskExecution.executionFacts?.toolCalls);
+          failedToolCalls += asNumber(taskExecution.executionFacts?.failedToolCalls);
+          if (
+            taskExecution.executionFacts?.toolCalls
+            && typeof taskExecution.output === "string"
+            && taskExecution.output.trim()
+          ) {
+            transcriptAppend.push(createToolTranscriptTurn(taskExecution.output));
+          }
         }
         state.priorExecutionSummaries.push(summarizeExecutionResult(execution));
         const observation = await this.observeStep.run(context, runId, stepIndex, {
@@ -201,8 +203,10 @@ function createAgentMetadata(pattern: IAgent["pattern"], context: AgentContext):
 }
 
 function summarizeExecutionResult(result: ExecutionStepResult): string {
-  if (result.task) {
-    return `${result.task.taskId}:${result.taskExecution.output ?? result.taskExecution.error?.message ?? ""}`;
+  if (result.tasks.length > 0) {
+    return result.tasks
+      .map((task, index) => `${task.taskId}:${result.taskExecutions[index]?.output ?? result.taskExecutions[index]?.error?.message ?? ""}`)
+      .join("|");
   }
-  return result.taskExecution.output ?? result.planSummary;
+  return result.finalAnswer ?? result.planSummary;
 }

@@ -15,67 +15,64 @@ export class ExecutionStep {
     stepIndex: number,
     plan: PlanStepResult,
   ): Promise<ExecutionStepResult> {
-    const task = selectNextExecutableTask(plan.tasks);
-    if (!task) {
+    const tasks = selectExecutableTasks(plan.tasks);
+    if (tasks.length === 0) {
       return {
         planSummary: plan.planSummary,
         finalAnswer: plan.finalAnswer,
-        taskExecution: {
-          taskId: "",
-          taskStatus: "completed",
-          output: plan.finalAnswer ?? plan.planSummary,
-          executionFacts: {
-            toolCalls: 0,
-            failedToolCalls: 0,
-          },
-        },
+        tasks: [],
+        taskExecutions: [],
       };
     }
-    await this.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "task_selected",
-        sessionId: context.runtimeContext?.sessionId,
-        traceId: _runId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: "peo",
-          peo: {
-            step: "task_execution",
-            stepIndex,
-            taskId: task.taskId,
-            taskType: task.type,
-            taskStatus: task.status,
-            taskCount: plan.tasks.length,
+    const taskExecutions = [];
+    for (const task of tasks) {
+      await this.eventBus.publish({
+        type: "agent",
+        agentMessage: {
+          event: "task_selected",
+          sessionId: context.runtimeContext?.sessionId,
+          traceId: _runId,
+          timestamp: new Date().toISOString(),
+          agent: {
+            name: "peo",
+            peo: {
+              step: "task_execution",
+              stepIndex,
+              taskId: task.taskId,
+              taskType: task.type,
+              taskStatus: task.status,
+              taskCount: plan.tasks.length,
+            },
           },
         },
-      },
-    });
-    const executor = task.type === "react"
-      ? this.reactTaskExecutor
-      : this.directTaskExecutor;
-    const taskExecution = await executor.execute({
-      plan,
-      task,
-      stepIndex,
-      context,
-    });
+      });
+      const executor = task.type === "react"
+        ? this.reactTaskExecutor
+        : this.directTaskExecutor;
+      const taskExecution = await executor.execute({
+        plan,
+        task,
+        stepIndex,
+        context,
+      });
+      taskExecutions.push(taskExecution);
+    }
     return {
       planSummary: plan.planSummary,
-      task,
-      taskExecution,
+      tasks,
+      taskExecutions,
       finalAnswer: plan.finalAnswer,
     };
   }
 }
 
-function selectNextExecutableTask(tasks: PlanTask[]): PlanTask | undefined {
+function selectExecutableTasks(tasks: PlanTask[]): PlanTask[] {
   const completed = new Set(
     tasks
       .filter((task) => task.status === "completed")
       .map((task) => task.taskId),
   );
-  return tasks.find((task) => (
+  return tasks.filter((task) => (
     task.status === "pending"
     && (task.dependsOn ?? []).every((dependency) => completed.has(dependency))
   ));
