@@ -47,14 +47,16 @@ class ReActAgent implements IAgent {
         const action = await this.actionStep.run(context, runId, stepIndex, thought);
         toolCalls += asNumber(action.toolCalls);
         failedToolCalls += asNumber(action.failedToolCalls);
-        if (thought.actionType === "tool" && action.observation) {
-          transcriptAppend.push(createToolTranscriptTurn(action.observation));
+        if (thought.actionType === "tool" && action.actionObservations.length > 0) {
+          for (const actionObservation of action.actionObservations) {
+            transcriptAppend.push(createToolTranscriptTurn(actionObservation));
+          }
         }
         state.priorActionSummaries.push(action.observation);
         const observation = await this.observationStep.run(context, runId, stepIndex, {
           thought: thought.thought,
           actionType: thought.actionType,
-          actionObservation: action.observation,
+          actionObservations: action.actionObservations,
           priorObservation: state.lastObservation?.summary,
           shouldContinue: action.shouldContinue,
           finalAnswer: action.finalAnswer,
@@ -85,7 +87,7 @@ export function createReActAgent(input: {
 }): IAgent {
   return new ReActAgent(
     new ThoughtStep(input.modelFactory, input.eventBus, input.toolRegistry),
-    new ActionStep(input.gateway, input.toolRegistry),
+    new ActionStep(input.gateway, input.toolRegistry, input.eventBus),
     new ObservationStep(input.modelFactory, input.eventBus),
   );
 }

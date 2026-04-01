@@ -53,11 +53,20 @@ async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
   await bus.publish({
     type: "agent",
     agentMessage: {
-      event: "agent_selected",
+      event: "step",
       sessionId: "session-1",
       timestamp: new Date().toISOString(),
       agent: {
         name: "react",
+        content: {
+          step: "thought",
+          stepIndex: 1,
+          input: {
+            question: {
+              task: "demo",
+            },
+          },
+        },
       },
     },
   });
@@ -67,8 +76,9 @@ async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
   const persisted = JSON.parse(
     await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_event-bus.json"), "utf8"),
   ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
-  assert.equal(persisted.events?.[0]?.eventType, "agent_selected");
+  assert.equal(persisted.events?.[0]?.eventType, "agent_step_started");
   assert.equal(persisted.events?.[0]?.payload?.agent, "react");
+  assert.equal(persisted.events?.[0]?.payload?.step, "thought");
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
@@ -181,7 +191,7 @@ async function testRuntimeRegistersExternalMcpTools(): Promise<void> {
         model: {
           mock: true,
           mockInfo: {
-            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolName\":\"remote_echo\",\"actionPayload\":{\"content\":\"from runtime\"},\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
+            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolCalls\":[{\"toolName\":\"remote_echo\",\"arguments\":{\"content\":\"from runtime\"}}],\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
           },
         },
       },

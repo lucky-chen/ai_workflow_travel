@@ -9,7 +9,7 @@ export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testRuntimeExposesStableApi();
   await testCreateSessionReturnsStableSessionHandle();
   await testRuntimeCallbackReceivesSessionLifecycleEvents();
-  await testRuntimeCallbackReceivesChatResult();
+  await testRuntimeCallbackReceivesChatStepInput();
   await testOpenSessionReloadsPersistedSession();
   await testCloseSessionPersistsClosedState();
   await testOpenSessionReactivatesClosedSession();
@@ -45,18 +45,15 @@ async function testRuntimeCallbackReceivesSessionLifecycleEvents(): Promise<void
   assert.equal(received.includes("session_closed"), true);
 }
 
-async function testRuntimeCallbackReceivesChatResult(): Promise<void> {
-  const workdir = await createTestWorkdir("agent-runtime-src-new-callback-chat-result-");
-  const finalAnswers: string[] = [];
+async function testRuntimeCallbackReceivesChatStepInput(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-callback-chat-step-");
+  const questions: Array<Record<string, unknown>> = [];
   const runtime = createRuntime({
     workdir,
     eventCallback: {
       onEvent(event) {
-        const finalAnswer = event.type === "agent"
-          ? event.agentMessage.agent.chat?.result?.finalAnswer
-          : undefined;
-        if (typeof finalAnswer === "string") {
-          finalAnswers.push(finalAnswer);
+        if (event.type === "agent" && event.agentMessage.agent.name === "chat") {
+          questions.push(event.agentMessage.agent.content.input.question as Record<string, unknown>);
         }
       },
     },
@@ -79,7 +76,7 @@ async function testRuntimeCallbackReceivesChatResult(): Promise<void> {
   });
 
   assert.equal(result.errorCode, undefined);
-  assert.deepEqual(finalAnswers, ["chat callback answer"]);
+  assert.deepEqual(questions, [{ task: "what is callback result" }]);
 }
 
 async function testRuntimeExposesStableApi(): Promise<void> {

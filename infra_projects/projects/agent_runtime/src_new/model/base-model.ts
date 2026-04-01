@@ -40,7 +40,7 @@ export abstract class BaseModel implements IModel {
     input: ModuleRequest,
     response?: ModuleResponse,
   ): Promise<void> {
-    if (!this.eventBus || !input.runtimeEvent) {
+    if (!this.eventBus) {
       return;
     }
     const event = {
@@ -48,9 +48,6 @@ export abstract class BaseModel implements IModel {
       modelMessage: {
         event: type,
         timestamp: new Date().toISOString(),
-        sessionId: input.runtimeEvent.sessionId,
-        traceId: input.runtimeEvent.traceId,
-        agent: input.runtimeEvent.agent,
         request: {
           responseFormat: input.responseFormat,
           userPrompt: input.userPrompt,

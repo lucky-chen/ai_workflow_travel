@@ -15,42 +15,30 @@ export class ObserveStep {
     completed: boolean;
     finalAnswer: string;
   }> {
-    const checked = await this.check({
-      executionResult: input.executionResult,
-    });
-    for (const [index, task] of input.executionResult.tasks.entries()) {
-      const taskExecution = input.executionResult.taskExecutions[index];
-      if (!taskExecution) {
-        continue;
-      }
-      await this.eventBus.publish({
-        type: "agent",
-        agentMessage: {
-          event: "task_completed",
-          sessionId: context.runtimeContext?.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-          agent: {
-            name: "peo",
-            peo: {
-              step: "observation",
-              stepIndex,
-              taskId: task.taskId,
-              taskType: task.type,
-              taskStatus: taskExecution.taskStatus,
-              taskCount: input.plan.tasks.length,
-              taskResult: {
-                taskId: taskExecution.taskId,
-                taskStatus: taskExecution.taskStatus,
-                output: taskExecution.output,
-                error: taskExecution.error,
-              },
-              observationResult: checked,
+    await this.eventBus.publish({
+      type: "agent",
+      agentMessage: {
+        event: "step",
+        sessionId: context.runtimeContext?.sessionId,
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+        agent: {
+          name: "peo",
+          content: {
+            step: "observation",
+            stepIndex,
+            input: {
+              planSummary: input.executionResult.planSummary,
+              taskExecutions: input.executionResult.taskExecutions,
+              finalAnswer: input.executionResult.finalAnswer,
             },
           },
         },
-      });
-    }
+      },
+    });
+    const checked = await this.check({
+      executionResult: input.executionResult,
+    });
     return checked;
   }
 

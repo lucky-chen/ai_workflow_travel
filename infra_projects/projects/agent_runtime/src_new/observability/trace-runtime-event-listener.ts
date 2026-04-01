@@ -54,50 +54,21 @@ function mapRuntimeMessage(message: Extract<RuntimeEvent, { type: "runtime" }>["
 
 function mapAgentMessage(message: Extract<RuntimeEvent, { type: "agent" }>["agentMessage"]): TraceEvent[] {
   const common = traceCommon(message.timestamp, message.sessionId);
-  if (message.event === "agent_selected") {
-    return [{
-      scope: "session",
-      eventType: "agent_selected",
-      payload: {
-        agent: message.agent.name,
-        reasonCode: message.custom?.reasonCode,
-        question: message.custom?.question,
-      },
-      ...common,
-    }];
-  }
-  if (message.event === "agent_step_completed" || message.event === "task_completed") {
-    return [{
-      scope: "session",
-      eventType: "agent_step_recorded",
-      payload: {
-        ...buildStepPayload(message.agent),
-        result: buildAgentStepResult(message.agent),
-      },
-      ...common,
-    }];
-  }
-  if (message.event === "task_selected") {
-    return [{
-      scope: "session",
-      eventType: "agent_step_started",
-      payload: {
-        ...buildStepPayload(message.agent),
-      },
-      ...common,
-    }];
-  }
-  return [];
+  return [{
+    scope: "session",
+    eventType: "agent_step_started",
+    payload: buildStepPayload(message.agent),
+    ...common,
+  }];
 }
 
 function mapModelMessage(message: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]): TraceEvent[] {
-  const common = traceCommon(message.timestamp, message.sessionId);
+  const common = traceCommon(message.timestamp);
   if (message.event === "model_started") {
     return [{
       scope: "session",
       eventType: "model_called",
       payload: {
-        ...buildStepPayload(message.agent),
         inputSummary: buildModelInputSummary(message),
       },
       ...common,
@@ -107,7 +78,6 @@ function mapModelMessage(message: Extract<RuntimeEvent, { type: "model" }>["mode
     scope: "session",
     eventType: "model_result_recorded",
     payload: {
-      ...buildStepPayload(message.agent),
       outputSummary: buildModelOutputSummary(message),
       error: message.response?.error?.code ? message.response.error : undefined,
     },
@@ -152,67 +122,12 @@ function buildStepPayload(agent?: AgentEventAgent): Record<string, unknown> {
   if (!agent) {
     return {};
   }
-  if (agent.name === "chat") {
-    return { agent: "chat", step: "chat" };
-  }
-  if (agent.name === "react") {
-    return {
-      agent: "react",
-      step: agent.react?.step,
-      stepIndex: agent.react?.stepIndex,
-      actionType: agent.react?.actionType,
-    };
-  }
   return {
-    agent: "peo",
-    step: agent.peo?.step,
-    stepIndex: agent.peo?.stepIndex,
-    taskId: agent.peo?.taskId,
-    taskType: agent.peo?.taskType,
-    taskStatus: agent.peo?.taskStatus,
-    taskCount: agent.peo?.taskCount,
+    agent: agent.name,
+    step: agent.content.step,
+    stepIndex: "stepIndex" in agent.content ? agent.content.stepIndex : undefined,
+    input: agent.content.input,
   };
-}
-
-function buildAgentStepResult(agent?: AgentEventAgent): Record<string, unknown> | undefined {
-  if (!agent) {
-    return undefined;
-  }
-  if (agent.name === "chat") {
-    return agent.chat?.result ? { finalAnswer: agent.chat.result.finalAnswer } : undefined;
-  }
-  if (agent.name === "react") {
-    if (agent.react?.step === "thought") {
-      return omitUndefined({
-        actionType: agent.react.actionType,
-        toolName: agent.react.thoughtResult?.toolName,
-        actionPayload: agent.react.thoughtResult?.actionPayload,
-        finalAnswer: agent.react.thoughtResult?.finalAnswer,
-      });
-    }
-    if (agent.react?.step === "observation") {
-      return omitUndefined({
-        summary: agent.react.observationResult?.summary,
-        completed: agent.react.observationResult?.completed,
-        finalAnswer: agent.react.observationResult?.finalAnswer,
-      });
-    }
-    return undefined;
-  }
-  if (agent.peo?.step === "plan") {
-    return omitUndefined({
-      planSummary: agent.peo.planResult?.planSummary,
-      tasks: agent.peo.planResult?.tasks,
-      finalAnswer: agent.peo.planResult?.finalAnswer,
-    });
-  }
-  if (agent.peo?.step === "observation") {
-    return omitUndefined({
-      taskResult: agent.peo.taskResult,
-      observationResult: agent.peo.observationResult,
-    });
-  }
-  return undefined;
 }
 
 function buildModelInputSummary(message: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]): Record<string, unknown> | undefined {

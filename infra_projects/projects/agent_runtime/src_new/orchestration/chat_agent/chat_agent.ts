@@ -76,27 +76,24 @@ class ChatAgent implements IAgent {
     this.running = true;
     try {
       const prompt = await this.promptBuilder.buildPrompt(context);
-      const response = await this.executeModel(context, runId, prompt);
-      const checked = await this.resultChecker.check(response);
-      const runtimeContext = getRuntimeContext(context);
       await this.eventBus.publish({
         type: "agent",
         agentMessage: {
-          event: "agent_step_completed",
-          sessionId: runtimeContext.sessionId,
+          event: "step",
+          sessionId: getRuntimeContext(context).sessionId,
           traceId: runId,
           timestamp: new Date().toISOString(),
           agent: {
             name: "chat",
-            chat: {
-              stage: "chat",
-              result: {
-                finalAnswer: formatChatFinalAnswer(checked.data),
-              },
+            content: {
+              step: "chat",
+              input: prompt.userPrompt,
             },
           },
         },
       });
+      const response = await this.executeModel(context, runId, prompt);
+      const checked = await this.resultChecker.check(response);
       return createChatSuccessResult(this.pattern, context, runId, checked);
     } catch (error) {
       return createChatFailureResult(this.pattern, context, runId, error);
@@ -111,17 +108,6 @@ class ChatAgent implements IAgent {
     request: ModuleRequest,
   ): Promise<ModuleResponse> {
     const runtimeContext = getRuntimeContext(context);
-    request.runtimeEvent = {
-      sessionId: runtimeContext.sessionId,
-      traceId: runId,
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "chat",
-        chat: {
-          stage: "chat",
-        },
-      },
-    };
     const model = this.modelFactory.createModel({
       mock: runtimeContext.modelConfig?.mock ?? true,
       modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
@@ -133,10 +119,6 @@ class ChatAgent implements IAgent {
       throw error;
     }
   }
-}
-
-function formatChatFinalAnswer(data: string | Record<string, unknown>): string {
-  return typeof data === "string" ? data : JSON.stringify(data);
 }
 
 export function createChatAgent(input: {

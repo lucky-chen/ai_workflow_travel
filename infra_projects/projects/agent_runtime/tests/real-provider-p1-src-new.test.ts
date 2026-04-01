@@ -164,7 +164,7 @@ async function testRuntimeLoadsExternalMcpServersFromLocalEnv(): Promise<void> {
         model: {
           mock: true,
           mockInfo: {
-            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolName\":\"remote_echo\",\"actionPayload\":{\"content\":\"from local env\"},\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
+            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolCalls\":[{\"toolName\":\"remote_echo\",\"arguments\":{\"content\":\"from local env\"}}],\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
           },
         },
       },

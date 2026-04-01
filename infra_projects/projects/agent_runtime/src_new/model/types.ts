@@ -1,5 +1,3 @@
-import type { AgentEventAgent } from "../capability/runtime-event.js";
-
 export type RealLlmProvider = "openai" | "deepseek";
 
 export interface ModelCreationInput {
@@ -29,12 +27,6 @@ export interface ModuleRequest {
   responseFormat: ModuleResponseFormat;
   userPrompt: Record<string, unknown>;
   stream: boolean;
-  runtimeEvent?: {
-    timestamp: string;
-    sessionId?: string;
-    traceId?: string;
-    agent?: AgentEventAgent;
-  };
 }
 
 export interface ModuleResponse {

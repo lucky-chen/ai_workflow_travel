@@ -77,13 +77,14 @@ function createTaskExecutionContext(
       },
       eventAgentOverride: {
         name: "peo",
-        peo: {
-          step: "task_execution",
+        content: {
+          step: "execution",
           stepIndex,
-          taskId: task.taskId,
-          taskType: task.type,
-          taskStatus: task.status,
-          taskCount: plan.tasks.length,
+          input: {
+            planSummary: plan.planSummary,
+            task,
+            taskCount: plan.tasks.length,
+          },
         },
       },
     },

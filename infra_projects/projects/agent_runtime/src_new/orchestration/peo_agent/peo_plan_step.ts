@@ -32,26 +32,25 @@ export class PlanStep {
     },
   ): Promise<PlanStepResult> {
     const request = await this.buildPrompt(context, stepIndex, state);
-    const response = await this.executeModel(context, runId, stepIndex, request);
-    const checked = await this.check({ content: response.content });
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {
-        event: "agent_step_completed",
+        event: "step",
         sessionId: getRuntimeContext(context).sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
           name: "peo",
-          peo: {
+          content: {
             step: "plan",
             stepIndex,
-            taskCount: checked.tasks.length,
-            planResult: checked,
+            input: request.userPrompt,
           },
         },
       },
     });
+    const response = await this.executeModel(context, runId, stepIndex, request);
+    const checked = await this.check({ content: response.content });
     return checked;
   }
 
@@ -145,18 +144,6 @@ export class PlanStep {
     request: ModuleRequest,
   ) {
     const runtimeContext = getRuntimeContext(context);
-    request.runtimeEvent = {
-      sessionId: runtimeContext.sessionId,
-      traceId: runId,
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "peo",
-        peo: {
-          step: "plan",
-          stepIndex,
-        },
-      },
-    };
     const model = this.modelFactory.createModel({
       mock: runtimeContext.modelConfig?.mock ?? true,
       modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},

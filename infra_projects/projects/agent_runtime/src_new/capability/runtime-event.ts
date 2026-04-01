@@ -39,7 +39,7 @@ export interface RuntimeMessage {
 }
 
 export interface AgentMessage {
-  event: "agent_selected" | "agent_step_completed" | "task_selected" | "task_completed";
+  event: "step";
   timestamp: string;
   sessionId?: string;
   traceId?: string;
@@ -50,9 +50,6 @@ export interface AgentMessage {
 export interface ModelMessage {
   event: "model_started" | "model_completed";
   timestamp: string;
-  sessionId?: string;
-  traceId?: string;
-  agent?: AgentEventAgent;
   request?: {
     responseFormat: "text" | "json";
     userPrompt: Record<string, unknown>;
@@ -90,63 +87,30 @@ export interface ToolMessage {
   custom?: Record<string, unknown>;
 }
 
-export interface AgentEventAgent {
-  name: "chat" | "react" | "peo";
-  chat?: {
-    stage: "chat";
-    result?: {
-      finalAnswer: string;
+export type AgentEventAgent =
+  | {
+    name: "chat";
+    content: {
+      step: "chat";
+      input: Record<string, unknown>;
+    };
+  }
+  | {
+    name: "react";
+    content: {
+      step: "thought" | "action" | "observation";
+      stepIndex: number;
+      input: Record<string, unknown>;
+    };
+  }
+  | {
+    name: "peo";
+    content: {
+      step: "plan" | "execution" | "observation";
+      stepIndex: number;
+      input: Record<string, unknown>;
     };
   };
-  react?: {
-    step: "thought" | "action" | "observation";
-    stepIndex: number;
-    actionType?: "tool" | "respond";
-    thoughtResult?: {
-      toolName?: string;
-      actionPayload?: Record<string, unknown>;
-      finalAnswer?: string;
-    };
-    observationResult?: {
-      summary: string;
-      completed: boolean;
-      finalAnswer: string;
-    };
-  };
-  peo?: {
-    step: "plan" | "task_execution" | "observation";
-    stepIndex: number;
-    taskId?: string;
-    taskType?: "direct" | "react";
-    taskStatus?: "pending" | "completed" | "failed" | "blocked";
-    taskCount?: number;
-    planResult?: {
-      planSummary: string;
-      tasks: Array<{
-        taskId: string;
-        description: string;
-        type: "direct" | "react";
-        status: "pending" | "completed" | "failed" | "blocked";
-        dependsOn?: string[];
-      }>;
-      finalAnswer?: string;
-    };
-    observationResult?: {
-      summary: string;
-      completed: boolean;
-      finalAnswer: string;
-    };
-    taskResult?: {
-      taskId: string;
-      taskStatus: "completed" | "failed" | "blocked";
-      output?: string;
-      error?: {
-        code: string;
-        message: string;
-      };
-    };
-  };
-}
 
 export interface RuntimeEventCallback {
   onEvent(event: RuntimeEvent): Promise<void> | void;

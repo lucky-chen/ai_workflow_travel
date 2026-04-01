@@ -16,6 +16,27 @@ export class ExecutionStep {
     plan: PlanStepResult,
   ): Promise<ExecutionStepResult> {
     const tasks = selectExecutableTasks(plan.tasks);
+    await this.eventBus.publish({
+      type: "agent",
+      agentMessage: {
+        event: "step",
+        sessionId: context.runtimeContext?.sessionId,
+        traceId: _runId,
+        timestamp: new Date().toISOString(),
+        agent: {
+          name: "peo",
+          content: {
+            step: "execution",
+            stepIndex,
+            input: {
+              planSummary: plan.planSummary,
+              tasks,
+              finalAnswer: plan.finalAnswer,
+            },
+          },
+        },
+      },
+    });
     if (tasks.length === 0) {
       return {
         planSummary: plan.planSummary,
@@ -26,26 +47,6 @@ export class ExecutionStep {
     }
     const taskExecutions = [];
     for (const task of tasks) {
-      await this.eventBus.publish({
-        type: "agent",
-        agentMessage: {
-          event: "task_selected",
-          sessionId: context.runtimeContext?.sessionId,
-          traceId: _runId,
-          timestamp: new Date().toISOString(),
-          agent: {
-            name: "peo",
-            peo: {
-              step: "task_execution",
-              stepIndex,
-              taskId: task.taskId,
-              taskType: task.type,
-              taskStatus: task.status,
-              taskCount: plan.tasks.length,
-            },
-          },
-        },
-      });
       const executor = task.type === "react"
         ? this.reactTaskExecutor
         : this.directTaskExecutor;

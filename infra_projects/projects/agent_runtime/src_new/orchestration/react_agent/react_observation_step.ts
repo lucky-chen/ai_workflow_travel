@@ -22,7 +22,7 @@ export class ObservationStep {
     input: {
       thought: string;
       actionType: "tool" | "respond";
-      actionObservation: string;
+      actionObservations: string[];
       priorObservation?: string;
       shouldContinue: boolean;
       finalAnswer?: string;
@@ -32,7 +32,7 @@ export class ObservationStep {
     completed: boolean;
     finalAnswer: string;
   }> {
-    const response = await this.executeModel(context, runId, stepIndex, {
+    const request = {
       systemPrompt: [
         "Return valid JSON only.",
         "Summarize the current observation and decide whether the run is complete.",
@@ -56,33 +56,34 @@ export class ObservationStep {
         action: {
           thought: input.thought,
           actionType: input.actionType,
-          actionObservation: input.actionObservation,
+          actionObservations: input.actionObservations,
         },
       },
       stream: false,
-    });
-    const checked = await this.check({
-      content: response.content,
-      observation: input.actionObservation,
-      shouldContinue: input.shouldContinue,
-      finalAnswer: input.finalAnswer,
-    });
+    } satisfies ModuleRequest;
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {
-        event: "agent_step_completed",
+        event: "step",
         sessionId: getRuntimeContext(context).sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
           name: "react",
-          react: {
+          content: {
             step: "observation",
             stepIndex,
-            observationResult: checked,
+            input: request.userPrompt,
           },
         },
       },
+    });
+    const response = await this.executeModel(context, runId, stepIndex, request);
+    const checked = await this.check({
+      content: response.content,
+      observations: input.actionObservations,
+      shouldContinue: input.shouldContinue,
+      finalAnswer: input.finalAnswer,
     });
     return checked;
   }
@@ -94,10 +95,13 @@ export class ObservationStep {
   }> {
     const content = typeof observation.content === "string" ? observation.content : "";
     const parsed = tryParseJsonRecord(content);
+    const firstObservation = Array.isArray(observation.observations)
+      ? observation.observations.find((value): value is string => typeof value === "string" && value.trim().length > 0)
+      : undefined;
     const summary = typeof parsed?.summary === "string" && parsed.summary.trim()
       ? parsed.summary
-      : typeof observation.observation === "string" && observation.observation.trim()
-        ? observation.observation
+      : typeof firstObservation === "string" && firstObservation.trim()
+        ? firstObservation
         : content;
     if (!summary.trim()) {
       throw new Error("ReAct observation is invalid.");
@@ -128,18 +132,6 @@ export class ObservationStep {
     request: ModuleRequest,
   ) {
     const runtimeContext = getRuntimeContext(context);
-    request.runtimeEvent = {
-      sessionId: runtimeContext.sessionId,
-      traceId: runId,
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "react",
-        react: {
-          step: "observation",
-          stepIndex,
-        },
-      },
-    };
     const model = this.modelFactory.createModel({
       mock: runtimeContext.modelConfig?.mock ?? true,
       modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},

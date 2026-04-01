@@ -126,7 +126,7 @@ export class AgentSession implements AgentSessionLike {
         sessionState,
       });
       const requestedMode = routing.mode;
-      const agent = await this.selectAgent(requestedMode, routing.reasonCode, userInput, traceId);
+      const agent = await this.selectAgent(requestedMode);
       const result = await agent.run(await this.buildAgentContext(context, userInput, requestedMode, sessionState));
       await this.applyStateUpdate(result.stateUpdate, traceId);
       return this.finalizeSuccess(result, requestedMode, agent, traceId);
@@ -210,13 +210,7 @@ export class AgentSession implements AgentSessionLike {
     });
   }
 
-  private async selectAgent(
-    requestedMode: AgentRunMode,
-    reasonCode: string,
-    userInput: UserInput,
-    traceId: string,
-  ): Promise<IAgent> {
-    await this.recordAgentSelected(traceId, requestedMode, reasonCode, userInput);
+  private async selectAgent(requestedMode: AgentRunMode): Promise<IAgent> {
     const cached = this.agentCacheMap.get(requestedMode);
     if (cached) {
       return cached;
@@ -224,30 +218,6 @@ export class AgentSession implements AgentSessionLike {
     const agent = await this.services.agentFactory.create(requestedMode);
     this.agentCacheMap.set(requestedMode, agent);
     return agent;
-  }
-
-  private async recordAgentSelected(
-    traceId: string,
-    requestedMode: AgentRunMode,
-    reasonCode: string,
-    userInput: UserInput,
-  ): Promise<void> {
-    await this.services.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "agent_selected",
-        sessionId: this.sessionId,
-        traceId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: requestedMode,
-        },
-        custom: {
-          reasonCode,
-          question: userInput.content,
-        },
-      },
-    });
   }
 
   private async buildAgentContext(

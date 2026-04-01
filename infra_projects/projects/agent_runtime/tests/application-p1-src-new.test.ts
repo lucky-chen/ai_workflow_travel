@@ -87,25 +87,25 @@ async function testRuntimeEventDisplayMapping(): Promise<void> {
     modelMessage: {
       event: "model_started",
       timestamp: new Date().toISOString(),
-      agent: {
-        name: "react",
-        react: {
-          step: "thought",
-          stepIndex: 1,
-        },
+      request: {
+        responseFormat: "json",
+        userPrompt: { stage: "react_thought" },
+        stream: false,
+        systemPromptCount: 1,
       },
     },
   });
   const reactStepDisplay = toRuntimeEventDisplay({
     type: "agent",
     agentMessage: {
-      event: "agent_step_completed",
+      event: "step",
       timestamp: new Date().toISOString(),
       agent: {
         name: "react",
-        react: {
+        content: {
           step: "thought",
           stepIndex: 1,
+          input: {},
         },
       },
     },
@@ -113,15 +113,16 @@ async function testRuntimeEventDisplayMapping(): Promise<void> {
   const peoDisplay = toRuntimeEventDisplay({
     type: "agent",
     agentMessage: {
-      event: "task_selected",
+      event: "step",
       timestamp: new Date().toISOString(),
       agent: {
         name: "peo",
-        peo: {
-          step: "task_execution",
+        content: {
+          step: "execution",
           stepIndex: 1,
-          taskId: "task-1",
-          taskType: "react",
+          input: {
+            tasks: [{ taskId: "task-1", type: "react" }],
+          },
         },
       },
     },
@@ -133,10 +134,10 @@ async function testRuntimeEventDisplayMapping(): Promise<void> {
       timestamp: new Date().toISOString(),
       agent: {
         name: "react",
-        react: {
+        content: {
           step: "action",
           stepIndex: 1,
-          actionType: "tool",
+          input: {},
         },
       },
       tool: {
@@ -145,9 +146,8 @@ async function testRuntimeEventDisplayMapping(): Promise<void> {
     },
   });
 
-  assert.equal(reactDisplay.title, "React thought started");
-  assert.equal(reactStepDisplay.title, "React thought completed");
-  assert.equal(peoDisplay.title, "Task selected: task-1");
-  assert.equal(peoDisplay.detail, "react");
+  assert.equal(reactDisplay.title, "Model started");
+  assert.equal(reactStepDisplay.title, "React thought");
+  assert.equal(peoDisplay.title, "PEO execution");
   assert.equal(toolDisplay.title, "Tool started: read_text_file");
 }

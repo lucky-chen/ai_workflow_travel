@@ -9,12 +9,15 @@ import {
   ensureSuccessfulModelResponse,
   getRuntimeContext,
   isRecord,
-  matchAvailableToolName,
   summarizeToolDefinitions,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
 
 export const REACT_MAX_STEPS = 2;
+export interface ReactToolCall {
+  toolName: string;
+  arguments: Record<string, unknown>;
+}
 
 export class ThoughtStep {
   constructor(
@@ -34,12 +37,28 @@ export class ThoughtStep {
   ): Promise<{
     thought: string;
     actionType: "tool" | "respond";
-    toolName?: string;
-    actionPayload?: Record<string, unknown>;
+    toolCalls?: ReactToolCall[];
     shouldContinue: boolean;
     finalAnswer?: string;
   }> {
     const request = await this.buildPrompt(context, stepIndex, state);
+    await this.eventBus.publish({
+      type: "agent",
+      agentMessage: {
+        event: "step",
+        sessionId: getRuntimeContext(context).sessionId,
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+        agent: {
+          name: "react",
+          content: {
+            step: "thought",
+            stepIndex,
+            input: request.userPrompt,
+          },
+        },
+      },
+    });
     const response = await this.executeModel(context, runId, stepIndex, request);
     const checked = await this.check({
       content: response.content,
@@ -48,28 +67,6 @@ export class ThoughtStep {
           .map((value) => isRecord(value) && typeof value.name === "string" ? value.name : undefined)
           .filter((value): value is string => typeof value === "string")
         : [],
-    });
-    await this.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "agent_step_completed",
-        sessionId: getRuntimeContext(context).sessionId,
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: "react",
-          react: {
-            step: "thought",
-            stepIndex,
-            actionType: checked.actionType,
-            thoughtResult: {
-              toolName: checked.toolName,
-              actionPayload: checked.actionPayload,
-              finalAnswer: checked.finalAnswer,
-            },
-          },
-        },
-      },
     });
     return checked;
   }
@@ -105,8 +102,7 @@ export class ThoughtStep {
         },
         expectedSchema: {
           actionType: "\"tool\" | \"respond\"",
-          toolName: "string required when actionType is tool",
-          actionPayload: "object required when actionType is tool",
+          toolCalls: "array required when actionType is tool",
           finalAnswer: "string required when actionType is respond",
         },
         runtimeState: {
@@ -121,8 +117,7 @@ export class ThoughtStep {
   private async check(thought: Record<string, unknown>): Promise<{
     thought: string;
     actionType: "tool" | "respond";
-    toolName?: string;
-    actionPayload?: Record<string, unknown>;
+    toolCalls?: ReactToolCall[];
     shouldContinue: boolean;
     finalAnswer?: string;
   }> {
@@ -134,22 +129,20 @@ export class ThoughtStep {
     const normalizedThought = typeof parsed?.thought === "string" && parsed.thought.trim()
       ? parsed.thought
       : content;
-    const availableTools = Array.isArray(thought.availableTools)
-      ? thought.availableTools.filter((value): value is string => typeof value === "string")
+    const toolCalls = Array.isArray(parsed?.toolCalls)
+      ? parsed.toolCalls
+        .map((value) => normalizeToolCall(value))
+        .filter((value): value is ReactToolCall => Boolean(value))
       : [];
-    const toolName = typeof parsed?.toolName === "string"
-      ? parsed.toolName
-      : matchAvailableToolName(content, availableTools);
     const actionType = parsed?.actionType === "tool" || parsed?.actionType === "respond"
       ? parsed.actionType
-      : toolName
+      : toolCalls.length > 0
         ? "tool"
         : "respond";
     return {
       thought: normalizedThought,
       actionType,
-      toolName,
-      actionPayload: isRecord(parsed?.actionPayload) ? parsed.actionPayload : undefined,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       shouldContinue: parsed?.shouldContinue === true || actionType === "tool",
       finalAnswer: typeof parsed?.finalAnswer === "string" ? parsed.finalAnswer : undefined,
     };
@@ -162,18 +155,6 @@ export class ThoughtStep {
     request: ModuleRequest,
   ) {
     const runtimeContext = getRuntimeContext(context);
-    request.runtimeEvent = {
-      sessionId: runtimeContext.sessionId,
-      traceId: runId,
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "react",
-        react: {
-          step: "thought",
-          stepIndex,
-        },
-      },
-    };
     const model = this.modelFactory.createModel({
       mock: runtimeContext.modelConfig?.mock ?? true,
       modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
@@ -187,4 +168,18 @@ export class ThoughtStep {
       throw error;
     }
   }
+}
+
+function normalizeToolCall(value: unknown): ReactToolCall | undefined {
+  if (!isRecord(value) || typeof value.toolName !== "string") {
+    return undefined;
+  }
+  return {
+    toolName: value.toolName,
+    arguments: isRecord(value.arguments)
+      ? value.arguments
+      : isRecord(value.actionPayload)
+        ? value.actionPayload
+        : {},
+  };
 }

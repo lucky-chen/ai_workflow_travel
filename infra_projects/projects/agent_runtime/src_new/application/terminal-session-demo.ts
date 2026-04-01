@@ -181,22 +181,7 @@ function describeRuntimeEvent(event: Extract<RuntimeEvent, { type: "runtime" }>)
 }
 
 function describeAgentEvent(event: Extract<RuntimeEvent, { type: "agent" }>): RuntimeEventDisplay {
-  if (event.agentMessage.event === "agent_selected") {
-    return { title: `Agent selected: ${event.agentMessage.agent.name}` };
-  }
-  if (event.agentMessage.event === "task_selected") {
-    return {
-      title: `Task selected: ${event.agentMessage.agent.peo?.taskId ?? "unknown"}`,
-      detail: event.agentMessage.agent.peo?.taskType,
-    };
-  }
-  if (event.agentMessage.event === "task_completed") {
-    return {
-      title: `Task completed: ${event.agentMessage.agent.peo?.taskId ?? "unknown"}`,
-      detail: event.agentMessage.agent.peo?.taskStatus,
-    };
-  }
-  return { title: describeAgentStepCompleted(event) };
+  return { title: describeAgentStep(event) };
 }
 
 function describeModelEvent(event: Extract<RuntimeEvent, { type: "model" }>): RuntimeEventDisplay {
@@ -225,40 +210,22 @@ function parseSessionIdArg(argv: string[]): string | undefined {
 }
 
 function describeModelStarted(event: Extract<RuntimeEvent, { type: "model" }>): string {
-  if (event.modelMessage.agent?.name === "chat") {
-    return "Chat model started";
-  }
-  if (event.modelMessage.agent?.name === "react") {
-    return `React ${event.modelMessage.agent.react?.step ?? "step"} started`;
-  }
-  if (event.modelMessage.agent?.name === "peo") {
-    return `PEO ${event.modelMessage.agent.peo?.step ?? "step"} started`;
-  }
   return "Model started";
 }
 
 function describeModelCompleted(event: Extract<RuntimeEvent, { type: "model" }>): string {
-  if (event.modelMessage.agent?.name === "chat") {
-    return "Chat model completed";
-  }
-  if (event.modelMessage.agent?.name === "react") {
-    return `React ${event.modelMessage.agent.react?.step ?? "step"} model completed`;
-  }
-  if (event.modelMessage.agent?.name === "peo") {
-    return `PEO ${event.modelMessage.agent.peo?.step ?? "step"} model completed`;
-  }
   return "Model completed";
 }
 
-function describeAgentStepCompleted(event: Extract<RuntimeEvent, { type: "agent" }>): string {
+function describeAgentStep(event: Extract<RuntimeEvent, { type: "agent" }>): string {
   if (event.agentMessage.agent.name === "chat") {
-    return "Chat step completed";
+    return "Chat";
   }
   if (event.agentMessage.agent.name === "react") {
-    return `React ${event.agentMessage.agent.react?.step ?? "step"} completed`;
+    return `React ${event.agentMessage.agent.content.step}`;
   }
   if (event.agentMessage.agent.name === "peo") {
-    return `PEO ${event.agentMessage.agent.peo?.step ?? "step"} completed`;
+    return `PEO ${event.agentMessage.agent.content.step}`;
   }
-  return "Agent step completed";
+  return "Agent step";
 }

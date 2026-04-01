@@ -26,6 +26,11 @@ export class McpGateway implements McpGatewayContract {
         agent: {
           ...(input.eventAgent ?? {
             name: "react",
+            content: {
+              step: "action",
+              stepIndex: 0,
+              input: {},
+            },
           }),
         },
         tool: {
@@ -55,6 +60,11 @@ export class McpGateway implements McpGatewayContract {
           agent: {
             ...(input.eventAgent ?? {
               name: "react",
+              content: {
+                step: "action",
+                stepIndex: 0,
+                input: {},
+              },
             }),
           },
           tool: {
@@ -91,6 +101,11 @@ export class McpGateway implements McpGatewayContract {
             agent: {
               ...(input.eventAgent ?? {
                 name: "react",
+                content: {
+                  step: "action",
+                  stepIndex: 0,
+                  input: {},
+                },
               }),
             },
             tool: {
@@ -127,6 +142,11 @@ export class McpGateway implements McpGatewayContract {
           agent: {
             ...(input.eventAgent ?? {
               name: "react",
+              content: {
+                step: "action",
+                stepIndex: 0,
+                input: {},
+              },
             }),
           },
           tool: {

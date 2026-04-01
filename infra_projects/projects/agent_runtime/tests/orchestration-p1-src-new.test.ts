@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createRuntime, MultiAgentProtocol, RunCheckpoint, RuntimeEventBus } from "../src_new/index.js";
+import type { RuntimeEvent } from "../src_new/capability/runtime-event.js";
 import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
 import type { McpGateway, ToolCallInput, ToolCallResult } from "../src_new/capability/types.js";
 import { ExecutionStep } from "../src_new/orchestration/peo_agent/peo_execution_step.js";
@@ -100,8 +101,7 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
           respond: () => JSON.stringify({
             thought: "Use echo tool",
             actionType: "tool",
-            toolName: "echo_hello",
-            actionPayload: {},
+            toolCalls: [{ toolName: "echo_hello", arguments: {} }],
             finalAnswer: "react result",
             shouldContinue: true,
           }),
@@ -342,8 +342,7 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
               return JSON.stringify({
                 thought: "Use echo tool",
                 actionType: "tool",
-                toolName: "echo_hello",
-                actionPayload: {},
+                toolCalls: [{ toolName: "echo_hello", arguments: {} }],
                 shouldContinue: true,
               });
             }
@@ -373,7 +372,7 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
   ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
   const eventTypes = (tracePayload.events ?? []).map((event) => event.eventType);
   const peoPlanEvent = (tracePayload.events ?? []).find((event) =>
-    event.eventType === "agent_step_recorded"
+    event.eventType === "agent_step_started"
     && event.payload?.agent === "peo"
     && event.payload?.step === "plan"
   );
@@ -384,9 +383,8 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
   assert.equal(state.history.some((item) => item.role === "tool"), true);
   assert.equal(eventTypes.includes("model_called"), true);
   assert.equal(eventTypes.includes("tool_called"), true);
-  const peoPlanResult = peoPlanEvent?.payload?.result as Record<string, unknown> | undefined;
-  assert.equal(peoPlanResult?.planSummary, "Use react subtask to execute plan");
-  assert.equal(Array.isArray(peoPlanResult?.tasks), true);
+  const peoPlanInput = peoPlanEvent?.payload?.input as Record<string, unknown> | undefined;
+  assert.equal((peoPlanInput?.question as Record<string, unknown> | undefined)?.task, "/plan execute observe");
   assert.equal(Boolean(toolEvent), true);
 }
 
@@ -550,8 +548,7 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
               return JSON.stringify({
                 thought: "Use missing tool",
                 actionType: "tool",
-                toolName: "missing_tool",
-                actionPayload: {},
+                toolCalls: [{ toolName: "missing_tool", arguments: {} }],
                 shouldContinue: true,
               });
             }
@@ -661,7 +658,7 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
       },
     },
   ]);
-  const step = new ActionStep(gateway, registry);
+  const step = new ActionStep(gateway, registry, new RuntimeEventBus([]));
 
   const result = await step.run(
     createMinimalAgentContext("react"),
@@ -670,8 +667,7 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
     {
       thought: "read file",
       actionType: "tool",
-      toolName: "read_text_file",
-      actionPayload: {},
+      toolCalls: [{ toolName: "read_text_file", arguments: {} }],
       shouldContinue: true,
     },
   );
@@ -685,42 +681,12 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
 
 async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-events-");
-  const received: Array<{
-    type: string;
-    agent?: string;
-    reactStep?: string;
-    toolName?: string;
-    thoughtResult?: Record<string, unknown>;
-    observationResult?: Record<string, unknown>;
-    toolResult?: Record<string, unknown>;
-  }> = [];
+  const received: RuntimeEvent[] = [];
   const runtime = createRuntime({
     workdir,
     eventCallback: {
       onEvent(event) {
-        const eventName = event.type === "runtime"
-          ? event.runtimeMessage.event
-          : event.type === "agent"
-            ? event.agentMessage.event
-            : event.type === "model"
-              ? event.modelMessage.event
-              : event.toolMessage.event;
-        const agent = event.type === "agent"
-          ? event.agentMessage.agent
-          : event.type === "model"
-            ? event.modelMessage.agent
-            : event.type === "tool"
-              ? event.toolMessage.agent
-              : undefined;
-        received.push({
-          type: eventName,
-          agent: agent?.name,
-          reactStep: agent?.react?.step,
-          toolName: event.type === "tool" ? event.toolMessage.tool.toolName : undefined,
-          thoughtResult: agent?.react?.thoughtResult,
-          observationResult: agent?.react?.observationResult,
-          toolResult: event.type === "tool" ? event.toolMessage.tool.result : undefined,
-        });
+        received.push(event);
       },
     },
   });
@@ -734,8 +700,7 @@ async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> 
               return JSON.stringify({
                 thought: "use tool",
                 actionType: "tool",
-                toolName: "echo_hello",
-                actionPayload: {},
+                toolCalls: [{ toolName: "echo_hello", arguments: {} }],
                 shouldContinue: false,
                 finalAnswer: "done",
               });
@@ -761,56 +726,45 @@ async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> 
   });
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(received.some((event) => event.type === "model_started" && event.agent === "react" && event.reactStep === "thought"), true);
-  assert.equal(received.some((event) => event.type === "model_completed" && event.agent === "react" && event.reactStep === "thought"), true);
-  assert.equal(received.some((event) => event.type === "agent_step_completed" && event.agent === "react" && event.reactStep === "thought" && event.thoughtResult?.toolName === "echo_hello"), true);
-  assert.equal(received.some((event) => event.type === "agent_step_completed" && event.agent === "react" && event.reactStep === "observation" && event.observationResult?.finalAnswer === "done"), true);
-  assert.equal(received.some((event) => event.type === "tool_started" && event.agent === "react" && event.toolName === "echo_hello"), true);
-  assert.equal(received.some((event) => event.type === "tool_failed"), false);
+  assert.equal(received.some((event) => (
+    event.type === "model"
+    && event.modelMessage.event === "model_started"
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "model"
+    && event.modelMessage.event === "model_completed"
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "agent"
+    && event.agentMessage.event === "step"
+    && event.agentMessage.agent.name === "react"
+    && event.agentMessage.agent.content.step === "thought"
+    && (event.agentMessage.agent.content.input.question as Record<string, unknown>)?.task === "/react use tool"
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "agent"
+    && event.agentMessage.event === "step"
+    && event.agentMessage.agent.name === "react"
+    && event.agentMessage.agent.content.step === "observation"
+    && Array.isArray((event.agentMessage.agent.content.input.action as Record<string, unknown> | undefined)?.actionObservations)
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "tool"
+    && event.toolMessage.event === "tool_started"
+    && event.toolMessage.agent.name === "react"
+    && event.toolMessage.tool.toolName === "echo_hello"
+  )), true);
+  assert.equal(received.some((event) => event.type === "tool" && event.toolMessage.event === "tool_failed"), false);
 }
 
 async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-events-");
-  const received: Array<{
-    type: string;
-    agent?: string;
-    peoStep?: string;
-    taskId?: string;
-    toolName?: string;
-    planResult?: Record<string, unknown>;
-    taskResult?: Record<string, unknown>;
-    observationResult?: Record<string, unknown>;
-    toolResult?: Record<string, unknown>;
-  }> = [];
+  const received: RuntimeEvent[] = [];
   const runtime = createRuntime({
     workdir,
     eventCallback: {
       onEvent(event) {
-        const eventName = event.type === "runtime"
-          ? event.runtimeMessage.event
-          : event.type === "agent"
-            ? event.agentMessage.event
-            : event.type === "model"
-              ? event.modelMessage.event
-              : event.toolMessage.event;
-        const agent = event.type === "agent"
-          ? event.agentMessage.agent
-          : event.type === "model"
-            ? event.modelMessage.agent
-            : event.type === "tool"
-              ? event.toolMessage.agent
-              : undefined;
-        received.push({
-          type: eventName,
-          agent: agent?.name,
-          peoStep: agent?.peo?.step,
-          taskId: agent?.peo?.taskId,
-          toolName: event.type === "tool" ? event.toolMessage.tool.toolName : undefined,
-          planResult: agent?.peo?.planResult,
-          taskResult: agent?.peo?.taskResult,
-          observationResult: agent?.peo?.observationResult,
-          toolResult: event.type === "tool" ? event.toolMessage.tool.result : undefined,
-        });
+        received.push(event);
       },
     },
   });
@@ -838,8 +792,7 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
               return JSON.stringify({
                 thought: "use tool",
                 actionType: "tool",
-                toolName: "echo_hello",
-                actionPayload: {},
+                toolCalls: [{ toolName: "echo_hello", arguments: {} }],
                 shouldContinue: false,
                 finalAnswer: "done",
               });
@@ -865,13 +818,43 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
   });
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(received.some((event) => event.type === "model_started" && event.agent === "peo" && event.peoStep === "plan"), true);
-  assert.equal(received.some((event) => event.type === "model_completed" && event.agent === "peo" && event.peoStep === "plan"), true);
-  assert.equal(received.some((event) => event.type === "agent_step_completed" && event.agent === "peo" && event.peoStep === "plan" && event.planResult?.planSummary === "read with react"), true);
-  assert.equal(received.some((event) => event.type === "task_selected" && event.agent === "peo" && event.taskId === "task-1"), true);
-  assert.equal(received.some((event) => event.type === "task_completed" && event.agent === "peo" && event.taskId === "task-1" && event.taskResult?.taskStatus === "completed" && event.observationResult?.finalAnswer === "done"), true);
-  assert.equal(received.some((event) => event.type === "tool_started" && event.agent === "peo" && event.peoStep === "task_execution" && event.toolName === "echo_hello"), true);
-  assert.equal(received.some((event) => event.type === "tool_failed"), false);
+  assert.equal(received.some((event) => (
+    event.type === "model"
+    && event.modelMessage.event === "model_started"
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "model"
+    && event.modelMessage.event === "model_completed"
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "agent"
+    && event.agentMessage.event === "step"
+    && event.agentMessage.agent.name === "peo"
+    && event.agentMessage.agent.content.step === "plan"
+    && (event.agentMessage.agent.content.input.question as Record<string, unknown>)?.task === "/plan solve with tool"
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "agent"
+    && event.agentMessage.event === "step"
+    && event.agentMessage.agent.name === "peo"
+    && event.agentMessage.agent.content.step === "execution"
+    && Array.isArray(event.agentMessage.agent.content.input.tasks)
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "agent"
+    && event.agentMessage.event === "step"
+    && event.agentMessage.agent.name === "peo"
+    && event.agentMessage.agent.content.step === "observation"
+    && Array.isArray(event.agentMessage.agent.content.input.taskExecutions)
+  )), true);
+  assert.equal(received.some((event) => (
+    event.type === "tool"
+    && event.toolMessage.event === "tool_started"
+    && event.toolMessage.agent.name === "peo"
+    && event.toolMessage.agent.content.step === "execution"
+    && event.toolMessage.tool.toolName === "echo_hello"
+  )), true);
+  assert.equal(received.some((event) => event.type === "tool" && event.toolMessage.event === "tool_failed"), false);
 }
 
 async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
