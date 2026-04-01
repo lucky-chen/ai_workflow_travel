@@ -370,14 +370,24 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
   const state = await session.load();
   const tracePayload = JSON.parse(
     await readFile(await findOnlyTraceFile(workdir), "utf8"),
-  ) as { events?: Array<{ eventType?: string }> };
+  ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
   const eventTypes = (tracePayload.events ?? []).map((event) => event.eventType);
+  const peoPlanEvent = (tracePayload.events ?? []).find((event) =>
+    event.eventType === "agent_step_recorded"
+    && event.payload?.agent === "peo"
+    && event.payload?.step === "plan"
+  );
+  const toolEvent = (tracePayload.events ?? []).find((event) => event.eventType === "tool_called" && event.payload?.toolName === "echo_hello");
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "peo observation");
   assert.equal(state.history.some((item) => item.role === "tool"), true);
   assert.equal(eventTypes.includes("model_called"), true);
   assert.equal(eventTypes.includes("tool_called"), true);
+  const peoPlanResult = peoPlanEvent?.payload?.result as Record<string, unknown> | undefined;
+  assert.equal(peoPlanResult?.planSummary, "Use react subtask to execute plan");
+  assert.equal(Array.isArray(peoPlanResult?.tasks), true);
+  assert.equal(Boolean(toolEvent), true);
 }
 
 async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
@@ -675,16 +685,41 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
 
 async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-events-");
-  const received: Array<{ type: string; agent?: string; reactStep?: string; toolName?: string }> = [];
+  const received: Array<{
+    type: string;
+    agent?: string;
+    reactStep?: string;
+    toolName?: string;
+    thoughtResult?: Record<string, unknown>;
+    observationResult?: Record<string, unknown>;
+    toolResult?: Record<string, unknown>;
+  }> = [];
   const runtime = createRuntime({
     workdir,
     eventCallback: {
       onEvent(event) {
+        const eventName = event.type === "runtime"
+          ? event.runtimeMessage.event
+          : event.type === "agent"
+            ? event.agentMessage.event
+            : event.type === "model"
+              ? event.modelMessage.event
+              : event.toolMessage.event;
+        const agent = event.type === "agent"
+          ? event.agentMessage.agent
+          : event.type === "model"
+            ? event.modelMessage.agent
+            : event.type === "tool"
+              ? event.toolMessage.agent
+              : undefined;
         received.push({
-          type: event.type,
-          agent: event.agent?.name,
-          reactStep: event.agent?.react?.step,
-          toolName: event.agent?.tool?.toolName,
+          type: eventName,
+          agent: agent?.name,
+          reactStep: agent?.react?.step,
+          toolName: event.type === "tool" ? event.toolMessage.tool.toolName : undefined,
+          thoughtResult: agent?.react?.thoughtResult,
+          observationResult: agent?.react?.observationResult,
+          toolResult: event.type === "tool" ? event.toolMessage.tool.result : undefined,
         });
       },
     },
@@ -727,9 +762,11 @@ async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> 
 
   assert.equal(result.errorCode, undefined);
   assert.equal(received.some((event) => event.type === "model_started" && event.agent === "react" && event.reactStep === "thought"), true);
-  assert.equal(received.some((event) => event.type === "model_completed" && event.agent === "react" && event.reactStep === "observation"), true);
+  assert.equal(received.some((event) => event.type === "model_completed" && event.agent === "react" && event.reactStep === "thought"), true);
+  assert.equal(received.some((event) => event.type === "agent_step_completed" && event.agent === "react" && event.reactStep === "thought" && event.thoughtResult?.toolName === "echo_hello"), true);
+  assert.equal(received.some((event) => event.type === "agent_step_completed" && event.agent === "react" && event.reactStep === "observation" && event.observationResult?.finalAnswer === "done"), true);
   assert.equal(received.some((event) => event.type === "tool_started" && event.agent === "react" && event.toolName === "echo_hello"), true);
-  assert.equal(received.some((event) => event.type === "tool_completed" && event.agent === "react" && event.toolName === "echo_hello"), true);
+  assert.equal(received.some((event) => event.type === "tool_failed"), false);
 }
 
 async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> {
@@ -740,17 +777,39 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
     peoStep?: string;
     taskId?: string;
     toolName?: string;
+    planResult?: Record<string, unknown>;
+    taskResult?: Record<string, unknown>;
+    observationResult?: Record<string, unknown>;
+    toolResult?: Record<string, unknown>;
   }> = [];
   const runtime = createRuntime({
     workdir,
     eventCallback: {
       onEvent(event) {
+        const eventName = event.type === "runtime"
+          ? event.runtimeMessage.event
+          : event.type === "agent"
+            ? event.agentMessage.event
+            : event.type === "model"
+              ? event.modelMessage.event
+              : event.toolMessage.event;
+        const agent = event.type === "agent"
+          ? event.agentMessage.agent
+          : event.type === "model"
+            ? event.modelMessage.agent
+            : event.type === "tool"
+              ? event.toolMessage.agent
+              : undefined;
         received.push({
-          type: event.type,
-          agent: event.agent?.name,
-          peoStep: event.agent?.peo?.step,
-          taskId: event.agent?.peo?.taskId,
-          toolName: event.agent?.tool?.toolName,
+          type: eventName,
+          agent: agent?.name,
+          peoStep: agent?.peo?.step,
+          taskId: agent?.peo?.taskId,
+          toolName: event.type === "tool" ? event.toolMessage.tool.toolName : undefined,
+          planResult: agent?.peo?.planResult,
+          taskResult: agent?.peo?.taskResult,
+          observationResult: agent?.peo?.observationResult,
+          toolResult: event.type === "tool" ? event.toolMessage.tool.result : undefined,
         });
       },
     },
@@ -807,10 +866,12 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
 
   assert.equal(result.errorCode, undefined);
   assert.equal(received.some((event) => event.type === "model_started" && event.agent === "peo" && event.peoStep === "plan"), true);
+  assert.equal(received.some((event) => event.type === "model_completed" && event.agent === "peo" && event.peoStep === "plan"), true);
+  assert.equal(received.some((event) => event.type === "agent_step_completed" && event.agent === "peo" && event.peoStep === "plan" && event.planResult?.planSummary === "read with react"), true);
   assert.equal(received.some((event) => event.type === "task_selected" && event.agent === "peo" && event.taskId === "task-1"), true);
-  assert.equal(received.some((event) => event.type === "task_completed" && event.agent === "peo" && event.taskId === "task-1"), true);
+  assert.equal(received.some((event) => event.type === "task_completed" && event.agent === "peo" && event.taskId === "task-1" && event.taskResult?.taskStatus === "completed" && event.observationResult?.finalAnswer === "done"), true);
   assert.equal(received.some((event) => event.type === "tool_started" && event.agent === "peo" && event.peoStep === "task_execution" && event.toolName === "echo_hello"), true);
-  assert.equal(received.some((event) => event.type === "tool_completed" && event.agent === "peo" && event.peoStep === "task_execution" && event.toolName === "echo_hello"), true);
+  assert.equal(received.some((event) => event.type === "tool_failed"), false);
 }
 
 async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {

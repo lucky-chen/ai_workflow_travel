@@ -1,5 +1,5 @@
 import type { AgentContext, TranscriptTurn } from "../context/types.js";
-import type { ModuleRequest, ModuleResponse } from "../model/types.js";
+import type { ModuleResponse } from "../model/types.js";
 import type { AgentRuntimeResult } from "./types.js";
 import type { ToolDefinition } from "../capability/types.js";
 
@@ -105,30 +105,6 @@ export function getRequestedToolName(context: AgentContext): string | undefined 
 
 export function cloneTranscriptTurns(turns: TranscriptTurn[]): TranscriptTurn[] {
   return turns.map((turn) => ({ ...turn }));
-}
-
-export function summarizeModuleRequest(request: ModuleRequest): Record<string, unknown> {
-  const userKeys = Object.keys(request.userPrompt ?? {});
-  return {
-    responseFormat: request.responseFormat,
-    systemPromptCount: request.systemPrompt.length,
-    userPromptKeys: userKeys,
-    userPromptPreview: truncatePreview(JSON.stringify(request.userPrompt ?? {})),
-    stream: request.stream,
-  };
-}
-
-export function summarizeModuleResponse(response: ModuleResponse): Record<string, unknown> {
-  return {
-    hasContent: Boolean(response.content),
-    contentPreview: truncatePreview(response.content),
-    error: response.error.code
-      ? {
-        code: response.error.code,
-        message: truncatePreview(response.error.message),
-      }
-      : undefined,
-  };
 }
 
 export function summarizeToolDefinitions(toolDefinitions: ToolDefinition[]): Array<Record<string, unknown>> {

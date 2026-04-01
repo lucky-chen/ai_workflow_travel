@@ -6,8 +6,6 @@ import {
   createContextBasis,
   ensureSuccessfulModelResponse,
   getRuntimeContext,
-  summarizeModuleRequest,
-  summarizeModuleResponse,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
 
@@ -63,12 +61,30 @@ export class ObservationStep {
       },
       stream: false,
     });
-    return this.check({
+    const checked = await this.check({
       content: response.content,
       observation: input.actionObservation,
       shouldContinue: input.shouldContinue,
       finalAnswer: input.finalAnswer,
     });
+    await this.eventBus.publish({
+      type: "agent",
+      agentMessage: {
+        event: "agent_step_completed",
+        sessionId: getRuntimeContext(context).sessionId,
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+        agent: {
+          name: "react",
+          react: {
+            step: "observation",
+            stepIndex,
+            observationResult: checked,
+          },
+        },
+      },
+    });
+    return checked;
   }
 
   private async check(observation: Record<string, unknown>): Promise<{
@@ -112,18 +128,10 @@ export class ObservationStep {
     request: ModuleRequest,
   ) {
     const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
-    await this.eventBus.publish({
-      type: "model_started",
-      metadata: {
-        sessionId: runtimeContext.sessionId,
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-      },
+    request.runtimeEvent = {
+      sessionId: runtimeContext.sessionId,
+      traceId: runId,
+      timestamp: new Date().toISOString(),
       agent: {
         name: "react",
         react: {
@@ -131,53 +139,17 @@ export class ObservationStep {
           stepIndex,
         },
       },
+    };
+    const model = this.modelFactory.createModel({
+      mock: runtimeContext.modelConfig?.mock ?? true,
+      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
+      mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     try {
       const response = await model.execute(request);
       ensureSuccessfulModelResponse(response);
-      await this.eventBus.publish({
-        type: "model_completed",
-        metadata: {
-          sessionId: runtimeContext.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          name: "react",
-          react: {
-            step: "observation",
-            stepIndex,
-          },
-        },
-      });
       return response;
     } catch (error) {
-      const response = error && typeof error === "object" && "content" in error && "error" in error
-        ? error as { content: string; error: { code: string; message: string } }
-        : undefined;
-      await this.eventBus.publish({
-        type: "model_completed",
-        metadata: {
-          sessionId: runtimeContext.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          name: "react",
-          react: {
-            step: "observation",
-            stepIndex,
-          },
-        },
-        custom: {
-          requestSummary: summarizeModuleRequest(request),
-          responseSummary: response ? summarizeModuleResponse(response) : undefined,
-          error: {
-            code: response?.error.code ?? "MODEL_CALL_FAILED",
-            message: error instanceof Error ? error.message : String(error),
-          },
-        },
-      });
       throw error;
     }
   }

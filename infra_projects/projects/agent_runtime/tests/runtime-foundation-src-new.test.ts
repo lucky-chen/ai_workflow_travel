@@ -9,6 +9,7 @@ export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testRuntimeExposesStableApi();
   await testCreateSessionReturnsStableSessionHandle();
   await testRuntimeCallbackReceivesSessionLifecycleEvents();
+  await testRuntimeCallbackReceivesChatResult();
   await testOpenSessionReloadsPersistedSession();
   await testCloseSessionPersistsClosedState();
   await testOpenSessionReactivatesClosedSession();
@@ -23,7 +24,14 @@ async function testRuntimeCallbackReceivesSessionLifecycleEvents(): Promise<void
     workdir,
     eventCallback: {
       onEvent(event) {
-        received.push(event.type);
+        const eventName = event.type === "runtime"
+          ? event.runtimeMessage.event
+          : event.type === "agent"
+            ? event.agentMessage.event
+            : event.type === "model"
+              ? event.modelMessage.event
+              : event.toolMessage.event;
+        received.push(eventName);
       },
     },
   });
@@ -35,6 +43,43 @@ async function testRuntimeCallbackReceivesSessionLifecycleEvents(): Promise<void
   assert.equal(received.includes("session_create_requested"), true);
   assert.equal(received.includes("session_created"), true);
   assert.equal(received.includes("session_closed"), true);
+}
+
+async function testRuntimeCallbackReceivesChatResult(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-callback-chat-result-");
+  const finalAnswers: string[] = [];
+  const runtime = createRuntime({
+    workdir,
+    eventCallback: {
+      onEvent(event) {
+        const finalAnswer = event.type === "agent"
+          ? event.agentMessage.agent.chat?.result?.finalAnswer
+          : undefined;
+        if (typeof finalAnswer === "string") {
+          finalAnswers.push(finalAnswer);
+        }
+      },
+    },
+  });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          content: "chat callback answer",
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "what is callback result",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.deepEqual(finalAnswers, ["chat callback answer"]);
 }
 
 async function testRuntimeExposesStableApi(): Promise<void> {

@@ -1,3 +1,5 @@
+import { BaseModel } from "./base-model.js";
+import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import type { StreamingEventAdapter } from "./streaming-event-adapter.js";
 import type {
   FetchLike,
@@ -25,53 +27,45 @@ interface DeepSeekResponseBody {
   }>;
 }
 
-export class DeepSeekModel implements IModel {
-  private running = false;
-
+export class DeepSeekModel extends BaseModel implements IModel {
   constructor(
     private readonly modeSelection: ModeSelection,
     private readonly fetchFn: FetchLike,
     private readonly streamingAdapter: StreamingEventAdapter,
-  ) {}
-
-  isRunning(): boolean {
-    return this.running;
+    eventBus?: RuntimeEventBus,
+  ) {
+    super(eventBus);
   }
 
-  async execute(input: ModuleRequest): Promise<ModuleResponse> {
-    this.running = true;
-    try {
-      const requestBody = buildDeepSeekRequestBody(this.modeSelection.model!, input);
-      const response = await this.fetchFn(this.modeSelection.url!, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${this.modeSelection.key!}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
-      const rawText = await response.text();
-      if (!response.ok) {
-        return {
-          content: "",
-          error: {
-            code: "MODEL_HTTP_ERROR",
-            message: rawText,
-          },
-        };
-      }
-
-      const content = extractDeepSeekResponseContent(rawText);
+  protected override async executeCore(input: ModuleRequest): Promise<ModuleResponse> {
+    const requestBody = buildDeepSeekRequestBody(this.modeSelection.model!, input);
+    const response = await this.fetchFn(this.modeSelection.url!, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${this.modeSelection.key!}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+    const rawText = await response.text();
+    if (!response.ok) {
       return {
-        content,
+        content: "",
         error: {
-          code: "",
-          message: "",
+          code: "MODEL_HTTP_ERROR",
+          message: rawText,
         },
       };
-    } finally {
-      this.running = false;
     }
+
+    const content = extractDeepSeekResponseContent(rawText);
+    return {
+      content,
+      error: {
+        code: "",
+        message: "",
+      },
+    };
   }
 
   async *stream(input: ModuleRequest): AsyncIterable<StreamEvent> {

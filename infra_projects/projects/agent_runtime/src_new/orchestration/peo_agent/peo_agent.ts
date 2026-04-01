@@ -24,6 +24,7 @@ class PEOAgent implements IAgent {
   private running = false;
 
   constructor(
+    private readonly eventBus: RuntimeEventBus,
     private readonly planStep: PlanStep,
     private readonly executionStep: ExecutionStep,
     private readonly observeStep: ObserveStep,
@@ -62,6 +63,35 @@ class PEOAgent implements IAgent {
           executionResult: execution,
           priorObservation: state.lastObservation?.summary,
         });
+        if (execution.task) {
+          await this.eventBus.publish({
+            type: "agent",
+            agentMessage: {
+              event: "task_completed",
+              sessionId: context.runtimeContext?.sessionId,
+              traceId: runId,
+              timestamp: new Date().toISOString(),
+              agent: {
+                name: "peo",
+                peo: {
+                  step: "observation",
+                  stepIndex,
+                  taskId: execution.task.taskId,
+                  taskType: execution.task.type,
+                  taskStatus: execution.taskExecution.taskStatus,
+                  taskCount: plan.tasks.length,
+                  taskResult: {
+                    taskId: execution.taskExecution.taskId,
+                    taskStatus: execution.taskExecution.taskStatus,
+                    output: execution.taskExecution.output,
+                    error: execution.taskExecution.error,
+                  },
+                  observationResult: observation,
+                },
+              },
+            },
+          });
+        }
         state.lastObservation = {
           summary: observation.summary,
           finalAnswer: observation.finalAnswer,
@@ -93,6 +123,7 @@ export function createPEOAgent(input: {
     toolRegistry: input.toolRegistry,
   });
   return new PEOAgent(
+    input.eventBus,
     new PlanStep(input.modelFactory, input.eventBus, input.toolRegistry),
     new ExecutionStep(
       input.eventBus,

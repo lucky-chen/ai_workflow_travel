@@ -1,3 +1,5 @@
+import { BaseModel } from "./base-model.js";
+import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import type { StreamingEventAdapter } from "./streaming-event-adapter.js";
 import type {
   IModel,
@@ -6,32 +8,24 @@ import type {
   StreamEvent,
 } from "./types.js";
 
-export class MockModel implements IModel {
-  private running = false;
-
+export class MockModel extends BaseModel implements IModel {
   constructor(
     private readonly mockInfo: Record<string, unknown> | undefined,
     private readonly streamingAdapter: StreamingEventAdapter,
-  ) {}
-
-  isRunning(): boolean {
-    return this.running;
+    eventBus?: RuntimeEventBus,
+  ) {
+    super(eventBus);
   }
 
-  async execute(input: ModuleRequest): Promise<ModuleResponse> {
-    this.running = true;
-    try {
-      const resolvedContent = resolveMockContent(this.mockInfo, input);
-      return {
-        content: resolvedContent,
-        error: {
-          code: "",
-          message: "",
-        },
-      };
-    } finally {
-      this.running = false;
-    }
+  protected override async executeCore(input: ModuleRequest): Promise<ModuleResponse> {
+    const resolvedContent = resolveMockContent(this.mockInfo, input);
+    return {
+      content: resolvedContent,
+      error: {
+        code: "",
+        message: "",
+      },
+    };
   }
 
   async *stream(input: ModuleRequest): AsyncIterable<StreamEvent> {

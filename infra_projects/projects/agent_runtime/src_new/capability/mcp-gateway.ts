@@ -18,15 +18,16 @@ export class McpGateway implements McpGatewayContract {
 
   async call(input: ToolCallInput): Promise<ToolCallResult> {
     await this.eventBus.publish({
-      type: "tool_started",
-      metadata: {
+      type: "tool",
+      toolMessage: {
+        event: "tool_started",
         traceId: input.toolCallId,
         timestamp: new Date().toISOString(),
-      },
-      agent: {
-        ...(input.eventAgent ?? {
-          name: "react",
-        }),
+        agent: {
+          ...(input.eventAgent ?? {
+            name: "react",
+          }),
+        },
         tool: {
           toolName: input.toolName,
           arguments: input.arguments,
@@ -46,23 +47,29 @@ export class McpGateway implements McpGatewayContract {
         },
       };
       await this.eventBus.publish({
-        type: "tool_completed",
-        metadata: {
+        type: "tool",
+        toolMessage: {
+          event: "tool_failed",
           traceId: input.toolCallId,
           timestamp: new Date().toISOString(),
-        },
-        agent: {
-          ...(input.eventAgent ?? {
-            name: "react",
-          }),
+          agent: {
+            ...(input.eventAgent ?? {
+              name: "react",
+            }),
+          },
           tool: {
             toolName: input.toolName,
             arguments: input.arguments,
             error: result.error,
+            result: {
+              content: result.content,
+              exitCode: undefined,
+              blockedByPolicy: true,
+            },
           },
-        },
-        custom: {
-          blockedByPolicy: true,
+          custom: {
+            blockedByPolicy: true,
+          },
         },
       });
       return result;
@@ -74,26 +81,34 @@ export class McpGateway implements McpGatewayContract {
         toolCall: input,
         handler,
       });
-      await this.eventBus.publish({
-        type: "tool_completed",
-        metadata: {
-          traceId: input.toolCallId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          ...(input.eventAgent ?? {
-            name: "react",
-          }),
-          tool: {
-            toolName: input.toolName,
-            arguments: input.arguments,
-            error: result.error,
+      if (result.error || result.blockedByPolicy) {
+        await this.eventBus.publish({
+          type: "tool",
+          toolMessage: {
+            event: "tool_failed",
+            traceId: input.toolCallId,
+            timestamp: new Date().toISOString(),
+            agent: {
+              ...(input.eventAgent ?? {
+                name: "react",
+              }),
+            },
+            tool: {
+              toolName: input.toolName,
+              arguments: input.arguments,
+              error: result.error,
+              result: {
+                content: result.content,
+                exitCode: result.exitCode,
+                blockedByPolicy: result.blockedByPolicy ?? false,
+              },
+            },
+            custom: {
+              blockedByPolicy: result.blockedByPolicy ?? false,
+            },
           },
-        },
-        custom: {
-          blockedByPolicy: result.blockedByPolicy ?? false,
-        },
-      });
+        });
+      }
       return result;
     } catch (error) {
       const result = {
@@ -104,23 +119,28 @@ export class McpGateway implements McpGatewayContract {
         },
       };
       await this.eventBus.publish({
-        type: "tool_completed",
-        metadata: {
+        type: "tool",
+        toolMessage: {
+          event: "tool_failed",
           traceId: input.toolCallId,
           timestamp: new Date().toISOString(),
-        },
-        agent: {
-          ...(input.eventAgent ?? {
-            name: "react",
-          }),
+          agent: {
+            ...(input.eventAgent ?? {
+              name: "react",
+            }),
+          },
           tool: {
             toolName: input.toolName,
             arguments: input.arguments,
             error: result.error,
+            result: {
+              content: result.content,
+              blockedByPolicy: false,
+            },
           },
-        },
-        custom: {
-          blockedByPolicy: false,
+          custom: {
+            blockedByPolicy: false,
+          },
         },
       });
       return result;

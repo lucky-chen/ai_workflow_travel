@@ -32,21 +32,22 @@ export class ExecutionStep {
       };
     }
     await this.eventBus.publish({
-      type: "task_selected",
-      metadata: {
+      type: "agent",
+      agentMessage: {
+        event: "task_selected",
         sessionId: context.runtimeContext?.sessionId,
         traceId: _runId,
         timestamp: new Date().toISOString(),
-      },
-      agent: {
-        name: "peo",
-        peo: {
-          step: "task_execution",
-          stepIndex,
-          taskId: task.taskId,
-          taskType: task.type,
-          taskStatus: task.status,
-          taskCount: plan.tasks.length,
+        agent: {
+          name: "peo",
+          peo: {
+            step: "task_execution",
+            stepIndex,
+            taskId: task.taskId,
+            taskType: task.type,
+            taskStatus: task.status,
+            taskCount: plan.tasks.length,
+          },
         },
       },
     });
@@ -58,30 +59,6 @@ export class ExecutionStep {
       task,
       stepIndex,
       context,
-    });
-    await this.eventBus.publish({
-      type: "task_completed",
-      metadata: {
-        sessionId: context.runtimeContext?.sessionId,
-        traceId: _runId,
-        timestamp: new Date().toISOString(),
-      },
-      agent: {
-        name: "peo",
-        peo: {
-          step: "observation",
-          stepIndex,
-          taskId: task.taskId,
-          taskType: task.type,
-          taskStatus: taskExecution.taskStatus,
-          taskCount: plan.tasks.length,
-        },
-      },
-      custom: taskExecution.error
-        ? {
-          error: taskExecution.error,
-        }
-        : undefined,
     });
     return {
       planSummary: plan.planSummary,

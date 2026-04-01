@@ -45,14 +45,15 @@ export async function registerExternalMcpEndpoints(
   }
 
   await eventBus?.publish({
-    type: "external_mcp_registered",
-    metadata: {
+    type: "runtime",
+    runtimeMessage: {
+      event: "external_mcp_registered",
       timestamp: new Date().toISOString(),
-    },
-    custom: {
-      endpointCount: endpointSummaries.length,
-      toolCount: endpointSummaries.reduce((total, endpoint) => total + endpoint.toolCount, 0),
-      endpoints: endpointSummaries,
+      custom: {
+        endpointCount: endpointSummaries.length,
+        toolCount: endpointSummaries.reduce((total, endpoint) => total + endpoint.toolCount, 0),
+        endpoints: endpointSummaries,
+      },
     },
   });
 }

@@ -21,6 +21,7 @@ import { AgentFactory } from "../orchestration/agent_factory.js";
 import { createIntentRouter } from "../orchestration/intent_router/index.js";
 import { Metrics } from "../observability/metrics.js";
 import { Trace } from "../observability/trace.js";
+import { TraceRuntimeEventListener } from "../observability/trace-runtime-event-listener.js";
 import { ModelFactory } from "../model/model-factory.js";
 import { AgentSession } from "./agent-session.js";
 import { AgentSessionManager } from "./agent-session-manager.js";
@@ -29,7 +30,6 @@ import {
   CallbackRuntimeEventListener,
   RuntimeEventBus,
   type RuntimeEventListener,
-  TraceRuntimeEventListener,
 } from "../capability/runtime-event-bus.js";
 import type { RuntimeEventCallback } from "../capability/runtime-event.js";
 import {
@@ -81,7 +81,7 @@ export class Runtime implements RuntimeApi {
     }
     const eventBus = new RuntimeEventBus(eventListeners);
     const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, eventBus);
-    const modelFactory = new ModelFactory();
+    const modelFactory = new ModelFactory(eventBus);
     const workspaceLocalEnv = new WorkspaceLocalEnv(options.workdir);
     const localEnvLoading = workspaceLocalEnv.load({
       optional: options.defaultModelMode !== "real_from_local_env",
@@ -137,13 +137,14 @@ export class Runtime implements RuntimeApi {
   async createSession(input: AgentSessionAccessInput): Promise<AgentSession> {
     await this.initialization;
     await this.services.eventBus.publish({
-      type: "session_create_requested",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "session_create_requested",
         traceId: randomUUID(),
         timestamp: new Date().toISOString(),
-      },
-      session: {
-        mode: "create",
+        session: {
+          mode: "create",
+        },
       },
     });
     const sessionId = randomUUID();
@@ -159,26 +160,28 @@ export class Runtime implements RuntimeApi {
       throw new Error("Runtime requires sessionId to open a session.");
     }
     await this.services.eventBus.publish({
-      type: "session_open_requested",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "session_open_requested",
         sessionId,
         traceId: randomUUID(),
         timestamp: new Date().toISOString(),
-      },
-      session: {
-        mode: "open",
+        session: {
+          mode: "open",
+        },
       },
     });
     const cached = await this.sessionManager.get(sessionId);
     if (cached instanceof AgentSession) {
       await this.services.eventBus.publish({
-        type: "session_opened",
-        metadata: {
+        type: "runtime",
+        runtimeMessage: {
+          event: "session_opened",
           sessionId,
           timestamp: new Date().toISOString(),
-        },
-        session: {
-          mode: "open",
+          session: {
+            mode: "open",
+          },
         },
       });
       await this.services.trace.flush();
@@ -205,14 +208,15 @@ export class Runtime implements RuntimeApi {
     await session.close();
     await this.sessionManager.remove(sessionId);
     await this.services.eventBus.publish({
-      type: "session_closed",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "session_closed",
         sessionId,
         traceId: randomUUID(),
         timestamp: new Date().toISOString(),
-      },
-      session: {
-        mode: "close",
+        session: {
+          mode: "close",
+        },
       },
     });
     await this.services.trace.flush();

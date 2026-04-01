@@ -10,8 +10,6 @@ import {
   createAssistantTranscriptTurn as createAssistantTurn,
   createUserTranscriptTurn as createUserTurn,
   getRuntimeContext,
-  summarizeModuleRequest,
-  summarizeModuleResponse,
 } from "../agent_orchestration_helpers.js";
 
 class ChatPromptBuilder {
@@ -80,6 +78,25 @@ class ChatAgent implements IAgent {
       const prompt = await this.promptBuilder.buildPrompt(context);
       const response = await this.executeModel(context, runId, prompt);
       const checked = await this.resultChecker.check(response);
+      const runtimeContext = getRuntimeContext(context);
+      await this.eventBus.publish({
+        type: "agent",
+        agentMessage: {
+          event: "agent_step_completed",
+          sessionId: runtimeContext.sessionId,
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+          agent: {
+            name: "chat",
+            chat: {
+              stage: "chat",
+              result: {
+                finalAnswer: formatChatFinalAnswer(checked.data),
+              },
+            },
+          },
+        },
+      });
       return createChatSuccessResult(this.pattern, context, runId, checked);
     } catch (error) {
       return createChatFailureResult(this.pattern, context, runId, error);
@@ -94,71 +111,32 @@ class ChatAgent implements IAgent {
     request: ModuleRequest,
   ): Promise<ModuleResponse> {
     const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
-    await this.eventBus.publish({
-      type: "model_started",
-      metadata: {
-        sessionId: runtimeContext.sessionId,
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-      },
+    request.runtimeEvent = {
+      sessionId: runtimeContext.sessionId,
+      traceId: runId,
+      timestamp: new Date().toISOString(),
       agent: {
         name: "chat",
         chat: {
           stage: "chat",
         },
       },
+    };
+    const model = this.modelFactory.createModel({
+      mock: runtimeContext.modelConfig?.mock ?? true,
+      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
+      mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     try {
-      const response = await model.execute(request);
-      await this.eventBus.publish({
-        type: "model_completed",
-        metadata: {
-          sessionId: runtimeContext.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          name: "chat",
-          chat: {
-            stage: "chat",
-          },
-        },
-      });
-      return response;
+      return await model.execute(request);
     } catch (error) {
-      const response = error && typeof error === "object" && "content" in error && "error" in error
-        ? error as { content: string; error: { code: string; message: string } }
-        : undefined;
-      await this.eventBus.publish({
-        type: "model_completed",
-        metadata: {
-          sessionId: runtimeContext.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          name: "chat",
-          chat: {
-            stage: "chat",
-          },
-        },
-        custom: {
-          requestSummary: summarizeModuleRequest(request),
-          responseSummary: response ? summarizeModuleResponse(response) : undefined,
-          error: {
-            code: response?.error.code ?? "MODEL_CALL_FAILED",
-            message: error instanceof Error ? error.message : String(error),
-          },
-        },
-      });
       throw error;
     }
   }
+}
+
+function formatChatFinalAnswer(data: string | Record<string, unknown>): string {
+  return typeof data === "string" ? data : JSON.stringify(data);
 }
 
 export function createChatAgent(input: {

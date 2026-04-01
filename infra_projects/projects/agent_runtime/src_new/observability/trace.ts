@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import type { Storage } from "../data/storage.js";
 import { PersistentObservabilityBuffer } from "./persistent-observability-buffer.js";
 
@@ -14,6 +12,7 @@ export type TraceEventType =
   | "context_assembled"
   | "agent_selected"
   | "agent_step_started"
+  | "agent_step_recorded"
   | "model_called"
   | "model_result_recorded"
   | "tool_called"
@@ -34,7 +33,6 @@ export interface TraceEvent {
     message: string;
   }>;
   metadata?: {
-    traceId: string;
     timestamp: string;
   };
 }
@@ -45,7 +43,7 @@ export interface TraceResult {
 
 export interface Trace {
   record(event: TraceEvent): Promise<void>;
-  get(sessionId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult>;
+  get(sessionId?: string, scope?: TraceScope): Promise<TraceResult>;
   flush(): Promise<void>;
   getTraceId(): string;
 }
@@ -67,15 +65,12 @@ export class Trace extends PersistentObservabilityBuffer implements Trace {
     await this.recordMutation(isImmediateFlushEvent(normalized.eventType));
   }
 
-  async get(sessionId?: string, traceId?: string, scope?: TraceScope): Promise<TraceResult> {
+  async get(sessionId?: string, scope?: TraceScope): Promise<TraceResult> {
     await this.ensureLoaded();
 
     return {
       events: this.events.filter((event) => {
         if (sessionId && event.sessionId !== sessionId) {
-          return false;
-        }
-        if (traceId && event.metadata?.traceId !== traceId) {
           return false;
         }
         if (scope && event.scope !== scope) {
@@ -108,16 +103,11 @@ export class Trace extends PersistentObservabilityBuffer implements Trace {
   }
 }
 
-export function createTraceId(): string {
-  return randomUUID();
-}
-
 function normalizeTraceEvent(event: TraceEvent): TraceEvent {
   const now = new Date().toISOString();
   return {
     ...event,
     metadata: {
-      traceId: event.metadata?.traceId || createTraceId(),
       timestamp: event.metadata?.timestamp || now,
     },
   };

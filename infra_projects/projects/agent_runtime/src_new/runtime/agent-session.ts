@@ -57,13 +57,14 @@ export class AgentSession implements AgentSessionLike {
     await services.runtimeMemory.update(input.sessionId, []);
     await session.persist();
     await services.eventBus.publish({
-      type: "session_created",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "session_created",
         sessionId: input.sessionId,
         timestamp: new Date().toISOString(),
-      },
-      session: {
-        mode: "create",
+        session: {
+          mode: "create",
+        },
       },
     });
     return session;
@@ -77,13 +78,14 @@ export class AgentSession implements AgentSessionLike {
       await session.reopen();
     }
     await services.eventBus.publish({
-      type: "session_opened",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "session_opened",
         sessionId,
         timestamp: new Date().toISOString(),
-      },
-      session: {
-        mode: "open",
+        session: {
+          mode: "open",
+        },
       },
     });
     return session;
@@ -124,7 +126,7 @@ export class AgentSession implements AgentSessionLike {
         sessionState,
       });
       const requestedMode = routing.mode;
-      const agent = await this.selectAgent(requestedMode, traceId);
+      const agent = await this.selectAgent(requestedMode, routing.reasonCode, userInput, traceId);
       const result = await agent.run(await this.buildAgentContext(context, userInput, requestedMode, sessionState));
       await this.applyStateUpdate(result.stateUpdate, traceId);
       return this.finalizeSuccess(result, requestedMode, agent, traceId);
@@ -177,8 +179,9 @@ export class AgentSession implements AgentSessionLike {
 
   private async recordRunStarted(traceId: string): Promise<void> {
     await this.services.eventBus.publish({
-      type: "run_started",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "run_started",
         sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
@@ -197,8 +200,9 @@ export class AgentSession implements AgentSessionLike {
 
   private async recordContextAssembled(traceId: string): Promise<void> {
     await this.services.eventBus.publish({
-      type: "context_assembled",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "context_assembled",
         sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
@@ -208,9 +212,11 @@ export class AgentSession implements AgentSessionLike {
 
   private async selectAgent(
     requestedMode: AgentRunMode,
+    reasonCode: string,
+    userInput: UserInput,
     traceId: string,
   ): Promise<IAgent> {
-    await this.recordAgentSelected(traceId, requestedMode);
+    await this.recordAgentSelected(traceId, requestedMode, reasonCode, userInput);
     const cached = this.agentCacheMap.get(requestedMode);
     if (cached) {
       return cached;
@@ -220,16 +226,26 @@ export class AgentSession implements AgentSessionLike {
     return agent;
   }
 
-  private async recordAgentSelected(traceId: string, requestedMode: AgentRunMode): Promise<void> {
+  private async recordAgentSelected(
+    traceId: string,
+    requestedMode: AgentRunMode,
+    reasonCode: string,
+    userInput: UserInput,
+  ): Promise<void> {
     await this.services.eventBus.publish({
-      type: "agent_selected",
-      metadata: {
+      type: "agent",
+      agentMessage: {
+        event: "agent_selected",
         sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
-      },
-      agent: {
-        name: requestedMode,
+        agent: {
+          name: requestedMode,
+        },
+        custom: {
+          reasonCode,
+          question: userInput.content,
+        },
       },
     });
   }
@@ -263,15 +279,16 @@ export class AgentSession implements AgentSessionLike {
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
     await this.services.eventBus.publish({
-      type: "state_persisted",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "state_persisted",
         sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
-      },
-      custom: {
-        transcriptAppendCount: stateUpdate.transcriptAppend.length,
-        runtimeMemorySummaryItemCount: stateUpdate.runtimeMemorySummaryItems.length,
+        custom: {
+          transcriptAppendCount: stateUpdate.transcriptAppend.length,
+          runtimeMemorySummaryItemCount: stateUpdate.runtimeMemorySummaryItems.length,
+        },
       },
     });
   }
@@ -306,16 +323,17 @@ export class AgentSession implements AgentSessionLike {
     });
     await this.collectSuccessMetrics(normalized, result, agent.pattern, traceId);
     await this.services.eventBus.publish({
-      type: "run_finished",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "run_finished",
         sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
-      },
-      custom: {
-        agent: requestedMode,
-        format: normalized.format,
-        hasError: false,
+        custom: {
+          agent: requestedMode,
+          format: normalized.format,
+          hasError: false,
+        },
       },
     });
     await this.flushObservability();
@@ -358,16 +376,17 @@ export class AgentSession implements AgentSessionLike {
       },
     });
     await this.services.eventBus.publish({
-      type: "run_failed",
-      metadata: {
+      type: "runtime",
+      runtimeMessage: {
+        event: "run_failed",
         sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
-      },
-      custom: {
-        error: {
-          code: failure.errorCode ?? "SESSION_EXECUTION_FAILED",
-          message: failure.errorMessage ?? "Session execution failed.",
+        custom: {
+          error: {
+            code: failure.errorCode ?? "SESSION_EXECUTION_FAILED",
+            message: failure.errorMessage ?? "Session execution failed.",
+          },
         },
       },
     });

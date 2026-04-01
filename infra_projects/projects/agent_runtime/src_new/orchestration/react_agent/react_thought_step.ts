@@ -10,8 +10,6 @@ import {
   getRuntimeContext,
   isRecord,
   matchAvailableToolName,
-  summarizeModuleRequest,
-  summarizeModuleResponse,
   summarizeToolDefinitions,
   tryParseJsonRecord,
 } from "../agent_orchestration_helpers.js";
@@ -43,7 +41,7 @@ export class ThoughtStep {
   }> {
     const request = await this.buildPrompt(context, stepIndex, state);
     const response = await this.executeModel(context, runId, stepIndex, request);
-    return this.check({
+    const checked = await this.check({
       content: response.content,
       availableTools: isRecord(request.userPrompt.tools) && Array.isArray(request.userPrompt.tools.availableTools)
         ? request.userPrompt.tools.availableTools
@@ -51,6 +49,29 @@ export class ThoughtStep {
           .filter((value): value is string => typeof value === "string")
         : [],
     });
+    await this.eventBus.publish({
+      type: "agent",
+      agentMessage: {
+        event: "agent_step_completed",
+        sessionId: getRuntimeContext(context).sessionId,
+        traceId: runId,
+        timestamp: new Date().toISOString(),
+        agent: {
+          name: "react",
+          react: {
+            step: "thought",
+            stepIndex,
+            actionType: checked.actionType,
+            thoughtResult: {
+              toolName: checked.toolName,
+              actionPayload: checked.actionPayload,
+              finalAnswer: checked.finalAnswer,
+            },
+          },
+        },
+      },
+    });
+    return checked;
   }
 
   private async buildPrompt(
@@ -141,18 +162,10 @@ export class ThoughtStep {
     request: ModuleRequest,
   ) {
     const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
-    await this.eventBus.publish({
-      type: "model_started",
-      metadata: {
-        sessionId: runtimeContext.sessionId,
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-      },
+    request.runtimeEvent = {
+      sessionId: runtimeContext.sessionId,
+      traceId: runId,
+      timestamp: new Date().toISOString(),
       agent: {
         name: "react",
         react: {
@@ -160,53 +173,17 @@ export class ThoughtStep {
           stepIndex,
         },
       },
+    };
+    const model = this.modelFactory.createModel({
+      mock: runtimeContext.modelConfig?.mock ?? true,
+      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
+      mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
     try {
       const response = await model.execute(request);
       ensureSuccessfulModelResponse(response);
-      await this.eventBus.publish({
-        type: "model_completed",
-        metadata: {
-          sessionId: runtimeContext.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          name: "react",
-          react: {
-            step: "thought",
-            stepIndex,
-          },
-        },
-      });
       return response;
     } catch (error) {
-      const response = error && typeof error === "object" && "content" in error && "error" in error
-        ? error as { content: string; error: { code: string; message: string } }
-        : undefined;
-      await this.eventBus.publish({
-        type: "model_completed",
-        metadata: {
-          sessionId: runtimeContext.sessionId,
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-        },
-        agent: {
-          name: "react",
-          react: {
-            step: "thought",
-            stepIndex,
-          },
-        },
-        custom: {
-          requestSummary: summarizeModuleRequest(request),
-          responseSummary: response ? summarizeModuleResponse(response) : undefined,
-          error: {
-            code: response?.error.code ?? "MODEL_CALL_FAILED",
-            message: error instanceof Error ? error.message : String(error),
-          },
-        },
-      });
       throw error;
     }
   }

@@ -1,7 +1,7 @@
 import type { UserInput } from "../interface/api.js";
 import type { AgentRunMode } from "../interface/api.js";
 import type { RuntimeModelConfig } from "../runtime/types.js";
-import type { RuntimeEvent } from "../capability/runtime-event.js";
+import type { AgentEventAgent } from "../capability/runtime-event.js";
 
 export interface ContextAssemblyInput {
   sessionId: string;
@@ -32,7 +32,7 @@ export interface AgentRuntimeContext {
   };
   modelConfig?: RuntimeModelConfig;
   allowedWorkingDirectories?: string[];
-  eventAgentOverride?: RuntimeEvent["agent"];
+  eventAgentOverride?: AgentEventAgent;
 }
 
 export interface ContextView {

@@ -1,10 +1,10 @@
-import type { RuntimeEvent } from "./runtime-event.js";
+import type { AgentEventAgent } from "./runtime-event.js";
 
 export interface ToolCallInput {
   toolCallId: string;
   toolName: string;
   arguments: Record<string, unknown>;
-  eventAgent?: RuntimeEvent["agent"];
+  eventAgent?: AgentEventAgent;
 }
 
 export interface ToolCallResult {

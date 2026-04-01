@@ -83,44 +83,61 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
 
 async function testRuntimeEventDisplayMapping(): Promise<void> {
   const reactDisplay = toRuntimeEventDisplay({
-    type: "model_started",
-    metadata: {
+    type: "model",
+    modelMessage: {
+      event: "model_started",
       timestamp: new Date().toISOString(),
+      agent: {
+        name: "react",
+        react: {
+          step: "thought",
+          stepIndex: 1,
+        },
+      },
     },
-    agent: {
-      name: "react",
-      react: {
-        step: "thought",
-        stepIndex: 1,
+  });
+  const reactStepDisplay = toRuntimeEventDisplay({
+    type: "agent",
+    agentMessage: {
+      event: "agent_step_completed",
+      timestamp: new Date().toISOString(),
+      agent: {
+        name: "react",
+        react: {
+          step: "thought",
+          stepIndex: 1,
+        },
       },
     },
   });
   const peoDisplay = toRuntimeEventDisplay({
-    type: "task_selected",
-    metadata: {
+    type: "agent",
+    agentMessage: {
+      event: "task_selected",
       timestamp: new Date().toISOString(),
-    },
-    agent: {
-      name: "peo",
-      peo: {
-        step: "task_execution",
-        stepIndex: 1,
-        taskId: "task-1",
-        taskType: "react",
+      agent: {
+        name: "peo",
+        peo: {
+          step: "task_execution",
+          stepIndex: 1,
+          taskId: "task-1",
+          taskType: "react",
+        },
       },
     },
   });
   const toolDisplay = toRuntimeEventDisplay({
-    type: "tool_started",
-    metadata: {
+    type: "tool",
+    toolMessage: {
+      event: "tool_started",
       timestamp: new Date().toISOString(),
-    },
-    agent: {
-      name: "react",
-      react: {
-        step: "action",
-        stepIndex: 1,
-        actionType: "tool",
+      agent: {
+        name: "react",
+        react: {
+          step: "action",
+          stepIndex: 1,
+          actionType: "tool",
+        },
       },
       tool: {
         toolName: "read_text_file",
@@ -129,6 +146,7 @@ async function testRuntimeEventDisplayMapping(): Promise<void> {
   });
 
   assert.equal(reactDisplay.title, "React thought started");
+  assert.equal(reactStepDisplay.title, "React thought completed");
   assert.equal(peoDisplay.title, "Task selected: task-1");
   assert.equal(peoDisplay.detail, "react");
   assert.equal(toolDisplay.title, "Tool started: read_text_file");

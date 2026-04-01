@@ -19,11 +19,11 @@ import {
   ExecutionEnvironment,
   Metrics,
   Trace,
-  TraceRuntimeEventListener,
   createRuntime,
   registerExternalMcpEndpoints,
   type ToolCallInput,
 } from "../src_new/index.js";
+import { TraceRuntimeEventListener } from "../src_new/observability/trace-runtime-event-listener.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
@@ -51,14 +51,14 @@ async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
   ]);
 
   await bus.publish({
-    type: "agent_selected",
-    metadata: {
+    type: "agent",
+    agentMessage: {
+      event: "agent_selected",
       sessionId: "session-1",
-      traceId: "trace-1",
       timestamp: new Date().toISOString(),
-    },
-    agent: {
-      name: "react",
+      agent: {
+        name: "react",
+      },
     },
   });
   await trace.flush();
@@ -313,7 +313,6 @@ async function testTracePersistsFlushState(): Promise<void> {
     eventType: "run_started",
     sessionId: "session-1",
     metadata: {
-      traceId: "trace-1",
       timestamp: new Date().toISOString(),
     },
   });
@@ -361,7 +360,6 @@ function createTraceEvent(eventType: Parameters<Trace["record"]>[0]["eventType"]
     sessionId: "session-1",
     payload: eventType === "agent_selected" ? { agent: "react" } : undefined,
     metadata: {
-      traceId: `${eventType}-trace`,
       timestamp: new Date().toISOString(),
     },
   };
