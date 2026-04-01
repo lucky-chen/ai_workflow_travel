@@ -1,7 +1,7 @@
 import type { AgentContext } from "../../context/types.js";
+import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
-import type { Trace } from "../../observability/trace.js";
 import {
   createContextBasis,
   ensureSuccessfulModelResponse,
@@ -14,7 +14,7 @@ import {
 export class ObservationStep {
   constructor(
     private readonly modelFactory: ModelFactory,
-    private readonly trace: Trace,
+    private readonly eventBus: RuntimeEventBus,
   ) {}
 
   async run(
@@ -117,44 +117,65 @@ export class ObservationStep {
       modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
       mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
-    await this.trace.record({
-      scope: "session",
-      eventType: "model_called",
-      sessionId: runtimeContext.sessionId,
-      payload: {
-        stage: "react_observation",
-        stepIndex,
-      },
+    await this.eventBus.publish({
+      type: "model_started",
       metadata: {
+        sessionId: runtimeContext.sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
+      },
+      agent: {
+        name: "react",
+        react: {
+          step: "observation",
+          stepIndex,
+        },
       },
     });
     try {
       const response = await model.execute(request);
       ensureSuccessfulModelResponse(response);
+      await this.eventBus.publish({
+        type: "model_completed",
+        metadata: {
+          sessionId: runtimeContext.sessionId,
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+        agent: {
+          name: "react",
+          react: {
+            step: "observation",
+            stepIndex,
+          },
+        },
+      });
       return response;
     } catch (error) {
       const response = error && typeof error === "object" && "content" in error && "error" in error
         ? error as { content: string; error: { code: string; message: string } }
         : undefined;
-      await this.trace.record({
-        scope: "session",
-        eventType: "model_result_recorded",
-        sessionId: runtimeContext.sessionId,
-        payload: {
-          stage: "react_observation",
-          stepIndex,
+      await this.eventBus.publish({
+        type: "model_completed",
+        metadata: {
+          sessionId: runtimeContext.sessionId,
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+        agent: {
+          name: "react",
+          react: {
+            step: "observation",
+            stepIndex,
+          },
+        },
+        custom: {
           requestSummary: summarizeModuleRequest(request),
           responseSummary: response ? summarizeModuleResponse(response) : undefined,
           error: {
             code: response?.error.code ?? "MODEL_CALL_FAILED",
             message: error instanceof Error ? error.message : String(error),
           },
-        },
-        metadata: {
-          traceId: runId,
-          timestamp: new Date().toISOString(),
         },
       });
       throw error;

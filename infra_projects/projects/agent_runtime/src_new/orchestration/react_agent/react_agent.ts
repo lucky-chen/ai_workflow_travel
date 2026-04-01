@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
 import type { AgentContext } from "../../context/types.js";
 import type { ModelFactory } from "../../model/model-factory.js";
-import type { Trace } from "../../observability/trace.js";
+import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentRuntimeResult, IAgent } from "../types.js";
 import {
   asNumber,
@@ -80,13 +80,13 @@ class ReActAgent implements IAgent {
 export function createReActAgent(input: {
   modelFactory: ModelFactory;
   gateway: McpGateway;
-  trace: Trace;
+  eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
 }): IAgent {
   return new ReActAgent(
-    new ThoughtStep(input.modelFactory, input.trace, input.toolRegistry),
+    new ThoughtStep(input.modelFactory, input.eventBus, input.toolRegistry),
     new ActionStep(input.gateway, input.toolRegistry),
-    new ObservationStep(input.modelFactory, input.trace),
+    new ObservationStep(input.modelFactory, input.eventBus),
   );
 }
 

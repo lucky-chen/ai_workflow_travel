@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime, MultiAgentProtocol, RunCheckpoint } from "../src_new/index.js";
+import { createRuntime, MultiAgentProtocol, RunCheckpoint, RuntimeEventBus } from "../src_new/index.js";
 import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
 import type { McpGateway, ToolCallInput, ToolCallResult } from "../src_new/capability/types.js";
 import { ExecutionStep } from "../src_new/orchestration/peo_agent/peo_execution_step.js";
@@ -25,6 +25,8 @@ export async function runOrchestrationP1SrcNewTests(): Promise<void> {
   await testPeoToolFailureStillFlowsIntoObserve();
   await testToolArgumentValidatorRejectsInvalidArguments();
   await testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall();
+  await testRuntimeCallbackReceivesReactLifecycleEvents();
+  await testRuntimeCallbackReceivesPeoTaskAndToolEvents();
   await testPeoExecutionRoutesReactTaskToReactExecutor();
   await testReservedPlaceholdersStayCallable();
 }
@@ -671,10 +673,151 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
   assert.equal(result.observation.includes("Tool argument validation failed for read_text_file"), true);
 }
 
+async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-react-events-");
+  const received: Array<{ type: string; agent?: string; reactStep?: string; toolName?: string }> = [];
+  const runtime = createRuntime({
+    workdir,
+    eventCallback: {
+      onEvent(event) {
+        received.push({
+          type: event.type,
+          agent: event.agent?.name,
+          reactStep: event.agent?.react?.step,
+          toolName: event.agent?.tool?.toolName,
+        });
+      },
+    },
+  });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          respond: (prompt: Record<string, unknown>) => {
+            if (prompt.stage === "react_thought") {
+              return JSON.stringify({
+                thought: "use tool",
+                actionType: "tool",
+                toolName: "echo_hello",
+                actionPayload: {},
+                shouldContinue: false,
+                finalAnswer: "done",
+              });
+            }
+            if (prompt.stage === "react_observation") {
+              return JSON.stringify({
+                summary: "done",
+                completed: true,
+                finalAnswer: "done",
+              });
+            }
+            throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
+          },
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "/react use tool",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.equal(received.some((event) => event.type === "model_started" && event.agent === "react" && event.reactStep === "thought"), true);
+  assert.equal(received.some((event) => event.type === "model_completed" && event.agent === "react" && event.reactStep === "observation"), true);
+  assert.equal(received.some((event) => event.type === "tool_started" && event.agent === "react" && event.toolName === "echo_hello"), true);
+  assert.equal(received.some((event) => event.type === "tool_completed" && event.agent === "react" && event.toolName === "echo_hello"), true);
+}
+
+async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-peo-events-");
+  const received: Array<{
+    type: string;
+    agent?: string;
+    peoStep?: string;
+    taskId?: string;
+    toolName?: string;
+  }> = [];
+  const runtime = createRuntime({
+    workdir,
+    eventCallback: {
+      onEvent(event) {
+        received.push({
+          type: event.type,
+          agent: event.agent?.name,
+          peoStep: event.agent?.peo?.step,
+          taskId: event.agent?.peo?.taskId,
+          toolName: event.agent?.tool?.toolName,
+        });
+      },
+    },
+  });
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          respond: (prompt: Record<string, unknown>) => {
+            if (prompt.stage === "peo_plan") {
+              return JSON.stringify({
+                planSummary: "read with react",
+                tasks: [
+                  {
+                    taskId: "task-1",
+                    description: "use echo_hello tool",
+                    type: "react",
+                    status: "pending",
+                  },
+                ],
+                finalAnswer: "done",
+              });
+            }
+            if (prompt.stage === "react_thought") {
+              return JSON.stringify({
+                thought: "use tool",
+                actionType: "tool",
+                toolName: "echo_hello",
+                actionPayload: {},
+                shouldContinue: false,
+                finalAnswer: "done",
+              });
+            }
+            if (prompt.stage === "react_observation") {
+              return JSON.stringify({
+                summary: "done",
+                completed: true,
+                finalAnswer: "done",
+              });
+            }
+            throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
+          },
+        },
+      },
+    },
+  });
+
+  const result = await session.execute({
+    content: {
+      task: "/plan solve with tool",
+    },
+  });
+
+  assert.equal(result.errorCode, undefined);
+  assert.equal(received.some((event) => event.type === "model_started" && event.agent === "peo" && event.peoStep === "plan"), true);
+  assert.equal(received.some((event) => event.type === "task_selected" && event.agent === "peo" && event.taskId === "task-1"), true);
+  assert.equal(received.some((event) => event.type === "task_completed" && event.agent === "peo" && event.taskId === "task-1"), true);
+  assert.equal(received.some((event) => event.type === "tool_started" && event.agent === "peo" && event.peoStep === "task_execution" && event.toolName === "echo_hello"), true);
+  assert.equal(received.some((event) => event.type === "tool_completed" && event.agent === "peo" && event.peoStep === "task_execution" && event.toolName === "echo_hello"), true);
+}
+
 async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
   let directCalled = 0;
   let reactCalled = 0;
   const step = new ExecutionStep(
+    new RuntimeEventBus([]),
     {
       async execute() {
         directCalled += 1;

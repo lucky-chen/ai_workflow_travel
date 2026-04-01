@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { AgentContext } from "../../context/types.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
-import type { Trace } from "../../observability/trace.js";
+import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentRuntimeResult, IAgent } from "../types.js";
 import {
   createContextBasis,
@@ -66,7 +66,7 @@ class ChatAgent implements IAgent {
     private readonly modelFactory: ModelFactory,
     private readonly promptBuilder: ChatPromptBuilder,
     private readonly resultChecker: ChatResultChecker,
-    private readonly trace: Trace,
+    private readonly eventBus: RuntimeEventBus,
   ) {}
 
   isRunning(): boolean {
@@ -99,40 +99,61 @@ class ChatAgent implements IAgent {
       modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
       mockInfo: runtimeContext.modelConfig?.mockInfo,
     });
-    await this.trace.record({
-      scope: "session",
-      eventType: "model_called",
-      sessionId: runtimeContext.sessionId,
-      payload: {
-        stage: "chat",
-      },
+    await this.eventBus.publish({
+      type: "model_started",
       metadata: {
+        sessionId: runtimeContext.sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
       },
+      agent: {
+        name: "chat",
+        chat: {
+          stage: "chat",
+        },
+      },
     });
     try {
-      return await model.execute(request);
+      const response = await model.execute(request);
+      await this.eventBus.publish({
+        type: "model_completed",
+        metadata: {
+          sessionId: runtimeContext.sessionId,
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+        agent: {
+          name: "chat",
+          chat: {
+            stage: "chat",
+          },
+        },
+      });
+      return response;
     } catch (error) {
       const response = error && typeof error === "object" && "content" in error && "error" in error
         ? error as { content: string; error: { code: string; message: string } }
         : undefined;
-      await this.trace.record({
-        scope: "session",
-        eventType: "model_result_recorded",
-        sessionId: runtimeContext.sessionId,
-        payload: {
-          stage: "chat",
+      await this.eventBus.publish({
+        type: "model_completed",
+        metadata: {
+          sessionId: runtimeContext.sessionId,
+          traceId: runId,
+          timestamp: new Date().toISOString(),
+        },
+        agent: {
+          name: "chat",
+          chat: {
+            stage: "chat",
+          },
+        },
+        custom: {
           requestSummary: summarizeModuleRequest(request),
           responseSummary: response ? summarizeModuleResponse(response) : undefined,
           error: {
             code: response?.error.code ?? "MODEL_CALL_FAILED",
             message: error instanceof Error ? error.message : String(error),
           },
-        },
-        metadata: {
-          traceId: runId,
-          timestamp: new Date().toISOString(),
         },
       });
       throw error;
@@ -142,13 +163,13 @@ class ChatAgent implements IAgent {
 
 export function createChatAgent(input: {
   modelFactory: ModelFactory;
-  trace: Trace;
+  eventBus: RuntimeEventBus;
 }): IAgent {
   return new ChatAgent(
     input.modelFactory,
     new ChatPromptBuilder(),
     new ChatResultChecker(),
-    input.trace,
+    input.eventBus,
   );
 }
 

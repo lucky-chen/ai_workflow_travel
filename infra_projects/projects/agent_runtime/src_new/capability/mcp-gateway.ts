@@ -6,26 +6,31 @@ import type {
   ToolCallInput,
   ToolCallResult,
 } from "./types.js";
-import type { Trace } from "../observability/trace.js";
+import type { RuntimeEventBus } from "./runtime-event-bus.js";
 
 export class McpGateway implements McpGatewayContract {
   constructor(
     private readonly permissionPolicy: RuntimePermissionPolicyContract,
     private readonly toolRegistry: McpToolRegistryContract,
     private readonly executionEnvironment: ExecutionEnvironmentContract,
-    private readonly trace: Trace,
+    private readonly eventBus: RuntimeEventBus,
   ) {}
 
   async call(input: ToolCallInput): Promise<ToolCallResult> {
-    await this.trace.record({
-      scope: "session",
-      eventType: "tool_called",
-      payload: {
-        toolName: input.toolName,
-      },
+    await this.eventBus.publish({
+      type: "tool_started",
       metadata: {
         traceId: input.toolCallId,
         timestamp: new Date().toISOString(),
+      },
+      agent: {
+        ...(input.eventAgent ?? {
+          name: "react",
+        }),
+        tool: {
+          toolName: input.toolName,
+          arguments: input.arguments,
+        },
       },
     });
     const decision = await this.permissionPolicy.evaluate({
@@ -40,18 +45,24 @@ export class McpGateway implements McpGatewayContract {
           message: decision.message ?? "Tool call blocked by runtime permission policy.",
         },
       };
-      await this.trace.record({
-        scope: "session",
-        eventType: "tool_result_recorded",
-        payload: {
-          toolName: input.toolName,
-          arguments: input.arguments,
-          blockedByPolicy: true,
-          error: result.error,
-        },
+      await this.eventBus.publish({
+        type: "tool_completed",
         metadata: {
           traceId: input.toolCallId,
           timestamp: new Date().toISOString(),
+        },
+        agent: {
+          ...(input.eventAgent ?? {
+            name: "react",
+          }),
+          tool: {
+            toolName: input.toolName,
+            arguments: input.arguments,
+            error: result.error,
+          },
+        },
+        custom: {
+          blockedByPolicy: true,
         },
       });
       return result;
@@ -63,22 +74,26 @@ export class McpGateway implements McpGatewayContract {
         toolCall: input,
         handler,
       });
-      if (result.error || result.blockedByPolicy) {
-        await this.trace.record({
-          scope: "session",
-          eventType: "tool_result_recorded",
-          payload: {
+      await this.eventBus.publish({
+        type: "tool_completed",
+        metadata: {
+          traceId: input.toolCallId,
+          timestamp: new Date().toISOString(),
+        },
+        agent: {
+          ...(input.eventAgent ?? {
+            name: "react",
+          }),
+          tool: {
             toolName: input.toolName,
             arguments: input.arguments,
-            blockedByPolicy: result.blockedByPolicy ?? false,
             error: result.error,
           },
-          metadata: {
-            traceId: input.toolCallId,
-            timestamp: new Date().toISOString(),
-          },
-        });
-      }
+        },
+        custom: {
+          blockedByPolicy: result.blockedByPolicy ?? false,
+        },
+      });
       return result;
     } catch (error) {
       const result = {
@@ -88,18 +103,24 @@ export class McpGateway implements McpGatewayContract {
           message: error instanceof Error ? error.message : String(error),
         },
       };
-      await this.trace.record({
-        scope: "session",
-        eventType: "tool_result_recorded",
-        payload: {
-          toolName: input.toolName,
-          arguments: input.arguments,
-          blockedByPolicy: false,
-          error: result.error,
-        },
+      await this.eventBus.publish({
+        type: "tool_completed",
         metadata: {
           traceId: input.toolCallId,
           timestamp: new Date().toISOString(),
+        },
+        agent: {
+          ...(input.eventAgent ?? {
+            name: "react",
+          }),
+          tool: {
+            toolName: input.toolName,
+            arguments: input.arguments,
+            error: result.error,
+          },
+        },
+        custom: {
+          blockedByPolicy: false,
         },
       });
       return result;

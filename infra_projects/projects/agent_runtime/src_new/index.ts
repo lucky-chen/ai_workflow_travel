@@ -55,6 +55,8 @@ export * from "./capability/execution-environment.js";
 export * from "./capability/mcp-gateway.js";
 export * from "./capability/external_mcp_tool_adapter.js";
 export * from "./capability/built-in-tools.js";
+export * from "./capability/runtime-event.js";
+export * from "./capability/runtime-event-bus.js";
 export * from "./observability/metrics.js";
 export * from "./observability/trace.js";
 export * from "./application/terminal-session-demo.js";

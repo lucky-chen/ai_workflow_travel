@@ -7,6 +7,7 @@ export class DirectTaskExecutor implements ITaskExecutor {
   async execute(input: {
     plan: PlanStepResult;
     task: PlanTask;
+    stepIndex: number;
     context: AgentContext;
   }): Promise<TaskExecutionResult> {
     return {
@@ -27,9 +28,12 @@ export class ReactTaskExecutor implements ITaskExecutor {
   async execute(input: {
     plan: PlanStepResult;
     task: PlanTask;
+    stepIndex: number;
     context: AgentContext;
   }): Promise<TaskExecutionResult> {
-    const result = await this.reactAgent.run(createTaskExecutionContext(input.context, input.plan, input.task));
+    const result = await this.reactAgent.run(
+      createTaskExecutionContext(input.context, input.plan, input.task, input.stepIndex),
+    );
     if (result.errorInfo) {
       return {
         taskId: input.task.taskId,
@@ -54,6 +58,7 @@ function createTaskExecutionContext(
   context: AgentContext,
   plan: PlanStepResult,
   task: PlanTask,
+  stepIndex: number,
 ): AgentContext {
   const runtimeContext = getRuntimeContext(context);
   return {
@@ -68,6 +73,17 @@ function createTaskExecutionContext(
           planSummary: plan.planSummary,
           taskId: task.taskId,
           taskType: task.type,
+        },
+      },
+      eventAgentOverride: {
+        name: "peo",
+        peo: {
+          step: "task_execution",
+          stepIndex,
+          taskId: task.taskId,
+          taskType: task.type,
+          taskStatus: task.status,
+          taskCount: plan.tasks.length,
         },
       },
     },

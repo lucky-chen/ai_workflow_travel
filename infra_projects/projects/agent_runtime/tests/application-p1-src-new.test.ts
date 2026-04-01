@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 
-import { createTerminalSessionDemo } from "../src_new/application/terminal-session-demo.js";
+import {
+  createTerminalSessionDemo,
+  toRuntimeEventDisplay,
+} from "../src_new/application/terminal-session-demo.js";
 import { createRuntime } from "../src_new/runtime/runtime.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runApplicationP1SrcNewTests(): Promise<void> {
   await testTerminalDemoCreateExecuteClose();
   await testTerminalDemoOpenExistingSession();
+  await testRuntimeEventDisplayMapping();
 }
 
 async function testTerminalDemoCreateExecuteClose(): Promise<void> {
@@ -75,4 +79,57 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
   assert.equal(result.sessionId, state.sessionId);
   assert.equal(outputs.includes("[assistant] existing assistant output"), true);
   assert.equal(outputs.at(-1), `Session closed: ${state.sessionId}`);
+}
+
+async function testRuntimeEventDisplayMapping(): Promise<void> {
+  const reactDisplay = toRuntimeEventDisplay({
+    type: "model_started",
+    metadata: {
+      timestamp: new Date().toISOString(),
+    },
+    agent: {
+      name: "react",
+      react: {
+        step: "thought",
+        stepIndex: 1,
+      },
+    },
+  });
+  const peoDisplay = toRuntimeEventDisplay({
+    type: "task_selected",
+    metadata: {
+      timestamp: new Date().toISOString(),
+    },
+    agent: {
+      name: "peo",
+      peo: {
+        step: "task_execution",
+        stepIndex: 1,
+        taskId: "task-1",
+        taskType: "react",
+      },
+    },
+  });
+  const toolDisplay = toRuntimeEventDisplay({
+    type: "tool_started",
+    metadata: {
+      timestamp: new Date().toISOString(),
+    },
+    agent: {
+      name: "react",
+      react: {
+        step: "action",
+        stepIndex: 1,
+        actionType: "tool",
+      },
+      tool: {
+        toolName: "read_text_file",
+      },
+    },
+  });
+
+  assert.equal(reactDisplay.title, "React thought started");
+  assert.equal(peoDisplay.title, "Task selected: task-1");
+  assert.equal(peoDisplay.detail, "react");
+  assert.equal(toolDisplay.title, "Tool started: read_text_file");
 }

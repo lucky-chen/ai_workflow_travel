@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
+import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentContext } from "../../context/types.js";
 import type { ModelFactory } from "../../model/model-factory.js";
-import type { Trace } from "../../observability/trace.js";
 import type { AgentRuntimeResult, IAgent } from "../types.js";
 import {
   asNumber,
@@ -83,18 +83,19 @@ class PEOAgent implements IAgent {
 export function createPEOAgent(input: {
   modelFactory: ModelFactory;
   gateway: McpGateway;
-  trace: Trace;
+  eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
 }): IAgent {
   const internalReactAgent = createReActAgent({
     modelFactory: input.modelFactory,
     gateway: input.gateway,
-    trace: input.trace,
+    eventBus: input.eventBus,
     toolRegistry: input.toolRegistry,
   });
   return new PEOAgent(
-    new PlanStep(input.modelFactory, input.trace, input.toolRegistry),
+    new PlanStep(input.modelFactory, input.eventBus, input.toolRegistry),
     new ExecutionStep(
+      input.eventBus,
       new DirectTaskExecutor(),
       new ReactTaskExecutor(internalReactAgent),
     ),

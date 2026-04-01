@@ -56,6 +56,16 @@ export class AgentSession implements AgentSessionLike {
     await services.sessionTranscript.update(input.sessionId, history.map((item) => ({ ...item })));
     await services.runtimeMemory.update(input.sessionId, []);
     await session.persist();
+    await services.eventBus.publish({
+      type: "session_created",
+      metadata: {
+        sessionId: input.sessionId,
+        timestamp: new Date().toISOString(),
+      },
+      session: {
+        mode: "create",
+      },
+    });
     return session;
   }
 
@@ -66,6 +76,16 @@ export class AgentSession implements AgentSessionLike {
     if (state.status === "closed") {
       await session.reopen();
     }
+    await services.eventBus.publish({
+      type: "session_opened",
+      metadata: {
+        sessionId,
+        timestamp: new Date().toISOString(),
+      },
+      session: {
+        mode: "open",
+      },
+    });
     return session;
   }
 
@@ -156,11 +176,10 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordRunStarted(traceId: string): Promise<void> {
-    await this.services.trace.record({
-      scope: "session",
-      eventType: "run_started",
-      sessionId: this.sessionId,
+    await this.services.eventBus.publish({
+      type: "run_started",
       metadata: {
+        sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
       },
@@ -177,11 +196,10 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordContextAssembled(traceId: string): Promise<void> {
-    await this.services.trace.record({
-      scope: "session",
-      eventType: "context_assembled",
-      sessionId: this.sessionId,
+    await this.services.eventBus.publish({
+      type: "context_assembled",
       metadata: {
+        sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
       },
@@ -203,16 +221,15 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordAgentSelected(traceId: string, requestedMode: AgentRunMode): Promise<void> {
-    await this.services.trace.record({
-      scope: "session",
-      eventType: "agent_selected",
-      sessionId: this.sessionId,
-      payload: {
-        agent: requestedMode,
-      },
+    await this.services.eventBus.publish({
+      type: "agent_selected",
       metadata: {
+        sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
+      },
+      agent: {
+        name: requestedMode,
       },
     });
   }
@@ -245,17 +262,16 @@ export class AgentSession implements AgentSessionLike {
     applyTranscriptToState(this.state, stateUpdate.transcriptAppend);
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
-    await this.services.trace.record({
-      scope: "session",
-      eventType: "state_persisted",
-      sessionId: this.sessionId,
-      payload: {
-        transcriptAppendCount: stateUpdate.transcriptAppend.length,
-        runtimeMemorySummaryItemCount: stateUpdate.runtimeMemorySummaryItems.length,
-      },
+    await this.services.eventBus.publish({
+      type: "state_persisted",
       metadata: {
+        sessionId: this.sessionId,
         traceId,
         timestamp: new Date().toISOString(),
+      },
+      custom: {
+        transcriptAppendCount: stateUpdate.transcriptAppend.length,
+        runtimeMemorySummaryItemCount: stateUpdate.runtimeMemorySummaryItems.length,
       },
     });
   }
@@ -289,18 +305,17 @@ export class AgentSession implements AgentSessionLike {
       sessionConfig: this.state.config,
     });
     await this.collectSuccessMetrics(normalized, result, agent.pattern, traceId);
-    await this.services.trace.record({
-      scope: "session",
-      eventType: "run_finished",
-      sessionId: this.sessionId,
-      payload: {
+    await this.services.eventBus.publish({
+      type: "run_finished",
+      metadata: {
+        sessionId: this.sessionId,
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
+      custom: {
         agent: requestedMode,
         format: normalized.format,
         hasError: false,
-      },
-      metadata: {
-        traceId,
-        timestamp: new Date().toISOString(),
       },
     });
     await this.flushObservability();
@@ -342,19 +357,18 @@ export class AgentSession implements AgentSessionLike {
         agentName: "session",
       },
     });
-    await this.services.trace.record({
-      scope: "session",
-      eventType: "run_failed",
-      sessionId: this.sessionId,
-      payload: {
+    await this.services.eventBus.publish({
+      type: "run_failed",
+      metadata: {
+        sessionId: this.sessionId,
+        traceId,
+        timestamp: new Date().toISOString(),
+      },
+      custom: {
         error: {
           code: failure.errorCode ?? "SESSION_EXECUTION_FAILED",
           message: failure.errorMessage ?? "Session execution failed.",
         },
-      },
-      metadata: {
-        traceId,
-        timestamp: new Date().toISOString(),
       },
     });
     await this.flushObservability();

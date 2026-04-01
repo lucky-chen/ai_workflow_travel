@@ -5,6 +5,7 @@ import type {
   SessionResult,
   UserInput,
 } from "../interface/api.js";
+import type { RuntimeEvent } from "../capability/runtime-event.js";
 import { createRuntime } from "../runtime/runtime.js";
 
 export interface TerminalSessionDemoEntry {
@@ -25,6 +26,11 @@ export interface TerminalSessionDemoOptions {
 export interface TerminalSessionDemoResult {
   sessionId: string;
   closeResult: CloseSessionResult;
+}
+
+export interface RuntimeEventDisplay {
+  title: string;
+  detail?: string;
 }
 
 export class TerminalInputHandler {
@@ -144,6 +150,41 @@ export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): Te
   return new TerminalSessionDemo(runtime, inputHandler, outputRenderer);
 }
 
+export function toRuntimeEventDisplay(event: RuntimeEvent): RuntimeEventDisplay {
+  switch (event.type) {
+    case "session_created":
+      return { title: "Session created" };
+    case "session_opened":
+      return { title: "Session opened" };
+    case "agent_selected":
+      return { title: `Agent selected: ${event.agent?.name ?? "unknown"}` };
+    case "model_started":
+      return { title: describeModelStarted(event) };
+    case "model_completed":
+      return { title: describeModelCompleted(event) };
+    case "task_selected":
+      return {
+        title: `Task selected: ${event.agent?.peo?.taskId ?? "unknown"}`,
+        detail: event.agent?.peo?.taskType,
+      };
+    case "task_completed":
+      return {
+        title: `Task completed: ${event.agent?.peo?.taskId ?? "unknown"}`,
+        detail: event.agent?.peo?.taskStatus,
+      };
+    case "tool_started":
+      return { title: `Tool started: ${event.agent?.tool?.toolName ?? "unknown"}` };
+    case "tool_completed":
+      return { title: `Tool completed: ${event.agent?.tool?.toolName ?? "unknown"}` };
+    case "run_finished":
+      return { title: "Run finished" };
+    case "run_failed":
+      return { title: "Run failed" };
+    default:
+      return { title: event.type };
+  }
+}
+
 function formatHistoryItem(item: ChatHistoryItem): string {
   return `[${item.role}] ${item.content}`;
 }
@@ -155,4 +196,30 @@ function parseSessionIdArg(argv: string[]): string | undefined {
     }
   }
   return undefined;
+}
+
+function describeModelStarted(event: RuntimeEvent): string {
+  if (event.agent?.name === "chat") {
+    return "Chat model started";
+  }
+  if (event.agent?.name === "react") {
+    return `React ${event.agent.react?.step ?? "step"} started`;
+  }
+  if (event.agent?.name === "peo") {
+    return `PEO ${event.agent.peo?.step ?? "step"} started`;
+  }
+  return "Model started";
+}
+
+function describeModelCompleted(event: RuntimeEvent): string {
+  if (event.agent?.name === "chat") {
+    return "Chat model completed";
+  }
+  if (event.agent?.name === "react") {
+    return `React ${event.agent.react?.step ?? "step"} completed`;
+  }
+  if (event.agent?.name === "peo") {
+    return `PEO ${event.agent.peo?.step ?? "step"} completed`;
+  }
+  return "Model completed";
 }

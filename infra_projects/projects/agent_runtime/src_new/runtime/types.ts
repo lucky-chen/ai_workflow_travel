@@ -15,6 +15,7 @@ import type { AgentFactory, AgentRuntimeResult, IntentRouter } from "../orchestr
 import type { Metrics } from "../observability/metrics.js";
 import type { Trace } from "../observability/trace.js";
 import type { RunCheckpoint } from "./run-checkpoint.js";
+import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 
 export interface RuntimeDependencies {
   storageRoot: string;
@@ -78,6 +79,7 @@ export interface RuntimeServices {
   agentFactory: AgentFactory;
   metrics: Metrics;
   trace: Trace;
+  eventBus: RuntimeEventBus;
   checkpoint: RunCheckpoint;
   resolveDefaultModelConfig(): Promise<RuntimeModelConfig>;
 }

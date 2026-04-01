@@ -10,7 +10,7 @@ import type {
   ToolDefinition,
   ToolHandler,
 } from "./types.js";
-import type { Trace } from "../observability/trace.js";
+import type { RuntimeEventBus } from "./runtime-event-bus.js";
 
 interface ConnectedExternalMcpEndpoint {
   client: Client;
@@ -20,7 +20,7 @@ interface ConnectedExternalMcpEndpoint {
 export async function registerExternalMcpEndpoints(
   registry: McpToolRegistry,
   endpoints: ExternalMcpEndpointConfig[],
-  trace?: Trace,
+  eventBus?: RuntimeEventBus,
 ): Promise<void> {
   const endpointSummaries: Array<{
     endpointName: string;
@@ -44,17 +44,15 @@ export async function registerExternalMcpEndpoints(
     return;
   }
 
-  await trace?.record({
-    scope: "sdk",
-    eventType: "external_mcp_registered",
-    payload: {
+  await eventBus?.publish({
+    type: "external_mcp_registered",
+    metadata: {
+      timestamp: new Date().toISOString(),
+    },
+    custom: {
       endpointCount: endpointSummaries.length,
       toolCount: endpointSummaries.reduce((total, endpoint) => total + endpoint.toolCount, 0),
       endpoints: endpointSummaries,
-    },
-    metadata: {
-      traceId: trace.getTraceId(),
-      timestamp: new Date().toISOString(),
     },
   });
 }

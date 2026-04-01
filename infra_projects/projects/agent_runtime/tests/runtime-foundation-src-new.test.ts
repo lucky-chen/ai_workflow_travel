@@ -8,11 +8,33 @@ import { createTestWorkdir } from "./test-workdir.js";
 export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testRuntimeExposesStableApi();
   await testCreateSessionReturnsStableSessionHandle();
+  await testRuntimeCallbackReceivesSessionLifecycleEvents();
   await testOpenSessionReloadsPersistedSession();
   await testCloseSessionPersistsClosedState();
   await testOpenSessionReactivatesClosedSession();
   await testCloseSessionDoesNotEmitOpenEvents();
   await testOpenSessionSynchronizesTranscriptHistory();
+}
+
+async function testRuntimeCallbackReceivesSessionLifecycleEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-callback-lifecycle-");
+  const received: string[] = [];
+  const runtime = createRuntime({
+    workdir,
+    eventCallback: {
+      onEvent(event) {
+        received.push(event.type);
+      },
+    },
+  });
+
+  const session = await runtime.createSession({});
+  const state = await session.load();
+  await runtime.closeSession(state.sessionId);
+
+  assert.equal(received.includes("session_create_requested"), true);
+  assert.equal(received.includes("session_created"), true);
+  assert.equal(received.includes("session_closed"), true);
 }
 
 async function testRuntimeExposesStableApi(): Promise<void> {

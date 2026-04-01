@@ -48,6 +48,7 @@ export interface ITaskExecutor {
   execute(input: {
     plan: PlanStepResult;
     task: PlanTask;
+    stepIndex: number;
     context: AgentContext;
   }): Promise<TaskExecutionResult>;
 }

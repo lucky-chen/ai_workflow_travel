@@ -60,6 +60,14 @@ export class ActionStep {
       toolCallId: `${runId}:react:${stepIndex}:${thought.toolName}`,
       toolName: thought.toolName,
       arguments: argumentsValue,
+      eventAgent: runtimeContext.eventAgentOverride ?? {
+        name: "react",
+        react: {
+          step: "action",
+          stepIndex,
+          actionType: "tool",
+        },
+      },
     });
     return {
       observation: result.error ? result.error.message : result.content,

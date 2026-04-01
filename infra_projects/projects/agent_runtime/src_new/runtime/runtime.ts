@@ -25,7 +25,16 @@ import { ModelFactory } from "../model/model-factory.js";
 import { AgentSession } from "./agent-session.js";
 import { AgentSessionManager } from "./agent-session-manager.js";
 import { registerExternalToolProviders } from "./external-tool-registration.js";
-import { RunCheckpoint } from "./run-checkpoint.js";
+import {
+  CallbackRuntimeEventListener,
+  RuntimeEventBus,
+  type RuntimeEventListener,
+  TraceRuntimeEventListener,
+} from "../capability/runtime-event-bus.js";
+import type { RuntimeEventCallback } from "../capability/runtime-event.js";
+import {
+  RunCheckpoint,
+} from "./run-checkpoint.js";
 import {
   toRuntimeModelConfig,
   WorkspaceLocalEnv,
@@ -40,6 +49,7 @@ export interface RuntimeOptions {
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: import("../model/types.js").FetchLike;
   externalMcpEndpoints?: ExternalMcpEndpointConfig[];
+  eventCallback?: RuntimeEventCallback;
 }
 
 export class Runtime implements RuntimeApi {
@@ -65,7 +75,12 @@ export class Runtime implements RuntimeApi {
     const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
     const trace = new Trace(this.storage, this.runtimeRunId);
-    const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, trace);
+    const eventListeners: RuntimeEventListener[] = [new TraceRuntimeEventListener(trace)];
+    if (options.eventCallback) {
+      eventListeners.push(new CallbackRuntimeEventListener(options.eventCallback));
+    }
+    const eventBus = new RuntimeEventBus(eventListeners);
+    const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, eventBus);
     const modelFactory = new ModelFactory();
     const workspaceLocalEnv = new WorkspaceLocalEnv(options.workdir);
     const localEnvLoading = workspaceLocalEnv.load({
@@ -97,7 +112,7 @@ export class Runtime implements RuntimeApi {
       configuredMcpEndpoints: options.externalMcpEndpoints,
       localEnvLoading,
       toolRegistry,
-      trace,
+      eventBus,
     });
     this.services = {
       storageRoot: path.join(options.workdir, ".agent_runtime"),
@@ -108,11 +123,12 @@ export class Runtime implements RuntimeApi {
       agentFactory: new AgentFactory({
         modelFactory,
         gateway,
-        trace,
+        eventBus,
         toolRegistry,
       }),
       metrics: new Metrics(this.storage),
       trace,
+      eventBus,
       checkpoint: new RunCheckpoint(this.storage),
       resolveDefaultModelConfig,
     };
@@ -120,12 +136,14 @@ export class Runtime implements RuntimeApi {
 
   async createSession(input: AgentSessionAccessInput): Promise<AgentSession> {
     await this.initialization;
-    await this.services.trace.record({
-      scope: "sdk",
-      eventType: "session_create_requested",
+    await this.services.eventBus.publish({
+      type: "session_create_requested",
       metadata: {
         traceId: randomUUID(),
         timestamp: new Date().toISOString(),
+      },
+      session: {
+        mode: "create",
       },
     });
     const sessionId = randomUUID();
@@ -140,17 +158,29 @@ export class Runtime implements RuntimeApi {
     if (!sessionId) {
       throw new Error("Runtime requires sessionId to open a session.");
     }
-    await this.services.trace.record({
-      scope: "sdk",
-      eventType: "session_open_requested",
-      sessionId,
+    await this.services.eventBus.publish({
+      type: "session_open_requested",
       metadata: {
+        sessionId,
         traceId: randomUUID(),
         timestamp: new Date().toISOString(),
+      },
+      session: {
+        mode: "open",
       },
     });
     const cached = await this.sessionManager.get(sessionId);
     if (cached instanceof AgentSession) {
+      await this.services.eventBus.publish({
+        type: "session_opened",
+        metadata: {
+          sessionId,
+          timestamp: new Date().toISOString(),
+        },
+        session: {
+          mode: "open",
+        },
+      });
       await this.services.trace.flush();
       return cached;
     }
@@ -172,17 +202,19 @@ export class Runtime implements RuntimeApi {
     if (session.isRunning()) {
       throw new Error(`Session ${sessionId} is running and cannot be closed.`);
     }
-    await this.services.trace.record({
-      scope: "sdk",
-      eventType: "session_closed",
-      sessionId,
+    await session.close();
+    await this.sessionManager.remove(sessionId);
+    await this.services.eventBus.publish({
+      type: "session_closed",
       metadata: {
+        sessionId,
         traceId: randomUUID(),
         timestamp: new Date().toISOString(),
       },
+      session: {
+        mode: "close",
+      },
     });
-    await session.close();
-    await this.sessionManager.remove(sessionId);
     await this.services.trace.flush();
     return { sessionId };
   }

@@ -1,6 +1,6 @@
 import type { McpGateway, McpToolRegistry } from "../capability/types.js";
 import type { ModelFactory } from "../model/model-factory.js";
-import type { Trace } from "../observability/trace.js";
+import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import { createChatAgent } from "./chat_agent/index.js";
 import { createPEOAgent } from "./peo_agent/index.js";
 import { createReActAgent } from "./react_agent/index.js";
@@ -10,7 +10,7 @@ import type { AgentFactory as AgentFactoryContract, IAgent } from "./types.js";
 export interface AgentFactoryOptions {
   modelFactory: ModelFactory;
   gateway: McpGateway;
-  trace: Trace;
+  eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
 }
 
@@ -21,14 +21,14 @@ export class AgentFactory implements AgentFactoryContract {
     if (mode === "chat") {
       return createChatAgent({
         modelFactory: this.options.modelFactory,
-        trace: this.options.trace,
+        eventBus: this.options.eventBus,
       });
     }
     if (mode === "react") {
       return createReActAgent({
         modelFactory: this.options.modelFactory,
         gateway: this.options.gateway,
-        trace: this.options.trace,
+        eventBus: this.options.eventBus,
         toolRegistry: this.options.toolRegistry,
       });
     }
@@ -36,7 +36,7 @@ export class AgentFactory implements AgentFactoryContract {
       return createPEOAgent({
         modelFactory: this.options.modelFactory,
         gateway: this.options.gateway,
-        trace: this.options.trace,
+        eventBus: this.options.eventBus,
         toolRegistry: this.options.toolRegistry,
       });
     }

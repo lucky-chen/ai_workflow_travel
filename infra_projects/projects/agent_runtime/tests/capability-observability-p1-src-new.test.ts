@@ -9,13 +9,17 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 import {
+  CallbackRuntimeEventListener,
   FileStorage,
   McpToolRegistry,
   McpGateway,
   RuntimePermissionPolicy,
+  RuntimeEvent,
+  RuntimeEventBus,
   ExecutionEnvironment,
   Metrics,
   Trace,
+  TraceRuntimeEventListener,
   createRuntime,
   registerExternalMcpEndpoints,
   type ToolCallInput,
@@ -23,6 +27,7 @@ import {
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
+  await testRuntimeEventBusNotifiesTraceAndCallback();
   await testGatewayDispatchAndPolicyBlock();
   await testExternalMcpToolAdapterRegistersRemoteTools();
   await testRuntimeRegistersExternalMcpTools();
@@ -30,6 +35,40 @@ export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
   await testMetricsAutoFlushesAfterThresholdAndToolUsage();
   await testTracePersistsFlushState();
   await testTraceAutoFlushesAfterThresholdAndTerminalEvents();
+}
+
+async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-p1-event-bus-");
+  const trace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "event-bus");
+  const received: RuntimeEvent[] = [];
+  const bus = new RuntimeEventBus([
+    new TraceRuntimeEventListener(trace),
+    new CallbackRuntimeEventListener({
+      async onEvent(event) {
+        received.push(event);
+      },
+    }),
+  ]);
+
+  await bus.publish({
+    type: "agent_selected",
+    metadata: {
+      sessionId: "session-1",
+      traceId: "trace-1",
+      timestamp: new Date().toISOString(),
+    },
+    agent: {
+      name: "react",
+    },
+  });
+  await trace.flush();
+
+  assert.equal(received.length, 1);
+  const persisted = JSON.parse(
+    await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_event-bus.json"), "utf8"),
+  ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
+  assert.equal(persisted.events?.[0]?.eventType, "agent_selected");
+  assert.equal(persisted.events?.[0]?.payload?.agent, "react");
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
@@ -55,17 +94,19 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
   ]);
   const allowedTrace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-allowed");
   const blockedTrace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-blocked");
+  const allowedEventBus = new RuntimeEventBus([new TraceRuntimeEventListener(allowedTrace)]);
+  const blockedEventBus = new RuntimeEventBus([new TraceRuntimeEventListener(blockedTrace)]);
   const gateway = new McpGateway(
     new RuntimePermissionPolicy("/tmp/allowed", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
-    allowedTrace,
+    allowedEventBus,
   );
   const blockedGateway = new McpGateway(
     new RuntimePermissionPolicy("/tmp/blocked", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
-    blockedTrace,
+    blockedEventBus,
   );
 
   const allowed = await gateway.call({
@@ -99,7 +140,9 @@ async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
   const trace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "external-mcp-register");
   const endpoint = await startTestMcpHttpServer();
   try {
-    await registerExternalMcpEndpoints(registry, [endpoint.config], trace);
+    await registerExternalMcpEndpoints(registry, [endpoint.config], new RuntimeEventBus([
+      new TraceRuntimeEventListener(trace),
+    ]));
 
     const handler = await registry.resolve("remote_echo");
     const definitions = await registry.listToolDefinitions();
