@@ -101,7 +101,7 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
           respond: () => JSON.stringify({
             thought: "Use echo tool",
             actionType: "tool",
-            toolCalls: [{ toolName: "echo_hello", arguments: {} }],
+            toolCalls: [{ name: "echo_hello", arguments: {} }],
             finalAnswer: "react result",
             shouldContinue: true,
           }),
@@ -342,7 +342,7 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
               return JSON.stringify({
                 thought: "Use echo tool",
                 actionType: "tool",
-                toolCalls: [{ toolName: "echo_hello", arguments: {} }],
+                toolCalls: [{ name: "echo_hello", arguments: {} }],
                 shouldContinue: true,
               });
             }
@@ -369,22 +369,22 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
   const state = await session.load();
   const tracePayload = JSON.parse(
     await readFile(await findOnlyTraceFile(workdir), "utf8"),
-  ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
-  const eventTypes = (tracePayload.events ?? []).map((event) => event.eventType);
+  ) as { events?: Array<{ type?: string; brief?: string; details?: Record<string, unknown> }> };
+  const briefs = (tracePayload.events ?? []).map((event) => event.brief);
   const peoPlanEvent = (tracePayload.events ?? []).find((event) =>
-    event.eventType === "agent_step_started"
-    && event.payload?.agent === "peo"
-    && event.payload?.step === "plan"
+    event.brief === "peo.plan.input"
+    && event.details?.agent === "peo"
+    && event.details?.step === "plan"
   );
-  const toolEvent = (tracePayload.events ?? []).find((event) => event.eventType === "tool_called" && event.payload?.toolName === "echo_hello");
+  const toolEvent = (tracePayload.events ?? []).find((event) => event.brief === "tool.call.started" && event.details?.toolName === "echo_hello");
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "peo observation");
   assert.equal(state.history.some((item) => item.role === "tool"), true);
-  assert.equal(eventTypes.includes("model_called"), true);
-  assert.equal(eventTypes.includes("tool_called"), true);
-  const peoPlanInput = peoPlanEvent?.payload?.input as Record<string, unknown> | undefined;
-  assert.equal((peoPlanInput?.question as Record<string, unknown> | undefined)?.task, "/plan execute observe");
+  assert.equal(briefs.includes("model.call.started"), true);
+  assert.equal(briefs.includes("tool.call.started"), true);
+  const peoPlanInput = peoPlanEvent?.details?.input as Record<string, unknown> | undefined;
+  assert.deepEqual(peoPlanInput?.questionKeys, ["task", "workingDirectory"]);
   assert.equal(Boolean(toolEvent), true);
 }
 
@@ -548,7 +548,7 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
               return JSON.stringify({
                 thought: "Use missing tool",
                 actionType: "tool",
-                toolCalls: [{ toolName: "missing_tool", arguments: {} }],
+                toolCalls: [{ name: "missing_tool", arguments: {} }],
                 shouldContinue: true,
               });
             }
@@ -667,7 +667,7 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
     {
       thought: "read file",
       actionType: "tool",
-      toolCalls: [{ toolName: "read_text_file", arguments: {} }],
+      toolCalls: [{ name: "read_text_file", arguments: {} }],
       shouldContinue: true,
     },
   );
@@ -700,7 +700,7 @@ async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> 
               return JSON.stringify({
                 thought: "use tool",
                 actionType: "tool",
-                toolCalls: [{ toolName: "echo_hello", arguments: {} }],
+                toolCalls: [{ name: "echo_hello", arguments: {} }],
                 shouldContinue: false,
                 finalAnswer: "done",
               });
@@ -792,7 +792,7 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
               return JSON.stringify({
                 thought: "use tool",
                 actionType: "tool",
-                toolCalls: [{ toolName: "echo_hello", arguments: {} }],
+                toolCalls: [{ name: "echo_hello", arguments: {} }],
                 shouldContinue: false,
                 finalAnswer: "done",
               });

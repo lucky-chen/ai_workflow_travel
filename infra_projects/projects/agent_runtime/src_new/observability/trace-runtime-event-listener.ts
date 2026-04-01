@@ -28,125 +28,206 @@ export function mapRuntimeEventToTraceEvents(event: RuntimeEvent): TraceEvent[] 
 }
 
 function mapRuntimeMessage(message: Extract<RuntimeEvent, { type: "runtime" }>["runtimeMessage"]): TraceEvent[] {
-  const common = traceCommon(message.timestamp, message.sessionId);
-  if (
-    message.event === "session_create_requested"
-    || message.event === "session_created"
-    || message.event === "session_open_requested"
-    || message.event === "session_opened"
-    || message.event === "session_closed"
-    || message.event === "external_mcp_registered"
-  ) {
-    return [{
-      scope: "sdk",
-      eventType: message.event,
-      payload: message.custom,
-      ...common,
-    }];
+  const brief = mapRuntimeBrief(message.event);
+  if (!brief) {
+    return [];
   }
   return [{
-    scope: "session",
-    eventType: message.event,
-    payload: message.custom,
-    ...common,
+    type: "runtime",
+    brief,
+    metadata: {
+      timestamp: message.timestamp,
+    },
+    details: omitUndefined({
+      sessionId: message.sessionId,
+      event: message.event,
+      session: message.session,
+      data: message.custom,
+    }),
   }];
 }
 
 function mapAgentMessage(message: Extract<RuntimeEvent, { type: "agent" }>["agentMessage"]): TraceEvent[] {
-  const common = traceCommon(message.timestamp, message.sessionId);
   return [{
-    scope: "session",
-    eventType: "agent_step_started",
-    payload: buildStepPayload(message.agent),
-    ...common,
+    type: "agent",
+    brief: mapAgentBrief(message.agent),
+    metadata: {
+      timestamp: message.timestamp,
+    },
+    details: omitUndefined({
+      sessionId: message.sessionId,
+      agent: message.agent.name,
+      step: message.agent.content.step,
+      stepIndex: "stepIndex" in message.agent.content ? message.agent.content.stepIndex : undefined,
+      input: summarizeStepInput(message.agent.content.input),
+    }),
   }];
 }
 
 function mapModelMessage(message: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]): TraceEvent[] {
-  const common = traceCommon(message.timestamp);
-  if (message.event === "model_started") {
-    return [{
-      scope: "session",
-      eventType: "model_called",
-      payload: {
-        inputSummary: buildModelInputSummary(message),
-      },
-      ...common,
-    }];
-  }
   return [{
-    scope: "session",
-    eventType: "model_result_recorded",
-    payload: {
-      outputSummary: buildModelOutputSummary(message),
-      error: message.response?.error?.code ? message.response.error : undefined,
+    type: "model",
+    brief: message.event === "model_started" ? "model.call.started" : "model.call.finished",
+    metadata: {
+      timestamp: message.timestamp,
     },
-    ...common,
+    details: omitUndefined({
+      event: message.event,
+      request: summarizeModelRequest(message.request),
+      response: summarizeModelResponse(message.response),
+      error: message.response?.error?.code ? message.response.error : undefined,
+    }),
   }];
 }
 
 function mapToolMessage(message: Extract<RuntimeEvent, { type: "tool" }>["toolMessage"]): TraceEvent[] {
-  const common = traceCommon(message.timestamp, message.sessionId);
-  const payload = {
-    ...buildStepPayload(message.agent),
-    toolName: message.tool.toolName,
-    arguments: message.tool.arguments,
-    result: message.tool.result,
-    error: message.tool.error,
-    blockedByPolicy: message.custom?.blockedByPolicy,
-  };
-  if (message.event === "tool_started") {
-    return [{
-      scope: "session",
-      eventType: "tool_called",
-      payload,
-      ...common,
-    }];
-  }
   return [{
-    scope: "session",
-    eventType: "tool_result_recorded",
-    payload,
-    ...common,
+    type: "tool",
+    brief: message.event === "tool_started" ? "tool.call.started" : "tool.call.failed",
+    metadata: {
+      timestamp: message.timestamp,
+    },
+    details: omitUndefined({
+      sessionId: message.sessionId,
+      event: message.event,
+      agent: message.agent.name,
+      step: message.agent.content.step,
+      stepIndex: "stepIndex" in message.agent.content ? message.agent.content.stepIndex : undefined,
+      toolName: message.tool.toolName,
+      arguments: summarizeToolArguments(message.tool.arguments),
+      result: summarizeToolResult(message.tool.result),
+      error: message.tool.error,
+      blockedByPolicy: message.custom?.blockedByPolicy,
+    }),
   }];
 }
 
-function traceCommon(timestamp: string, sessionId?: string): Pick<TraceEvent, "sessionId" | "metadata"> {
-  return {
-    sessionId,
-    metadata: { timestamp },
-  };
-}
-
-function buildStepPayload(agent?: AgentEventAgent): Record<string, unknown> {
-  if (!agent) {
-    return {};
+function mapRuntimeBrief(event: Extract<RuntimeEvent, { type: "runtime" }>["runtimeMessage"]["event"]): string | undefined {
+  switch (event) {
+    case "session_created":
+      return "runtime.session.created";
+    case "session_opened":
+      return "runtime.session.opened";
+    case "session_closed":
+      return "runtime.session.closed";
+    case "external_mcp_registered":
+      return "runtime.mcp.registered";
+    case "run_started":
+      return "runtime.run.started";
+    case "context_assembled":
+      return "runtime.context.assembled";
+    case "state_persisted":
+      return "runtime.state.persisted";
+    case "run_finished":
+      return "runtime.run.finished";
+    case "run_failed":
+      return "runtime.run.failed";
+    default:
+      return undefined;
   }
-  return {
-    agent: agent.name,
-    step: agent.content.step,
-    stepIndex: "stepIndex" in agent.content ? agent.content.stepIndex : undefined,
-    input: agent.content.input,
-  };
 }
 
-function buildModelInputSummary(message: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]): Record<string, unknown> | undefined {
+function mapAgentBrief(agent: AgentEventAgent): string {
+  if (agent.name === "chat") {
+    return "chat.respond.input";
+  }
+  if (agent.name === "react") {
+    switch (agent.content.step) {
+      case "thought":
+        return "react.thought.input";
+      case "action":
+        return "react.action.input";
+      case "observation":
+        return "react.observation.input";
+      default:
+        return "react.step.input";
+    }
+  }
+  switch (agent.content.step) {
+    case "plan":
+      return "peo.plan.input";
+    case "execution":
+      return "peo.execution.input";
+    case "observation":
+      return "peo.observation.input";
+    default:
+      return "peo.step.input";
+  }
+}
+
+function summarizeStepInput(input: Record<string, unknown>): Record<string, unknown> {
   return omitUndefined({
-    responseFormat: message.request?.responseFormat,
-    systemPromptCount: message.request?.systemPromptCount,
-    stream: message.request?.stream,
-    userPromptKeys: message.request ? Object.keys(message.request.userPrompt) : undefined,
+    stage: typeof input.stage === "string" ? input.stage : undefined,
+    questionKeys: isRecord(input.question) ? Object.keys(input.question) : undefined,
+    runtimeStateKeys: isRecord(input.runtimeState) ? Object.keys(input.runtimeState) : undefined,
+    toolCallNames: Array.isArray(input.toolCalls)
+      ? input.toolCalls
+        .map((entry) => isRecord(entry) && typeof entry.name === "string" ? entry.name : undefined)
+        .filter((value): value is string => typeof value === "string")
+      : undefined,
+    taskIds: Array.isArray(input.tasks)
+      ? input.tasks
+        .map((entry) => isRecord(entry) && typeof entry.taskId === "string" ? entry.taskId : undefined)
+        .filter((value): value is string => typeof value === "string")
+      : undefined,
+    taskExecutionCount: Array.isArray(input.taskExecutions) ? input.taskExecutions.length : undefined,
+    taskId: typeof input.taskId === "string" ? input.taskId : undefined,
+    taskType: typeof input.taskType === "string" ? input.taskType : undefined,
+  }) ?? {};
+}
+
+function summarizeModelRequest(
+  request: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]["request"],
+): Record<string, unknown> | undefined {
+  if (!request) {
+    return undefined;
+  }
+  return omitUndefined({
+    responseFormat: request.responseFormat,
+    systemPromptCount: request.systemPromptCount,
+    stream: request.stream,
+    userPromptKeys: Object.keys(request.userPrompt),
+    stage: typeof request.userPrompt.stage === "string" ? request.userPrompt.stage : undefined,
   });
 }
 
-function buildModelOutputSummary(message: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]): Record<string, unknown> | undefined {
+function summarizeModelResponse(
+  response: Extract<RuntimeEvent, { type: "model" }>["modelMessage"]["response"],
+): Record<string, unknown> | undefined {
+  if (!response) {
+    return undefined;
+  }
   return omitUndefined({
-    responseFormat: message.request?.responseFormat,
-    systemPromptCount: message.request?.systemPromptCount,
-    stream: message.request?.stream,
-    userPromptKeys: message.request ? Object.keys(message.request.userPrompt) : undefined,
-    hasContent: Boolean(message.response?.content),
-    error: message.response?.error?.code ? message.response.error : undefined,
+    hasContent: response.content.length > 0,
+    contentLength: response.content.length,
+    errorCode: response.error.code || undefined,
+  });
+}
+
+function summarizeToolArguments(argumentsValue: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!argumentsValue) {
+    return undefined;
+  }
+  return {
+    keys: Object.keys(argumentsValue),
+  };
+}
+
+function summarizeToolResult(
+  result: {
+    content: string;
+    exitCode?: number;
+    blockedByPolicy?: boolean;
+  } | undefined,
+): Record<string, unknown> | undefined {
+  if (!result) {
+    return undefined;
+  }
+  return omitUndefined({
+    hasContent: result.content.length > 0,
+    contentLength: result.content.length,
+    exitCode: result.exitCode,
+    blockedByPolicy: result.blockedByPolicy,
   });
 }
 
@@ -155,4 +236,8 @@ function omitUndefined(value: Record<string, unknown>): Record<string, unknown> 
     Object.entries(value).filter(([, entry]) => entry !== undefined),
   );
   return Object.keys(filtered).length > 0 ? filtered : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

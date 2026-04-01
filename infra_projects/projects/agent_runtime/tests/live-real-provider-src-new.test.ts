@@ -79,14 +79,14 @@ async function runLiveModeCase(input: {
 
   const trace = await loadNewTrace(input.workdir, existingTraceFiles);
   assert.equal(
-    trace.events.some((event) => event.eventType === "model_called"),
+    trace.events.some((event) => event.brief === "model.call.started"),
     true,
-    `${input.provider} ${input.label} trace missing model_called`,
+    `${input.provider} ${input.label} trace missing model.call.started`,
   );
   assert.equal(
-    trace.events.some((event) => event.eventType === "tool_called"),
+    trace.events.some((event) => event.brief === "tool.call.started"),
     input.requireToolCall,
-    `${input.provider} ${input.label} trace tool_called mismatch`,
+    `${input.provider} ${input.label} trace tool.call.started mismatch`,
   );
 }
 
@@ -102,7 +102,7 @@ async function listTraceFiles(workdir: string): Promise<string[]> {
 async function loadNewTrace(
   workdir: string,
   existingTraceFiles: string[],
-): Promise<{ events: Array<{ eventType?: string }> }> {
+): Promise<{ events: Array<{ brief?: string }> }> {
   const tracesDir = path.join(workdir, ".agent_runtime", "traces");
   const currentTraceFiles = await listTraceFiles(workdir);
   const newTraceFile = currentTraceFiles.find((fileName) => !existingTraceFiles.includes(fileName));
@@ -110,7 +110,7 @@ async function loadNewTrace(
     throw new Error(`No new trace file found in ${tracesDir}.`);
   }
   return JSON.parse(await readFile(path.join(tracesDir, newTraceFile), "utf8")) as {
-    events: Array<{ eventType?: string }>;
+    events: Array<{ brief?: string }>;
   };
 }
 

@@ -1,41 +1,39 @@
 import type { Storage } from "../data/storage.js";
 import { PersistentObservabilityBuffer } from "./persistent-observability-buffer.js";
 
-export type TraceEventType =
-  | "session_create_requested"
-  | "session_created"
-  | "session_open_requested"
-  | "session_opened"
-  | "session_closed"
-  | "external_mcp_registered"
-  | "run_started"
-  | "context_assembled"
-  | "agent_selected"
-  | "agent_step_started"
-  | "agent_step_recorded"
-  | "model_called"
-  | "model_result_recorded"
-  | "tool_called"
-  | "tool_result_recorded"
-  | "state_persisted"
-  | "run_failed"
-  | "run_finished";
-
-export type TraceScope = "sdk" | "session";
-
-export interface TraceEvent {
-  scope: TraceScope;
-  eventType: TraceEventType;
-  sessionId?: string;
-  payload?: Record<string, unknown>;
-  diagnostics?: Array<{
-    code: string;
-    message: string;
-  }>;
-  metadata?: {
-    timestamp: string;
+export type TraceEvent =
+  | {
+    type: "runtime";
+    brief: string;
+    details?: Record<string, unknown>;
+    metadata?: {
+      timestamp: string;
+    };
+  }
+  | {
+    type: "agent";
+    brief: string;
+    details?: Record<string, unknown>;
+    metadata?: {
+      timestamp: string;
+    };
+  }
+  | {
+    type: "model";
+    brief: string;
+    details?: Record<string, unknown>;
+    metadata?: {
+      timestamp: string;
+    };
+  }
+  | {
+    type: "tool";
+    brief: string;
+    details?: Record<string, unknown>;
+    metadata?: {
+      timestamp: string;
+    };
   };
-}
 
 export interface TraceResult {
   events: TraceEvent[];
@@ -43,7 +41,7 @@ export interface TraceResult {
 
 export interface Trace {
   record(event: TraceEvent): Promise<void>;
-  get(sessionId?: string, scope?: TraceScope): Promise<TraceResult>;
+  get(): Promise<TraceResult>;
   flush(): Promise<void>;
   getTraceId(): string;
 }
@@ -62,22 +60,13 @@ export class Trace extends PersistentObservabilityBuffer implements Trace {
     await this.ensureLoaded();
     const normalized = normalizeTraceEvent(event);
     this.events.push(normalized);
-    await this.recordMutation(isImmediateFlushEvent(normalized.eventType));
+    await this.recordMutation(isImmediateFlushEvent(normalized.brief));
   }
 
-  async get(sessionId?: string, scope?: TraceScope): Promise<TraceResult> {
+  async get(): Promise<TraceResult> {
     await this.ensureLoaded();
-
     return {
-      events: this.events.filter((event) => {
-        if (sessionId && event.sessionId !== sessionId) {
-          return false;
-        }
-        if (scope && event.scope !== scope) {
-          return false;
-        }
-        return true;
-      }),
+      events: [...this.events],
     };
   }
 
@@ -113,9 +102,9 @@ function normalizeTraceEvent(event: TraceEvent): TraceEvent {
   };
 }
 
-function isImmediateFlushEvent(eventType: TraceEventType): boolean {
-  return eventType === "session_closed"
-    || eventType === "state_persisted"
-    || eventType === "run_failed"
-    || eventType === "run_finished";
+function isImmediateFlushEvent(brief: string): boolean {
+  return brief === "runtime.session.closed"
+    || brief === "runtime.state.persisted"
+    || brief === "runtime.run.failed"
+    || brief === "runtime.run.finished";
 }

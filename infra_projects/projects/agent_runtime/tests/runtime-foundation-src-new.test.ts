@@ -189,13 +189,12 @@ async function testCloseSessionDoesNotEmitOpenEvents(): Promise<void> {
 
   const tracePath = await findOnlyTraceFile(workdir);
   const tracePayload = JSON.parse(await readFile(tracePath, "utf8")) as {
-    events?: Array<{ eventType?: string; sessionId?: string }>;
+    events?: Array<{ brief?: string; details?: Record<string, unknown> }>;
   };
-  const sessionEvents = (tracePayload.events ?? []).filter((event) => event.sessionId === state.sessionId);
+  const sessionEvents = (tracePayload.events ?? []).filter((event) => event.details?.sessionId === state.sessionId);
 
-  assert.equal(sessionEvents.some((event) => event.eventType === "session_open_requested"), false);
-  assert.equal(sessionEvents.some((event) => event.eventType === "session_opened"), false);
-  assert.equal(sessionEvents.filter((event) => event.eventType === "session_closed").length, 2);
+  assert.equal(sessionEvents.some((event) => event.brief === "runtime.session.opened"), false);
+  assert.equal(sessionEvents.filter((event) => event.brief === "runtime.session.closed").length, 2);
 }
 
 async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {

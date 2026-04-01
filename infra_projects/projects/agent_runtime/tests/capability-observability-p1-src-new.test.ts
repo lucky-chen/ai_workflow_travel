@@ -75,10 +75,11 @@ async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
   assert.equal(received.length, 1);
   const persisted = JSON.parse(
     await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_event-bus.json"), "utf8"),
-  ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
-  assert.equal(persisted.events?.[0]?.eventType, "agent_step_started");
-  assert.equal(persisted.events?.[0]?.payload?.agent, "react");
-  assert.equal(persisted.events?.[0]?.payload?.step, "thought");
+  ) as { events?: Array<{ type?: string; brief?: string; details?: Record<string, unknown> }> };
+  assert.equal(persisted.events?.[0]?.type, "agent");
+  assert.equal(persisted.events?.[0]?.brief, "react.thought.input");
+  assert.equal(persisted.events?.[0]?.details?.agent, "react");
+  assert.equal(persisted.events?.[0]?.details?.step, "thought");
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
@@ -136,12 +137,12 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
   const blockedPersisted = JSON.parse(
     await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_gateway-blocked.json"), "utf8"),
   ) as {
-    events?: Array<{ eventType?: string; payload?: Record<string, unknown> }>;
+    events?: Array<{ brief?: string; details?: Record<string, unknown> }>;
   };
-  const blockedEvent = blockedPersisted.events?.find((event) => event.eventType === "tool_result_recorded");
+  const blockedEvent = blockedPersisted.events?.find((event) => event.brief === "tool.call.failed");
   assert.equal(Boolean(blockedEvent), true);
-  assert.equal(blockedEvent?.payload?.toolName, "echo");
-  assert.deepEqual(blockedEvent?.payload?.arguments, { content: "deny" });
+  assert.equal(blockedEvent?.details?.toolName, "echo");
+  assert.deepEqual(blockedEvent?.details?.arguments, { keys: ["content"] });
 }
 
 async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
@@ -167,12 +168,13 @@ async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
     await trace.flush();
     const persisted = JSON.parse(
       await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_external-mcp-register.json"), "utf8"),
-    ) as { events?: Array<{ eventType?: string; payload?: Record<string, unknown> }> };
-    const registrationEvent = persisted.events?.find((event) => event.eventType === "external_mcp_registered");
+    ) as { events?: Array<{ brief?: string; details?: Record<string, unknown> }> };
+    const registrationEvent = persisted.events?.find((event) => event.brief === "runtime.mcp.registered");
     assert.equal(Boolean(registrationEvent), true);
-    assert.equal(registrationEvent?.payload?.endpointCount, 1);
-    assert.equal(registrationEvent?.payload?.toolCount, 1);
-    assert.equal(Array.isArray(registrationEvent?.payload?.endpoints), true);
+    const registrationData = registrationEvent?.details?.data as Record<string, unknown> | undefined;
+    assert.equal(registrationData?.endpointCount, 1);
+    assert.equal(registrationData?.toolCount, 1);
+    assert.equal(Array.isArray(registrationData?.endpoints), true);
   } finally {
     await endpoint.close();
   }
@@ -191,7 +193,7 @@ async function testRuntimeRegistersExternalMcpTools(): Promise<void> {
         model: {
           mock: true,
           mockInfo: {
-            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolCalls\":[{\"toolName\":\"remote_echo\",\"arguments\":{\"content\":\"from runtime\"}}],\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
+            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolCalls\":[{\"name\":\"remote_echo\",\"arguments\":{\"content\":\"from runtime\"}}],\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
           },
         },
       },
@@ -319,9 +321,12 @@ async function testTracePersistsFlushState(): Promise<void> {
   const trace = new Trace(storage, "trace-persist");
 
   await trace.record({
-    scope: "session",
-    eventType: "run_started",
-    sessionId: "session-1",
+    type: "runtime",
+    brief: "runtime.run.started",
+    details: {
+      sessionId: "session-1",
+      event: "run_started",
+    },
     metadata: {
       timestamp: new Date().toISOString(),
     },
@@ -330,8 +335,8 @@ async function testTracePersistsFlushState(): Promise<void> {
 
   const persisted = JSON.parse(
     await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_trace-persist.json"), "utf8"),
-  ) as { events?: Array<{ eventType?: string }> };
-  assert.equal(persisted.events?.[0]?.eventType, "run_started");
+  ) as { events?: Array<{ brief?: string }> };
+  assert.equal(persisted.events?.[0]?.brief, "runtime.run.started");
 }
 
 async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<void> {
@@ -340,35 +345,36 @@ async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<vo
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
   const trace = new Trace(storage, "trace-autoflush");
 
-  await trace.record(createTraceEvent("run_started"));
+  await trace.record(createTraceEvent("runtime.run.started"));
   await assertRejectsFileRead(tracePath);
 
-  await trace.record(createTraceEvent("context_assembled"));
+  await trace.record(createTraceEvent("runtime.context.assembled"));
   await assertRejectsFileRead(tracePath);
 
-  await trace.record(createTraceEvent("agent_selected"));
+  await trace.record(createTraceEvent("react.thought.input"));
   const thresholdPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
-    events?: Array<{ eventType?: string }>;
+    events?: Array<{ brief?: string }>;
   };
   assert.deepEqual(
-    (thresholdPersisted.events ?? []).map((event) => event.eventType),
-    ["run_started", "context_assembled", "agent_selected"],
+    (thresholdPersisted.events ?? []).map((event) => event.brief),
+    ["runtime.run.started", "runtime.context.assembled", "react.thought.input"],
   );
 
   const terminalTrace = new Trace(storage, "trace-autoflush");
-  await terminalTrace.record(createTraceEvent("run_finished"));
+  await terminalTrace.record(createTraceEvent("runtime.run.finished"));
   const terminalPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
-    events?: Array<{ eventType?: string }>;
+    events?: Array<{ brief?: string }>;
   };
-  assert.equal(terminalPersisted.events?.at(-1)?.eventType, "run_finished");
+  assert.equal(terminalPersisted.events?.at(-1)?.brief, "runtime.run.finished");
 }
 
-function createTraceEvent(eventType: Parameters<Trace["record"]>[0]["eventType"]) {
+function createTraceEvent(brief: string): Parameters<Trace["record"]>[0] {
   return {
-    scope: "session" as const,
-    eventType,
-    sessionId: "session-1",
-    payload: eventType === "agent_selected" ? { agent: "react" } : undefined,
+    type: brief.startsWith("react.") ? "agent" : "runtime",
+    brief,
+    details: {
+      sessionId: "session-1",
+    },
     metadata: {
       timestamp: new Date().toISOString(),
     },
