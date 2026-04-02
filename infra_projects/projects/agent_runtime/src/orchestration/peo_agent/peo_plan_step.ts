@@ -8,7 +8,7 @@ import {
   summarizeToolDefinitions,
   tryParseJsonRecord,
 } from "../agent_parsing.js";
-import type { PlanStepResult, PlanTask } from "./peo_types.js";
+import type { PlanStepResult, PlanTask, Summary } from "./peo_types.js";
 
 export const PEO_STAGE_COUNT = 3;
 
@@ -25,8 +25,7 @@ export class PlanStep {
     runId: string,
     stepIndex: number,
     state: {
-      lastObservation?: { summary: string; finalAnswer?: string };
-      priorExecutionSummaries: string[];
+      lastObservation?: { summary: Summary };
     },
   ): Promise<PlanStepResult> {
     const request = await this.buildPrompt(input, stepIndex, state);
@@ -50,8 +49,7 @@ export class PlanStep {
     input: AgentRunInput,
     stepIndex: number,
     state: {
-      lastObservation?: { summary: string; finalAnswer?: string };
-      priorExecutionSummaries: string[];
+      lastObservation?: { summary: Summary };
     },
   ): Promise<ModuleRequest> {
     const toolDefinitions = await this.toolRegistry.listToolDefinitions();
@@ -61,8 +59,7 @@ export class PlanStep {
         "Return valid JSON only.",
         "Return one plan result object only.",
         "Produce high-level plan tasks only. Do not output direct tool calls.",
-        "Set task type to react when the task requires tool-oriented sub-problem solving.",
-        "Set task type to direct when the task is bounded direct work without a tool loop.",
+        "Return tasks in execution order.",
         "Do not add fields outside the contract.",
       ]),
       responseFormat: "json",
@@ -70,19 +67,22 @@ export class PlanStep {
         stage: "peo_plan",
         question: input.userInput,
         priorObservation: state.lastObservation?.summary,
-        priorExecutionSummaries: state.priorExecutionSummaries,
         tools: {
           availableTools: summarizeToolDefinitions(toolDefinitions),
           taskTypeRules: [
-            "Use task type react for tool-oriented sub-problems.",
-            "Use task type direct for bounded direct work.",
             "Keep tasks abstract and do not output direct toolCall payloads.",
+            "Return tasks in execution order.",
           ],
         },
-        expectedSchema: {
+        responseContract: {
           planSummary: "required string",
-          tasks: "required array",
-          finalAnswer: "string optional",
+          tasks: {
+            type: "required array<PlanTask>",
+            itemSchema: {
+              name: "required string",
+              description: "required string",
+            },
+          },
         },
         runtimeState: {
           stepIndex,
@@ -95,9 +95,7 @@ export class PlanStep {
 
   private async check(plan: Record<string, unknown>): Promise<PlanStepResult> {
     const content = typeof plan.content === "string" ? plan.content : "";
-    if (!content.trim()) {
-      throw new Error("PEO plan is empty.");
-    }
+    const fallbackSummary = content.trim() || "PEO plan validation failed.";
     const parsed = tryParseJsonRecord(content);
     const tasks = Array.isArray(parsed?.tasks)
       ? parsed.tasks
@@ -108,20 +106,30 @@ export class PlanStep {
       ? parsed.planSummary
       : typeof parsed?.plan === "string" && parsed.plan.trim()
         ? parsed.plan
-        : content;
+        : fallbackSummary;
+    if (!content.trim()) {
+      return {
+        planSummary,
+        tasks: [],
+        validationError: "PEO plan is empty.",
+      };
+    }
+    if (Array.isArray(parsed?.tasks) && tasks.length === 0) {
+      return {
+        planSummary,
+        tasks: [],
+      };
+    }
+    if (!Array.isArray(parsed?.tasks)) {
+      return {
+        planSummary,
+        tasks: [],
+        validationError: "PEO plan tasks are invalid.",
+      };
+    }
     return {
       planSummary,
-      tasks: tasks.length > 0
-        ? tasks
-        : typeof parsed?.finalAnswer === "string"
-          ? []
-          : [{
-              taskId: "task-1",
-              description: planSummary,
-              type: "direct",
-              status: "pending",
-            }],
-      finalAnswer: typeof parsed?.finalAnswer === "string" ? parsed.finalAnswer : undefined,
+      tasks,
     };
   }
 
@@ -153,14 +161,7 @@ function normalizePlanTask(value: unknown, index: number): PlanTask | undefined 
     return undefined;
   }
   return {
-    taskId: typeof value.taskId === "string" && value.taskId.trim() ? value.taskId : `task-${index + 1}`,
+    name: typeof value.name === "string" && value.name.trim() ? value.name : `task-${index + 1}`,
     description,
-    type: value.type === "react" ? "react" : "direct",
-    status: value.status === "completed" || value.status === "failed" || value.status === "blocked"
-      ? value.status
-      : "pending",
-    dependsOn: Array.isArray(value.dependsOn)
-      ? value.dependsOn.filter((dependency): dependency is string => typeof dependency === "string")
-      : undefined,
   };
 }

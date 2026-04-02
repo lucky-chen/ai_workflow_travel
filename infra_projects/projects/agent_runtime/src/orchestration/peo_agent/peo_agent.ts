@@ -6,8 +6,8 @@ import { asNumber } from "../agent_parsing.js";
 import { ExecutionStep } from "./peo_execution_step.js";
 import { PEO_STAGE_COUNT, PlanStep } from "./peo_plan_step.js";
 import { ObserveStep } from "./peo_observe_step.js";
-import type { ExecutionStepResult } from "./peo_types.js";
-import { DirectTaskExecutor, ReactTaskExecutor } from "./peo_task_executor.js";
+import type { Summary } from "./peo_types.js";
+import { ReactTaskExecutor } from "./peo_task_executor.js";
 import { createReActAgent } from "../react_agent/index.js";
 
 class PEOAgent extends BaseAgent {
@@ -23,18 +23,16 @@ class PEOAgent extends BaseAgent {
     let toolCalls = 0;
     let failedToolCalls = 0;
     const state: {
-      lastObservation?: { summary: string; finalAnswer?: string };
-      priorExecutionSummaries: string[];
-    } = { priorExecutionSummaries: [] };
+      lastObservation?: { summary: Summary };
+    } = {};
     try {
       for (let stepIndex = 1; stepIndex <= PEO_STAGE_COUNT; stepIndex += 1) {
         const plan = await this.planStep.run(input, runId, stepIndex, state);
         const execution = await this.executionStep.run(input, runId, stepIndex, plan);
-        for (const taskExecution of execution.taskExecutions) {
-          toolCalls += asNumber(taskExecution.executionFacts?.toolCalls);
-          failedToolCalls += asNumber(taskExecution.executionFacts?.failedToolCalls);
+        for (const taskResult of execution.taskResults) {
+          toolCalls += asNumber(taskResult.executionFacts?.toolCalls);
+          failedToolCalls += asNumber(taskResult.executionFacts?.failedToolCalls);
         }
-        state.priorExecutionSummaries.push(summarizeExecutionResult(execution));
         const observation = await this.observeStep.run(input, runId, stepIndex, {
           plan,
           executionResult: execution,
@@ -42,10 +40,9 @@ class PEOAgent extends BaseAgent {
         });
         state.lastObservation = {
           summary: observation.summary,
-          finalAnswer: observation.finalAnswer,
         };
         if (observation.completed) {
-          return createPeoSuccessResult("peo", input, runId, plan.planSummary, observation.finalAnswer, toolCalls, failedToolCalls);
+          return createPeoSuccessResult("peo", input, runId, plan.planSummary, JSON.stringify(observation.summary), toolCalls, failedToolCalls);
         }
       }
       return createPeoMaxStepResult("peo", input, runId, toolCalls, failedToolCalls, state);
@@ -73,7 +70,6 @@ export function createPEOAgent(input: {
       await agent.publishInternal(event);
     }),
     new ExecutionStep(
-      new DirectTaskExecutor(),
       new ReactTaskExecutor(internalReactAgent),
       async (event: AgentEvent) => {
         await agent.publishInternal(event);
@@ -137,7 +133,7 @@ function createPeoMaxStepResult(
   _toolCalls: number,
   _failedToolCalls: number,
   state: {
-    lastObservation?: { summary: string; finalAnswer?: string };
+    lastObservation?: { summary: Summary };
   },
 ): AgentRunResult {
   return {
@@ -153,13 +149,4 @@ function createPeoMaxStepResult(
       },
     },
   };
-}
-
-function summarizeExecutionResult(result: ExecutionStepResult): string {
-  if (result.tasks.length > 0) {
-    return result.tasks
-      .map((task, index) => `${task.taskId}:${result.taskExecutions[index]?.output ?? result.taskExecutions[index]?.error?.message ?? ""}`)
-      .join("|");
-  }
-  return result.finalAnswer ?? result.planSummary;
 }

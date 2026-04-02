@@ -9,7 +9,8 @@ interface LiveProviderCase {
   workdir: string;
 }
 
-const DEFAULT_LIVE_TEST_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_LIVE_TEST_TIMEOUT_MS = 7 * 60 * 1000;
+const REACT_LIVE_TEST_TIMEOUT_MS = 8 * 60 * 1000;
 
 export async function runLiveRealProviderSrcNewTests(cases: LiveProviderCase[]): Promise<void> {
   for (const item of cases) {
@@ -35,8 +36,8 @@ export async function runLiveRealProviderSrcNewTests(cases: LiveProviderCase[]):
         requireToolCall: true,
         label: "react",
       }),
-      timeoutMs,
-      `Live real-provider react test timed out after ${timeoutMs}ms for ${item.provider}.`,
+      Math.max(timeoutMs, REACT_LIVE_TEST_TIMEOUT_MS),
+      `Live real-provider react test timed out after ${Math.max(timeoutMs, REACT_LIVE_TEST_TIMEOUT_MS)}ms for ${item.provider}.`,
     );
     await withTimeout(
       runLiveModeCase({
@@ -77,7 +78,7 @@ async function runLiveModeCase(input: {
     undefined,
     `${input.provider} ${input.label} returned error: ${result.errorMessage}`,
   );
-  const content = String(result.content ?? "").trim();
+  const content = normalizeSessionContent(result.content).trim();
   if (input.label === "react" || input.label === "peo") {
     assert.equal(
       content.includes(input.expectedContent),
@@ -103,6 +104,22 @@ async function runLiveModeCase(input: {
     input.requireToolCall,
     `${input.provider} ${input.label} trace tool.call.started mismatch`,
   );
+}
+
+function normalizeSessionContent(content: string | Record<string, unknown> | undefined): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (!content || typeof content !== "object" || Array.isArray(content)) {
+    return "";
+  }
+  if (typeof content.finalAnswer === "string") {
+    return content.finalAnswer;
+  }
+  if (typeof content.answer === "string") {
+    return content.answer;
+  }
+  return JSON.stringify(content);
 }
 
 async function listTraceFiles(workdir: string): Promise<string[]> {

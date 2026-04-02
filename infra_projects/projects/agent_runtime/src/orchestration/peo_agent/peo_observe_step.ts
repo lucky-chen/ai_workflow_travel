@@ -1,5 +1,16 @@
 import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
-import type { ObserveStepInput } from "./peo_types.js";
+import type { ObserveStepInput, PlanTask, Summary, TaskSummary } from "./peo_types.js";
+
+interface TaskObservationResult {
+  task: PlanTask;
+  output: string;
+  error: {
+    code: number;
+    message: string;
+  };
+}
+
+type ObservationDecision = "success" | "replan";
 
 export class ObserveStep {
   constructor(
@@ -12,9 +23,8 @@ export class ObserveStep {
     stepIndex: number,
     observeInput: ObserveStepInput,
   ): Promise<{
-    summary: string;
+    summary: Summary;
     completed: boolean;
-    finalAnswer: string;
   }> {
     await this.emitAgentEvent({
       timestamp: new Date().toISOString(),
@@ -25,68 +35,114 @@ export class ObserveStep {
         step: "observation",
         stepIndex,
         input: {
-          planSummary: observeInput.executionResult.planSummary,
-          taskExecutions: observeInput.executionResult.taskExecutions,
-          finalAnswer: observeInput.executionResult.finalAnswer,
+          planSummary: observeInput.plan.planSummary,
+          tasks: observeInput.executionResult.tasks,
+          taskResults: observeInput.executionResult.taskResults,
         },
       },
     });
-    const checked = await this.check({
-      executionResult: observeInput.executionResult,
-    });
-    return checked;
+    if (observeInput.executionResult.validationError) {
+      return this.buildObservationOutput(
+        {
+          conclusion: {
+            completedCount: 0,
+            incompleteCount: 0,
+            failedCount: 0,
+          },
+          validationError: observeInput.executionResult.validationError,
+          tasks: [],
+        },
+        "replan",
+      );
+    }
+    const taskResults = this.buildTaskObservationResults(observeInput);
+    const summary = summarizeTaskResults(taskResults, observeInput.executionResult.validationError);
+    const decision = this.decideObservationOutcome(taskResults, observeInput.executionResult.validationError);
+    if (decision === "replan") {
+      return this.buildObservationOutput(summary, "replan");
+    }
+    return this.buildObservationOutput(summary, "success");
   }
 
-  private async check(observation: Record<string, unknown>): Promise<{
-    summary: string;
-    completed: boolean;
-    finalAnswer: string;
-  }> {
-    const executionResult = observation.executionResult && typeof observation.executionResult === "object"
-      ? observation.executionResult as {
-          planSummary?: unknown;
-          finalAnswer?: unknown;
-          taskExecutions?: unknown;
-        }
-      : undefined;
-    const taskExecutions = Array.isArray(executionResult?.taskExecutions)
-      ? executionResult.taskExecutions as unknown[]
-      : [];
-    const firstFailure = taskExecutions.find((value) => (
-      Boolean(value)
-      && typeof value === "object"
-      && Boolean((value as { error?: unknown }).error)
-    ));
-    const firstOutput = taskExecutions.find((value) => (
-      Boolean(value)
-      && typeof value === "object"
-      && typeof (value as { output?: unknown }).output === "string"
-      && String((value as { output?: unknown }).output).trim()
-    ));
-    const error = firstFailure && typeof firstFailure === "object" && typeof (firstFailure as { error?: unknown }).error === "object"
-      ? (firstFailure as { error: { message?: unknown } }).error as {
-          message?: unknown;
-        }
-      : undefined;
-    const summary = typeof error?.message === "string" && error.message.trim()
-      ? error.message
-      : firstOutput && typeof firstOutput === "object" && typeof (firstOutput as { output?: unknown }).output === "string"
-        ? String((firstOutput as { output?: unknown }).output)
-        : typeof executionResult?.planSummary === "string"
-          ? executionResult.planSummary
-          : typeof observation.priorObservation === "string"
-            ? observation.priorObservation
-            : "";
-    if (!summary.trim()) {
-      throw new Error("PEO observation is invalid.");
+  private buildTaskObservationResults(observeInput: ObserveStepInput): TaskObservationResult[] {
+    return observeInput.executionResult.tasks.map((task, index) => {
+      const taskResult = observeInput.executionResult.taskResults[index];
+      return {
+        task,
+        output: taskResult?.output ?? "",
+        error: taskResult?.error ?? {
+          code: 1,
+          message: "",
+        },
+      };
+    });
+  }
+
+  private decideObservationOutcome(
+    taskResults: TaskObservationResult[],
+    validationError?: string,
+  ): ObservationDecision {
+    if (validationError) {
+      return "replan";
     }
-    const finalAnswer = typeof executionResult?.finalAnswer === "string" && executionResult.finalAnswer.trim()
-      ? executionResult.finalAnswer
-      : summary;
+    if (taskResults.length === 0) {
+      return "success";
+    }
+    const failedTasks = taskResults.filter((task) => task.error.code !== 0);
+    const incompleteTasks = taskResults.filter((task) => task.error.code === 0 && !task.output.trim());
+    return failedTasks.length > 0 || incompleteTasks.length > 0 ? "replan" : "success";
+  }
+
+  private buildObservationOutput(
+    summary: Summary,
+    decision: ObservationDecision,
+  ): {
+    summary: Summary;
+    completed: boolean;
+  } {
+    if (decision === "success") {
+      return {
+        summary,
+        completed: true,
+      };
+    }
     return {
       summary,
-      completed: typeof executionResult?.finalAnswer === "string" && executionResult.finalAnswer.trim().length > 0,
-      finalAnswer,
+      completed: false,
     };
   }
+}
+
+function summarizeTaskResults(taskResults: TaskObservationResult[], validationError?: string): Summary {
+  const tasks: TaskSummary[] = taskResults.map((task) => {
+    const status = task.error.code !== 0
+      ? "failed"
+      : task.output.trim()
+        ? "completed"
+        : "incomplete";
+    return {
+      name: task.task.name,
+      description: task.task.description,
+      status,
+      reason: task.error.code !== 0 ? (task.error.message || "Task failed.") : undefined,
+      output: task.output.trim() ? task.output : undefined,
+    };
+  });
+  if (validationError) {
+    tasks.unshift({
+      name: "plan",
+      description: "plan validation",
+      status: "failed",
+      reason: validationError,
+    });
+  }
+  return {
+    conclusion: {
+      completedCount: tasks.filter((task) => task.status === "completed").length,
+      incompleteCount: tasks.filter((task) => task.status === "incomplete").length,
+      failedCount: tasks.filter((task) => task.status === "failed").length,
+    },
+    validationError,
+    tasks,
+  };
 }

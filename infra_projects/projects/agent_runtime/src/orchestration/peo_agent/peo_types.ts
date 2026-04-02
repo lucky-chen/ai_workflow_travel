@@ -1,28 +1,20 @@
 import type { AgentRunInput } from "../../interface/agent-api.js";
 
-export type PlanTaskType = "direct" | "react";
-export type PlanTaskStatus = "pending" | "completed" | "failed" | "blocked";
-
 export interface PlanTask {
-  taskId: string;
+  name: string;
   description: string;
-  type: PlanTaskType;
-  status: PlanTaskStatus;
-  dependsOn?: string[];
 }
 
 export interface PlanStepResult {
   planSummary: string;
   tasks: PlanTask[];
-  finalAnswer?: string;
+  validationError?: string;
 }
 
 export interface TaskExecutionResult {
-  taskId: string;
-  taskStatus: Exclude<PlanTaskStatus, "pending">;
-  output?: string;
-  error?: {
-    code: string;
+  output: string;
+  error: {
+    code: number;
     message: string;
   };
   executionFacts?: {
@@ -32,16 +24,33 @@ export interface TaskExecutionResult {
 }
 
 export interface ExecutionStepResult {
-  planSummary: string;
   tasks: PlanTask[];
-  taskExecutions: TaskExecutionResult[];
-  finalAnswer?: string;
+  taskResults: TaskExecutionResult[];
+  validationError?: string;
+}
+
+export interface TaskSummary {
+  name: string;
+  description: string;
+  status: "completed" | "incomplete" | "failed";
+  reason?: string;
+  output?: string;
+}
+
+export interface Summary {
+  conclusion: {
+    completedCount: number;
+    incompleteCount: number;
+    failedCount: number;
+  };
+  validationError?: string;
+  tasks: TaskSummary[];
 }
 
 export interface ObserveStepInput {
   plan: PlanStepResult;
   executionResult: ExecutionStepResult;
-  priorObservation?: string;
+  priorObservation?: Summary;
 }
 
 export interface ITaskExecutor {

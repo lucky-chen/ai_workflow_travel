@@ -13,7 +13,7 @@ class ChatPromptBuilder {
       userPrompt: {
         stage: "chat",
         question: input.userInput,
-        expectedSchema: {
+        responseContract: {
           finalAnswer: "required string",
         },
       },

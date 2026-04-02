@@ -84,7 +84,7 @@ export class ThoughtStep {
           availableTools: summarizeToolDefinitions(toolDefinitions),
           toolUsageRules: createToolUsageRules("react"),
         },
-        expectedSchema: {
+        responseContract: {
           actionType: "\"tool\" | \"respond\"",
           toolCalls: "array required when actionType is tool",
           finalAnswer: "string required when actionType is respond",

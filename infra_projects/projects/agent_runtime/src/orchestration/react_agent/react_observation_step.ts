@@ -37,7 +37,7 @@ export class ObservationStep {
         stage: "react_observation",
         question: agentInput.userInput,
         priorObservation: observationInput.priorObservation,
-        expectedSchema: {
+        responseContract: {
           summary: "required string",
           completed: "required boolean",
           finalAnswer: "required string when completed is true",

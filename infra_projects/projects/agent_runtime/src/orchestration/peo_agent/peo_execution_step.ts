@@ -3,75 +3,74 @@ import type { ExecutionStepResult, ITaskExecutor, PlanStepResult, PlanTask } fro
 
 export class ExecutionStep {
   constructor(
-    private readonly directTaskExecutor: ITaskExecutor,
     private readonly reactTaskExecutor: ITaskExecutor,
     private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
 
   async run(
     input: AgentRunInput,
-    _runId: string,
+    runId: string,
     stepIndex: number,
     plan: PlanStepResult,
   ): Promise<ExecutionStepResult> {
-    const tasks = selectExecutableTasks(plan.tasks);
+    const tasks = plan.tasks;
+    await this.emitExecutionInput(runId, stepIndex, plan, tasks);
+    if (plan.validationError) {
+      return {
+        tasks,
+        taskResults: [],
+        validationError: plan.validationError,
+      };
+    }
+    const taskResults = await this.executeTasks(tasks, plan, stepIndex, input);
+    return {
+      tasks,
+      taskResults,
+      validationError: plan.validationError,
+    };
+  }
+
+  private async emitExecutionInput(
+    runId: string,
+    stepIndex: number,
+    plan: PlanStepResult,
+    tasks: PlanTask[],
+  ): Promise<void> {
     await this.emitAgentEvent({
       timestamp: new Date().toISOString(),
       brief: "peo.execution.input",
       details: {
-        runId: _runId,
+        runId,
         agent: "peo",
         step: "execution",
         stepIndex,
         input: {
           planSummary: plan.planSummary,
           tasks: tasks.map((task) => ({
-            taskId: task.taskId,
+            name: task.name,
             description: task.description,
-            type: task.type,
           })),
-          finalAnswer: plan.finalAnswer,
         },
       },
     });
-    if (tasks.length === 0) {
-      return {
-        planSummary: plan.planSummary,
-        finalAnswer: plan.finalAnswer,
-        tasks: [],
-        taskExecutions: [],
-      };
-    }
-    const taskExecutions = [];
+  }
+
+  private async executeTasks(
+    tasks: PlanTask[],
+    plan: PlanStepResult,
+    stepIndex: number,
+    input: AgentRunInput,
+  ) {
+    const taskResults = [];
     for (const task of tasks) {
-      const executor = task.type === "react"
-        ? this.reactTaskExecutor
-        : this.directTaskExecutor;
-      const taskExecution = await executor.execute({
+      const taskResult = await this.reactTaskExecutor.execute({
         plan,
         task,
         stepIndex,
         context: input,
       });
-      taskExecutions.push(taskExecution);
+      taskResults.push(taskResult);
     }
-    return {
-      planSummary: plan.planSummary,
-      tasks,
-      taskExecutions,
-      finalAnswer: plan.finalAnswer,
-    };
+    return taskResults;
   }
-}
-
-function selectExecutableTasks(tasks: PlanTask[]): PlanTask[] {
-  const completed = new Set(
-    tasks
-      .filter((task) => task.status === "completed")
-      .map((task) => task.taskId),
-  );
-  return tasks.filter((task) => (
-    task.status === "pending"
-    && (task.dependsOn ?? []).every((dependency) => completed.has(dependency))
-  ));
 }

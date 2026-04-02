@@ -45,7 +45,7 @@ async function testChatPromptUsesUnifiedContract(): Promise<void> {
           respond: (prompt: Record<string, unknown>) => {
             assert.equal(prompt.stage, "chat");
             assert.equal(typeof prompt.question, "object");
-            assert.equal(typeof prompt.expectedSchema, "object");
+            assert.equal(typeof prompt.responseContract, "object");
             assert.equal("tools" in prompt, false);
             assert.equal("contextBasis" in prompt, false);
             assert.equal("runtimeState" in prompt, false);
@@ -136,7 +136,22 @@ async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
           responses: {
             peo_plan: JSON.stringify({
               planSummary: "Slash plan resolved to peo",
-              tasks: [],
+                tasks: [
+                  {
+                    name: "task-1",
+                    description: "reply with peo from slash command",
+                  },
+                ],
+            }),
+            peo_observation_finalize: "peo from slash command",
+            react_thought: JSON.stringify({
+              thought: "reply directly",
+              actionType: "respond",
+              finalAnswer: "peo from slash command",
+            }),
+            react_observation: JSON.stringify({
+              summary: "reply directly",
+              completed: true,
               finalAnswer: "peo from slash command",
             }),
           },
@@ -152,7 +167,7 @@ async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
   });
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(result.content, "peo from slash command");
+  assertPeoSummaryOutput(result.content, "task-1", "peo from slash command");
 }
 
 async function testDynamicModeSelectsReactForFixedBuildKeyword(): Promise<void> {
@@ -259,7 +274,7 @@ async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void>
             ) {
               assert.equal(typeof prompt.question, "object");
               assert.equal(typeof prompt.tools, "object");
-              assert.equal(typeof prompt.expectedSchema, "object");
+              assert.equal(typeof prompt.responseContract, "object");
               assert.equal(typeof prompt.runtimeState, "object");
               assert.equal("contextBasis" in prompt, false);
               return JSON.stringify({
@@ -331,14 +346,11 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
                 planSummary: "Use react subtask to execute plan",
                 tasks: [
                   {
-                    taskId: "task-1",
-                    description: "use echo_hello and finish the subtask",
-                    type: "react",
-                    status: "pending",
+                    name: "task-1",
+                    description: "use echo_hello then reply with react subtask completed",
                   },
                 ],
-                finalAnswer: "peo observation",
-              });
+            });
             }
             if (prompt.stage === "react_thought") {
               return JSON.stringify({
@@ -354,6 +366,9 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
                 completed: true,
                 finalAnswer: "react subtask completed",
               });
+            }
+            if (prompt.stage === "peo_observation_finalize") {
+              return "react subtask completed";
             }
             throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
           },
@@ -381,8 +396,8 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
   const toolEvent = (tracePayload.events ?? []).find((event) => event.brief === "tool.call.started" && event.details?.toolName === "echo_hello");
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(result.content, "peo observation");
-  assert.equal(state.history.at(-1)?.content, "peo observation");
+  assertPeoSummaryOutput(result.content, "task-1", "react subtask completed");
+  assertPeoSummaryOutput(state.history.at(-1)?.content, "task-1", "react subtask completed");
   assert.equal(briefs.includes("model.call.started"), true);
   assert.equal(briefs.includes("tool.call.started"), true);
   const peoPlanInput = peoPlanEvent?.details?.input as Record<string, unknown> | undefined;
@@ -403,7 +418,22 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
           responses: {
             peo_plan: JSON.stringify({
               planSummary: "Respond directly",
-              tasks: [],
+                tasks: [
+                  {
+                    name: "task-1",
+                    description: "reply with peo direct answer",
+                  },
+                ],
+            }),
+            peo_observation_finalize: "peo direct answer",
+            react_thought: JSON.stringify({
+              thought: "reply directly",
+              actionType: "respond",
+              finalAnswer: "peo direct answer",
+            }),
+            react_observation: JSON.stringify({
+              summary: "reply directly",
+              completed: true,
               finalAnswer: "peo direct answer",
             }),
           },
@@ -425,8 +455,8 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
   const state = await session.load();
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(result.content, "peo direct answer");
-  assert.equal(state.history.at(-1)?.content, "peo direct answer");
+  assertPeoSummaryOutput(result.content, "task-1", "peo direct answer");
+  assertPeoSummaryOutput(state.history.at(-1)?.content, "task-1", "peo direct answer");
 }
 
 async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
@@ -465,28 +495,18 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
                 },
               ]);
               assert.deepEqual(tools.taskTypeRules, [
-                "Use task type react for tool-oriented sub-problems.",
-                "Use task type direct for bounded direct work.",
                 "Keep tasks abstract and do not output direct toolCall payloads.",
+                "Return tasks in execution order.",
               ]);
-              assert.equal(typeof prompt.expectedSchema, "object");
+              assert.equal(typeof prompt.responseContract, "object");
               assert.equal(typeof prompt.runtimeState, "object");
               assert.equal("contextBasis" in prompt, false);
               return JSON.stringify({
                 planSummary: "Two-step peo flow",
                 tasks: [
                   {
-                    taskId: "task-1",
+                    name: "task-1",
                     description: "Inspect state",
-                    type: "direct",
-                    status: "pending",
-                  },
-                  {
-                    taskId: "task-2",
-                    description: "Finish response",
-                    type: "direct",
-                    status: "pending",
-                    dependsOn: ["task-1"],
                   },
                 ],
               });
@@ -495,12 +515,58 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
               prompt.stage === "peo_plan"
               && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
             ) {
-              assert.equal(Array.isArray(prompt.priorExecutionSummaries), true);
               return JSON.stringify({
                 planSummary: "Second step: finish response",
-                tasks: [],
+                tasks: [
+                  {
+                    name: "task-3",
+                    description: "reply with peo two-step answer",
+                  },
+                ],
+              });
+            }
+            if (
+              prompt.stage === "react_thought"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "Inspect state"
+            ) {
+              return JSON.stringify({
+                thought: "reply directly",
+                actionType: "respond",
+                finalAnswer: "inspect result",
+              });
+            }
+            if (
+              prompt.stage === "react_observation"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "Inspect state"
+            ) {
+              return JSON.stringify({
+                summary: "inspect result",
+                completed: true,
+                finalAnswer: "inspect result",
+              });
+            }
+            if (
+              prompt.stage === "react_thought"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "reply with peo two-step answer"
+            ) {
+              return JSON.stringify({
+                thought: "reply directly",
+                actionType: "respond",
                 finalAnswer: "peo two-step answer",
               });
+            }
+            if (
+              prompt.stage === "react_observation"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "reply with peo two-step answer"
+            ) {
+              return JSON.stringify({
+                summary: "reply directly",
+                completed: true,
+                finalAnswer: "peo two-step answer",
+              });
+            }
+            if (prompt.stage === "peo_observation_finalize") {
+              return "peo two-step answer";
             }
             throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
           },
@@ -517,8 +583,8 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
   const state = await session.load();
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(result.content, "peo two-step answer");
-  assert.equal(state.history.at(-1)?.content, "peo two-step answer");
+  assertPeoSummaryOutput(result.content, "task-1", "inspect result");
+  assertPeoSummaryOutput(state.history.at(-1)?.content, "task-1", "inspect result");
   assert.equal(state.history.filter((item) => item.role === "assistant").length >= 1, true);
 }
 
@@ -539,15 +605,16 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
                 planSummary: "Try a missing tool then observe the failure",
                 tasks: [
                   {
-                    taskId: "task-1",
+                    name: "task-1",
                     description: "use missing_tool and continue",
-                    type: "react",
-                    status: "pending",
                   },
                 ],
               });
             }
-            if (prompt.stage === "react_thought") {
+            if (
+              prompt.stage === "react_thought"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "use missing_tool and continue"
+            ) {
               return JSON.stringify({
                 thought: "Use missing tool",
                 actionType: "tool",
@@ -555,7 +622,10 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
                 shouldContinue: true,
               });
             }
-            if (prompt.stage === "react_observation") {
+            if (
+              prompt.stage === "react_observation"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "use missing_tool and continue"
+            ) {
               return JSON.stringify({
                 summary: "react child observed tool failure",
                 completed: true,
@@ -566,16 +636,38 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
               prompt.stage === "peo_plan"
               && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
             ) {
-              const priorExecutionSummaries = Array.isArray(prompt.priorExecutionSummaries)
-                ? prompt.priorExecutionSummaries
-                : [];
-              assert.equal(Array.isArray(priorExecutionSummaries), true);
-              assert.equal(String(priorExecutionSummaries[0] ?? "").includes("task-1"), true);
               return JSON.stringify({
                 planSummary: "Handle missing tool failure",
-                tasks: [],
+                tasks: [
+                  {
+                    name: "task-2",
+                    description: "reply with peo handled tool failure",
+                  },
+                ],
+              });
+            }
+            if (
+              prompt.stage === "react_thought"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "reply with peo handled tool failure"
+            ) {
+              return JSON.stringify({
+                thought: "reply directly",
+                actionType: "respond",
                 finalAnswer: "peo handled tool failure",
               });
+            }
+            if (
+              prompt.stage === "react_observation"
+              && (prompt.question as Record<string, unknown> | undefined)?.task === "reply with peo handled tool failure"
+            ) {
+              return JSON.stringify({
+                summary: "reply directly",
+                completed: true,
+                finalAnswer: "peo handled tool failure",
+              });
+            }
+            if (prompt.stage === "peo_observation_finalize") {
+              return "peo handled tool failure";
             }
             throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
           },
@@ -591,7 +683,7 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
   });
 
   assert.equal(result.errorCode, undefined);
-  assert.equal(result.content, "peo handled tool failure");
+  assertPeoSummaryOutput(result.content, "task-1", "react child observed tool failure");
 }
 
 async function testToolArgumentValidatorRejectsInvalidArguments(): Promise<void> {
@@ -768,14 +860,11 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
                 planSummary: "read with react",
                 tasks: [
                   {
-                    taskId: "task-1",
-                    description: "use echo_hello tool",
-                    type: "react",
-                    status: "pending",
+                    name: "task-1",
+                    description: "use echo_hello tool then reply with done",
                   },
                 ],
-                finalAnswer: "done",
-              });
+            });
             }
             if (prompt.stage === "react_thought") {
               return JSON.stringify({
@@ -792,6 +881,9 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
                 completed: true,
                 finalAnswer: "done",
               });
+            }
+            if (prompt.stage === "peo_observation_finalize") {
+              return "done";
             }
             throw new Error(`Unexpected prompt: ${JSON.stringify(prompt)}`);
           },
@@ -823,30 +915,17 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
 }
 
 async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
-  let directCalled = 0;
   let reactCalled = 0;
   const step = new ExecutionStep(
     {
       async execute() {
-        directCalled += 1;
-        return {
-          taskId: "task-1",
-          taskStatus: "completed",
-          output: "direct output",
-          executionFacts: {
-            toolCalls: 0,
-            failedToolCalls: 0,
-          },
-        };
-      },
-    },
-    {
-      async execute() {
         reactCalled += 1;
         return {
-          taskId: "task-2",
-          taskStatus: "completed",
           output: "react output",
+          error: {
+            code: 0,
+            message: "",
+          },
           executionFacts: {
             toolCalls: 1,
             failedToolCalls: 0,
@@ -865,21 +944,17 @@ async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
       planSummary: "execute react task",
       tasks: [
         {
-          taskId: "task-2",
+          name: "task-2",
           description: "read file with tools",
-          type: "react",
-          status: "pending",
         },
       ],
-      finalAnswer: undefined,
     },
   );
 
-  assert.equal(directCalled, 0);
   assert.equal(reactCalled, 1);
-  assert.equal(result.tasks[0]?.taskId, "task-2");
-  assert.equal(result.taskExecutions[0]?.output, "react output");
-  assert.equal(result.taskExecutions[0]?.executionFacts?.toolCalls, 1);
+  assert.equal(result.tasks[0]?.name, "task-2");
+  assert.equal(result.taskResults[0]?.output, "react output");
+  assert.equal(result.taskResults[0]?.executionFacts?.toolCalls, 1);
 }
 
 async function testReservedPlaceholdersStayCallable(): Promise<void> {
@@ -948,4 +1023,29 @@ function createMinimalAgentContext(requestedMode: "react" | "peo") {
       },
     },
   } as unknown as Parameters<ActionStep["run"]>[0];
+}
+
+function assertPeoSummaryOutput(content: unknown, expectedName: string, expectedOutput: string): void {
+  if (typeof content !== "string") {
+    throw new Error(`Expected string content, received ${typeof content}.`);
+  }
+  const parsed = JSON.parse(content) as {
+    conclusion?: {
+      completedCount?: number;
+      incompleteCount?: number;
+      failedCount?: number;
+    };
+    tasks?: Array<{
+      name?: string;
+      description?: string;
+      status?: string;
+      output?: string;
+    }>;
+  };
+  assert.equal(parsed.conclusion?.completedCount, 1);
+  assert.equal(parsed.conclusion?.incompleteCount, 0);
+  assert.equal(parsed.conclusion?.failedCount, 0);
+  assert.equal(parsed.tasks?.[0]?.name, expectedName);
+  assert.equal(parsed.tasks?.[0]?.status, "completed");
+  assert.equal(parsed.tasks?.[0]?.output, expectedOutput);
 }
