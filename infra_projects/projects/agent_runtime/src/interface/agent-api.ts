@@ -1,14 +1,13 @@
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike } from "../model/types.js";
-import { createAgent as createAgentImpl } from "../orchestration/agent.js";
 
 export type { FetchLike } from "../model/types.js";
 
-export type AgentRunMode = "chat" | "react" | "peo";
+export type AgentType = "chat" | "react" | "peo";
 
 export interface AgentCreateOptions {
   workdir: string;
-  mode?: AgentRunMode;
+  type?: AgentType;
   sysPrompt?: string[];
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: FetchLike;
@@ -27,10 +26,16 @@ export interface AgentRunResult {
     code: string;
     message: string;
   };
-  tokenUsage?: {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
+  metrics?: {
+    tokenUsage?: {
+      inputTokens: number;
+      outputTokens: number;
+      totalTokens: number;
+    };
+    toolUsage?: {
+      toolCalls: number;
+      failedToolCalls: number;
+    };
   };
   custom?: Record<string, unknown>;
 }
@@ -49,8 +54,4 @@ export interface IAgent {
   run(input: AgentRunInput): Promise<AgentRunResult>;
   subscribeEvents(listener: AgentEventListener): void;
   unsubscribeEvents(listener: AgentEventListener): void;
-}
-
-export function createAgent(options: AgentCreateOptions): IAgent {
-  return createAgentImpl(options);
 }

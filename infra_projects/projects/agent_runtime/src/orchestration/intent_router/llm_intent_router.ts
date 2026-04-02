@@ -24,13 +24,13 @@ export class LlmIntentRouter implements IntentRoutingLlm {
 function buildIntentClassificationRequest(input: AgentSelectionInput): ModuleRequest {
   return {
     systemPrompt: [
-      "You classify runtime intent into one concrete mode.",
+      "You classify runtime intent into one concrete type.",
       "Return valid JSON only.",
-      "Allowed modes: chat, react, peo.",
+      "Allowed types: chat, react, peo.",
       "Use chat when internal knowledge is enough and no multi-step operation is needed.",
       "Use react when external query or a simple tool call is needed.",
       "Use peo when multi-step planning, retries, or step dependencies are needed.",
-      "Return exactly: {\"mode\":\"chat|react|peo\",\"reasonCode\":\"string\"}.",
+      "Return exactly: {\"type\":\"chat|react|peo\",\"reasonCode\":\"string\"}.",
     ],
     responseFormat: "json",
     userPrompt: {
@@ -44,18 +44,18 @@ function buildIntentClassificationRequest(input: AgentSelectionInput): ModuleReq
 
 function parseIntentRoutingResult(response: ModuleResponse): IntentRoutingResult {
   const parsed = tryParseJsonRecord(response.content);
-  const mode = parsed?.mode;
+  const type = parsed?.type;
   const reasonCode = typeof parsed?.reasonCode === "string" && parsed.reasonCode.trim()
     ? parsed.reasonCode
     : "llm_classification";
-  if (mode === "chat" || mode === "react" || mode === "peo") {
+  if (type === "chat" || type === "react" || type === "peo") {
     return {
-      mode,
+      type,
       reasonCode,
     };
   }
   return {
-    mode: "chat",
+    type: "chat",
     reasonCode: "llm_fallback_chat",
   };
 }

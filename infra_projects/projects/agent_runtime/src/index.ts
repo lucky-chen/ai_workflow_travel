@@ -1,6 +1,5 @@
 export * from "./interface/api.js";
 export {
-  createAgent,
   type AgentCreateOptions,
   type AgentEvent,
   type AgentEventListener,

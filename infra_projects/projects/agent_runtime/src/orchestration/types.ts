@@ -1,14 +1,14 @@
 import type { ModelConfig } from "../model/types.js";
-import type { IAgent, AgentRunMode, AgentRunResult } from "../interface/agent-api.js";
+import type { IAgent, AgentType, AgentRunResult } from "../interface/agent-api.js";
 import type { UserInput } from "../interface/api.js";
 
 export interface AgentFactory {
-  create(mode: AgentRunMode, options?: { modelConfig?: ModelConfig }): Promise<IAgent>;
+  create(type: AgentType, options?: { modelConfig?: ModelConfig; sysPrompt?: string[] }): IAgent;
 }
 
 export interface IntentRouter {
   resolve(input: AgentSelectionInput): Promise<{
-    mode: AgentRunMode;
+    type: AgentType;
     reasonCode: string;
   }>;
 }

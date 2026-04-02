@@ -1,9 +1,8 @@
-import { randomUUID } from "node:crypto";
-
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
+import { BaseAgent } from "../base_agent.js";
 import { asNumber } from "../agent_parsing.js";
 import { ExecutionStep } from "./peo_execution_step.js";
 import { PEO_STAGE_COUNT, PlanStep } from "./peo_plan_step.js";
@@ -12,26 +11,17 @@ import type { ExecutionStepResult } from "./peo_types.js";
 import { DirectTaskExecutor, ReactTaskExecutor } from "./peo_task_executor.js";
 import { createReActAgent } from "../react_agent/index.js";
 
-class PEOAgent implements IAgent {
-  private running = false;
-
+class PEOAgent extends BaseAgent {
   constructor(
     private readonly planStep: PlanStep,
     private readonly executionStep: ExecutionStep,
     private readonly observeStep: ObserveStep,
-  ) {}
-
-  isRunning(): boolean {
-    return this.running;
+    eventBus: RuntimeEventBus,
+  ) {
+    super("peo", eventBus);
   }
 
-  subscribeEvents(): void {}
-
-  unsubscribeEvents(): void {}
-
-  async run(input: AgentRunInput): Promise<AgentRunResult> {
-    const runId = randomUUID();
-    this.running = true;
+  protected async execute(input: AgentRunInput, runId: string): Promise<AgentRunResult> {
     let toolCalls = 0;
     let failedToolCalls = 0;
     const state: {
@@ -63,8 +53,6 @@ class PEOAgent implements IAgent {
       return createPeoMaxStepResult("peo", input, runId, toolCalls, failedToolCalls, state);
     } catch (error) {
       return createPeoFailureResult("peo", input, runId, error, toolCalls, failedToolCalls);
-    } finally {
-      this.running = false;
     }
   }
 }
@@ -91,6 +79,7 @@ export function createPEOAgent(input: {
       new ReactTaskExecutor(internalReactAgent),
     ),
     new ObserveStep(input.eventBus),
+    input.eventBus,
   );
 }
 
@@ -106,6 +95,12 @@ function createPeoSuccessResult(
   return {
     content: observeContent,
     format: "text",
+    metrics: {
+      toolUsage: {
+        toolCalls: _toolCalls,
+        failedToolCalls: _failedToolCalls,
+      },
+    },
   };
 }
 
@@ -122,6 +117,12 @@ function createPeoFailureResult(
     errorInfo: {
       code: "PEO_AGENT_FAILED",
       message: error instanceof Error ? error.message : String(error),
+    },
+    metrics: {
+      toolUsage: {
+        toolCalls: _toolCalls,
+        failedToolCalls: _failedToolCalls,
+      },
     },
   };
 }
@@ -141,6 +142,12 @@ function createPeoMaxStepResult(
     errorInfo: {
       code: "PEO_AGENT_MAX_STEPS",
       message: "PEO agent stopped after reaching the max step limit.",
+    },
+    metrics: {
+      toolUsage: {
+        toolCalls: _toolCalls,
+        failedToolCalls: _failedToolCalls,
+      },
     },
   };
 }

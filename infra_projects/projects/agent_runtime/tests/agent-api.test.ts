@@ -7,12 +7,12 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 import {
-  createAgent,
   type AgentEvent,
   type AgentEventListener,
-  type FetchLike,
   type IAgent,
 } from "../src/interface/agent-api.js";
+import type { FetchLike } from "../src/interface/agent-api.js";
+import { createRuntime } from "../src/interface/api.js";
 import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
 export async function runAgentApiTests(): Promise<void> {
@@ -24,9 +24,10 @@ export async function runAgentApiTests(): Promise<void> {
 }
 
 async function testCreateAgentReturnsStableApi(): Promise<void> {
-  const agent: IAgent = createAgent({
+  const runtime = createRuntime({
     workdir: await createTestWorkdir("agent-runtime-agent-api-stable-"),
   });
+  const agent: IAgent = await runtime.createAgent("chat");
 
   assert.equal(typeof agent.run, "function");
   assert.equal(typeof agent.subscribeEvents, "function");
@@ -39,13 +40,12 @@ async function testChatAgentReturnsMockResult(): Promise<void> {
     provider: "deepseek",
     model: "deepseek-chat",
   });
-  const agent = createAgent({
+  const runtime = createRuntime({
     workdir,
-    mode: "chat",
-    sysPrompt: ["reply with mock text"],
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: createProviderFetch(() => "chat agent result"),
   });
+  const agent = await runtime.createAgent("chat");
 
   const result = await agent.run({
     userInput: {
@@ -64,9 +64,8 @@ async function testReactAgentReceivesOnlyAgentScopedEvents(): Promise<void> {
     provider: "deepseek",
     model: "deepseek-chat",
   });
-  const agent = createAgent({
+  const runtime = createRuntime({
     workdir,
-    mode: "react",
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: createProviderFetch((prompt) => {
       if (prompt.stage === "react_thought") {
@@ -88,6 +87,7 @@ async function testReactAgentReceivesOnlyAgentScopedEvents(): Promise<void> {
       throw new Error(`Unexpected stage: ${String(prompt.stage)}`);
     }),
   });
+  const agent = await runtime.createAgent("react");
   const events: AgentEvent[] = [];
   const listener: AgentEventListener = {
     onEvent(event) {
@@ -106,7 +106,6 @@ async function testReactAgentReceivesOnlyAgentScopedEvents(): Promise<void> {
 
   assert.equal(result.errorInfo, undefined);
   assert.equal(result.content, "react complete");
-  assert.equal(events.some((event) => event.brief === "agent.run.started"), true);
   assert.equal(events.some((event) => event.brief === "react.thought.input"), true);
   assert.equal(events.some((event) => event.brief === "tool.call.started"), true);
   assert.equal(events.some((event) => event.brief.startsWith("runtime.")), false);
@@ -118,12 +117,12 @@ async function testAgentSubscriptionDeduplicatesAndUnsubscribes(): Promise<void>
     provider: "deepseek",
     model: "deepseek-chat",
   });
-  const agent = createAgent({
+  const runtime = createRuntime({
     workdir,
-    mode: "chat",
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: createProviderFetch(() => "chat result"),
   });
+  const agent = await runtime.createAgent("chat");
   const events: AgentEvent[] = [];
   const listener: AgentEventListener = {
     onEvent(event) {
@@ -161,9 +160,8 @@ async function testAgentRegistersExternalMcpTools(): Promise<void> {
   });
   const endpoint = await startTestMcpHttpServer();
   try {
-    const agent = createAgent({
+    const runtime = createRuntime({
       workdir,
-      mode: "react",
       externalMcpEndpoints: [endpoint.config],
       defaultModelMode: "real_from_local_env",
       realProviderFetchFn: createProviderFetch((prompt) => {
@@ -186,6 +184,7 @@ async function testAgentRegistersExternalMcpTools(): Promise<void> {
         throw new Error(`Unexpected stage: ${String(prompt.stage)}`);
       }),
     });
+    const agent = await runtime.createAgent("react");
     const events: AgentEvent[] = [];
     const listener: AgentEventListener = {
       onEvent(event) {

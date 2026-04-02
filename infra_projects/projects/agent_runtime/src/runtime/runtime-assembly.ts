@@ -3,10 +3,6 @@ import path from "node:path";
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike, ModelConfig } from "../model/types.js";
 import { FileStorage, type Storage } from "../data/storage.js";
-import { ContextAssembler } from "../context/context-assembler.js";
-import { createRetrievalProvider } from "../context/retrieval-provider.js";
-import { createRuntimeMemory, type RuntimeMemory } from "../context/runtime-memory.js";
-import { createSessionTranscript, type SessionTranscript } from "../context/session-transcript.js";
 import { createBuiltInToolDefinitions } from "../capability/built-in-tools.js";
 import { ExecutionEnvironment } from "../capability/execution-environment.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
@@ -22,7 +18,7 @@ import { ModelFactory } from "../model/model-factory.js";
 import { createRunCheckpoint } from "./run-checkpoint.js";
 import { registerExternalToolProviders } from "./external-tool-registration.js";
 import { toRuntimeModelConfig, WorkspaceLocalEnv } from "./workspace-local-env.js";
-import type { RuntimeComponents } from "./types.js";
+import type { RuntimeSharedComponents } from "./types.js";
 
 export interface RuntimeAssemblyOptions {
   workdir: string;
@@ -32,14 +28,12 @@ export interface RuntimeAssemblyOptions {
 }
 
 export interface RuntimeAssemblyOverrides {
-  sessionTranscript?: SessionTranscript;
-  runtimeMemory?: RuntimeMemory;
   eventListeners?: RuntimeEventListener[];
 }
 
 export class RuntimeAssembly {
   readonly storage: Storage;
-  readonly components: RuntimeComponents;
+  readonly components: RuntimeSharedComponents;
   readonly initialization: Promise<void>;
 
   constructor(
@@ -52,13 +46,6 @@ export class RuntimeAssembly {
     }
 
     this.storage = new FileStorage(path.join(options.workdir, ".agent_runtime"));
-    const sessionTranscript = overrides.sessionTranscript ?? createSessionTranscript(this.storage);
-    const runtimeMemory = overrides.runtimeMemory ?? createRuntimeMemory(this.storage);
-    const contextAssembler = new ContextAssembler(
-      sessionTranscript,
-      runtimeMemory,
-      createRetrievalProvider(options.workdir),
-    );
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
@@ -107,16 +94,13 @@ export class RuntimeAssembly {
 
     this.components = {
       storageRoot: path.join(options.workdir, ".agent_runtime"),
-      contextAssembler,
-      sessionTranscript,
-      runtimeMemory,
+      storage: this.storage,
       intentRouter,
       agentFactory: new AgentFactory({
         modelFactory,
         gateway,
         eventBus,
         toolRegistry,
-        sysPrompt: undefined,
       }),
       metrics: createMetrics(this.storage),
       trace,

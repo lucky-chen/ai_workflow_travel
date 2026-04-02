@@ -1,21 +1,21 @@
 {
   "slashCommands": {
     "/chat": {
-      "mode": "chat",
+      "type": "chat",
       "reasonCode": "rule_slash_chat"
     },
     "/react": {
-      "mode": "react",
+      "type": "react",
       "reasonCode": "rule_slash_react"
     },
     "/plan": {
-      "mode": "peo",
+      "type": "peo",
       "reasonCode": "rule_slash_plan"
     }
   },
   "fixedRules": [
     {
-      "mode": "peo",
+      "type": "peo",
       "reasonCode": "rule_multi_step_plan",
       "mainKeywords": [
         "step by step",
@@ -31,7 +31,7 @@
       ]
     },
     {
-      "mode": "react",
+      "type": "react",
       "reasonCode": "rule_simple_tool_call",
       "mainKeywords": [
         "run ",
@@ -46,7 +46,7 @@
       ]
     },
     {
-      "mode": "chat",
+      "type": "chat",
       "reasonCode": "rule_chat_question",
       "mainKeywords": [
         "what is",

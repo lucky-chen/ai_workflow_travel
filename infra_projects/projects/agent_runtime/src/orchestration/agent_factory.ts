@@ -6,7 +6,7 @@ import type { AgentCreateOptions } from "../interface/agent-api.js";
 import { createChatAgent } from "./chat_agent/index.js";
 import { createPEOAgent } from "./peo_agent/index.js";
 import { createReActAgent } from "./react_agent/index.js";
-import type { AgentRunMode, IAgent } from "../interface/agent-api.js";
+import type { AgentType, IAgent } from "../interface/agent-api.js";
 import type { AgentFactory as AgentFactoryContract } from "./types.js";
 
 export interface AgentFactoryOptions {
@@ -14,45 +14,48 @@ export interface AgentFactoryOptions {
   gateway: McpGateway;
   eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
-  sysPrompt?: AgentCreateOptions["sysPrompt"];
 }
 
 export class AgentFactory implements AgentFactoryContract {
   constructor(private readonly options: AgentFactoryOptions) {}
 
-  async create(mode: AgentRunMode, overrides: { modelConfig?: ModelConfig } = {}): Promise<IAgent> {
+  create(
+    type: AgentType,
+    overrides: { modelConfig?: ModelConfig; sysPrompt?: string[] } = {},
+  ): IAgent {
     const modelFactory = overrides.modelConfig
       ? this.options.modelFactory.withDefaultConfig(overrides.modelConfig)
       : this.options.modelFactory;
-    if (mode === "chat") {
+    const sysPrompt = overrides.sysPrompt ?? [];
+    if (type === "chat") {
       return createChatAgent({
         modelFactory,
         eventBus: this.options.eventBus,
-        sysPrompt: this.options.sysPrompt ?? [],
+        sysPrompt,
       });
     }
-    if (mode === "react") {
+    if (type === "react") {
       return createReActAgent({
         modelFactory,
         gateway: this.options.gateway,
         eventBus: this.options.eventBus,
         toolRegistry: this.options.toolRegistry,
-        sysPrompt: this.options.sysPrompt ?? [],
+        sysPrompt,
       });
     }
-    if (mode === "peo") {
+    if (type === "peo") {
       return createPEOAgent({
         modelFactory,
         gateway: this.options.gateway,
         eventBus: this.options.eventBus,
         toolRegistry: this.options.toolRegistry,
-        sysPrompt: this.options.sysPrompt ?? [],
+        sysPrompt,
       });
     }
-    return assertNever(mode);
+    return assertNever(type);
   }
 }
 
-function assertNever(mode: never): IAgent {
-  throw new Error(`Unsupported agent mode: ${String(mode)}`);
+function assertNever(type: never): IAgent {
+  throw new Error(`Unsupported agent type: ${String(type)}`);
 }

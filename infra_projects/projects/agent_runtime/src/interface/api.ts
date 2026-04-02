@@ -1,12 +1,11 @@
 import type { RuntimeEvent } from "../capability/runtime-event.js";
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike } from "../model/types.js";
+import type { AgentType, IAgent } from "./agent-api.js";
 import { createRuntime as createRuntimeImpl } from "../runtime/runtime.js";
 
 export type { FetchLike } from "../model/types.js";
 export type { RuntimeEvent } from "../capability/runtime-event.js";
-
-export type AgentRunMode = "chat" | "react" | "peo";
 
 export interface RuntimeEventListener {
   onEvent(event: RuntimeEvent): Promise<void> | void;
@@ -23,6 +22,8 @@ export interface RuntimeApi {
   createSession(input: AgentSessionAccessInput): Promise<ISession>;
   openSession(sessionId: string): Promise<ISession>;
   closeSession(sessionId: string): Promise<CloseSessionResult>;
+  createAgent(type: AgentType): Promise<IAgent>;
+  closeAgent(agent: IAgent): Promise<void>;
   subscribeEvents(listener: RuntimeEventListener): void;
   unsubscribeEvents(listener: RuntimeEventListener): void;
 }

@@ -23,12 +23,12 @@ function getSlashCommand(content: Record<string, unknown>): string | undefined {
 
 function resolveSlashCommand(command: string): IntentRoutingResult | undefined {
   const preset = presets.slashCommands[command as keyof typeof presets.slashCommands];
-  const mode = normalizeMode(preset?.mode);
-  if (!preset || !mode) {
+  const type = normalizeType(preset?.type);
+  if (!preset || !type) {
     return undefined;
   }
   return {
-    mode,
+    type,
     reasonCode: preset.reasonCode,
   };
 }
@@ -36,13 +36,13 @@ function resolveSlashCommand(command: string): IntentRoutingResult | undefined {
 function resolveFixedRule(input: AgentSelectionInput): IntentRoutingResult | undefined {
   const normalizedTask = getTaskText(input.userInput.content).toLowerCase();
   for (const rule of presets.fixedRules) {
-    const mode = normalizeMode(rule.mode);
-    if (!mode) {
+    const type = normalizeType(rule.type);
+    if (!type) {
       continue;
     }
     if (matchesMainKeywords(normalizedTask, rule.mainKeywords)) {
       return {
-        mode,
+        type,
         reasonCode: rule.reasonCode,
       };
     }
@@ -64,8 +64,8 @@ function matchesMainKeywords(normalizedTask: string, mainKeywords: readonly stri
   return mainKeywords.some((keyword) => keyword.trim() && normalizedTask.includes(keyword.toLowerCase()));
 }
 
-function normalizeMode(mode: unknown): IntentRoutingResult["mode"] | undefined {
-  return mode === "chat" || mode === "react" || mode === "peo"
-    ? mode
+function normalizeType(type: unknown): IntentRoutingResult["type"] | undefined {
+  return type === "chat" || type === "react" || type === "peo"
+    ? type
     : undefined;
 }

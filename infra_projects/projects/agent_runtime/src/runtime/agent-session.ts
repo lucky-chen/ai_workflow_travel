@@ -1,43 +1,47 @@
 import { randomUUID } from "node:crypto";
 
 import type {
-  AgentRunMode,
   SessionData,
   SessionResult,
   UserInput,
 } from "../interface/api.js";
-import type { IAgent } from "../interface/agent-api.js";
+import type { AgentEvent, AgentEventListener, AgentType, IAgent } from "../interface/agent-api.js";
 import type { Storage } from "../data/storage.js";
 import type {
   AgentSessionLike,
-  RuntimeComponents,
+  RuntimeSharedComponents,
   RuntimeSessionCreateInput,
   RuntimeSessionConfig,
+  SessionComponents,
   StoredSessionState,
 } from "./types.js";
 import type {
   AgentSelectionInput,
 } from "../orchestration/types.js";
-import type { AssembledContext } from "../context/types.js";
 import type { AgentRunResult } from "../interface/agent-api.js";
 
 const SESSION_STORAGE_PREFIX = "sessions";
 
 export class AgentSession implements AgentSessionLike {
   private running = false;
-  private readonly agentCacheMap = new Map<AgentRunMode, IAgent>();
+  private readonly agentCacheMap = new Map<AgentType, IAgent>();
+  private readonly agentListenerMap = new Map<AgentType, AgentEventListener>();
+  private currentTraceId?: string;
+  private currentAgentType?: AgentType;
 
   private constructor(
     public readonly sessionId: string,
     private readonly storage: Storage,
     private state: StoredSessionState,
-    private readonly components: RuntimeComponents,
+    private readonly sharedComponents: RuntimeSharedComponents,
+    private readonly sessionComponents: SessionComponents,
   ) {}
 
   static async create(
     input: RuntimeSessionCreateInput,
     storage: Storage,
-    components: RuntimeComponents,
+    sharedComponents: RuntimeSharedComponents,
+    sessionComponents: SessionComponents,
   ): Promise<AgentSession> {
     const now = new Date().toISOString();
     const history = seedHistory(input.sysPrompt, input.userPrompt);
@@ -51,11 +55,11 @@ export class AgentSession implements AgentSessionLike {
       createdAt: now,
       updatedAt: now,
     };
-    const session = new AgentSession(input.sessionId, storage, state, components);
-    await components.sessionTranscript.update(input.sessionId, history.map((item) => ({ ...item })));
-    await components.runtimeMemory.update(input.sessionId, []);
+    const session = new AgentSession(input.sessionId, storage, state, sharedComponents, sessionComponents);
+    await sessionComponents.sessionTranscript.update(input.sessionId, history.map((item) => ({ ...item })));
+    await sessionComponents.runtimeMemory.update(input.sessionId, []);
     await session.persist();
-    await components.eventBus.publish({
+    await sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "session_created",
@@ -69,14 +73,19 @@ export class AgentSession implements AgentSessionLike {
     return session;
   }
 
-  static async open(sessionId: string, storage: Storage, components: RuntimeComponents): Promise<AgentSession> {
+  static async open(
+    sessionId: string,
+    storage: Storage,
+    sharedComponents: RuntimeSharedComponents,
+    sessionComponents: SessionComponents,
+  ): Promise<AgentSession> {
     const state = await loadStoredSession(storage, sessionId);
-    const session = new AgentSession(sessionId, storage, state, components);
+    const session = new AgentSession(sessionId, storage, state, sharedComponents, sessionComponents);
     await session.syncHistoryWithTranscript({ persistOnMismatch: true });
     if (state.status === "closed") {
       await session.reopen();
     }
-    await components.eventBus.publish({
+    await sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "session_opened",
@@ -90,9 +99,14 @@ export class AgentSession implements AgentSessionLike {
     return session;
   }
 
-  static async loadForClose(sessionId: string, storage: Storage, components: RuntimeComponents): Promise<AgentSession> {
+  static async loadForClose(
+    sessionId: string,
+    storage: Storage,
+    sharedComponents: RuntimeSharedComponents,
+    sessionComponents: SessionComponents,
+  ): Promise<AgentSession> {
     const state = await loadStoredSession(storage, sessionId);
-    const session = new AgentSession(sessionId, storage, state, components);
+    const session = new AgentSession(sessionId, storage, state, sharedComponents, sessionComponents);
     await session.syncHistoryWithTranscript({ persistOnMismatch: false });
     return session;
   }
@@ -119,21 +133,26 @@ export class AgentSession implements AgentSessionLike {
     try {
       await this.recordRunStarted(traceId);
       const context = await this.assembleContext(userInput, traceId);
-      const routing = await this.components.intentRouter.resolve({
+      const routing = await this.sharedComponents.intentRouter.resolve({
         userInput,
       });
-      const requestedMode = routing.mode;
-      const agent = await this.selectAgent(requestedMode);
-      const result = await agent.run(await this.buildAgentRunInput(context, userInput, requestedMode));
-      return this.finalizeSuccess(userInput, result, requestedMode, traceId);
+      const requestedType = routing.type;
+      const agent = await this.selectAgent(requestedType);
+      this.currentTraceId = traceId;
+      this.currentAgentType = requestedType;
+      const result = await agent.run(this.buildAgentRunInput(userInput));
+      return this.finalizeSuccess(userInput, result, requestedType, traceId);
     } catch (error) {
       return this.finalizeFailure(error, traceId);
     } finally {
+      this.currentTraceId = undefined;
+      this.currentAgentType = undefined;
       this.running = false;
     }
   }
 
   async close(): Promise<void> {
+    this.unsubscribeAllAgentListeners();
     this.state.status = "closed";
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
@@ -157,8 +176,8 @@ export class AgentSession implements AgentSessionLike {
 
   private async syncHistoryWithTranscript(
     options: { persistOnMismatch: boolean },
-  ): Promise<Awaited<ReturnType<RuntimeComponents["sessionTranscript"]["load"]>>> {
-    const transcript = await this.components.sessionTranscript.load(this.sessionId);
+  ): Promise<Awaited<ReturnType<SessionComponents["sessionTranscript"]["load"]>>> {
+    const transcript = await this.sessionComponents.sessionTranscript.load(this.sessionId);
     const transcriptHistory = transcript.turns.map((turn) => ({
       role: turn.role,
       content: turn.content,
@@ -174,7 +193,7 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordRunStarted(traceId: string): Promise<void> {
-    await this.components.eventBus.publish({
+    await this.sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "run_started",
@@ -187,7 +206,7 @@ export class AgentSession implements AgentSessionLike {
 
   private async assembleContext(userInput: UserInput, traceId: string) {
     await this.recordContextAssembled(traceId);
-    return this.components.contextAssembler.assemble({
+    return this.sessionComponents.contextAssembler.assemble({
       sessionId: this.sessionId,
       userInput,
       runtimeLimits: this.state.config?.runtimeLimits,
@@ -195,7 +214,7 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordContextAssembled(traceId: string): Promise<void> {
-    await this.components.eventBus.publish({
+    await this.sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "context_assembled",
@@ -206,41 +225,36 @@ export class AgentSession implements AgentSessionLike {
     });
   }
 
-  private async selectAgent(requestedMode: AgentRunMode): Promise<IAgent> {
-    const cached = this.agentCacheMap.get(requestedMode);
+  private async selectAgent(requestedType: AgentType): Promise<IAgent> {
+    const cached = this.agentCacheMap.get(requestedType);
     if (cached) {
       return cached;
     }
-    const agent = await this.components.agentFactory.create(requestedMode, {
+    const agent = this.sharedComponents.agentFactory.create(requestedType, {
       modelConfig: this.state.config?.model,
+      sysPrompt: this.state.systemPrompt ?? [],
     });
-    this.agentCacheMap.set(requestedMode, agent);
+    this.subscribeAgentEvents(requestedType, agent);
+    this.agentCacheMap.set(requestedType, agent);
     return agent;
   }
 
-  private async buildAgentRunInput(
-    context: AssembledContext,
-    userInput: UserInput,
-    requestedMode: AgentRunMode,
-  ) {
+  private buildAgentRunInput(userInput: UserInput) {
     return {
       userInput: userInput.content,
-      context: {
-        requestedMode,
-      },
     };
   }
 
   private async finalizeSuccess(
     userInput: UserInput,
     result: AgentRunResult,
-    requestedMode: AgentRunMode,
+    requestedType: AgentType,
     traceId: string,
   ): Promise<SessionResult> {
     const normalized = normalizeSessionResult(this.sessionId, traceId, result);
     await this.persistTranscript(userInput, normalized);
-    await this.collectSuccessMetrics(normalized, result, requestedMode, traceId);
-    await this.components.eventBus.publish({
+    await this.collectSuccessMetrics(normalized, result, requestedType, traceId);
+    await this.sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "run_finished",
@@ -248,7 +262,7 @@ export class AgentSession implements AgentSessionLike {
         traceId,
         timestamp: new Date().toISOString(),
         custom: {
-          agent: requestedMode,
+          agent: requestedType,
           format: normalized.format,
           hasError: Boolean(normalized.errorCode),
         },
@@ -261,15 +275,19 @@ export class AgentSession implements AgentSessionLike {
   private async collectSuccessMetrics(
     normalized: SessionResult,
     result: AgentRunResult,
-    agentName: AgentRunMode,
+    agentName: AgentType,
     traceId: string,
   ): Promise<void> {
-    await this.components.metrics.collect({
+    await this.sharedComponents.metrics.collect({
       sessionId: this.sessionId,
       result: normalized,
       providerUsageFacts: {
-        promptTokens: result.tokenUsage?.inputTokens ?? 0,
-        completionTokens: result.tokenUsage?.outputTokens ?? 0,
+        promptTokens: result.metrics?.tokenUsage?.inputTokens ?? 0,
+        completionTokens: result.metrics?.tokenUsage?.outputTokens ?? 0,
+      },
+      toolExecutionFacts: {
+        toolCalls: result.metrics?.toolUsage?.toolCalls ?? 0,
+        failedToolCalls: result.metrics?.toolUsage?.failedToolCalls ?? 0,
       },
       runScope: {
         runId: traceId,
@@ -280,7 +298,7 @@ export class AgentSession implements AgentSessionLike {
 
   private async finalizeFailure(error: unknown, traceId: string): Promise<SessionResult> {
     const failure = normalizeFailureSessionResult(this.sessionId, traceId, error);
-    await this.components.metrics.collect({
+    await this.sharedComponents.metrics.collect({
       sessionId: this.sessionId,
       result: failure,
       toolExecutionFacts: {
@@ -292,7 +310,7 @@ export class AgentSession implements AgentSessionLike {
         agentName: "session",
       },
     });
-    await this.components.eventBus.publish({
+    await this.sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "run_failed",
@@ -312,12 +330,12 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async flushObservability(): Promise<void> {
-    await this.components.metrics.flush();
-    await this.components.trace.flush();
+    await this.sharedComponents.metrics.flush();
+    await this.sharedComponents.trace.flush();
   }
 
   private async persistTranscript(userInput: UserInput, result: SessionResult): Promise<void> {
-    const transcript = await this.components.sessionTranscript.load(this.sessionId);
+    const transcript = await this.sessionComponents.sessionTranscript.load(this.sessionId);
     const turns = [
       ...transcript.turns,
       {
@@ -331,20 +349,65 @@ export class AgentSession implements AgentSessionLike {
         content: stringifyResultContent(result.content),
       });
     }
-    await this.components.sessionTranscript.update(this.sessionId, turns);
+    await this.sessionComponents.sessionTranscript.update(this.sessionId, turns);
     this.state.history = turns.map((turn) => ({
       role: turn.role,
       content: turn.content,
     }));
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
-    await this.components.eventBus.publish({
+    await this.sharedComponents.eventBus.publish({
       type: "runtime",
       runtimeMessage: {
         event: "state_persisted",
         sessionId: this.sessionId,
         traceId: result.traceId,
         timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  private subscribeAgentEvents(agentType: AgentType, agent: IAgent): void {
+    if (this.agentListenerMap.has(agentType)) {
+      return;
+    }
+    const listener: AgentEventListener = {
+      onEvent: async (event) => {
+        await this.forwardAgentEvent(agentType, event);
+      },
+    };
+    agent.subscribeEvents(listener);
+    this.agentListenerMap.set(agentType, listener);
+  }
+
+  private unsubscribeAllAgentListeners(): void {
+    for (const [agentType, listener] of this.agentListenerMap.entries()) {
+      const agent = this.agentCacheMap.get(agentType);
+      if (agent) {
+        agent.unsubscribeEvents(listener);
+      }
+    }
+    this.agentListenerMap.clear();
+  }
+
+  private async forwardAgentEvent(agentType: AgentType, event: AgentEvent): Promise<void> {
+    if (!this.currentTraceId || this.currentAgentType !== agentType) {
+      return;
+    }
+    await this.sharedComponents.eventBus.publish({
+      type: "runtime",
+      runtimeMessage: {
+        event: "agent_event_forwarded",
+        sessionId: this.sessionId,
+        traceId: this.currentTraceId,
+        timestamp: event.timestamp,
+        custom: {
+          agentType,
+          agentEvent: {
+            brief: event.brief,
+            details: event.details,
+          },
+        },
       },
     });
   }

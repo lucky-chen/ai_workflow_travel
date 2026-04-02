@@ -1,9 +1,8 @@
-import { randomUUID } from "node:crypto";
-
 import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
+import { BaseAgent } from "../base_agent.js";
 
 class ChatPromptBuilder {
   constructor(private readonly sysPrompt: string[]) {}
@@ -46,27 +45,17 @@ class ChatResultChecker {
   }
 }
 
-class ChatAgent implements IAgent {
-  private running = false;
-
+class ChatAgent extends BaseAgent {
   constructor(
     private readonly modelFactory: ModelFactory,
     private readonly promptBuilder: ChatPromptBuilder,
     private readonly resultChecker: ChatResultChecker,
     private readonly eventBus: RuntimeEventBus,
-  ) {}
-
-  isRunning(): boolean {
-    return this.running;
+  ) {
+    super("chat", eventBus);
   }
 
-  subscribeEvents(): void {}
-
-  unsubscribeEvents(): void {}
-
-  async run(input: AgentRunInput): Promise<AgentRunResult> {
-    const runId = randomUUID();
-    this.running = true;
+  protected async execute(input: AgentRunInput, runId: string): Promise<AgentRunResult> {
     try {
       const prompt = await this.promptBuilder.buildPrompt(input);
       await this.eventBus.publish({
@@ -89,8 +78,6 @@ class ChatAgent implements IAgent {
       return createChatSuccessResult("chat", input, runId, checked);
     } catch (error) {
       return createChatFailureResult("chat", input, runId, error);
-    } finally {
-      this.running = false;
     }
   }
 

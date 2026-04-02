@@ -1,35 +1,24 @@
-import { randomUUID } from "node:crypto";
-
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
-import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
-import type { AgentRunMode } from "../../interface/api.js";
+import type { AgentRunInput, AgentRunResult, AgentType, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
+import { BaseAgent } from "../base_agent.js";
 import { asNumber } from "../agent_parsing.js";
 import { ActionStep } from "./react_action_step.js";
 import { ObservationStep } from "./react_observation_step.js";
 import { REACT_MAX_STEPS, ThoughtStep } from "./react_thought_step.js";
 
-class ReActAgent implements IAgent {
-  private running = false;
-
+class ReActAgent extends BaseAgent {
   constructor(
     private readonly thoughtStep: ThoughtStep,
     private readonly actionStep: ActionStep,
     private readonly observationStep: ObservationStep,
-  ) {}
-
-  isRunning(): boolean {
-    return this.running;
+    eventBus: RuntimeEventBus,
+  ) {
+    super("react", eventBus);
   }
 
-  subscribeEvents(): void {}
-
-  unsubscribeEvents(): void {}
-
-  async run(input: AgentRunInput): Promise<AgentRunResult> {
-    const runId = randomUUID();
-    this.running = true;
+  protected async execute(input: AgentRunInput, runId: string): Promise<AgentRunResult> {
     let toolCalls = 0;
     let failedToolCalls = 0;
     const state: {
@@ -62,8 +51,6 @@ class ReActAgent implements IAgent {
       return createReactMaxStepResult("react", input, runId, toolCalls, failedToolCalls, state);
     } catch (error) {
       return createReactFailureResult("react", input, runId, error, toolCalls, failedToolCalls);
-    } finally {
-      this.running = false;
     }
   }
 }
@@ -79,11 +66,12 @@ export function createReActAgent(input: {
     new ThoughtStep(input.modelFactory, input.eventBus, input.toolRegistry, input.sysPrompt),
     new ActionStep(input.gateway, input.toolRegistry, input.eventBus),
     new ObservationStep(input.modelFactory, input.eventBus, input.sysPrompt),
+    input.eventBus,
   );
 }
 
 function createReactSuccessResult(
-  _pattern: AgentRunMode,
+  _pattern: AgentType,
   _input: AgentRunInput,
   _runId: string,
   content: string,
@@ -93,11 +81,17 @@ function createReactSuccessResult(
   return {
     content,
     format: "text",
+    metrics: {
+      toolUsage: {
+        toolCalls: _toolCalls,
+        failedToolCalls: _failedToolCalls,
+      },
+    },
   };
 }
 
 function createReactFailureResult(
-  _pattern: AgentRunMode,
+  _pattern: AgentType,
   _input: AgentRunInput,
   _runId: string,
   error: unknown,
@@ -110,11 +104,17 @@ function createReactFailureResult(
       code: "REACT_AGENT_FAILED",
       message: error instanceof Error ? error.message : String(error),
     },
+    metrics: {
+      toolUsage: {
+        toolCalls: _toolCalls,
+        failedToolCalls: _failedToolCalls,
+      },
+    },
   };
 }
 
 function createReactMaxStepResult(
-  _pattern: AgentRunMode,
+  _pattern: AgentType,
   _input: AgentRunInput,
   _runId: string,
   _toolCalls: number,
@@ -128,6 +128,12 @@ function createReactMaxStepResult(
     errorInfo: {
       code: "REACT_AGENT_MAX_STEPS",
       message: "ReAct agent stopped after reaching the max step limit.",
+    },
+    metrics: {
+      toolUsage: {
+        toolCalls: _toolCalls,
+        failedToolCalls: _failedToolCalls,
+      },
     },
   };
 }

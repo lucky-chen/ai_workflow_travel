@@ -1,4 +1,5 @@
 import type { FetchLike, ModelConfig, RealLlmProvider } from "../model/types.js";
+import type { Storage } from "../data/storage.js";
 import type {
   AgentSessionAccessInput,
   ChatHistoryItem,
@@ -58,15 +59,19 @@ export interface AgentSessionLike {
   close(): Promise<void>;
 }
 
-export interface RuntimeComponents {
+export interface RuntimeSharedComponents {
   storageRoot: string;
-  contextAssembler: ContextAssembler;
-  sessionTranscript: SessionTranscript;
-  runtimeMemory: RuntimeMemory;
+  storage: Storage;
   intentRouter: IntentRouter;
   agentFactory: AgentFactory;
   metrics: Metrics;
   trace: Trace;
   eventBus: RuntimeEventBus;
   checkpoint: RunCheckpoint;
+}
+
+export interface SessionComponents {
+  contextAssembler: ContextAssembler;
+  sessionTranscript: SessionTranscript;
+  runtimeMemory: RuntimeMemory;
 }
