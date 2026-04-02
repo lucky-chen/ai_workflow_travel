@@ -5,7 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as processInput, stdout as processOutput, stderr } from "node:process";
 
 import type { RuntimeApi } from "../src_new/interface/api.js";
-import { createRuntime } from "../src_new/runtime/runtime.js";
+import { createRuntime } from "../src_new/interface/api.js";
 import {
   createTerminalSessionDemo,
 } from "../src_new/application/terminal-session-demo.js";

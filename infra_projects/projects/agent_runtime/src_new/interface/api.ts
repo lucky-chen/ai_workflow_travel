@@ -1,24 +1,30 @@
-import type { RuntimeEventCallback } from "../capability/runtime-event.js";
+import type { RuntimeEvent } from "../capability/runtime-event.js";
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike } from "../model/types.js";
 import { createRuntime as createRuntimeImpl } from "../runtime/runtime.js";
 
 export type { FetchLike } from "../model/types.js";
+export type { RuntimeEvent } from "../capability/runtime-event.js";
 
 export type AgentRunMode = "chat" | "react" | "peo";
+
+export interface RuntimeEventListener {
+  onEvent(event: RuntimeEvent): Promise<void> | void;
+}
 
 export interface RuntimeCreateOptions {
   workdir: string;
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: FetchLike;
   externalMcpEndpoints?: ExternalMcpEndpointConfig[];
-  eventCallback?: RuntimeEventCallback;
 }
 
 export interface RuntimeApi {
   createSession(input: AgentSessionAccessInput): Promise<ISession>;
   openSession(sessionId: string): Promise<ISession>;
   closeSession(sessionId: string): Promise<CloseSessionResult>;
+  subscribeEvents(listener: RuntimeEventListener): void;
+  unsubscribeEvents(listener: RuntimeEventListener): void;
 }
 
 export interface ISession {

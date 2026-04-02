@@ -4,7 +4,7 @@ import {
   createTerminalSessionDemo,
   toRuntimeEventDisplay,
 } from "../src_new/application/terminal-session-demo.js";
-import { createRuntime } from "../src_new/runtime/runtime.js";
+import { createRuntime } from "../src_new/interface/api.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runApplicationP1SrcNewTests(): Promise<void> {

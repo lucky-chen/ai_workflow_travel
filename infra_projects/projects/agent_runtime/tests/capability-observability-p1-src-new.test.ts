@@ -12,7 +12,7 @@ import { createRuntime } from "../src_new/interface/api.js";
 import { FileStorage } from "../src_new/data/storage.js";
 import { McpGateway } from "../src_new/capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../src_new/capability/permission-policy.js";
-import { RuntimeEventBus, CallbackRuntimeEventListener } from "../src_new/capability/runtime-event-bus.js";
+import { RuntimeEventBus } from "../src_new/capability/runtime-event-bus.js";
 import { ExecutionEnvironment } from "../src_new/capability/execution-environment.js";
 import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
 import { registerExternalMcpEndpoints } from "../src_new/capability/external_mcp_tool_adapter.js";
@@ -40,11 +40,11 @@ async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
   const received: RuntimeEvent[] = [];
   const bus = new RuntimeEventBus([
     new TraceRuntimeEventListener(trace),
-    new CallbackRuntimeEventListener({
+    {
       async onEvent(event) {
         received.push(event);
       },
-    }),
+    },
   ]);
 
   await bus.publish({

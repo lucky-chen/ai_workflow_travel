@@ -111,7 +111,3 @@ export type AgentEventAgent =
       input: Record<string, unknown>;
     };
   };
-
-export interface RuntimeEventCallback {
-  onEvent(event: RuntimeEvent): Promise<void> | void;
-}

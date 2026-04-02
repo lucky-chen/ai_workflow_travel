@@ -1,23 +1,27 @@
-import type { RuntimeEvent, RuntimeEventCallback } from "./runtime-event.js";
+import type { RuntimeEvent } from "./runtime-event.js";
 
 export interface RuntimeEventListener {
-  onEvent(event: RuntimeEvent): Promise<void>;
+  onEvent(event: RuntimeEvent): Promise<void> | void;
 }
 
 export class RuntimeEventBus {
-  constructor(private readonly listeners: RuntimeEventListener[]) {}
+  private readonly listeners: Set<RuntimeEventListener>;
+
+  constructor(initialListeners: RuntimeEventListener[] = []) {
+    this.listeners = new Set(initialListeners);
+  }
+
+  subscribe(listener: RuntimeEventListener): void {
+    this.listeners.add(listener);
+  }
+
+  unsubscribe(listener: RuntimeEventListener): void {
+    this.listeners.delete(listener);
+  }
 
   async publish(event: RuntimeEvent): Promise<void> {
-    for (const listener of this.listeners) {
+    for (const listener of [...this.listeners]) {
       await listener.onEvent(event);
     }
-  }
-}
-
-export class CallbackRuntimeEventListener implements RuntimeEventListener {
-  constructor(private readonly callback: RuntimeEventCallback) {}
-
-  async onEvent(event: RuntimeEvent): Promise<void> {
-    await this.callback.onEvent(event);
   }
 }

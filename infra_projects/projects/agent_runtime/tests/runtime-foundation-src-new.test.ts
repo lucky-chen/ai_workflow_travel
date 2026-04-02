@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime, type RuntimeApi } from "../src_new/index.js";
+import { createRuntime, type RuntimeApi, type RuntimeEvent, type RuntimeEventListener } from "../src_new/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testRuntimeExposesStableApi();
   await testCreateSessionReturnsStableSessionHandle();
-  await testRuntimeCallbackReceivesSessionLifecycleEvents();
-  await testRuntimeCallbackReceivesChatStepInput();
+  await testRuntimeSubscriptionReceivesSessionLifecycleEvents();
+  await testRuntimeSubscriptionReceivesChatStepInput();
+  await testRuntimeSubscriptionDeduplicatesAndUnsubscribes();
+  await testRuntimeSubscriptionSelfUnsubscribeDoesNotBreakPublish();
   await testOpenSessionReloadsPersistedSession();
   await testCloseSessionPersistsClosedState();
   await testOpenSessionReactivatesClosedSession();
@@ -17,47 +19,46 @@ export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testOpenSessionSynchronizesTranscriptHistory();
 }
 
-async function testRuntimeCallbackReceivesSessionLifecycleEvents(): Promise<void> {
-  const workdir = await createTestWorkdir("agent-runtime-src-new-callback-lifecycle-");
+async function testRuntimeSubscriptionReceivesSessionLifecycleEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-lifecycle-");
   const received: string[] = [];
-  const runtime = createRuntime({
-    workdir,
-    eventCallback: {
-      onEvent(event) {
-        const eventName = event.type === "runtime"
-          ? event.runtimeMessage.event
-          : event.type === "agent"
-            ? event.agentMessage.event
-            : event.type === "model"
-              ? event.modelMessage.event
-              : event.toolMessage.event;
-        received.push(eventName);
-      },
+  const runtime = createRuntime({ workdir });
+  const listener: RuntimeEventListener = {
+    onEvent(event) {
+      const eventName = event.type === "runtime"
+        ? event.runtimeMessage.event
+        : event.type === "agent"
+          ? event.agentMessage.event
+          : event.type === "model"
+            ? event.modelMessage.event
+            : event.toolMessage.event;
+      received.push(eventName);
     },
-  });
+  };
+  runtime.subscribeEvents(listener);
 
   const session = await runtime.createSession({});
   const state = await session.load();
   await runtime.closeSession(state.sessionId);
+  runtime.unsubscribeEvents(listener);
 
   assert.equal(received.includes("session_create_requested"), true);
   assert.equal(received.includes("session_created"), true);
   assert.equal(received.includes("session_closed"), true);
 }
 
-async function testRuntimeCallbackReceivesChatStepInput(): Promise<void> {
-  const workdir = await createTestWorkdir("agent-runtime-src-new-callback-chat-step-");
+async function testRuntimeSubscriptionReceivesChatStepInput(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-chat-step-");
   const questions: Array<Record<string, unknown>> = [];
-  const runtime = createRuntime({
-    workdir,
-    eventCallback: {
-      onEvent(event) {
-        if (event.type === "agent" && event.agentMessage.agent.name === "chat") {
-          questions.push(event.agentMessage.agent.content.input.question as Record<string, unknown>);
-        }
-      },
+  const runtime = createRuntime({ workdir });
+  const listener: RuntimeEventListener = {
+    onEvent(event) {
+      if (event.type === "agent" && event.agentMessage.agent.name === "chat") {
+        questions.push(event.agentMessage.agent.content.input.question as Record<string, unknown>);
+      }
     },
-  });
+  };
+  runtime.subscribeEvents(listener);
   const session = await runtime.createSession({
     config: {
       model: {
@@ -74,9 +75,76 @@ async function testRuntimeCallbackReceivesChatStepInput(): Promise<void> {
       task: "what is callback result",
     },
   });
+  runtime.unsubscribeEvents(listener);
 
   assert.equal(result.errorCode, undefined);
   assert.deepEqual(questions, [{ task: "what is callback result" }]);
+}
+
+async function testRuntimeSubscriptionDeduplicatesAndUnsubscribes(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-dedup-");
+  const received: RuntimeEvent[] = [];
+  const runtime = createRuntime({ workdir });
+  const listener: RuntimeEventListener = {
+    onEvent(event) {
+      received.push(event);
+    },
+  };
+  runtime.subscribeEvents(listener);
+  runtime.subscribeEvents(listener);
+  const session = await runtime.createSession({
+    config: {
+      model: {
+        mock: true,
+        mockInfo: {
+          content: "chat answer",
+        },
+      },
+    },
+  });
+  await session.execute({
+    content: {
+      task: "what is dedup result",
+    },
+  });
+  const countBeforeUnsubscribe = received.length;
+  runtime.unsubscribeEvents(listener);
+  runtime.unsubscribeEvents(listener);
+  await session.execute({
+    content: {
+      task: "what is after unsubscribe",
+    },
+  });
+
+  assert.equal(countBeforeUnsubscribe > 0, true);
+  assert.equal(received.length, countBeforeUnsubscribe);
+}
+
+async function testRuntimeSubscriptionSelfUnsubscribeDoesNotBreakPublish(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-self-remove-");
+  const runtime = createRuntime({ workdir });
+  const received: string[] = [];
+  const persistentListener: RuntimeEventListener = {
+    onEvent(event) {
+      if (event.type === "runtime") {
+        received.push(event.runtimeMessage.event);
+      }
+    },
+  };
+  const selfRemovingListener: RuntimeEventListener = {
+    onEvent() {
+      runtime.unsubscribeEvents(selfRemovingListener);
+    },
+  };
+  runtime.subscribeEvents(selfRemovingListener);
+  runtime.subscribeEvents(persistentListener);
+
+  const session = await runtime.createSession({});
+  const state = await session.load();
+  await runtime.closeSession(state.sessionId);
+
+  assert.equal(received.includes("session_create_requested"), true);
+  assert.equal(received.includes("session_closed"), true);
 }
 
 async function testRuntimeExposesStableApi(): Promise<void> {
@@ -87,6 +155,8 @@ async function testRuntimeExposesStableApi(): Promise<void> {
   assert.equal(typeof runtime.createSession, "function");
   assert.equal(typeof runtime.openSession, "function");
   assert.equal(typeof runtime.closeSession, "function");
+  assert.equal(typeof runtime.subscribeEvents, "function");
+  assert.equal(typeof runtime.unsubscribeEvents, "function");
 }
 
 async function testCreateSessionReturnsStableSessionHandle(): Promise<void> {

@@ -685,14 +685,13 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
 async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-events-");
   const received: RuntimeEvent[] = [];
-  const runtime = createRuntime({
-    workdir,
-    eventCallback: {
-      onEvent(event) {
-        received.push(event);
-      },
+  const runtime = createRuntime({ workdir });
+  const listener = {
+    onEvent(event: RuntimeEvent) {
+      received.push(event);
     },
-  });
+  };
+  runtime.subscribeEvents(listener);
   const session = await runtime.createSession({
     config: {
       model: {
@@ -758,19 +757,19 @@ async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> 
     && event.toolMessage.tool.toolName === "echo_hello"
   )), true);
   assert.equal(received.some((event) => event.type === "tool" && event.toolMessage.event === "tool_failed"), false);
+  runtime.unsubscribeEvents(listener);
 }
 
 async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-events-");
   const received: RuntimeEvent[] = [];
-  const runtime = createRuntime({
-    workdir,
-    eventCallback: {
-      onEvent(event) {
-        received.push(event);
-      },
+  const runtime = createRuntime({ workdir });
+  const listener = {
+    onEvent(event: RuntimeEvent) {
+      received.push(event);
     },
-  });
+  };
+  runtime.subscribeEvents(listener);
   const session = await runtime.createSession({
     config: {
       model: {
@@ -858,6 +857,7 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
     && event.toolMessage.tool.toolName === "echo_hello"
   )), true);
   assert.equal(received.some((event) => event.type === "tool" && event.toolMessage.event === "tool_failed"), false);
+  runtime.unsubscribeEvents(listener);
 }
 
 async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {

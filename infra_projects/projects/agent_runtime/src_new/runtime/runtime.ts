@@ -27,7 +27,6 @@ import { AgentSession } from "./agent-session.js";
 import { AgentSessionManager } from "./agent-session-manager.js";
 import { registerExternalToolProviders } from "./external-tool-registration.js";
 import {
-  CallbackRuntimeEventListener,
   RuntimeEventBus,
   type RuntimeEventListener,
 } from "../capability/runtime-event-bus.js";
@@ -65,9 +64,6 @@ export class Runtime implements RuntimeApi {
     const executionEnvironment = new ExecutionEnvironment();
     const trace = createTrace(this.storage, this.runtimeRunId);
     const eventListeners: RuntimeEventListener[] = [new TraceRuntimeEventListener(trace)];
-    if (options.eventCallback) {
-      eventListeners.push(new CallbackRuntimeEventListener(options.eventCallback));
-    }
     const eventBus = new RuntimeEventBus(eventListeners);
     const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, eventBus);
     const modelFactory = new ModelFactory(eventBus);
@@ -210,6 +206,14 @@ export class Runtime implements RuntimeApi {
     });
     await this.services.trace.flush();
     return { sessionId };
+  }
+
+  subscribeEvents(listener: RuntimeEventListener): void {
+    this.services.eventBus.subscribe(listener);
+  }
+
+  unsubscribeEvents(listener: RuntimeEventListener): void {
+    this.services.eventBus.unsubscribe(listener);
   }
 }
 
