@@ -8,7 +8,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
-import { createRuntime } from "../src/interface/api.js";
+import { createSessionApi } from "../src/interface/api.js";
 import { FileStorage } from "../src/data/storage.js";
 import { McpGateway } from "../src/capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../src/capability/permission-policy.js";
@@ -146,7 +146,7 @@ async function testRuntimeRegistersExternalMcpTools(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-external-mcp-");
   const endpoint = await startTestMcpHttpServer();
   try {
-    const runtime = createRuntime({
+    const runtime = createSessionApi({
       workdir,
       externalMcpEndpoints: [endpoint.config],
     });

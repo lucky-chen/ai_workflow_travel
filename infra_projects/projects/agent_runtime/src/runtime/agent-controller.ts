@@ -6,7 +6,7 @@ import type {
 import type { ModelConfig } from "../model/types.js";
 import type { AgentRuntimeComponents } from "./types.js";
 
-export class AgentService {
+export class AgentController {
   private readonly agentListeners = new WeakMap<IAgent, AgentEventListener>();
 
   constructor(

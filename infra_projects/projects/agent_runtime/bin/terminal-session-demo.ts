@@ -5,7 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as processInput, stdout as processOutput, stderr } from "node:process";
 
 import type { SessionApi } from "../src/interface/api.js";
-import { createRuntime } from "../src/interface/api.js";
+import { createSessionApi } from "../src/interface/api.js";
 import {
   createTerminalSessionDemo,
 } from "../src/application/terminal-session-demo.js";
@@ -15,7 +15,7 @@ export interface TerminalSessionCliOptions {
   readInput?: () => Promise<string | null>;
   writeLine?: (line: string) => Promise<void> | void;
   writeError?: (line: string) => Promise<void> | void;
-  createRuntime?: (input: { workdir: string; defaultModelMode: "real_from_local_env" }) => SessionApi;
+  createSessionApi?: (input: { workdir: string; defaultModelMode: "real_from_local_env" }) => SessionApi;
 }
 
 interface StoredSessionSummary {
@@ -51,7 +51,7 @@ export async function runTerminalSessionCli(
   })();
 
   try {
-    const runtime = (options.createRuntime ?? createRuntime)({
+    const runtime = (options.createSessionApi ?? createSessionApi)({
       workdir: parsedArgs.workdir,
       defaultModelMode: "real_from_local_env",
     });
@@ -85,7 +85,7 @@ export async function runTerminalSessionCli(
       writeLine,
     });
 
-    await writeLine(`Runtime ready: ${parsedArgs.workdir}`);
+    await writeLine(`Session API ready: ${parsedArgs.workdir}`);
     await demo.run({
       runtime,
       workdir: parsedArgs.workdir,

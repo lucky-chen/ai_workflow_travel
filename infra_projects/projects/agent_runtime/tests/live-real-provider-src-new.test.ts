@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime } from "../src/index.js";
+import { createSessionApi } from "../src/index.js";
 
 interface LiveProviderCase {
   provider: "openai" | "deepseek";
@@ -62,7 +62,7 @@ async function runLiveModeCase(input: {
   label: "chat" | "react" | "peo";
 }): Promise<void> {
   const existingTraceFiles = await listTraceFiles(input.workdir);
-  const runtime = createRuntime({
+  const runtime = createSessionApi({
     workdir: input.workdir,
     defaultModelMode: "real_from_local_env",
   });

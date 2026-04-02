@@ -102,7 +102,7 @@ async function testTerminalSessionCliPrintsHintWhenSessionDoesNotExist(): Promis
     writeError: async (line) => {
       errorLines.push(line);
     },
-    createRuntime: () => ({
+    createSessionApi: () => ({
       async createSession() {
         throw new Error("not used");
       },
@@ -120,7 +120,7 @@ async function testTerminalSessionCliPrintsHintWhenSessionDoesNotExist(): Promis
   });
 
   assert.equal(exitCode, 0);
-  assert.equal(outputLines[0], `Runtime ready: ${workdir}`);
+  assert.equal(outputLines[0], `Session API ready: ${workdir}`);
   assert.equal(
     errorLines[0],
     `Session not found: ${missingSessionId}. Start without --session-id to create a new session in ${workdir}.`,
@@ -143,7 +143,7 @@ async function testTerminalSessionCliLoadsRealProviderConfigFromLocalEnv(): Prom
     readInput: async () => "exit",
     writeLine: async () => {},
     writeError: async () => {},
-    createRuntime: (dependencies) => {
+    createSessionApi: (dependencies) => {
       capturedDependencies = dependencies;
       return {
         async createSession() {
@@ -198,7 +198,7 @@ async function testTerminalSessionCliPrintsChatJsonAnswerAsPlainText(): Promise<
       outputLines.push(line);
     },
     writeError: async () => {},
-    createRuntime: () => ({
+    createSessionApi: () => ({
       async createSession() {
         return {
           async read() {
@@ -250,7 +250,7 @@ async function testTerminalSessionCliLoadsRealProviderConfigFromFixtureLocalEnv(
     readInput: async () => "exit",
     writeLine: async () => {},
     writeError: async () => {},
-    createRuntime: (dependencies) => {
+    createSessionApi: (dependencies) => {
       capturedDependencies = dependencies;
       return {
         async createSession() {
@@ -303,7 +303,7 @@ async function testTerminalSessionCliWritesTraceToAgentRuntimeStorage(): Promise
     readInput: async () => "exit",
     writeLine: async () => {},
     writeError: async () => {},
-    createRuntime: (dependencies) => {
+    createSessionApi: (dependencies) => {
       capturedDependencies = dependencies;
       return {
         async createSession() {

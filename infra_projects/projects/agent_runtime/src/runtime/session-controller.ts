@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import type {
   AgentSessionAccessInput,
   CloseSessionResult,
+  SessionApi,
+  SessionApiCreateOptions,
   SessionEvent,
   SessionEventListener,
 } from "../interface/api.js";
@@ -17,8 +19,9 @@ import { AgentSession } from "./agent-session.js";
 import type { Storage } from "../data/storage.js";
 import type { AgentRuntimeComponents, AgentSessionLike, SessionRuntimeComponents, SessionEventSink } from "./types.js";
 import { mapSessionEventToTraceEvents } from "../observability/trace_event_mapper.js";
+import { RuntimeAssembly } from "./runtime-assembly.js";
 
-export class SessionService {
+export class SessionController implements SessionApi {
   private readonly sessions = new Map<string, AgentSessionLike>();
   private readonly traces = new Map<string, Trace>();
   private readonly listeners = new Set<SessionEventListener>();
@@ -81,7 +84,7 @@ export class SessionService {
   async openSession(sessionId: string): Promise<AgentSession> {
     await this.initialization;
     if (!sessionId) {
-      throw new Error("Runtime requires sessionId to open a session.");
+      throw new Error("Session controller requires sessionId to open a session.");
     }
     await this.emit({
       brief: "session_open_requested",
@@ -120,7 +123,7 @@ export class SessionService {
   async closeSession(sessionId: string): Promise<CloseSessionResult> {
     await this.initialization;
     if (!sessionId) {
-      throw new Error("Runtime requires sessionId to close a session.");
+      throw new Error("Session controller requires sessionId to close a session.");
     }
     const cached = this.sessions.get(sessionId);
     const session = cached instanceof AgentSession
@@ -186,3 +189,15 @@ export class SessionService {
     await trace.flush();
   }
 }
+
+export function createSessionController(options: SessionApiCreateOptions): SessionController {
+  const assembly = new RuntimeAssembly(randomUUID(), options);
+  return new SessionController(
+    options.workdir,
+    assembly.storage,
+    assembly.components,
+    assembly.initialization,
+  );
+}
+
+export const createSessionApi = createSessionController;

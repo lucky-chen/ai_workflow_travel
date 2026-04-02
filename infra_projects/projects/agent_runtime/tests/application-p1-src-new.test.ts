@@ -4,7 +4,7 @@ import {
   createTerminalSessionDemo,
   toSessionEventDisplay,
 } from "../src/application/terminal-session-demo.js";
-import { createRuntime } from "../src/interface/api.js";
+import { createSessionApi } from "../src/interface/api.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runApplicationP1SrcNewTests(): Promise<void> {
@@ -16,7 +16,7 @@ export async function runApplicationP1SrcNewTests(): Promise<void> {
 async function testTerminalDemoCreateExecuteClose(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-app-create-");
   const outputs: string[] = [];
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const demo = createTerminalSessionDemo({
     runtime,
     readInput: async () => {
@@ -41,7 +41,7 @@ async function testTerminalDemoCreateExecuteClose(): Promise<void> {
 
 async function testTerminalDemoOpenExistingSession(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-app-open-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {

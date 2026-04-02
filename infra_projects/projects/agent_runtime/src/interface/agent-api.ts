@@ -2,7 +2,7 @@ import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike } from "../model/types.js";
 import { randomUUID } from "node:crypto";
 
-import { AgentService } from "../runtime/agent-service.js";
+import { AgentController } from "../runtime/agent-controller.js";
 import { RuntimeAssembly } from "../runtime/runtime-assembly.js";
 
 export type { FetchLike } from "../model/types.js";
@@ -72,16 +72,16 @@ export function createAgentApi(options: AgentCreateOptions): AgentApi {
     realProviderFetchFn: options.realProviderFetchFn,
     externalMcpEndpoints: options.externalMcpEndpoints,
   });
-  const agentService = new AgentService(assembly.components, assembly.initialization);
+  const agentController = new AgentController(assembly.components, assembly.initialization);
 
   return {
     async createAgent(type?: AgentType): Promise<IAgent> {
-      return agentService.createAgentInstance(type ?? options.type ?? "chat", {
+      return agentController.createAgentInstance(type ?? options.type ?? "chat", {
         sysPrompt: options.sysPrompt,
       });
     },
     async closeAgent(agent: IAgent): Promise<void> {
-      await agentService.closeAgent(agent);
+      await agentController.closeAgent(agent);
     },
   };
 }

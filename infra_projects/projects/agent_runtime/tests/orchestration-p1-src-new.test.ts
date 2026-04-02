@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime } from "../src/interface/api.js";
+import { createSessionApi } from "../src/interface/api.js";
 import { createRunCheckpoint } from "../src/runtime/run-checkpoint.js";
 import { MultiAgentProtocol } from "../src/orchestration/multi_agent_protocol.js";
 import type { SessionEvent } from "../src/interface/api.js";
@@ -36,7 +36,7 @@ export async function runOrchestrationP1SrcNewTests(): Promise<void> {
 
 async function testChatPromptUsesUnifiedContract(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-chat-prompt-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -68,7 +68,7 @@ async function testChatPromptUsesUnifiedContract(): Promise<void> {
 
 async function testSelectorAndChatExecutionPath(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-chat-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -94,7 +94,7 @@ async function testSelectorAndChatExecutionPath(): Promise<void> {
 
 async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -127,7 +127,7 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
 
 async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-dynamic-slash-plan-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -157,7 +157,7 @@ async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
 
 async function testDynamicModeSelectsReactForFixedBuildKeyword(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-dynamic-build-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -186,7 +186,7 @@ async function testDynamicModeSelectsReactForFixedBuildKeyword(): Promise<void> 
 
 async function testDynamicModeSelectsChatForFixedQuestionKeyword(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-dynamic-chat-keyword-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -210,7 +210,7 @@ async function testDynamicModeSelectsChatForFixedQuestionKeyword(): Promise<void
 
 async function testReactDoesNotCallToolWithoutThoughtAction(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-no-tool-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -246,7 +246,7 @@ async function testReactDoesNotCallToolWithoutThoughtAction(): Promise<void> {
 
 async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-loop-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -319,7 +319,7 @@ async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void>
 
 async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -394,7 +394,7 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
 
 async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-no-tool-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -431,7 +431,7 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
 
 async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-loop-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -524,7 +524,7 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
 
 async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-tool-failure-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -689,7 +689,7 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
 async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-react-events-");
   const received: SessionEvent[] = [];
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const listener = {
     onEvent(event: SessionEvent) {
       received.push(event);
@@ -750,7 +750,7 @@ async function testRuntimeCallbackReceivesReactLifecycleEvents(): Promise<void> 
 async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-peo-events-");
   const received: SessionEvent[] = [];
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const listener = {
     onEvent(event: SessionEvent) {
       received.push(event);
@@ -884,7 +884,7 @@ async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
 
 async function testReservedPlaceholdersStayCallable(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-placeholder-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({});
   const loaded = await session.load();
   const protocol = new MultiAgentProtocol();

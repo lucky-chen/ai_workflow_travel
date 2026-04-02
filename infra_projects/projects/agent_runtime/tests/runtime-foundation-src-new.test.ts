@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime, type SessionApi, type SessionEvent, type SessionEventListener } from "../src/index.js";
+import { createSessionApi, type SessionApi, type SessionEvent, type SessionEventListener } from "../src/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
@@ -22,7 +22,7 @@ export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
 async function testRuntimeSubscriptionReceivesSessionLifecycleEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-lifecycle-");
   const received: string[] = [];
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const listener: SessionEventListener = {
     onEvent(event) {
       received.push(event.brief);
@@ -43,7 +43,7 @@ async function testRuntimeSubscriptionReceivesSessionLifecycleEvents(): Promise<
 async function testRuntimeSubscriptionReceivesSessionRunEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-run-events-");
   const received: string[] = [];
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const listener: SessionEventListener = {
     onEvent(event) {
       received.push(event.brief);
@@ -78,7 +78,7 @@ async function testRuntimeSubscriptionReceivesSessionRunEvents(): Promise<void> 
 async function testRuntimeSubscriptionDeduplicatesAndUnsubscribes(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-dedup-");
   const received: SessionEvent[] = [];
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const listener: SessionEventListener = {
     onEvent(event) {
       received.push(event);
@@ -116,7 +116,7 @@ async function testRuntimeSubscriptionDeduplicatesAndUnsubscribes(): Promise<voi
 
 async function testRuntimeSubscriptionSelfUnsubscribeDoesNotBreakPublish(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-self-remove-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const received: string[] = [];
   const persistentListener: SessionEventListener = {
     onEvent(event) {
@@ -140,7 +140,7 @@ async function testRuntimeSubscriptionSelfUnsubscribeDoesNotBreakPublish(): Prom
 }
 
 async function testRuntimeExposesStableApi(): Promise<void> {
-  const runtime: SessionApi = createRuntime({
+  const runtime: SessionApi = createSessionApi({
     workdir: await createTestWorkdir("agent-runtime-src-new-api-"),
   });
 
@@ -153,7 +153,7 @@ async function testRuntimeExposesStableApi(): Promise<void> {
 
 async function testCreateSessionReturnsStableSessionHandle(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-create-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
 
   const session = await runtime.createSession({
     title: "foundation",
@@ -171,13 +171,13 @@ async function testCreateSessionReturnsStableSessionHandle(): Promise<void> {
 
 async function testOpenSessionReloadsPersistedSession(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-open-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const created = await runtime.createSession({
     title: "reopenable",
   });
   const createdState = await created.load();
 
-  const reopenedRuntime = createRuntime({ workdir });
+  const reopenedRuntime = createSessionApi({ workdir });
   const reopened = await reopenedRuntime.openSession(createdState.sessionId);
   const reopenedState = await reopened.load();
 
@@ -190,7 +190,7 @@ async function testOpenSessionReloadsPersistedSession(): Promise<void> {
 
 async function testCloseSessionPersistsClosedState(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-close-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({});
   const state = await session.load();
 
@@ -206,7 +206,7 @@ async function testCloseSessionPersistsClosedState(): Promise<void> {
 
 async function testOpenSessionReactivatesClosedSession(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-reopen-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     config: {
       model: {
@@ -242,7 +242,7 @@ async function testOpenSessionReactivatesClosedSession(): Promise<void> {
 
 async function testCloseSessionDoesNotEmitOpenEvents(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-close-trace-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({});
   const state = await session.load();
 
@@ -261,7 +261,7 @@ async function testCloseSessionDoesNotEmitOpenEvents(): Promise<void> {
 
 async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-sync-");
-  const runtime = createRuntime({ workdir });
+  const runtime = createSessionApi({ workdir });
   const session = await runtime.createSession({
     sysPrompt: ["system prompt"],
   });
@@ -273,7 +273,7 @@ async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {
   persisted.history = [{ role: "user", content: "mismatched-history" }];
   await writeFile(sessionPath, JSON.stringify(persisted, null, 2), "utf8");
 
-  const reopened = await createRuntime({ workdir }).openSession(state.sessionId);
+  const reopened = await createSessionApi({ workdir }).openSession(state.sessionId);
   const reopenedState = await reopened.load();
 
   assert.equal(reopenedState.history[0]?.content, "system prompt");

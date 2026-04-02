@@ -8,7 +8,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 import { runTerminalSessionCli } from "../bin/terminal-session-demo.js";
-import { createRuntime, type FetchLike } from "../src/interface/api.js";
+import { createSessionApi, type FetchLike } from "../src/interface/api.js";
 import { WorkspaceLocalEnv } from "../src/runtime/workspace-local-env.js";
 import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
@@ -123,7 +123,7 @@ async function testRuntimeUsesRealProviderModeFromLocalEnv(): Promise<void> {
     },
   });
 
-  const runtime = createRuntime({
+  const runtime = createSessionApi({
     workdir,
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: fetchFn,
@@ -152,7 +152,7 @@ async function testRuntimeLoadsExternalMcpServersFromLocalEnv(): Promise<void> {
   });
 
   try {
-    const runtime = createRuntime({
+    const runtime = createSessionApi({
       workdir,
       defaultModelMode: "real_from_local_env",
     });
@@ -224,7 +224,7 @@ async function testTerminalCliUsesRealProviderRuntimePath(): Promise<void> {
       lines.push(line);
     },
     writeError: async () => {},
-    createRuntime: ({ workdir: runtimeWorkdir }) => createRuntime({
+    createSessionApi: ({ workdir: runtimeWorkdir }) => createSessionApi({
       workdir: runtimeWorkdir,
       defaultModelMode: "real_from_local_env",
       realProviderFetchFn: fetchFn,

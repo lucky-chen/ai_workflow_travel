@@ -37,7 +37,7 @@ export class RuntimeAssembly {
     overrides: RuntimeAssemblyOverrides = {},
   ) {
     if (!options.workdir) {
-      throw new Error("Runtime requires workdir.");
+      throw new Error("Controller assembly requires workdir.");
     }
 
     const storageRoot = path.join(options.workdir, ".agent_runtime");

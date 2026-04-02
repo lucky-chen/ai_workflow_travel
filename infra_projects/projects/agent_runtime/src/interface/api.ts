@@ -1,6 +1,6 @@
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike } from "../model/types.js";
-import { createRuntime as createRuntimeImpl } from "../runtime/runtime.js";
+import { createSessionController as createSessionApiImpl } from "../runtime/session-controller.js";
 
 export type { FetchLike } from "../model/types.js";
 
@@ -16,7 +16,7 @@ export interface SessionEventListener {
   onEvent(event: SessionEvent): Promise<void> | void;
 }
 
-export interface RuntimeCreateOptions {
+export interface SessionApiCreateOptions {
   workdir: string;
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: FetchLike;
@@ -72,6 +72,6 @@ export interface CloseSessionResult {
   sessionId: string;
 }
 
-export function createRuntime(options: RuntimeCreateOptions): SessionApi {
-  return createRuntimeImpl(options);
+export function createSessionApi(options: SessionApiCreateOptions): SessionApi {
+  return createSessionApiImpl(options);
 }

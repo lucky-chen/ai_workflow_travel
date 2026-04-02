@@ -1,4 +1,6 @@
 export * from "./interface/api.js";
+export { SessionController, createSessionController } from "./runtime/session-controller.js";
+export { AgentController } from "./runtime/agent-controller.js";
 export {
   createAgentApi,
   type AgentApi,

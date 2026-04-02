@@ -5,9 +5,9 @@ import type {
   SessionApi,
   SessionResult,
   UserInput,
-  RuntimeCreateOptions,
+  SessionApiCreateOptions,
 } from "../interface/api.js";
-import { createRuntime } from "../interface/api.js";
+import { createSessionApi } from "../interface/api.js";
 
 export interface TerminalSessionDemoEntry {
   run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult>;
@@ -21,7 +21,7 @@ export interface TerminalSessionDemoOptions {
   readInput?: () => Promise<{ rawText: string; closeRequested: boolean }>;
   writeLine?: (line: string) => Promise<void> | void;
   runtime?: SessionApi;
-  workdir?: RuntimeCreateOptions["workdir"];
+  workdir?: SessionApiCreateOptions["workdir"];
 }
 
 export interface TerminalSessionDemoResult {
@@ -138,7 +138,7 @@ export class TerminalSessionDemo implements TerminalSessionDemoEntry {
 }
 
 export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): TerminalSessionDemo {
-  const runtime = input.runtime ?? createRuntime({
+  const runtime = input.runtime ?? createSessionApi({
     workdir: input.workdir ?? process.cwd(),
     defaultModelMode: "real_from_local_env",
   });
