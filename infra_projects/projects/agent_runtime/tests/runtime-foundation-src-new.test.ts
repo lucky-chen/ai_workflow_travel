@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime, type RuntimeApi, type RuntimeEvent, type RuntimeEventListener } from "../src_new/index.js";
+import { createRuntime, type RuntimeApi, type RuntimeEvent, type RuntimeEventListener } from "../src/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runRuntimeFoundationSrcNewTests(): Promise<void> {

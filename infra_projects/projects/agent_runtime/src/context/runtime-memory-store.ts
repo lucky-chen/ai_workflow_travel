@@ -1,47 +1,56 @@
-import type { MemoryEntry } from "../runtime/agent-runtime-types.js";
-import { resolveMemoryPath } from "../runtime/runtime-storage-paths.js";
-import { BufferedFileStore } from "../shared/buffered-file-store.js";
+import type { Storage } from "../data/storage.js";
+import type { MemoryContext, MemorySummaryItem } from "./types.js";
+import type { RuntimeMemory } from "./runtime-memory.js";
 
-export class RuntimeMemoryStore extends BufferedFileStore<MemoryEntry[]> {
-  constructor(private readonly workdir: string, flushThreshold = 3) {
-    super(flushThreshold);
-  }
+export class RuntimeMemoryStore implements RuntimeMemory {
+  constructor(private readonly storage: Storage) {}
 
-  async load(scope?: string): Promise<MemoryEntry[]> {
-    if (!scope) {
-      return [];
-    }
-    return this.loadBuffered(scope);
-  }
-
-  async save(scope: string, entries: MemoryEntry[]): Promise<void> {
-    await this.saveBuffered(scope, entries);
-    if (this.shouldFlushByThreshold()) {
-      await this.flush();
+  async load(sessionId: string): Promise<MemoryContext> {
+    try {
+      const payload = await this.storage.load(memoryStorageKey(sessionId));
+      return parseMemoryContext(payload, sessionId);
+    } catch (error) {
+      if (isMissingStorageError(error)) {
+        return { summaryItems: [] };
+      }
+      throw error;
     }
   }
 
-  async flush(scope?: string): Promise<void> {
-    await this.flushBuffered(scope);
+  async update(sessionId: string, summaryItems: MemorySummaryItem[]): Promise<void> {
+    await this.storage.save(memoryStorageKey(sessionId), {
+      summaryItems,
+    });
+  }
+}
+
+function parseMemoryContext(payload: Record<string, unknown>, sessionId: string): MemoryContext {
+  if (!Array.isArray(payload.summaryItems)) {
+    throw new Error(`Runtime memory payload for ${sessionId} is invalid.`);
   }
 
-  protected resolvePath(scope: string): string {
-    return resolveMemoryPath(this.workdir, scope);
-  }
+  const summaryItems = payload.summaryItems.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new Error(`Runtime memory payload for ${sessionId} is invalid.`);
+    }
+    const summary = Reflect.get(item, "summary");
+    const sourceTurnId = Reflect.get(item, "sourceTurnId");
+    if (typeof summary !== "string") {
+      throw new Error(`Runtime memory payload for ${sessionId} contains invalid summary.`);
+    }
+    return {
+      summary,
+      sourceTurnId: typeof sourceTurnId === "string" ? sourceTurnId : undefined,
+    };
+  });
 
-  protected emptyValue(): MemoryEntry[] {
-    return [];
-  }
+  return { summaryItems };
+}
 
-  protected parse(raw: string): MemoryEntry[] {
-    return (JSON.parse(raw) as MemoryEntry[]).map((entry) => ({ ...entry }));
-  }
+function memoryStorageKey(sessionId: string): string {
+  return `memory/${sessionId}`;
+}
 
-  protected serialize(value: MemoryEntry[]): string {
-    return `${JSON.stringify(this.cloneValue(value), null, 2)}\n`;
-  }
-
-  protected cloneValue(value: MemoryEntry[]): MemoryEntry[] {
-    return value.map((entry) => ({ ...entry }));
-  }
+function isMissingStorageError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }

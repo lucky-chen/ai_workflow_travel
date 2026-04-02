@@ -2,39 +2,54 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime } from "../src_new/index.js";
+import { createRuntime } from "../src/index.js";
 
 interface LiveProviderCase {
   provider: "openai" | "deepseek";
   workdir: string;
 }
 
+const DEFAULT_LIVE_TEST_TIMEOUT_MS = 5 * 60 * 1000;
+
 export async function runLiveRealProviderSrcNewTests(cases: LiveProviderCase[]): Promise<void> {
   for (const item of cases) {
-    await runLiveModeCase({
-      provider: item.provider,
-      workdir: item.workdir,
-      task: `/chat reply with provider name ${item.provider} only`,
-      expectedContent: item.provider,
-      requireToolCall: false,
-      label: "chat",
-    });
-    await runLiveModeCase({
-      provider: item.provider,
-      workdir: item.workdir,
-      task: `/react read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} and reply with exactly hello-service fixture file only`,
-      expectedContent: "hello-service fixture file",
-      requireToolCall: true,
-      label: "react",
-    });
-    await runLiveModeCase({
-      provider: item.provider,
-      workdir: item.workdir,
-      task: `/plan first read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} then reply with exactly PEO_OK:hello-service fixture file only`,
-      expectedContent: "PEO_OK:hello-service fixture file",
-      requireToolCall: true,
-      label: "peo",
-    });
+    const timeoutMs = parseLiveTestTimeoutMs(process.env.AGENT_RUNTIME_LIVE_TEST_TIMEOUT_MS);
+    await withTimeout(
+      runLiveModeCase({
+        provider: item.provider,
+        workdir: item.workdir,
+        task: `/chat reply with provider name ${item.provider} only`,
+        expectedContent: item.provider,
+        requireToolCall: false,
+        label: "chat",
+      }),
+      timeoutMs,
+      `Live real-provider chat test timed out after ${timeoutMs}ms for ${item.provider}.`,
+    );
+    await withTimeout(
+      runLiveModeCase({
+        provider: item.provider,
+        workdir: item.workdir,
+        task: `/react read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} and reply with exactly hello-service fixture file only`,
+        expectedContent: "hello-service fixture file",
+        requireToolCall: true,
+        label: "react",
+      }),
+      timeoutMs,
+      `Live real-provider react test timed out after ${timeoutMs}ms for ${item.provider}.`,
+    );
+    await withTimeout(
+      runLiveModeCase({
+        provider: item.provider,
+        workdir: item.workdir,
+        task: `/plan first read the first line of ${path.join(item.workdir, "README_FOR_MCP_TEST.txt")} then reply with exactly PEO_OK:hello-service fixture file only`,
+        expectedContent: "PEO_OK:hello-service fixture file",
+        requireToolCall: true,
+        label: "peo",
+      }),
+      timeoutMs,
+      `Live real-provider peo test timed out after ${timeoutMs}ms for ${item.provider}.`,
+    );
   }
 }
 
@@ -138,6 +153,32 @@ async function main(): Promise<void> {
 
   await runLiveRealProviderSrcNewTests(cases);
   process.stdout.write("Live real-provider tests passed.\n");
+}
+
+function parseLiveTestTimeoutMs(raw: string | undefined): number {
+  if (!raw) {
+    return DEFAULT_LIVE_TEST_TIMEOUT_MS;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LIVE_TEST_TIMEOUT_MS;
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 const isDirectRun = process.argv[1]?.endsWith("/live-real-provider-src-new.test.js")

@@ -4,14 +4,14 @@ plan_name: agent_runtime_code_generation_work_plan
 status: in_progress
 target: deliver the current AgentRuntime SDK defined by TechnicalArchitecture and
   breakdown_docs as one session-based runtime implementation, with new runtime source
-  code generated under src_new
+  code generated under src
 context:
   docs:
     architecture: infra_projects/projects/agent_runtime/docs/TechnicalArchitecture.md
     breakdown_dir: infra_projects/projects/agent_runtime/docs/breakdown_docs
   code:
     root: infra_projects/projects/agent_runtime
-    source_root: infra_projects/projects/agent_runtime/src_new
+    source_root: infra_projects/projects/agent_runtime/src
   active_work_plan: infra_projects/projects/agent_runtime/docs/work_plan.yaml
   scope: feature-by-feature code generation plan for the current interface runtime
     controller agent orchestration context governance capability and tooling model
@@ -40,7 +40,7 @@ governance:
     that scope
   - the technical architecture and breakdown docs are the design authority for naming
     boundaries and dependency direction
-  - implementation code generation must place new runtime source files under src_new
+  - implementation code generation must place new runtime source files under src
     rather than extending the legacy src tree
   - placeholder boundaries must be implemented only to the level defined by the current
     docs and must not be expanded into active runtime behavior
@@ -51,7 +51,7 @@ governance:
       rewrite
     - use TechnicalArchitecture.md and docs/breakdown_docs as the direct design authority
       instead of the legacy agent_runtime_design.md
-    - src_new is the only target source root for newly generated runtime implementation
+    - src is the only target source root for newly generated runtime implementation
       code
     - milestone structure follows the phased implementation defined in TechnicalArchitecture.md
       section 8 as P0 P1 and P2
@@ -84,29 +84,29 @@ milestones:
     - batch_id: batch_1_1_interface_contract_implementation
       batch_type: implementation
       name: implementation
-      goal: implement stable interface and lifecycle contracts in src_new
+      goal: implement stable interface and lifecycle contracts in src
       status: completed
       covers:
       - runtime_api
       - session_lifecycle
       tasks:
       - task_name: implement runtime api interfaces
-        summary: implement Api RuntimeApi and ISession contracts in src_new/interface
+        summary: implement Api RuntimeApi and ISession contracts in src/interface
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/interface
+        - infra_projects/projects/agent_runtime/src/interface
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/sdk_interface_design.md
       - task_name: implement runtime entry wiring
-        summary: implement the src_new entry export and runtime bootstrap entrypoints
+        summary: implement the src entry export and runtime bootstrap entrypoints
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/index.ts
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/index.ts
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: implement session lifecycle methods
         summary: implement createSession openSession and closeSession on Runtime
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
     - batch_id: batch_1_2_runtime_registry_storage_implementation
       batch_type: implementation
@@ -123,21 +123,21 @@ milestones:
           lookup and removal
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
       - task_name: implement shared storage contract
         summary: implement Storage load and save contracts with baseline file-backed
           behavior
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/data
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/data_design.md
-      - task_name: establish src_new foundation layout
-        summary: create src_new directory structure for interface runtime data and
+      - task_name: establish src foundation layout
+        summary: create src directory structure for interface runtime data and
           shared modules
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new
+        - infra_projects/projects/agent_runtime/src
     - batch_id: batch_1_3_runtime_foundation_verification
       batch_type: verification
       name: verification
@@ -154,20 +154,20 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/interface
+        - infra_projects/projects/agent_runtime/src/interface
       - task_name: verify session lifecycle behavior
         summary: verify create open and close lifecycle behavior on Runtime and AgentSessionManager
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify storage boundary behavior
         summary: verify Storage file-backed load save and path behavior without leaking
           backend details upward
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/data
   - stage_id: context and model foundation usable
     goal: make context governance and model integration usable for later session execution
     status: completed
@@ -196,20 +196,20 @@ milestones:
         summary: implement SessionTranscript load and update behavior on top of Storage
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/context
+        - infra_projects/projects/agent_runtime/src/data
       - task_name: implement runtime memory boundary
         summary: implement RuntimeMemory load and update behavior on top of Storage
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/context
+        - infra_projects/projects/agent_runtime/src/data
       - task_name: implement retrieval provider boundary
         summary: implement RetrievalProvider contract for optional retrieval-backed
           context loading
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/context_governance_design.md
     - batch_id: batch_2_2_context_assembly_implementation
       batch_type: implementation
@@ -225,15 +225,15 @@ milestones:
           views
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/context_governance_design.md
       - task_name: implement context assembler
         summary: implement ContextAssembler to produce AgentContext with originalContext
           and boundedContext
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/context
+        - infra_projects/projects/agent_runtime/src/runtime
     - batch_id: batch_2_3_model_boundary_implementation
       batch_type: implementation
       name: implementation
@@ -249,20 +249,20 @@ milestones:
           leaking provider-specific types upward
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/model_integration_design.md
       - task_name: implement shared model execution
         summary: implement IModel execute and stream behavior with normalized request
           and response contracts
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/model_integration_design.md
       - task_name: implement streaming event adapter
         summary: implement StreamingEventAdapter for provider stream normalization
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/model_integration_design.md
     - batch_id: batch_2_4_context_verification
       batch_type: verification
@@ -279,21 +279,21 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
       - task_name: verify retrieval collaboration behavior
         summary: verify RetrievalProvider collaboration stays optional and bounded
           inside context assembly
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
       - task_name: verify bounded-context policy behavior
         summary: verify ContextBudgetPolicy returns bounded context views under runtime
           limits
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
     - batch_id: batch_2_5_model_verification
       batch_type: verification
       name: verification
@@ -310,20 +310,20 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
       - task_name: verify shared model execution behavior
         summary: verify IModel execute and stream contracts with mock provider fixtures
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
       - task_name: verify stream event normalization
         summary: verify StreamingEventAdapter normalizes provider stream events into
           shared stream events
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
 - milestone_id: milestone_p1_single_agent_production_hardening
   name: p1 single-agent mainline completion
   goal: deliver the single-agent runtime mainline on top of the p0 foundation, including
@@ -361,22 +361,22 @@ milestones:
         summary: implement AgentSelector with requestedMode routing and dynamic fallback
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
       - task_name: implement chat agent path
         summary: implement ChatAgent ChatPromptBuilder and ChatResultChecker on top
           of AgentContext and IModel
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/orchestration
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/orchestration
+        - infra_projects/projects/agent_runtime/src/model
       - task_name: implement session execution mainline
         summary: implement AgentSession execute flow through context assembly selection
           and agent execution
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/orchestration
     - batch_id: batch_3_2_result_react_peo_implementation
       batch_type: implementation
       name: implementation
@@ -392,21 +392,21 @@ milestones:
           SessionResult
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
       - task_name: implement bounded react orchestration
         summary: implement ReActAgent thought action and observation collaborators
           with bounded loop control
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
       - task_name: implement bounded peo orchestration
         summary: implement PEOAgent planning execution and observation stages with
           checker boundaries
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
     - batch_id: batch_3_3_reserved_protocol_implementation
       batch_type: implementation
@@ -423,14 +423,14 @@ milestones:
           activating checkpoint capture in the mainline path
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/runtime_control_design.md
       - task_name: implement reserved multi-agent protocol placeholder
         summary: implement MultiAgentProtocol placeholder contract without enabling
           active delegation in the mainline path
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/agent_orchestration_design.md
     - batch_id: batch_3_4_session_execution_verification
       batch_type: verification
@@ -448,20 +448,20 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: verify session execution cycle behavior
         summary: verify AgentSession runs one bounded execution cycle through the
           documented collaboration chain
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify stable session result behavior
         summary: verify SessionResult remains stable across success and failure paths
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
     - batch_id: batch_3_5_agent_path_verification
       batch_type: verification
       name: verification
@@ -477,19 +477,19 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: verify react path behavior
         summary: verify ReActAgent bounded loop behavior and result output
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: verify peo path behavior
         summary: verify PEOAgent bounded stage behavior and result output
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
     - batch_id: batch_3_6_reserved_protocol_verification
       batch_type: verification
       name: verification
@@ -505,14 +505,14 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify multi-agent placeholder stays reserved
         summary: verify MultiAgentProtocol is callable but not activated by normal
           session execution
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
   - stage_id: capability and observability usable
     goal: make tool execution governance metrics and trace boundaries usable for runtime
       execution
@@ -540,20 +540,20 @@ milestones:
         summary: implement McpGateway call behavior for normalized tool-call dispatch
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
       - task_name: implement tool registry
         summary: implement McpToolRegistry registration resolution and inventory listing
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
       - task_name: implement permission policy
         summary: implement RuntimePermissionPolicy with the current permission decision
           model
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
     - batch_id: batch_4_2_execution_observability_implementation
       batch_type: implementation
@@ -569,22 +569,22 @@ milestones:
         summary: implement ExecutionEnvironment for local baseline tool execution
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/capability_and_tooling_design.md
       - task_name: implement metrics boundary
         summary: implement Metrics aggregation with sessionMetrics totalMetrics and
           token usage facts
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/observability
+        - infra_projects/projects/agent_runtime/src/observability
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/observability_design.md
       - task_name: implement trace boundary
         summary: implement Trace recording querying and flush behavior with the current
           generalized event model
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/observability
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/observability
+        - infra_projects/projects/agent_runtime/src/data
     - batch_id: batch_4_3_tool_governance_verification
       batch_type: verification
       name: verification
@@ -600,21 +600,21 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify permission enforcement behavior
         summary: verify allowed and denied permission decisions are enforced before
           execution
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify execution environment behavior
         summary: verify ExecutionEnvironment returns stable tool-call results for
           the local baseline
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
     - batch_id: batch_4_4_registry_observability_verification
       batch_type: verification
       name: verification
@@ -630,24 +630,24 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify metrics behavior
         summary: verify metrics collection and aggregation stay separate from transcript
           state
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/observability
+        - infra_projects/projects/agent_runtime/src/observability
       - task_name: verify trace persistence behavior
         summary: verify trace event querying and flush persistence through Storage
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/observability
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/observability
+        - infra_projects/projects/agent_runtime/src/data
   - stage_id: application integration usable
     goal: make the terminal-facing demo and end-to-end mainline runtime behavior usable
-      on top of the new src_new implementation
+      on top of the new src implementation
     status: completed
     delivered_feature: application demo and integration
     feature_scope:
@@ -668,23 +668,23 @@ milestones:
         summary: implement TerminalSessionDemo on top of Api and ISession contracts
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/src/application
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/application_design.md
       - task_name: implement terminal input and output helpers
         summary: implement TerminalInputHandler and TerminalOutputRenderer for the
           application-layer demo
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/src/application
         - infra_projects/projects/agent_runtime/docs/breakdown_docs/application_design.md
-      - task_name: wire src_new runtime as package entry
-        summary: wire package exports examples and bin entrypoints to the new src_new
+      - task_name: wire src runtime as package entry
+        summary: wire package exports examples and bin entrypoints to the new src
           runtime mainline
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/package.json
         - infra_projects/projects/agent_runtime/src/index.ts
-        - infra_projects/projects/agent_runtime/src_new
+        - infra_projects/projects/agent_runtime/src
     - batch_id: batch_5_2_application_integration_verification
       batch_type: verification
       name: verification
@@ -709,14 +709,14 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new
+        - infra_projects/projects/agent_runtime/src
       - task_name: verify file-backed integration behavior
         summary: verify the runtime uses the file-backed storage baseline as the integrated
           mainline
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/data
   - stage_id: real provider mainline usable
     goal: make real-provider configuration loading synchronous provider execution
       and terminal-facing real-provider paths usable on top of the current single-agent
@@ -740,19 +740,19 @@ milestones:
       - real_provider_mode_selection
       tasks:
       - task_name: implement local env real-provider loading
-        summary: add src_new workspace local env loading for openai and deepseek provider
+        summary: add src workspace local env loading for openai and deepseek provider
           config
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
         - infra_projects/projects/agent_runtime/bin/terminal-session-demo.ts
       - task_name: implement runtime-owned real-provider mode selection
         summary: merge runtime-level defaults and session config into a stable real-provider
           model config resolver
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/model
     - batch_id: batch_5_4_real_provider_execution_implementation
       batch_type: implementation
       name: implementation
@@ -768,14 +768,14 @@ milestones:
           deepseek chat-completions style synchronous execution
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/model
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/model
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: implement terminal and cli real-provider path
         summary: make terminal demo and cli automatically enter real-provider mode
           from workdir local env config
         status: completed
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/src/application
         - infra_projects/projects/agent_runtime/bin
     - batch_id: batch_5_5_real_provider_verification
       batch_type: verification
@@ -793,14 +793,14 @@ milestones:
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify real-provider sync mainline behavior
         summary: verify runtime and terminal-facing real-provider paths execute synchronously
           without falling back to mock mode
         status: completed
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new
+        - infra_projects/projects/agent_runtime/src
       - task_name: verify live real-provider behavior
         summary: verify one deepseek fixture path and one openai-configured path can
           complete a real session execute call
@@ -841,15 +841,15 @@ milestones:
           explicit runtime-owned routing collaborators
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: implement step decision policy
         summary: make internal step decisions explicit instead of implicit inside
           orchestration internals
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/orchestration
     - batch_id: batch_6_2_repair_policy_implementation
       batch_type: implementation
       name: implementation
@@ -863,15 +863,15 @@ milestones:
         summary: add runtime-owned repair stop and bounded retry policy support
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: implement richer execution-observation policy
         summary: add richer execution-observation control without changing the external
           SessionResult contract
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/orchestration
     - batch_id: batch_6_3_routing_policy_verification
       batch_type: verification
       name: verification
@@ -887,21 +887,21 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify repair policy behavior
         summary: verify bounded repair and retry behavior across abnormal execution
           paths
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: verify richer execution-observation behavior
         summary: verify richer execution-observation policy does not break the stable
           result contract
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
   - stage_id: capability governance and runtime resilience usable
     goal: expand capability governance runtime resilience and usage visibility for
       single-agent production readiness
@@ -931,19 +931,19 @@ milestones:
         summary: add explicit tool allowlist checks into RuntimePermissionPolicy
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: implement path policy
         summary: add working-directory and path policy enforcement into tool execution
           governance
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: implement execution policy
         summary: add command and environment execution policy enforcement into tool
           governance
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
     - batch_id: batch_7_2_resilience_implementation
       batch_type: implementation
       name: implementation
@@ -959,21 +959,21 @@ milestones:
           gateway contract
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: implement streaming runtime support
         summary: wire streaming support through IModel AgentSession and orchestration
           boundaries
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/model
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/model
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: implement cancellation and timeout support
         summary: add cancellation and timeout support across runtime-owned execution
           paths
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/orchestration
     - batch_id: batch_7_3_checkpoint_metrics_implementation
       batch_type: implementation
       name: implementation
@@ -988,15 +988,15 @@ milestones:
           baseline
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/data
       - task_name: implement strengthened usage metrics
         summary: strengthen provider and tool usage aggregation beyond the p0 metrics
           baseline
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/observability
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/observability
+        - infra_projects/projects/agent_runtime/src/runtime
     - batch_id: batch_7_4_governance_verification
       batch_type: verification
       name: verification
@@ -1012,21 +1012,21 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify execution policy behavior
         summary: verify execution policy enforcement under allowed and denied runtime
           paths
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify expanded built-in capability behavior
         summary: verify expanded built-in capabilities still follow the shared gateway
           contract
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
     - batch_id: batch_7_5_resilience_verification
       batch_type: verification
       name: verification
@@ -1042,22 +1042,22 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/model
+        - infra_projects/projects/agent_runtime/src/model
       - task_name: verify cancellation and timeout behavior
         summary: verify cancellation and timeout handling under normal and abnormal
           execution paths
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify checkpoint persistence behavior
         summary: verify persisted checkpoints can be written and recovered under the
           hardened runtime path
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/data
     - batch_id: batch_7_6_metrics_policy_verification
       batch_type: verification
       name: verification
@@ -1072,14 +1072,14 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify strengthened usage metrics behavior
         summary: verify stronger provider and tool usage metrics are aggregated and
           persisted correctly
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/observability
+        - infra_projects/projects/agent_runtime/src/observability
   - stage_id: context and execution platform expansion
     goal: expand context governance and execution-environment capabilities beyond
       the p0 file-backed local-process baseline
@@ -1107,18 +1107,18 @@ milestones:
           boundary
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
       - task_name: implement memory optimization
         summary: add runtime memory optimization support beyond the p0 summary baseline
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
       - task_name: implement richer retrieval coordination
         summary: add richer retrieval coordination across request and session context
           assembly
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
     - batch_id: batch_8_2_execution_adapter_implementation
       batch_type: implementation
       name: implementation
@@ -1133,12 +1133,12 @@ milestones:
           boundary
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: implement remote execution adapter
         summary: add remote ExecutionEnvironment support behind the capability boundary
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
     - batch_id: batch_8_3_context_optimization_verification
       batch_type: verification
       name: verification
@@ -1154,20 +1154,20 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
       - task_name: verify memory optimization behavior
         summary: verify memory optimization behavior across repeated session execution
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
       - task_name: verify richer retrieval coordination behavior
         summary: verify richer retrieval coordination stays within the context-governance
           boundary
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/context
+        - infra_projects/projects/agent_runtime/src/context
     - batch_id: batch_8_4_execution_adapter_verification
       batch_type: verification
       name: verification
@@ -1182,13 +1182,13 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
       - task_name: verify remote execution adapter behavior
         summary: verify remote adapter preserves the existing tool contract
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/capability
+        - infra_projects/projects/agent_runtime/src/capability
   - stage_id: durable runtime and platform integration usable
     goal: expand runtime coordination from single-process foreground sessions toward
       durable background and multi-agent platform behavior
@@ -1218,19 +1218,19 @@ milestones:
           boundary
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: implement durable run checkpoints
         summary: add durable checkpoint resume behavior beyond p1 persistence hardening
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/data
       - task_name: implement long-running coordination
         summary: add long-running runtime coordination for non-foreground execution
           paths
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
     - batch_id: batch_9_2_platform_integration_implementation
       batch_type: implementation
       name: implementation
@@ -1246,19 +1246,19 @@ milestones:
           behavior
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: implement richer analytics
         summary: add richer analytics views on top of the observability boundary
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/observability
+        - infra_projects/projects/agent_runtime/src/observability
       - task_name: implement governance surfaces
         summary: expose richer governance surfaces without leaking internal runtime
           details outward
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/application
-        - infra_projects/projects/agent_runtime/src_new/observability
+        - infra_projects/projects/agent_runtime/src/application
+        - infra_projects/projects/agent_runtime/src/observability
     - batch_id: batch_9_3_automation_integration_implementation
       batch_type: implementation
       name: implementation
@@ -1272,7 +1272,7 @@ milestones:
           boundary
         status: pending
         involved_files:
-        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/src/application
     - batch_id: batch_9_4_durable_runtime_verification
       batch_type: verification
       name: verification
@@ -1289,20 +1289,20 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
       - task_name: verify durable run checkpoint behavior
         summary: verify durable checkpoints can be resumed correctly
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
-        - infra_projects/projects/agent_runtime/src_new/data
+        - infra_projects/projects/agent_runtime/src/runtime
+        - infra_projects/projects/agent_runtime/src/data
       - task_name: verify long-running coordination behavior
         summary: verify long-running coordination remains bounded and observable
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/runtime
+        - infra_projects/projects/agent_runtime/src/runtime
     - batch_id: batch_9_5_platform_integration_verification
       batch_type: verification
       name: verification
@@ -1319,21 +1319,21 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/orchestration
+        - infra_projects/projects/agent_runtime/src/orchestration
       - task_name: verify richer analytics behavior
         summary: verify richer analytics remain behind the documented observability
           boundary
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/observability
+        - infra_projects/projects/agent_runtime/src/observability
       - task_name: verify governance surface behavior
         summary: verify governance surfaces remain externally consumable without exposing
           runtime internals
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/src/application
     - batch_id: batch_9_6_automation_integration_verification
       batch_type: verification
       name: verification
@@ -1348,4 +1348,4 @@ milestones:
         status: pending
         involved_files:
         - infra_projects/projects/agent_runtime/tests
-        - infra_projects/projects/agent_runtime/src_new/application
+        - infra_projects/projects/agent_runtime/src/application

@@ -8,19 +8,19 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
-import { createRuntime } from "../src_new/interface/api.js";
-import { FileStorage } from "../src_new/data/storage.js";
-import { McpGateway } from "../src_new/capability/mcp-gateway.js";
-import { RuntimePermissionPolicy } from "../src_new/capability/permission-policy.js";
-import { RuntimeEventBus } from "../src_new/capability/runtime-event-bus.js";
-import { ExecutionEnvironment } from "../src_new/capability/execution-environment.js";
-import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
-import { registerExternalMcpEndpoints } from "../src_new/capability/external_mcp_tool_adapter.js";
-import type { RuntimeEvent } from "../src_new/capability/runtime-event.js";
-import type { ToolCallInput } from "../src_new/capability/types.js";
-import { createMetrics } from "../src_new/observability/metrics.js";
-import { createTrace, type Trace } from "../src_new/observability/trace.js";
-import { TraceRuntimeEventListener } from "../src_new/observability/trace-runtime-event-listener.js";
+import { createRuntime } from "../src/interface/api.js";
+import { FileStorage } from "../src/data/storage.js";
+import { McpGateway } from "../src/capability/mcp-gateway.js";
+import { RuntimePermissionPolicy } from "../src/capability/permission-policy.js";
+import { RuntimeEventBus } from "../src/capability/runtime-event-bus.js";
+import { ExecutionEnvironment } from "../src/capability/execution-environment.js";
+import { McpToolRegistry } from "../src/capability/tool-registry.js";
+import { registerExternalMcpEndpoints } from "../src/capability/external_mcp_tool_adapter.js";
+import type { RuntimeEvent } from "../src/capability/runtime-event.js";
+import type { ToolCallInput } from "../src/capability/types.js";
+import { createMetrics } from "../src/observability/metrics.js";
+import { createTrace, type Trace } from "../src/observability/trace.js";
+import { TraceRuntimeEventListener } from "../src/observability/trace-runtime-event-listener.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {

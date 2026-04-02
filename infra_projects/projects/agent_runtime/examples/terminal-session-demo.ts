@@ -1,8 +1,8 @@
-import type { RuntimeApi } from "../src_new/interface/api.js";
+import type { RuntimeApi } from "../src/interface/api.js";
 import {
   createTerminalSessionDemo,
   type TerminalSessionDemoOptions,
-} from "../src_new/application/terminal-session-demo.js";
+} from "../src/application/terminal-session-demo.js";
 
 export interface ExampleTerminalSessionDemoOptions {
   runtime?: RuntimeApi;

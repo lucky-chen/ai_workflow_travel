@@ -1,53 +1,67 @@
-import type { MessageTurn } from "../runtime/agent-runtime-types.js";
-import { resolveSessionTranscriptPath } from "../runtime/runtime-storage-paths.js";
-import { BufferedFileStore } from "../shared/buffered-file-store.js";
+import type { Storage } from "../data/storage.js";
+import type { TranscriptContext, TranscriptTurn } from "./types.js";
+import type { SessionTranscript } from "./session-transcript.js";
 
-export class SessionTranscriptStore extends BufferedFileStore<MessageTurn[]> {
-  constructor(private readonly workdir: string, flushThreshold = 3) {
-    super(flushThreshold);
-  }
+export class SessionTranscriptStore implements SessionTranscript {
+  constructor(private readonly storage: Storage) {}
 
-  async initialize(sessionId: string, transcript: MessageTurn[]): Promise<void> {
-    await this.saveBuffered(sessionId, transcript);
-    if (this.shouldFlushByThreshold()) {
-      await this.flush(sessionId);
+  async load(sessionId: string): Promise<TranscriptContext> {
+    try {
+      const payload = await this.storage.load(transcriptStorageKey(sessionId));
+      return parseTranscriptContext(payload, sessionId);
+    } catch (error) {
+      if (isMissingStorageError(error)) {
+        return { turns: [] };
+      }
+      throw error;
     }
   }
 
-  async load(sessionId: string): Promise<MessageTurn[]> {
-    return this.loadBuffered(sessionId);
+  async update(sessionId: string, turns: TranscriptTurn[]): Promise<void> {
+    await this.storage.save(transcriptStorageKey(sessionId), {
+      turns,
+    });
+  }
+}
+
+function parseTranscriptContext(payload: Record<string, unknown>, sessionId: string): TranscriptContext {
+  if (!Array.isArray(payload.turns)) {
+    throw new Error(`Transcript payload for ${sessionId} is invalid.`);
   }
 
-  async append(sessionId: string, turns: MessageTurn[]): Promise<void> {
-    const transcript = await this.load(sessionId);
-    transcript.push(...turns.map((turn) => ({ ...turn })));
-    await this.saveBuffered(sessionId, transcript);
-    if (this.shouldFlushByThreshold()) {
-      await this.flush(sessionId);
+  const turns = payload.turns.map((turn) => {
+    if (!turn || typeof turn !== "object") {
+      throw new Error(`Transcript payload for ${sessionId} is invalid.`);
     }
-  }
+    const role = Reflect.get(turn, "role");
+    const content = Reflect.get(turn, "content");
+    const timestamp = Reflect.get(turn, "timestamp");
+    if (
+      role !== "user" &&
+      role !== "assistant" &&
+      role !== "system" &&
+      role !== "tool"
+    ) {
+      throw new Error(`Transcript payload for ${sessionId} contains invalid role.`);
+    }
+    if (typeof content !== "string") {
+      throw new Error(`Transcript payload for ${sessionId} contains invalid content.`);
+    }
 
-  async flush(sessionId?: string): Promise<void> {
-    await this.flushBuffered(sessionId);
-  }
+    return {
+      role,
+      content,
+      timestamp: typeof timestamp === "string" ? timestamp : undefined,
+    };
+  });
 
-  resolvePath(sessionId: string): string {
-    return resolveSessionTranscriptPath(this.workdir, sessionId);
-  }
+  return { turns };
+}
 
-  protected emptyValue(): MessageTurn[] {
-    return [];
-  }
+function transcriptStorageKey(sessionId: string): string {
+  return `transcripts/${sessionId}`;
+}
 
-  protected parse(raw: string): MessageTurn[] {
-    return (JSON.parse(raw) as MessageTurn[]).map((turn) => ({ ...turn }));
-  }
-
-  protected serialize(value: MessageTurn[]): string {
-    return `${JSON.stringify(this.cloneValue(value), null, 2)}\n`;
-  }
-
-  protected cloneValue(value: MessageTurn[]): MessageTurn[] {
-    return value.map((turn) => ({ ...turn }));
-  }
+function isMissingStorageError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }

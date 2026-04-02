@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 
-import type { FetchLike } from "../src_new/model/types.js";
-import { StreamingEventAdapter } from "../src_new/model/streaming-event-adapter.js";
-import { ModelFactory } from "../src_new/model/model-factory.js";
+import type { FetchLike } from "../src/model/types.js";
+import { StreamingEventAdapter } from "../src/model/streaming-event-adapter.js";
+import { ModelFactory } from "../src/model/model-factory.js";
 
 export async function runModelFoundationSrcNewTests(): Promise<void> {
   await testModelFactoryCreatesMockModel();

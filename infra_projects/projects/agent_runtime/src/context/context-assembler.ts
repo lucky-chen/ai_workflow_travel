@@ -1,61 +1,56 @@
+import type { UserInput } from "../interface/api.js";
+import { ContextBudgetPolicy } from "./context-budget-policy.js";
+import type { RetrievalProvider } from "./retrieval-provider.js";
+import type { RuntimeMemory } from "./runtime-memory.js";
+import type { SessionTranscript } from "./session-transcript.js";
 import type {
   AgentContext,
-  AgentSessionRequest,
-  AgentSessionState,
-  RetrievalRequest,
-} from "../runtime/agent-runtime-types.js";
-import type { RetrievalProvider } from "./default-retrieval-provider.js";
-import { RuntimeMemoryStore } from "./runtime-memory-store.js";
-import { SessionTranscriptStore } from "./session-transcript-store.js";
+  ContextAssemblyInput,
+  ContextView,
+} from "./types.js";
 
 export class ContextAssembler {
   constructor(
-    private readonly transcriptStore: SessionTranscriptStore,
-    private readonly memoryStore: RuntimeMemoryStore,
+    private readonly sessionTranscript: SessionTranscript,
+    private readonly runtimeMemory: RuntimeMemory,
     private readonly retrievalProvider: RetrievalProvider,
-    private readonly workdir: string,
+    private readonly contextBudgetPolicy: ContextBudgetPolicy = new ContextBudgetPolicy(),
   ) {}
 
-  async assemble(session: AgentSessionState, request: AgentSessionRequest): Promise<AgentContext> {
-    const transcript = await this.transcriptStore.load(session.sessionId);
-    const memory = await this.memoryStore.load(session.sessionId);
-    const retrievalContext = request.payload.retrievalQuery
-      ? await this.retrievalProvider.load(this.buildRetrievalRequest(session, request))
-      : [];
+  async assemble(input: ContextAssemblyInput): Promise<AgentContext> {
+    const transcriptContext = await this.sessionTranscript.load(input.sessionId);
+    const runtimeMemoryContext = await this.runtimeMemory.load(input.sessionId);
+    const retrievalContext = await this.loadRetrievalContext(input.userInput, input.sessionId);
 
+    const originalContext: ContextView = {
+      transcriptContext,
+      runtimeMemoryContext,
+      retrievalContext,
+    };
+
+    if (!input.runtimeLimits) {
+      return { originalContext };
+    }
+
+    const boundedContext = await this.contextBudgetPolicy.bound(originalContext, input.runtimeLimits);
     return {
-      request: {
-        prompt: {
-          systemPrompt: [...request.payload.prompt.systemPrompt],
-          userPrompt: { ...request.payload.prompt.userPrompt },
-        },
-        responseFormat: request.payload.responseFormat,
-        metadata: request.metadata ? { ...request.metadata, labels: request.metadata.labels ? { ...request.metadata.labels } : undefined } : undefined,
-      },
-      runtimeContext: {
-        sessionId: session.sessionId,
-        workdir: this.workdir,
-        runId: undefined,
-        transcript,
-        memory,
-        retrievalContext,
-        mcpToolCalls: request.payload.mcpToolCalls?.map((toolCall) => ({
-          toolCallId: toolCall.toolCallId,
-          toolName: toolCall.toolName,
-          arguments: { ...toolCall.arguments },
-        })) ?? [],
-      },
+      originalContext,
+      boundedContext,
     };
   }
 
-  private buildRetrievalRequest(session: AgentSessionState, request: AgentSessionRequest): RetrievalRequest {
-    return {
-      query: request.payload.retrievalQuery ?? "",
-      candidateSources: [
-        `${this.workdir}/docs`,
-        this.transcriptStore.resolvePath(session.sessionId),
-      ],
-      metadata: request.metadata,
-    };
+  private async loadRetrievalContext(userInput: UserInput, sessionId: string) {
+    const queryText = typeof userInput.content.queryText === "string"
+      ? userInput.content.queryText
+      : typeof userInput.content.task === "string"
+        ? userInput.content.task
+        : "";
+
+    if (!queryText) {
+      return undefined;
+    }
+
+    const result = await this.retrievalProvider.retrieve(userInput, sessionId, queryText);
+    return result.fragments.length > 0 ? result : undefined;
   }
 }

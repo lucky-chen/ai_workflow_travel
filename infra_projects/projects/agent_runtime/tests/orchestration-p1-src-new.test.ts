@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime } from "../src_new/interface/api.js";
-import { RuntimeEventBus } from "../src_new/capability/runtime-event-bus.js";
-import { createRunCheckpoint } from "../src_new/runtime/run-checkpoint.js";
-import { MultiAgentProtocol } from "../src_new/orchestration/multi_agent_protocol.js";
-import type { RuntimeEvent } from "../src_new/capability/runtime-event.js";
-import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
-import type { McpGateway, ToolCallInput, ToolCallResult } from "../src_new/capability/types.js";
-import { ExecutionStep } from "../src_new/orchestration/peo_agent/peo_execution_step.js";
-import { ActionStep } from "../src_new/orchestration/react_agent/react_action_step.js";
-import { validateToolCallArguments } from "../src_new/orchestration/tool_call_argument_validator.js";
+import { createRuntime } from "../src/interface/api.js";
+import { RuntimeEventBus } from "../src/capability/runtime-event-bus.js";
+import { createRunCheckpoint } from "../src/runtime/run-checkpoint.js";
+import { MultiAgentProtocol } from "../src/orchestration/multi_agent_protocol.js";
+import type { RuntimeEvent } from "../src/capability/runtime-event.js";
+import { McpToolRegistry } from "../src/capability/tool-registry.js";
+import type { McpGateway, ToolCallInput, ToolCallResult } from "../src/capability/types.js";
+import { ExecutionStep } from "../src/orchestration/peo_agent/peo_execution_step.js";
+import { ActionStep } from "../src/orchestration/react_agent/react_action_step.js";
+import { validateToolCallArguments } from "../src/orchestration/tool_call_argument_validator.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runOrchestrationP1SrcNewTests(): Promise<void> {

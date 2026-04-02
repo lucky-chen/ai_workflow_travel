@@ -8,8 +8,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 import { runTerminalSessionCli } from "../bin/terminal-session-demo.js";
-import { createRuntime, type FetchLike } from "../src_new/interface/api.js";
-import { WorkspaceLocalEnv } from "../src_new/runtime/workspace-local-env.js";
+import { createRuntime, type FetchLike } from "../src/interface/api.js";
+import { WorkspaceLocalEnv } from "../src/runtime/workspace-local-env.js";
 import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
 export async function runRealProviderP1SrcNewTests(): Promise<void> {

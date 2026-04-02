@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { runTerminalSessionCli } from "../bin/terminal-session-demo.js";
-import { createRuntime } from "../src_new/runtime/runtime.js";
+import { createRuntime } from "../src/runtime/runtime.js";
 import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
 export async function runTerminalSessionCliSrcNewTests(): Promise<void> {

@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { FileStorage } from "../src_new/data/storage.js";
-import { ContextBudgetPolicy } from "../src_new/context/context-budget-policy.js";
-import { ContextAssembler } from "../src_new/context/context-assembler.js";
-import { createRetrievalProvider } from "../src_new/context/retrieval-provider.js";
-import { createRuntimeMemory } from "../src_new/context/runtime-memory.js";
-import { createSessionTranscript } from "../src_new/context/session-transcript.js";
+import { FileStorage } from "../src/data/storage.js";
+import { ContextBudgetPolicy } from "../src/context/context-budget-policy.js";
+import { ContextAssembler } from "../src/context/context-assembler.js";
+import { createRetrievalProvider } from "../src/context/retrieval-provider.js";
+import { createRuntimeMemory } from "../src/context/runtime-memory.js";
+import { createSessionTranscript } from "../src/context/session-transcript.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runContextFoundationSrcNewTests(): Promise<void> {
