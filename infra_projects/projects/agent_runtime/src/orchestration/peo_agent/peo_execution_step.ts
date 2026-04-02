@@ -1,4 +1,4 @@
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ExecutionStepResult, ITaskExecutor, PlanStepResult, PlanTask } from "./peo_types.js";
 
@@ -10,7 +10,7 @@ export class ExecutionStep {
   ) {}
 
   async run(
-    context: AgentContext,
+    input: AgentRunInput,
     _runId: string,
     stepIndex: number,
     plan: PlanStepResult,
@@ -20,7 +20,6 @@ export class ExecutionStep {
       type: "agent",
       agentMessage: {
         event: "step",
-        sessionId: context.runtimeContext?.sessionId,
         traceId: _runId,
         timestamp: new Date().toISOString(),
         agent: {
@@ -58,7 +57,7 @@ export class ExecutionStep {
         plan,
         task,
         stepIndex,
-        context,
+        context: input,
       });
       taskExecutions.push(taskExecution);
     }

@@ -1,4 +1,4 @@
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 
 export type PlanTaskType = "direct" | "react";
 export type PlanTaskStatus = "pending" | "completed" | "failed" | "blocked";
@@ -49,6 +49,6 @@ export interface ITaskExecutor {
     plan: PlanStepResult;
     task: PlanTask;
     stepIndex: number;
-    context: AgentContext;
+    context: AgentRunInput;
   }): Promise<TaskExecutionResult>;
 }

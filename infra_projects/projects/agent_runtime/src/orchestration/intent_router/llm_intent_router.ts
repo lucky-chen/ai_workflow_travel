@@ -1,26 +1,19 @@
 import type { AgentSelectionInput } from "../types.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
-import type { RuntimeModelConfig } from "../../runtime/types.js";
-import { ensureSuccessfulModelResponse, tryParseJsonRecord } from "../agent_orchestration_helpers.js";
+import { ensureSuccessfulModelResponse, tryParseJsonRecord } from "../agent_parsing.js";
 import type { IntentRoutingLlm, IntentRoutingResult } from "./shared.js";
 import presets from "./intent_router_presets.json" with { type: "json" };
 
 export interface LlmIntentRouterOptions {
   modelFactory: ModelFactory;
-  resolveModelConfig: () => Promise<RuntimeModelConfig>;
 }
 
 export class LlmIntentRouter implements IntentRoutingLlm {
   constructor(private readonly options: LlmIntentRouterOptions) {}
 
   async resolve(input: AgentSelectionInput): Promise<IntentRoutingResult> {
-    const modelConfig = await this.options.resolveModelConfig();
-    const model = this.options.modelFactory.createModel({
-      mock: modelConfig.mock,
-      modeSelection: modelConfig.modeSelection ?? {},
-      mockInfo: modelConfig.mockInfo,
-    });
+    const model = await this.options.modelFactory.createDefaultModel();
     const request = buildIntentClassificationRequest(input);
     const response = await model.execute(request);
     ensureSuccessfulModelResponse(response);
@@ -43,7 +36,6 @@ function buildIntentClassificationRequest(input: AgentSelectionInput): ModuleReq
     userPrompt: {
       stage: "intent_router_llm",
       presetSchemas: presets.schemas,
-      sessionState: input.sessionState,
       userInput: input.userInput,
     },
     stream: false,

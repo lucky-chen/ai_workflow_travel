@@ -3,6 +3,7 @@ import { runContextFoundationSrcNewTests } from "./context-foundation-src-new.te
 import { runModelFoundationSrcNewTests } from "./model-foundation-src-new.test.js";
 import { runOrchestrationP1SrcNewTests } from "./orchestration-p1-src-new.test.js";
 import { runCapabilityObservabilityP1SrcNewTests } from "./capability-observability-p1-src-new.test.js";
+import { runAgentApiTests } from "./agent-api.test.js";
 import { runApplicationP1SrcNewTests } from "./application-p1-src-new.test.js";
 import { runRealProviderP1SrcNewTests } from "./real-provider-p1-src-new.test.js";
 import { runTerminalSessionCliSrcNewTests } from "./terminal-session-cli-src-new.test.js";
@@ -13,6 +14,7 @@ async function main(): Promise<void> {
   await runModelFoundationSrcNewTests();
   await runOrchestrationP1SrcNewTests();
   await runCapabilityObservabilityP1SrcNewTests();
+  await runAgentApiTests();
   await runApplicationP1SrcNewTests();
   await runRealProviderP1SrcNewTests();
   await runTerminalSessionCliSrcNewTests();

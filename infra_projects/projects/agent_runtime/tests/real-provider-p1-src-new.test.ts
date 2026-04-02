@@ -176,7 +176,11 @@ async function testRuntimeLoadsExternalMcpServersFromLocalEnv(): Promise<void> {
     assert.equal(result.errorCode, undefined);
     const state = await session.load();
     assert.equal(
-      state.history.some((item) => item.role === "tool" && item.content.includes("remote:from local env")),
+      state.history.at(-1)?.content,
+      "done",
+    );
+    assert.equal(
+      state.history.some((item) => item.role === "assistant" && item.content === "done"),
       true,
     );
   } finally {

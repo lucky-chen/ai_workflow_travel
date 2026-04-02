@@ -46,10 +46,10 @@ async function testChatPromptUsesUnifiedContract(): Promise<void> {
           respond: (prompt: Record<string, unknown>) => {
             assert.equal(prompt.stage, "chat");
             assert.equal(typeof prompt.question, "object");
-            assert.equal(typeof prompt.contextBasis, "object");
             assert.equal(typeof prompt.expectedSchema, "object");
-            assert.equal(typeof prompt.runtimeState, "object");
             assert.equal("tools" in prompt, false);
+            assert.equal("contextBasis" in prompt, false);
+            assert.equal("runtimeState" in prompt, false);
             return "chat result";
           },
         },
@@ -123,7 +123,7 @@ async function testDynamicModeSelectsReactForThoughtDrivenToolRequests(): Promis
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "react result");
-  assert.equal(state.history.some((item) => item.role === "tool"), true);
+  assert.equal(state.history.at(-1)?.content, "react result");
 }
 
 async function testDynamicModeSelectsPeoForSlashPlanCommand(): Promise<void> {
@@ -242,7 +242,7 @@ async function testReactDoesNotCallToolWithoutThoughtAction(): Promise<void> {
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "react direct answer");
-  assert.equal(state.history.some((item) => item.role === "tool"), false);
+  assert.equal(state.history.at(-1)?.content, "react direct answer");
 }
 
 async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void> {
@@ -259,10 +259,10 @@ async function testReactCanContinueToSecondStepBeforeCompletion(): Promise<void>
               && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 1
             ) {
               assert.equal(typeof prompt.question, "object");
-              assert.equal(typeof prompt.contextBasis, "object");
               assert.equal(typeof prompt.tools, "object");
               assert.equal(typeof prompt.expectedSchema, "object");
               assert.equal(typeof prompt.runtimeState, "object");
+              assert.equal("contextBasis" in prompt, false);
               return JSON.stringify({
                 thought: "Inspect first",
                 actionType: "respond",
@@ -383,7 +383,7 @@ async function testExplicitPeoModeRunsPlanDrivenToolPathWithTrace(): Promise<voi
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "peo observation");
-  assert.equal(state.history.some((item) => item.role === "tool"), true);
+  assert.equal(state.history.at(-1)?.content, "peo observation");
   assert.equal(briefs.includes("model.call.started"), true);
   assert.equal(briefs.includes("tool.call.started"), true);
   const peoPlanInput = peoPlanEvent?.details?.input as Record<string, unknown> | undefined;
@@ -425,7 +425,7 @@ async function testPeoDoesNotCallToolWithoutPlanAction(): Promise<void> {
 
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "peo direct answer");
-  assert.equal(state.history.some((item) => item.role === "tool"), false);
+  assert.equal(state.history.at(-1)?.content, "peo direct answer");
 }
 
 async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
@@ -444,7 +444,6 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
               const tools = prompt.tools as Record<string, unknown>;
               assert.equal(request?.responseFormat, "json");
               assert.equal(typeof prompt.question, "object");
-              assert.equal(typeof prompt.contextBasis, "object");
               assert.equal(typeof prompt.tools, "object");
               assert.deepEqual(tools.availableTools, [
                 {
@@ -471,6 +470,7 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
               ]);
               assert.equal(typeof prompt.expectedSchema, "object");
               assert.equal(typeof prompt.runtimeState, "object");
+              assert.equal("contextBasis" in prompt, false);
               return JSON.stringify({
                 planSummary: "Two-step peo flow",
                 tasks: [
@@ -494,8 +494,7 @@ async function testPeoCanContinueToSecondStepBeforeCompletion(): Promise<void> {
               prompt.stage === "peo_plan"
               && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
             ) {
-              const contextBasis = prompt.contextBasis as Record<string, unknown>;
-              assert.equal(Array.isArray(contextBasis.priorExecutionSummaries), true);
+              assert.equal(Array.isArray(prompt.priorExecutionSummaries), true);
               return JSON.stringify({
                 planSummary: "Second step: finish response",
                 tasks: [],
@@ -566,8 +565,9 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
               prompt.stage === "peo_plan"
               && (prompt.runtimeState as Record<string, unknown> | undefined)?.stepIndex === 2
             ) {
-              const contextBasis = prompt.contextBasis as Record<string, unknown>;
-              const priorExecutionSummaries = contextBasis.priorExecutionSummaries as unknown[];
+              const priorExecutionSummaries = Array.isArray(prompt.priorExecutionSummaries)
+                ? prompt.priorExecutionSummaries
+                : [];
               assert.equal(Array.isArray(priorExecutionSummaries), true);
               assert.equal(String(priorExecutionSummaries[0] ?? "").includes("task-1"), true);
               return JSON.stringify({
@@ -852,8 +852,8 @@ async function testRuntimeCallbackReceivesPeoTaskAndToolEvents(): Promise<void> 
   assert.equal(received.some((event) => (
     event.type === "tool"
     && event.toolMessage.event === "tool_started"
-    && event.toolMessage.agent.name === "peo"
-    && event.toolMessage.agent.content.step === "execution"
+    && event.toolMessage.agent.name === "react"
+    && event.toolMessage.agent.content.step === "action"
     && event.toolMessage.tool.toolName === "echo_hello"
   )), true);
   assert.equal(received.some((event) => event.type === "tool" && event.toolMessage.event === "tool_failed"), false);

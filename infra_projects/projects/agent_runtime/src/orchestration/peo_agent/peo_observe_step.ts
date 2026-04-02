@@ -1,4 +1,4 @@
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ObserveStepInput } from "./peo_types.js";
 
@@ -6,10 +6,10 @@ export class ObserveStep {
   constructor(private readonly eventBus: RuntimeEventBus) {}
 
   async run(
-    context: AgentContext,
+    agentInput: AgentRunInput,
     runId: string,
     stepIndex: number,
-    input: ObserveStepInput,
+    observeInput: ObserveStepInput,
   ): Promise<{
     summary: string;
     completed: boolean;
@@ -19,7 +19,6 @@ export class ObserveStep {
       type: "agent",
       agentMessage: {
         event: "step",
-        sessionId: context.runtimeContext?.sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
@@ -28,16 +27,16 @@ export class ObserveStep {
             step: "observation",
             stepIndex,
             input: {
-              planSummary: input.executionResult.planSummary,
-              taskExecutions: input.executionResult.taskExecutions,
-              finalAnswer: input.executionResult.finalAnswer,
+              planSummary: observeInput.executionResult.planSummary,
+              taskExecutions: observeInput.executionResult.taskExecutions,
+              finalAnswer: observeInput.executionResult.finalAnswer,
             },
           },
         },
       },
     });
     const checked = await this.check({
-      executionResult: input.executionResult,
+      executionResult: observeInput.executionResult,
     });
     return checked;
   }

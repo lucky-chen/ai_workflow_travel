@@ -1,7 +1,6 @@
-import type { FetchLike, RealLlmProvider } from "../model/types.js";
+import type { FetchLike, ModelConfig, RealLlmProvider } from "../model/types.js";
 import type {
   AgentSessionAccessInput,
-  AgentRunMode,
   ChatHistoryItem,
   SessionData,
   SessionResult,
@@ -11,7 +10,7 @@ import type { ContextBudgetLimits } from "../context/types.js";
 import type { ContextAssembler } from "../context/context-assembler.js";
 import type { SessionTranscript } from "../context/session-transcript.js";
 import type { RuntimeMemory } from "../context/runtime-memory.js";
-import type { AgentFactory, AgentRuntimeResult, IntentRouter } from "../orchestration/types.js";
+import type { AgentFactory, IntentRouter } from "../orchestration/types.js";
 import type { Metrics } from "../observability/metrics.js";
 import type { Trace } from "../observability/trace.js";
 import type { RunCheckpoint } from "./run-checkpoint.js";
@@ -19,18 +18,6 @@ import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 
 export interface RuntimeDependencies {
   storageRoot: string;
-}
-
-export interface RuntimeModelConfig {
-  mock: boolean;
-  modeSelection?: {
-    provider?: RealLlmProvider;
-    url?: string;
-    key?: string;
-    model?: string;
-    timeoutMs?: number;
-  };
-  mockInfo?: Record<string, unknown>;
 }
 
 export interface RealProviderConfig {
@@ -43,7 +30,7 @@ export interface RealProviderConfig {
 }
 
 export interface RuntimeSessionConfig extends Record<string, unknown> {
-  model?: RuntimeModelConfig;
+  model?: ModelConfig;
   runtimeLimits?: ContextBudgetLimits;
   allowedWorkingDirectories?: string[];
 }
@@ -51,6 +38,7 @@ export interface RuntimeSessionConfig extends Record<string, unknown> {
 export interface StoredSessionState {
   sessionId: string;
   title?: string;
+  systemPrompt?: string[];
   history: ChatHistoryItem[];
   config?: RuntimeSessionConfig;
   status: "active" | "closed";
@@ -70,7 +58,7 @@ export interface AgentSessionLike {
   close(): Promise<void>;
 }
 
-export interface RuntimeServices {
+export interface RuntimeComponents {
   storageRoot: string;
   contextAssembler: ContextAssembler;
   sessionTranscript: SessionTranscript;
@@ -81,11 +69,4 @@ export interface RuntimeServices {
   trace: Trace;
   eventBus: RuntimeEventBus;
   checkpoint: RunCheckpoint;
-  resolveDefaultModelConfig(): Promise<RuntimeModelConfig>;
-}
-
-export interface AgentSessionExecutionContext {
-  requestedMode: AgentRunMode;
-  result: AgentRuntimeResult;
-  sessionConfig?: RuntimeSessionConfig;
 }

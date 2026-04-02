@@ -1,7 +1,8 @@
-import type { AgentSelectionInput, IAgent, IntentRouter } from "../types.js";
+import type { AgentRunMode, IAgent } from "../../interface/agent-api.js";
+import type { AgentSelectionInput, IntentRouter } from "../types.js";
 
 export interface IntentRoutingResult {
-  mode: IAgent["pattern"];
+  mode: AgentRunMode;
   reasonCode: string;
 }
 

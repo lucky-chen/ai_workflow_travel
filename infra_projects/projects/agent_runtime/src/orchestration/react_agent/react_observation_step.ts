@@ -1,25 +1,21 @@
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
-import {
-  createContextBasis,
-  ensureSuccessfulModelResponse,
-  getRuntimeContext,
-  tryParseJsonRecord,
-} from "../agent_orchestration_helpers.js";
+import { ensureSuccessfulModelResponse, tryParseJsonRecord } from "../agent_parsing.js";
 
 export class ObservationStep {
   constructor(
     private readonly modelFactory: ModelFactory,
     private readonly eventBus: RuntimeEventBus,
+    private readonly sysPrompt: string[],
   ) {}
 
   async run(
-    context: AgentContext,
+    agentInput: AgentRunInput,
     runId: string,
     stepIndex: number,
-    input: {
+    observationInput: {
       thought: string;
       actionType: "tool" | "respond";
       actionObservations: string[];
@@ -33,18 +29,15 @@ export class ObservationStep {
     finalAnswer: string;
   }> {
     const request = {
-      systemPrompt: [
+      systemPrompt: this.sysPrompt.concat([
         "Return valid JSON only.",
         "Summarize the current observation and decide whether the run is complete.",
-      ],
+      ]),
       responseFormat: "json",
       userPrompt: {
         stage: "react_observation",
-        question: getRuntimeContext(context).userInput.content,
-        contextBasis: createContextBasis({
-          context,
-          priorObservation: input.priorObservation,
-        }),
+        question: agentInput.userInput,
+        priorObservation: observationInput.priorObservation,
         expectedSchema: {
           summary: "required string",
           completed: "required boolean",
@@ -54,9 +47,9 @@ export class ObservationStep {
           stepIndex,
         },
         action: {
-          thought: input.thought,
-          actionType: input.actionType,
-          actionObservations: input.actionObservations,
+          thought: observationInput.thought,
+          actionType: observationInput.actionType,
+          actionObservations: observationInput.actionObservations,
         },
       },
       stream: false,
@@ -65,7 +58,6 @@ export class ObservationStep {
       type: "agent",
       agentMessage: {
         event: "step",
-        sessionId: getRuntimeContext(context).sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
@@ -78,12 +70,12 @@ export class ObservationStep {
         },
       },
     });
-    const response = await this.executeModel(context, runId, stepIndex, request);
+    const response = await this.executeModel(agentInput, runId, stepIndex, request);
     const checked = await this.check({
       content: response.content,
-      observations: input.actionObservations,
-      shouldContinue: input.shouldContinue,
-      finalAnswer: input.finalAnswer,
+      observations: observationInput.actionObservations,
+      shouldContinue: observationInput.shouldContinue,
+      finalAnswer: observationInput.finalAnswer,
     });
     return checked;
   }
@@ -126,17 +118,12 @@ export class ObservationStep {
   }
 
   private async executeModel(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     stepIndex: number,
     request: ModuleRequest,
   ) {
-    const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
+    const model = await this.modelFactory.createDefaultModel();
     try {
       const response = await model.execute(request);
       ensureSuccessfulModelResponse(response);

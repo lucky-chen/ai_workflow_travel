@@ -1,32 +1,22 @@
 import { randomUUID } from "node:crypto";
 
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentRuntimeResult, IAgent } from "../types.js";
-import {
-  createContextBasis,
-  createAssistantTranscriptTurn as createAssistantTurn,
-  createUserTranscriptTurn as createUserTurn,
-  getRuntimeContext,
-} from "../agent_orchestration_helpers.js";
 
 class ChatPromptBuilder {
-  async buildPrompt(context: AgentContext): Promise<ModuleRequest> {
-    const runtimeContext = getRuntimeContext(context);
+  constructor(private readonly sysPrompt: string[]) {}
+
+  async buildPrompt(input: AgentRunInput): Promise<ModuleRequest> {
     return {
-      systemPrompt: [],
+      systemPrompt: this.sysPrompt,
       responseFormat: "text",
       userPrompt: {
         stage: "chat",
-        question: runtimeContext.userInput.content,
-        contextBasis: createContextBasis({ context }),
+        question: input.userInput,
         expectedSchema: {
           finalAnswer: "required string",
-        },
-        runtimeState: {
-          requestedMode: runtimeContext.requestedMode,
         },
       },
       stream: false,
@@ -57,7 +47,6 @@ class ChatResultChecker {
 }
 
 class ChatAgent implements IAgent {
-  readonly pattern = "chat" as const;
   private running = false;
 
   constructor(
@@ -71,16 +60,19 @@ class ChatAgent implements IAgent {
     return this.running;
   }
 
-  async run(context: AgentContext): Promise<AgentRuntimeResult> {
+  subscribeEvents(): void {}
+
+  unsubscribeEvents(): void {}
+
+  async run(input: AgentRunInput): Promise<AgentRunResult> {
     const runId = randomUUID();
     this.running = true;
     try {
-      const prompt = await this.promptBuilder.buildPrompt(context);
+      const prompt = await this.promptBuilder.buildPrompt(input);
       await this.eventBus.publish({
         type: "agent",
         agentMessage: {
           event: "step",
-          sessionId: getRuntimeContext(context).sessionId,
           traceId: runId,
           timestamp: new Date().toISOString(),
           agent: {
@@ -92,27 +84,22 @@ class ChatAgent implements IAgent {
           },
         },
       });
-      const response = await this.executeModel(context, runId, prompt);
+      const response = await this.executeModel(input, runId, prompt);
       const checked = await this.resultChecker.check(response);
-      return createChatSuccessResult(this.pattern, context, runId, checked);
+      return createChatSuccessResult("chat", input, runId, checked);
     } catch (error) {
-      return createChatFailureResult(this.pattern, context, runId, error);
+      return createChatFailureResult("chat", input, runId, error);
     } finally {
       this.running = false;
     }
   }
 
   private async executeModel(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     request: ModuleRequest,
   ): Promise<ModuleResponse> {
-    const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
+    const model = await this.modelFactory.createDefaultModel();
     try {
       return await model.execute(request);
     } catch (error) {
@@ -124,85 +111,39 @@ class ChatAgent implements IAgent {
 export function createChatAgent(input: {
   modelFactory: ModelFactory;
   eventBus: RuntimeEventBus;
+  sysPrompt: string[];
 }): IAgent {
   return new ChatAgent(
     input.modelFactory,
-    new ChatPromptBuilder(),
+    new ChatPromptBuilder(input.sysPrompt),
     new ChatResultChecker(),
     input.eventBus,
   );
 }
 
 function createChatSuccessResult(
-  pattern: IAgent["pattern"],
-  context: AgentContext,
+  _pattern: "chat",
+  _input: AgentRunInput,
   runId: string,
   checked: { data: string | Record<string, unknown>; format: "text" | "json" },
-): AgentRuntimeResult {
+): AgentRunResult {
   return {
-    traceId: runId,
-    content: checked,
-    agent: createAgentMetadata(pattern, context),
-    stateUpdate: {
-      transcriptAppend: [
-        createUserTranscriptTurn(context),
-        createAssistantTurn(checked.data),
-      ],
-      runtimeMemorySummaryItems: [
-        { summary: summarizeUserInput(getRuntimeContext(context).userInput.content) },
-      ],
-    },
-    executionFacts: {
-      toolCalls: 0,
-      failedToolCalls: 0,
-    },
+    content: checked.data,
+    format: checked.format,
   };
 }
 
 function createChatFailureResult(
-  pattern: IAgent["pattern"],
-  context: AgentContext,
+  _pattern: "chat",
+  _input: AgentRunInput,
   runId: string,
   error: unknown,
-): AgentRuntimeResult {
+): AgentRunResult {
   return {
-    traceId: runId,
+    format: "text",
     errorInfo: {
       code: "CHAT_AGENT_FAILED",
       message: error instanceof Error ? error.message : String(error),
     },
-    agent: createAgentMetadata(pattern, context),
-    stateUpdate: {
-      transcriptAppend: [createUserTranscriptTurn(context)],
-      runtimeMemorySummaryItems: [],
-    },
-    executionFacts: {
-      toolCalls: 0,
-      failedToolCalls: 0,
-    },
   };
-}
-
-function createAgentMetadata(pattern: IAgent["pattern"], context: AgentContext): AgentRuntimeResult["agent"] {
-  return {
-    prompt: {
-      system: [],
-      user: getRuntimeContext(context).userInput.content,
-    },
-    pattern,
-  };
-}
-
-function createUserTranscriptTurn(context: AgentContext): AgentRuntimeResult["stateUpdate"]["transcriptAppend"][number] {
-  return createUserTurn(context);
-}
-
-function summarizeUserInput(content: Record<string, unknown>): string {
-  if (typeof content.task === "string") {
-    return content.task;
-  }
-  if (typeof content.queryText === "string") {
-    return content.queryText;
-  }
-  return JSON.stringify(content);
 }

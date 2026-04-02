@@ -1,24 +1,16 @@
 import { randomUUID } from "node:crypto";
 
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
+import type { AgentRunMode } from "../../interface/api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentRuntimeResult, IAgent } from "../types.js";
-import {
-  asNumber,
-  createAssistantTranscriptTurn,
-  createBaseTranscript,
-  createToolTranscriptTurn,
-  getRequestedToolName,
-  getRuntimeContext,
-} from "../agent_orchestration_helpers.js";
+import { asNumber } from "../agent_parsing.js";
 import { ActionStep } from "./react_action_step.js";
 import { ObservationStep } from "./react_observation_step.js";
 import { REACT_MAX_STEPS, ThoughtStep } from "./react_thought_step.js";
 
 class ReActAgent implements IAgent {
-  readonly pattern = "react" as const;
   private running = false;
 
   constructor(
@@ -31,7 +23,11 @@ class ReActAgent implements IAgent {
     return this.running;
   }
 
-  async run(context: AgentContext): Promise<AgentRuntimeResult> {
+  subscribeEvents(): void {}
+
+  unsubscribeEvents(): void {}
+
+  async run(input: AgentRunInput): Promise<AgentRunResult> {
     const runId = randomUUID();
     this.running = true;
     let toolCalls = 0;
@@ -41,19 +37,13 @@ class ReActAgent implements IAgent {
       priorActionSummaries: string[];
     } = { priorActionSummaries: [] };
     try {
-      const transcriptAppend = createBaseTranscript(context);
       for (let stepIndex = 1; stepIndex <= REACT_MAX_STEPS; stepIndex += 1) {
-        const thought = await this.thoughtStep.run(context, runId, stepIndex, state);
-        const action = await this.actionStep.run(context, runId, stepIndex, thought);
+        const thought = await this.thoughtStep.run(input, runId, stepIndex, state);
+        const action = await this.actionStep.run(input, runId, stepIndex, thought);
         toolCalls += asNumber(action.toolCalls);
         failedToolCalls += asNumber(action.failedToolCalls);
-        if (thought.actionType === "tool" && action.actionObservations.length > 0) {
-          for (const actionObservation of action.actionObservations) {
-            transcriptAppend.push(createToolTranscriptTurn(actionObservation));
-          }
-        }
         state.priorActionSummaries.push(action.observation);
-        const observation = await this.observationStep.run(context, runId, stepIndex, {
+        const observation = await this.observationStep.run(input, runId, stepIndex, {
           thought: thought.thought,
           actionType: thought.actionType,
           actionObservations: action.actionObservations,
@@ -66,13 +56,12 @@ class ReActAgent implements IAgent {
           finalAnswer: observation.finalAnswer,
         };
         if (observation.completed) {
-          transcriptAppend.push(createAssistantTranscriptTurn(observation.finalAnswer));
-          return createReactSuccessResult(this.pattern, context, runId, observation.finalAnswer, transcriptAppend, toolCalls, failedToolCalls);
+          return createReactSuccessResult("react", input, runId, observation.finalAnswer, toolCalls, failedToolCalls);
         }
       }
-      return createReactMaxStepResult(this.pattern, context, runId, createBaseTranscript(context), toolCalls, failedToolCalls, state);
+      return createReactMaxStepResult("react", input, runId, toolCalls, failedToolCalls, state);
     } catch (error) {
-      return createReactFailureResult(this.pattern, context, runId, error, toolCalls, failedToolCalls);
+      return createReactFailureResult("react", input, runId, error, toolCalls, failedToolCalls);
     } finally {
       this.running = false;
     }
@@ -84,106 +73,61 @@ export function createReActAgent(input: {
   gateway: McpGateway;
   eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
+  sysPrompt: string[];
 }): IAgent {
   return new ReActAgent(
-    new ThoughtStep(input.modelFactory, input.eventBus, input.toolRegistry),
+    new ThoughtStep(input.modelFactory, input.eventBus, input.toolRegistry, input.sysPrompt),
     new ActionStep(input.gateway, input.toolRegistry, input.eventBus),
-    new ObservationStep(input.modelFactory, input.eventBus),
+    new ObservationStep(input.modelFactory, input.eventBus, input.sysPrompt),
   );
 }
 
 function createReactSuccessResult(
-  pattern: IAgent["pattern"],
-  context: AgentContext,
-  runId: string,
+  _pattern: AgentRunMode,
+  _input: AgentRunInput,
+  _runId: string,
   content: string,
-  transcriptAppend: AgentRuntimeResult["stateUpdate"]["transcriptAppend"],
-  toolCalls: number,
-  failedToolCalls: number,
-): AgentRuntimeResult {
+  _toolCalls: number,
+  _failedToolCalls: number,
+): AgentRunResult {
   return {
-    traceId: runId,
-    content: {
-      data: content,
-      format: "text",
-    },
-    agent: createAgentMetadata(pattern, context),
-    stateUpdate: {
-      transcriptAppend,
-      runtimeMemorySummaryItems: [
-        { summary: `react:${getRequestedToolName(context) ?? "no-tool"}` },
-      ],
-    },
-    executionFacts: {
-      toolCalls,
-      failedToolCalls,
-    },
+    content,
+    format: "text",
   };
 }
 
 function createReactFailureResult(
-  pattern: IAgent["pattern"],
-  context: AgentContext,
-  runId: string,
+  _pattern: AgentRunMode,
+  _input: AgentRunInput,
+  _runId: string,
   error: unknown,
-  toolCalls: number,
-  failedToolCalls: number,
-): AgentRuntimeResult {
+  _toolCalls: number,
+  _failedToolCalls: number,
+): AgentRunResult {
   return {
-    traceId: runId,
+    format: "text",
     errorInfo: {
       code: "REACT_AGENT_FAILED",
       message: error instanceof Error ? error.message : String(error),
-    },
-    agent: createAgentMetadata(pattern, context),
-    stateUpdate: {
-      transcriptAppend: createBaseTranscript(context),
-      runtimeMemorySummaryItems: [],
-    },
-    executionFacts: {
-      toolCalls,
-      failedToolCalls,
     },
   };
 }
 
 function createReactMaxStepResult(
-  pattern: IAgent["pattern"],
-  context: AgentContext,
-  runId: string,
-  transcriptAppend: AgentRuntimeResult["stateUpdate"]["transcriptAppend"],
-  toolCalls: number,
-  failedToolCalls: number,
+  _pattern: AgentRunMode,
+  _input: AgentRunInput,
+  _runId: string,
+  _toolCalls: number,
+  _failedToolCalls: number,
   state: {
     lastObservation?: { summary: string; finalAnswer?: string };
   },
-): AgentRuntimeResult {
+): AgentRunResult {
   return {
-    traceId: runId,
+    format: "text",
     errorInfo: {
       code: "REACT_AGENT_MAX_STEPS",
       message: "ReAct agent stopped after reaching the max step limit.",
     },
-    agent: createAgentMetadata(pattern, context),
-    stateUpdate: {
-      transcriptAppend,
-      runtimeMemorySummaryItems: state.lastObservation?.summary
-        ? [{ summary: `react:${state.lastObservation.summary.slice(0, 64)}` }]
-        : [],
-    },
-    executionFacts: {
-      toolCalls,
-      failedToolCalls,
-    },
-  };
-}
-
-function createAgentMetadata(pattern: IAgent["pattern"], context: AgentContext): AgentRuntimeResult["agent"] {
-  return {
-    prompt: {
-      system: [],
-      user: getRuntimeContext(context).userInput.content,
-    },
-    pattern,
   };
 }

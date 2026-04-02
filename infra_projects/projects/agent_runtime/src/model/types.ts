@@ -1,5 +1,11 @@
 export type RealLlmProvider = "openai" | "deepseek";
 
+export interface ModelConfig {
+  mock: boolean;
+  modeSelection?: ModeSelection;
+  mockInfo?: Record<string, unknown>;
+}
+
 export interface ModelCreationInput {
   mock: boolean;
   modeSelection: ModeSelection;

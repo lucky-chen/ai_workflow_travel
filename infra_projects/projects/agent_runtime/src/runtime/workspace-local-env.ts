@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
-import type { RealProviderConfig, RuntimeModelConfig } from "./types.js";
+import type { RealProviderConfig } from "./types.js";
+import type { ModelConfig } from "../model/types.js";
 
 interface WorkspaceLocalEnvConfig {
   llm?: {
@@ -105,7 +106,7 @@ export class WorkspaceLocalEnv {
   }
 }
 
-export function toRuntimeModelConfig(config: RealProviderConfig): RuntimeModelConfig {
+export function toRuntimeModelConfig(config: RealProviderConfig): ModelConfig {
   return {
     mock: false,
     modeSelection: {

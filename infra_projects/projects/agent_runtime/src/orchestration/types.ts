@@ -1,64 +1,20 @@
-import type { AgentRunMode, UserInput } from "../interface/api.js";
-import type { AgentContext, MemorySummaryItem, TranscriptTurn } from "../context/types.js";
+import type { ModelConfig } from "../model/types.js";
+import type { IAgent, AgentRunMode, AgentRunResult } from "../interface/agent-api.js";
+import type { UserInput } from "../interface/api.js";
 
 export interface AgentFactory {
-  create(mode: AgentRunMode): Promise<IAgent>;
+  create(mode: AgentRunMode, options?: { modelConfig?: ModelConfig }): Promise<IAgent>;
 }
 
 export interface IntentRouter {
   resolve(input: AgentSelectionInput): Promise<{
-    mode: IAgent["pattern"];
+    mode: AgentRunMode;
     reasonCode: string;
   }>;
 }
 
-export interface IAgent {
-  readonly pattern: "chat" | "react" | "peo";
-  isRunning(): boolean;
-  run(context: AgentContext): Promise<AgentRuntimeResult>;
-}
-
-export interface AgentRuntimeResult {
-  traceId?: string;
-  content?: {
-    data: string | Record<string, unknown>;
-    format: "text" | "json";
-  };
-  errorInfo?: {
-    code: string;
-    message: string;
-  };
-  agent: {
-    prompt: {
-      system: string[];
-      user: Record<string, unknown>;
-    };
-    pattern: "chat" | "react" | "peo";
-    tokenUsage?: {
-      inputTokens: number;
-      outputTokens: number;
-      totalTokens: number;
-    };
-  };
-  stateUpdate: {
-    transcriptAppend: TranscriptTurn[];
-    runtimeMemorySummaryItems: MemorySummaryItem[];
-  };
-  executionFacts?: {
-    toolCalls: number;
-    failedToolCalls: number;
-  };
-}
-
 export interface AgentSelectionInput {
   userInput: UserInput;
-  sessionState: AgentSessionState;
-}
-
-export interface AgentSessionState {
-  sessionId: string;
-  transcriptTurnCount: number;
-  hasToolHistory: boolean;
 }
 
 export interface DelegationInput {

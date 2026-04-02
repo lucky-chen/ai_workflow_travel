@@ -4,7 +4,7 @@ import type { RetrievalProvider } from "./retrieval-provider.js";
 import type { RuntimeMemory } from "./runtime-memory.js";
 import type { SessionTranscript } from "./session-transcript.js";
 import type {
-  AgentContext,
+  AssembledContext,
   ContextAssemblyInput,
   ContextView,
 } from "./types.js";
@@ -17,7 +17,7 @@ export class ContextAssembler {
     private readonly contextBudgetPolicy: ContextBudgetPolicy = new ContextBudgetPolicy(),
   ) {}
 
-  async assemble(input: ContextAssemblyInput): Promise<AgentContext> {
+  async assemble(input: ContextAssemblyInput): Promise<AssembledContext> {
     const transcriptContext = await this.sessionTranscript.load(input.sessionId);
     const runtimeMemoryContext = await this.runtimeMemory.load(input.sessionId);
     const retrievalContext = await this.loadRetrievalContext(input.userInput, input.sessionId);

@@ -1,16 +1,14 @@
 import type { McpToolRegistry } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import {
-  createContextBasis,
   ensureSuccessfulModelResponse,
-  getRuntimeContext,
   isRecord,
   summarizeToolDefinitions,
   tryParseJsonRecord,
-} from "../agent_orchestration_helpers.js";
+} from "../agent_parsing.js";
 import type { PlanStepResult, PlanTask } from "./peo_types.js";
 
 export const PEO_STAGE_COUNT = 3;
@@ -20,10 +18,11 @@ export class PlanStep {
     private readonly modelFactory: ModelFactory,
     private readonly eventBus: RuntimeEventBus,
     private readonly toolRegistry: McpToolRegistry,
+    private readonly sysPrompt: string[],
   ) {}
 
   async run(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     stepIndex: number,
     state: {
@@ -31,12 +30,11 @@ export class PlanStep {
       priorExecutionSummaries: string[];
     },
   ): Promise<PlanStepResult> {
-    const request = await this.buildPrompt(context, stepIndex, state);
+    const request = await this.buildPrompt(input, stepIndex, state);
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {
         event: "step",
-        sessionId: getRuntimeContext(context).sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
@@ -49,23 +47,22 @@ export class PlanStep {
         },
       },
     });
-    const response = await this.executeModel(context, runId, stepIndex, request);
+    const response = await this.executeModel(input, runId, stepIndex, request);
     const checked = await this.check({ content: response.content });
     return checked;
   }
 
   private async buildPrompt(
-    context: AgentContext,
+    input: AgentRunInput,
     stepIndex: number,
     state: {
       lastObservation?: { summary: string; finalAnswer?: string };
       priorExecutionSummaries: string[];
     },
   ): Promise<ModuleRequest> {
-    const runtimeContext = getRuntimeContext(context);
     const toolDefinitions = await this.toolRegistry.listToolDefinitions();
     return {
-      systemPrompt: [
+      systemPrompt: this.sysPrompt.concat([
         "You are the plan stage inside the PEO agent.",
         "Return valid JSON only.",
         "Return one plan result object only.",
@@ -73,16 +70,13 @@ export class PlanStep {
         "Set task type to react when the task requires tool-oriented sub-problem solving.",
         "Set task type to direct when the task is bounded direct work without a tool loop.",
         "Do not add fields outside the contract.",
-      ],
+      ]),
       responseFormat: "json",
       userPrompt: {
         stage: "peo_plan",
-        question: runtimeContext.userInput.content,
-        contextBasis: createContextBasis({
-          context,
-          priorObservation: state.lastObservation?.summary,
-          priorExecutionSummaries: state.priorExecutionSummaries,
-        }),
+        question: input.userInput,
+        priorObservation: state.lastObservation?.summary,
+        priorExecutionSummaries: state.priorExecutionSummaries,
         tools: {
           availableTools: summarizeToolDefinitions(toolDefinitions),
           taskTypeRules: [
@@ -138,17 +132,12 @@ export class PlanStep {
   }
 
   private async executeModel(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     stepIndex: number,
     request: ModuleRequest,
   ) {
-    const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
+    const model = await this.modelFactory.createDefaultModel();
     try {
       const response = await model.execute(request);
       ensureSuccessfulModelResponse(response);

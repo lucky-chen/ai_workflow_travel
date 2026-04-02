@@ -1,58 +1,5 @@
-import type { AgentContext, TranscriptTurn } from "../context/types.js";
-import type { ModuleResponse } from "../model/types.js";
-import type { AgentRuntimeResult } from "./types.js";
 import type { ToolDefinition } from "../capability/types.js";
-
-export type RuntimeBoundAgentContext = AgentContext & {
-  runtimeContext: NonNullable<AgentContext["runtimeContext"]>;
-};
-
-export function requireRuntimeBoundContext(context: AgentContext): RuntimeBoundAgentContext {
-  if (!context.runtimeContext) {
-    throw new Error("Agent runtime context is missing.");
-  }
-  return context as RuntimeBoundAgentContext;
-}
-
-export function getRuntimeContext(context: AgentContext): RuntimeBoundAgentContext["runtimeContext"] {
-  return requireRuntimeBoundContext(context).runtimeContext;
-}
-
-export function createUserTranscriptTurn(
-  context: AgentContext,
-): AgentRuntimeResult["stateUpdate"]["transcriptAppend"][number] {
-  return {
-    role: "user",
-    content: stringifyContent(getRuntimeContext(context).userInput.content),
-    timestamp: new Date().toISOString(),
-  };
-}
-
-export function createBaseTranscript(
-  context: AgentContext,
-): AgentRuntimeResult["stateUpdate"]["transcriptAppend"] {
-  return [createUserTranscriptTurn(context)];
-}
-
-export function createToolTranscriptTurn(
-  content: string,
-): AgentRuntimeResult["stateUpdate"]["transcriptAppend"][number] {
-  return {
-    role: "tool",
-    content,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-export function createAssistantTranscriptTurn(
-  content: string | Record<string, unknown>,
-): AgentRuntimeResult["stateUpdate"]["transcriptAppend"][number] {
-  return {
-    role: "assistant",
-    content: stringifyContent(content),
-    timestamp: new Date().toISOString(),
-  };
-}
+import type { ModuleResponse } from "../model/types.js";
 
 export function ensureSuccessfulModelResponse(response: ModuleResponse): void {
   if (response.error.code) {
@@ -93,20 +40,6 @@ export function matchAvailableToolName(content: string, availableTools: string[]
   return undefined;
 }
 
-export function stringifyContent(content: string | Record<string, unknown>): string {
-  return typeof content === "string" ? content : JSON.stringify(content);
-}
-
-export function getRequestedToolName(context: AgentContext): string | undefined {
-  return typeof getRuntimeContext(context).userInput.content.toolName === "string"
-    ? String(getRuntimeContext(context).userInput.content.toolName)
-    : undefined;
-}
-
-export function cloneTranscriptTurns(turns: TranscriptTurn[]): TranscriptTurn[] {
-  return turns.map((turn) => ({ ...turn }));
-}
-
 export function summarizeToolDefinitions(toolDefinitions: ToolDefinition[]): Array<Record<string, unknown>> {
   return toolDefinitions.map((tool) => ({
     name: tool.name,
@@ -114,23 +47,6 @@ export function summarizeToolDefinitions(toolDefinitions: ToolDefinition[]): Arr
     inputSchema: summarizeSchema(tool.inputSchema),
     outputSchema: summarizeSchema(tool.outputSchema),
   }));
-}
-
-export function createContextBasis(input: {
-  context: AgentContext;
-  priorObservation?: string;
-  priorActionSummaries?: string[];
-  priorExecutionSummaries?: string[];
-}): Record<string, unknown> {
-  const activeContext = input.context.boundedContext ?? input.context.originalContext;
-  return omitUndefined({
-    transcript: activeContext.transcriptContext.turns,
-    memory: activeContext.runtimeMemoryContext.summaryItems,
-    retrieval: activeContext.retrievalContext?.fragments ?? [],
-    priorObservation: input.priorObservation,
-    priorActionSummaries: input.priorActionSummaries,
-    priorExecutionSummaries: input.priorExecutionSummaries,
-  });
 }
 
 export function createToolUsageRules(

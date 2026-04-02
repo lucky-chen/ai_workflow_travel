@@ -1,6 +1,4 @@
-import type { AgentContext } from "../../context/types.js";
-import type { IAgent } from "../types.js";
-import { getRuntimeContext } from "../agent_orchestration_helpers.js";
+import type { AgentRunInput, IAgent } from "../../interface/agent-api.js";
 import type { ITaskExecutor, PlanStepResult, PlanTask, TaskExecutionResult } from "./peo_types.js";
 
 export class DirectTaskExecutor implements ITaskExecutor {
@@ -8,7 +6,7 @@ export class DirectTaskExecutor implements ITaskExecutor {
     plan: PlanStepResult;
     task: PlanTask;
     stepIndex: number;
-    context: AgentContext;
+    context: AgentRunInput;
   }): Promise<TaskExecutionResult> {
     return {
       taskId: input.task.taskId,
@@ -29,7 +27,7 @@ export class ReactTaskExecutor implements ITaskExecutor {
     plan: PlanStepResult;
     task: PlanTask;
     stepIndex: number;
-    context: AgentContext;
+    context: AgentRunInput;
   }): Promise<TaskExecutionResult> {
     const result = await this.reactAgent.run(
       createTaskExecutionContext(input.context, input.plan, input.task, input.stepIndex),
@@ -38,59 +36,35 @@ export class ReactTaskExecutor implements ITaskExecutor {
       return {
         taskId: input.task.taskId,
         taskStatus: "failed",
-        output: result.errorInfo.message,
-        error: result.errorInfo,
-        executionFacts: result.executionFacts,
+        output: result.errorInfo.message ?? "Agent execution failed.",
+        error: {
+          code: result.errorInfo.code,
+          message: result.errorInfo.message ?? "Agent execution failed.",
+        },
       };
     }
     return {
       taskId: input.task.taskId,
       taskStatus: "completed",
-      output: typeof result.content?.data === "string"
-        ? result.content.data
-        : JSON.stringify(result.content?.data ?? {}),
-      executionFacts: result.executionFacts,
+      output: typeof result.content === "string"
+        ? result.content
+        : JSON.stringify(result.content ?? {}),
     };
   }
 }
 
 function createTaskExecutionContext(
-  context: AgentContext,
+  input: AgentRunInput,
   plan: PlanStepResult,
   task: PlanTask,
   stepIndex: number,
-): AgentContext {
-  const runtimeContext = getRuntimeContext(context);
+): AgentRunInput {
   return {
-    ...context,
-    runtimeContext: {
-      ...runtimeContext,
-      requestedMode: "react",
-      userInput: {
-        ...runtimeContext.userInput,
-        content: {
-          task: task.description,
-          planSummary: plan.planSummary,
-          taskId: task.taskId,
-          taskType: task.type,
-        },
-      },
-      eventAgentOverride: {
-        name: "peo",
-        content: {
-          step: "execution",
-          stepIndex,
-          input: {
-            planSummary: plan.planSummary,
-            task: {
-              taskId: task.taskId,
-              description: task.description,
-              type: task.type,
-            },
-            taskCount: plan.tasks.length,
-          },
-        },
-      },
+    userInput: {
+      task: task.description,
+      planSummary: plan.planSummary,
+      taskId: task.taskId,
+      taskType: task.type,
     },
   };
 }

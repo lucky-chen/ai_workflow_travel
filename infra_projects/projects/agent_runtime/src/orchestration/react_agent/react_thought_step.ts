@@ -1,17 +1,15 @@
 import type { McpToolRegistry, ToolCall } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentContext } from "../../context/types.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import {
-  createContextBasis,
   createToolUsageRules,
   ensureSuccessfulModelResponse,
-  getRuntimeContext,
   isRecord,
   summarizeToolDefinitions,
   tryParseJsonRecord,
-} from "../agent_orchestration_helpers.js";
+} from "../agent_parsing.js";
 
 export const REACT_MAX_STEPS = 2;
 
@@ -20,10 +18,11 @@ export class ThoughtStep {
     private readonly modelFactory: ModelFactory,
     private readonly eventBus: RuntimeEventBus,
     private readonly toolRegistry: McpToolRegistry,
+    private readonly sysPrompt: string[],
   ) {}
 
   async run(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     stepIndex: number,
     state: {
@@ -37,12 +36,11 @@ export class ThoughtStep {
     shouldContinue: boolean;
     finalAnswer?: string;
   }> {
-    const request = await this.buildPrompt(context, stepIndex, state);
+    const request = await this.buildPrompt(input, stepIndex, state);
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {
         event: "step",
-        sessionId: getRuntimeContext(context).sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
@@ -55,7 +53,7 @@ export class ThoughtStep {
         },
       },
     });
-    const response = await this.executeModel(context, runId, stepIndex, request);
+    const response = await this.executeModel(input, runId, stepIndex, request);
     const checked = await this.check({
       content: response.content,
       availableTools: isRecord(request.userPrompt.tools) && Array.isArray(request.userPrompt.tools.availableTools)
@@ -68,30 +66,26 @@ export class ThoughtStep {
   }
 
   private async buildPrompt(
-    context: AgentContext,
+    input: AgentRunInput,
     stepIndex: number,
     state: {
       lastObservation?: { summary: string; finalAnswer?: string };
       priorActionSummaries: string[];
     },
   ): Promise<ModuleRequest> {
-    const runtimeContext = getRuntimeContext(context);
     const toolDefinitions = await this.toolRegistry.listToolDefinitions();
     return {
-      systemPrompt: [
+      systemPrompt: this.sysPrompt.concat([
         "Return valid JSON only.",
         "Decide whether the next action is a tool call or a direct response.",
         "Do not output a tool call with missing required arguments.",
-      ],
+      ]),
       responseFormat: "json",
       userPrompt: {
         stage: "react_thought",
-        question: runtimeContext.userInput.content,
-        contextBasis: createContextBasis({
-          context,
-          priorObservation: state.lastObservation?.summary,
-          priorActionSummaries: state.priorActionSummaries,
-        }),
+        question: input.userInput,
+        priorObservation: state.lastObservation?.summary,
+        priorActionSummaries: state.priorActionSummaries,
         tools: {
           availableTools: summarizeToolDefinitions(toolDefinitions),
           toolUsageRules: createToolUsageRules("react"),
@@ -145,17 +139,12 @@ export class ThoughtStep {
   }
 
   private async executeModel(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     stepIndex: number,
     request: ModuleRequest,
   ) {
-    const runtimeContext = getRuntimeContext(context);
-    const model = this.modelFactory.createModel({
-      mock: runtimeContext.modelConfig?.mock ?? true,
-      modeSelection: runtimeContext.modelConfig?.modeSelection ?? {},
-      mockInfo: runtimeContext.modelConfig?.mockInfo,
-    });
+    const model = await this.modelFactory.createDefaultModel();
     try {
       const response = await model.execute(request);
       ensureSuccessfulModelResponse(response);

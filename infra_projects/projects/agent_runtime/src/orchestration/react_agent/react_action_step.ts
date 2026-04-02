@@ -1,7 +1,6 @@
 import type { McpGateway, McpToolRegistry, ToolCall } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentContext } from "../../context/types.js";
-import { getRuntimeContext } from "../agent_orchestration_helpers.js";
+import type { AgentRunInput } from "../../interface/agent-api.js";
 import { validateToolCallArguments } from "../tool_call_argument_validator.js";
 
 export class ActionStep {
@@ -12,7 +11,7 @@ export class ActionStep {
   ) {}
 
   async run(
-    context: AgentContext,
+    input: AgentRunInput,
     runId: string,
     stepIndex: number,
     thought: {
@@ -40,12 +39,10 @@ export class ActionStep {
         failedToolCalls: 0,
       };
     }
-    const runtimeContext = getRuntimeContext(context);
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {
         event: "step",
-        sessionId: runtimeContext.sessionId,
         traceId: runId,
         timestamp: new Date().toISOString(),
         agent: {
@@ -81,7 +78,7 @@ export class ActionStep {
         toolCallId: `${runId}:react:${stepIndex}:${index + 1}:${toolCall.name}`,
         toolName: toolCall.name,
         arguments: toolCall.arguments,
-        eventAgent: runtimeContext.eventAgentOverride ?? {
+        eventAgent: {
           name: "react",
           content: {
             step: "action",
