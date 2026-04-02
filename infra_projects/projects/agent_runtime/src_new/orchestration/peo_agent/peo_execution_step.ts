@@ -30,7 +30,11 @@ export class ExecutionStep {
             stepIndex,
             input: {
               planSummary: plan.planSummary,
-              tasks,
+              tasks: tasks.map((task) => ({
+                taskId: task.taskId,
+                description: task.description,
+                type: task.type,
+              })),
               finalAnswer: plan.finalAnswer,
             },
           },

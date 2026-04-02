@@ -1,9 +1,8 @@
-import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
+import type { McpGateway, McpToolRegistry, ToolCall } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentContext } from "../../context/types.js";
 import { getRuntimeContext } from "../agent_orchestration_helpers.js";
 import { validateToolCallArguments } from "../tool_call_argument_validator.js";
-import type { ReactToolCall } from "./react_thought_step.js";
 
 export class ActionStep {
   constructor(
@@ -19,7 +18,7 @@ export class ActionStep {
     thought: {
       thought: string;
       actionType: "tool" | "respond";
-      toolCalls?: ReactToolCall[];
+      toolCalls?: ToolCall[];
       shouldContinue: boolean;
       finalAnswer?: string;
     },
@@ -55,11 +54,10 @@ export class ActionStep {
             step: "action",
             stepIndex,
             input: {
-              thought: thought.thought,
               actionType: thought.actionType,
-              toolCalls: thought.toolCalls,
-              shouldContinue: thought.shouldContinue,
-              finalAnswer: thought.finalAnswer,
+              toolCalls: thought.toolCalls.map((toolCall) => ({
+                name: toolCall.name,
+              })),
             },
           },
         },
@@ -72,16 +70,16 @@ export class ActionStep {
       const toolCall = thought.toolCalls[index];
       const validation = await validateToolCallArguments({
         toolRegistry: this.toolRegistry,
-        toolName: toolCall.toolName,
+        toolName: toolCall.name,
         arguments: toolCall.arguments,
       });
       if (!validation.valid) {
-        observations.push(`Tool argument validation failed for ${toolCall.toolName}: ${validation.errors.join(" ")}`);
+        observations.push(`Tool argument validation failed for ${toolCall.name}: ${validation.errors.join(" ")}`);
         continue;
       }
       const result = await this.gateway.call({
-        toolCallId: `${runId}:react:${stepIndex}:${index + 1}:${toolCall.toolName}`,
-        toolName: toolCall.toolName,
+        toolCallId: `${runId}:react:${stepIndex}:${index + 1}:${toolCall.name}`,
+        toolName: toolCall.name,
         arguments: toolCall.arguments,
         eventAgent: runtimeContext.eventAgentOverride ?? {
           name: "react",
@@ -89,7 +87,7 @@ export class ActionStep {
             step: "action",
             stepIndex,
             input: {
-              toolCalls: thought.toolCalls,
+              toolCalls: thought.toolCalls.map((entry) => ({ name: entry.name })),
             },
           },
         },

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { Storage } from "../data/storage.js";
+import { RunCheckpointRecorder } from "./run-checkpoint-recorder.js";
 
 export interface RunCheckpoint {
   capture(input: RunCheckpointInput): Promise<RunCheckpointState>;
@@ -27,19 +28,8 @@ export interface RunRecoveryMetadata {
   reasonCode?: string;
 }
 
-export class RunCheckpoint implements RunCheckpoint {
-  constructor(private readonly _storage: Storage) {}
-
-  async capture(input: RunCheckpointInput): Promise<RunCheckpointState> {
-    return {
-      ...input,
-      recoveryMetadata: {
-        ...input.recoveryMetadata,
-        enabled: false,
-        reasonCode: "RUN_CHECKPOINT_NOT_ENABLED",
-      },
-    };
-  }
+export function createRunCheckpoint(storage: Storage): RunCheckpoint {
+  return new RunCheckpointRecorder(storage);
 }
 
 export function createRecoveryMetadata(): RunRecoveryMetadata {

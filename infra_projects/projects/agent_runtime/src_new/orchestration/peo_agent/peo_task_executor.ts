@@ -82,7 +82,11 @@ function createTaskExecutionContext(
           stepIndex,
           input: {
             planSummary: plan.planSummary,
-            task,
+            task: {
+              taskId: task.taskId,
+              description: task.description,
+              type: task.type,
+            },
             taskCount: plan.tasks.length,
           },
         },

@@ -1,4 +1,4 @@
-import type { McpToolRegistry } from "../../capability/types.js";
+import type { McpToolRegistry, ToolCall } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentContext } from "../../context/types.js";
 import type { ModelFactory } from "../../model/model-factory.js";
@@ -14,10 +14,6 @@ import {
 } from "../agent_orchestration_helpers.js";
 
 export const REACT_MAX_STEPS = 2;
-export interface ReactToolCall {
-  toolName: string;
-  arguments: Record<string, unknown>;
-}
 
 export class ThoughtStep {
   constructor(
@@ -37,7 +33,7 @@ export class ThoughtStep {
   ): Promise<{
     thought: string;
     actionType: "tool" | "respond";
-    toolCalls?: ReactToolCall[];
+    toolCalls?: ToolCall[];
     shouldContinue: boolean;
     finalAnswer?: string;
   }> {
@@ -117,7 +113,7 @@ export class ThoughtStep {
   private async check(thought: Record<string, unknown>): Promise<{
     thought: string;
     actionType: "tool" | "respond";
-    toolCalls?: ReactToolCall[];
+    toolCalls?: ToolCall[];
     shouldContinue: boolean;
     finalAnswer?: string;
   }> {
@@ -132,7 +128,7 @@ export class ThoughtStep {
     const toolCalls = Array.isArray(parsed?.toolCalls)
       ? parsed.toolCalls
         .map((value) => normalizeToolCall(value))
-        .filter((value): value is ReactToolCall => Boolean(value))
+        .filter((value): value is ToolCall => Boolean(value))
       : [];
     const actionType = parsed?.actionType === "tool" || parsed?.actionType === "respond"
       ? parsed.actionType
@@ -170,16 +166,14 @@ export class ThoughtStep {
   }
 }
 
-function normalizeToolCall(value: unknown): ReactToolCall | undefined {
-  if (!isRecord(value) || typeof value.toolName !== "string") {
+function normalizeToolCall(value: unknown): ToolCall | undefined {
+  if (!isRecord(value) || typeof value.name !== "string") {
     return undefined;
   }
   return {
-    toolName: value.toolName,
+    name: value.name,
     arguments: isRecord(value.arguments)
       ? value.arguments
-      : isRecord(value.actionPayload)
-        ? value.actionPayload
-        : {},
+      : {},
   };
 }
