@@ -1,7 +1,6 @@
 import type { AgentEvent, AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import { BaseAgent } from "../base_agent.js";
 
 class ChatPromptBuilder {
@@ -50,7 +49,6 @@ class ChatAgent extends BaseAgent {
     private readonly modelFactory: ModelFactory,
     private readonly promptBuilder: ChatPromptBuilder,
     private readonly resultChecker: ChatResultChecker,
-    private readonly eventBus: RuntimeEventBus,
   ) {
     super("chat");
   }
@@ -59,21 +57,6 @@ class ChatAgent extends BaseAgent {
     try {
       const prompt = await this.promptBuilder.buildPrompt(input);
       await this.publish(createAgentInputEvent(runId, prompt.userPrompt));
-      await this.eventBus.publish({
-        type: "agent",
-        agentMessage: {
-          event: "step",
-          traceId: runId,
-          timestamp: new Date().toISOString(),
-          agent: {
-            name: "chat",
-            content: {
-              step: "chat",
-              input: prompt.userPrompt,
-            },
-          },
-        },
-      });
       const response = await this.executeModel(input, runId, prompt);
       const checked = await this.resultChecker.check(response);
       return createChatSuccessResult("chat", input, runId, checked);
@@ -98,14 +81,12 @@ class ChatAgent extends BaseAgent {
 
 export function createChatAgent(input: {
   modelFactory: ModelFactory;
-  eventBus: RuntimeEventBus;
   sysPrompt: string[];
 }): IAgent {
   return new ChatAgent(
     input.modelFactory,
     new ChatPromptBuilder(input.sysPrompt),
     new ChatResultChecker(),
-    input.eventBus,
   );
 }
 

@@ -1,9 +1,9 @@
 import { BaseModel } from "./base-model.js";
-import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import type { StreamingEventAdapter } from "./streaming-event-adapter.js";
 import type {
   FetchLike,
   IModel,
+  ModelTraceWriter,
   ModeSelection,
   ModuleRequest,
   ModuleResponse,
@@ -32,9 +32,9 @@ export class DeepSeekModel extends BaseModel implements IModel {
     private readonly modeSelection: ModeSelection,
     private readonly fetchFn: FetchLike,
     private readonly streamingAdapter: StreamingEventAdapter,
-    eventBus?: RuntimeEventBus,
+    trace?: ModelTraceWriter,
   ) {
-    super(eventBus);
+    super(trace);
   }
 
   protected override async executeCore(input: ModuleRequest): Promise<ModuleResponse> {

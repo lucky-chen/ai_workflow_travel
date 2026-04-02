@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime, type SessionApi, type RuntimeEvent, type RuntimeEventListener } from "../src/index.js";
+import { createRuntime, type SessionApi, type SessionEvent, type SessionEventListener } from "../src/index.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runRuntimeFoundationSrcNewTests(): Promise<void> {
   await testRuntimeExposesStableApi();
   await testCreateSessionReturnsStableSessionHandle();
   await testRuntimeSubscriptionReceivesSessionLifecycleEvents();
-  await testRuntimeSubscriptionReceivesChatStepInput();
+  await testRuntimeSubscriptionReceivesSessionRunEvents();
   await testRuntimeSubscriptionDeduplicatesAndUnsubscribes();
   await testRuntimeSubscriptionSelfUnsubscribeDoesNotBreakPublish();
   await testOpenSessionReloadsPersistedSession();
@@ -23,16 +23,9 @@ async function testRuntimeSubscriptionReceivesSessionLifecycleEvents(): Promise<
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-lifecycle-");
   const received: string[] = [];
   const runtime = createRuntime({ workdir });
-  const listener: RuntimeEventListener = {
+  const listener: SessionEventListener = {
     onEvent(event) {
-      const eventName = event.type === "runtime"
-        ? event.runtimeMessage.event
-        : event.type === "agent"
-          ? event.agentMessage.event
-          : event.type === "model"
-            ? event.modelMessage.event
-            : event.toolMessage.event;
-      received.push(eventName);
+      received.push(event.brief);
     },
   };
   runtime.subscribeEvents(listener);
@@ -47,15 +40,13 @@ async function testRuntimeSubscriptionReceivesSessionLifecycleEvents(): Promise<
   assert.equal(received.includes("session_closed"), true);
 }
 
-async function testRuntimeSubscriptionReceivesChatStepInput(): Promise<void> {
-  const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-chat-step-");
-  const questions: Array<Record<string, unknown>> = [];
+async function testRuntimeSubscriptionReceivesSessionRunEvents(): Promise<void> {
+  const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-run-events-");
+  const received: string[] = [];
   const runtime = createRuntime({ workdir });
-  const listener: RuntimeEventListener = {
+  const listener: SessionEventListener = {
     onEvent(event) {
-      if (event.type === "agent" && event.agentMessage.agent.name === "chat") {
-        questions.push(event.agentMessage.agent.content.input.question as Record<string, unknown>);
-      }
+      received.push(event.brief);
     },
   };
   runtime.subscribeEvents(listener);
@@ -78,14 +69,17 @@ async function testRuntimeSubscriptionReceivesChatStepInput(): Promise<void> {
   runtime.unsubscribeEvents(listener);
 
   assert.equal(result.errorCode, undefined);
-  assert.deepEqual(questions, [{ task: "what is callback result" }]);
+  assert.equal(received.includes("run_started"), true);
+  assert.equal(received.includes("context_assembled"), true);
+  assert.equal(received.includes("state_persisted"), true);
+  assert.equal(received.includes("run_finished"), true);
 }
 
 async function testRuntimeSubscriptionDeduplicatesAndUnsubscribes(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-dedup-");
-  const received: RuntimeEvent[] = [];
+  const received: SessionEvent[] = [];
   const runtime = createRuntime({ workdir });
-  const listener: RuntimeEventListener = {
+  const listener: SessionEventListener = {
     onEvent(event) {
       received.push(event);
     },
@@ -124,14 +118,12 @@ async function testRuntimeSubscriptionSelfUnsubscribeDoesNotBreakPublish(): Prom
   const workdir = await createTestWorkdir("agent-runtime-src-new-subscribe-self-remove-");
   const runtime = createRuntime({ workdir });
   const received: string[] = [];
-  const persistentListener: RuntimeEventListener = {
+  const persistentListener: SessionEventListener = {
     onEvent(event) {
-      if (event.type === "runtime") {
-        received.push(event.runtimeMessage.event);
-      }
+      received.push(event.brief);
     },
   };
-  const selfRemovingListener: RuntimeEventListener = {
+  const selfRemovingListener: SessionEventListener = {
     onEvent() {
       runtime.unsubscribeEvents(selfRemovingListener);
     },
@@ -263,8 +255,8 @@ async function testCloseSessionDoesNotEmitOpenEvents(): Promise<void> {
   };
   const sessionEvents = (tracePayload.events ?? []).filter((event) => event.details?.sessionId === state.sessionId);
 
-  assert.equal(sessionEvents.some((event) => event.brief === "runtime.session.opened"), false);
-  assert.equal(sessionEvents.filter((event) => event.brief === "runtime.session.closed").length, 2);
+  assert.equal(sessionEvents.some((event) => event.brief === "session_opened"), false);
+  assert.equal(sessionEvents.filter((event) => event.brief === "session_closed").length, 2);
 }
 
 async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {

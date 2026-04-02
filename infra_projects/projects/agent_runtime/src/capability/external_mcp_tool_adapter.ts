@@ -10,7 +10,6 @@ import type {
   ToolDefinition,
   ToolHandler,
 } from "./types.js";
-import type { RuntimeEventBus } from "./runtime-event-bus.js";
 
 interface ConnectedExternalMcpEndpoint {
   client: Client;
@@ -20,7 +19,6 @@ interface ConnectedExternalMcpEndpoint {
 export async function registerExternalMcpEndpoints(
   registry: McpToolRegistry,
   endpoints: ExternalMcpEndpointConfig[],
-  eventBus?: RuntimeEventBus,
 ): Promise<void> {
   const endpointSummaries: Array<{
     endpointName: string;
@@ -43,19 +41,6 @@ export async function registerExternalMcpEndpoints(
   if (endpointSummaries.length === 0) {
     return;
   }
-
-  await eventBus?.publish({
-    type: "runtime",
-    runtimeMessage: {
-      event: "external_mcp_registered",
-      timestamp: new Date().toISOString(),
-      custom: {
-        endpointCount: endpointSummaries.length,
-        toolCount: endpointSummaries.reduce((total, endpoint) => total + endpoint.toolCount, 0),
-        endpoints: endpointSummaries,
-      },
-    },
-  });
 }
 
 function createExternalMcpToolDefinition(client: Client, tool: Tool): ToolDefinition {

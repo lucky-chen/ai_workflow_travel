@@ -1,9 +1,10 @@
 import type { ModelConfig } from "../model/types.js";
 import type { IAgent, AgentType, AgentRunResult } from "../interface/agent-api.js";
 import type { UserInput } from "../interface/api.js";
+import type { Trace } from "../observability/trace.js";
 
 export interface AgentFactory {
-  create(type: AgentType, options?: { modelConfig?: ModelConfig; sysPrompt?: string[] }): IAgent;
+  create(type: AgentType, options?: { modelConfig?: ModelConfig; sysPrompt?: string[]; trace?: Trace }): IAgent;
 }
 
 export interface IntentRouter {

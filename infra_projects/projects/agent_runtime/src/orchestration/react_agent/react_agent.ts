@@ -1,7 +1,6 @@
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
 import type { AgentEvent, AgentRunInput, AgentRunResult, AgentType, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import { BaseAgent } from "../base_agent.js";
 import { asNumber } from "../agent_parsing.js";
 import { ActionStep } from "./react_action_step.js";
@@ -57,19 +56,18 @@ class ReActAgent extends BaseAgent {
 export function createReActAgent(input: {
   modelFactory: ModelFactory;
   gateway: McpGateway;
-  eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
   sysPrompt: string[];
 }): IAgent {
   let agent!: ReActAgent;
   agent = new ReActAgent(
-    new ThoughtStep(input.modelFactory, input.eventBus, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
+    new ThoughtStep(input.modelFactory, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
       await agent.publishInternal(event);
     }),
-    new ActionStep(input.gateway, input.toolRegistry, input.eventBus, async (event: AgentEvent) => {
+    new ActionStep(input.gateway, input.toolRegistry, async (event: AgentEvent) => {
       await agent.publishInternal(event);
     }),
-    new ObservationStep(input.modelFactory, input.eventBus, input.sysPrompt, async (event: AgentEvent) => {
+    new ObservationStep(input.modelFactory, input.sysPrompt, async (event: AgentEvent) => {
       await agent.publishInternal(event);
     }),
   );

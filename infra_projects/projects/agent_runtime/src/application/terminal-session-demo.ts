@@ -1,13 +1,13 @@
 import type {
   ChatHistoryItem,
   CloseSessionResult,
+  SessionEvent,
   SessionApi,
   SessionResult,
   UserInput,
   RuntimeCreateOptions,
 } from "../interface/api.js";
 import { createRuntime } from "../interface/api.js";
-import type { RuntimeEvent } from "../capability/runtime-event.js";
 
 export interface TerminalSessionDemoEntry {
   run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult>;
@@ -29,7 +29,7 @@ export interface TerminalSessionDemoResult {
   closeResult: CloseSessionResult;
 }
 
-export interface RuntimeEventDisplay {
+export interface SessionEventDisplay {
   title: string;
   detail?: string;
 }
@@ -151,23 +151,8 @@ export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): Te
   return new TerminalSessionDemo(runtime, inputHandler, outputRenderer);
 }
 
-export function toRuntimeEventDisplay(event: RuntimeEvent): RuntimeEventDisplay {
-  switch (event.type) {
-    case "runtime":
-      return describeRuntimeEvent(event);
-    case "agent":
-      return describeAgentEvent(event);
-    case "model":
-      return describeModelEvent(event);
-    case "tool":
-      return describeToolEvent(event);
-    default:
-      return { title: "Unknown event" };
-  }
-}
-
-function describeRuntimeEvent(event: Extract<RuntimeEvent, { type: "runtime" }>): RuntimeEventDisplay {
-  switch (event.runtimeMessage.event) {
+export function toSessionEventDisplay(event: SessionEvent): SessionEventDisplay {
+  switch (event.brief) {
     case "session_created":
       return { title: "Session created" };
     case "session_opened":
@@ -177,24 +162,8 @@ function describeRuntimeEvent(event: Extract<RuntimeEvent, { type: "runtime" }>)
     case "run_failed":
       return { title: "Run failed" };
     default:
-      return { title: event.runtimeMessage.event };
+      return { title: event.brief };
   }
-}
-
-function describeAgentEvent(event: Extract<RuntimeEvent, { type: "agent" }>): RuntimeEventDisplay {
-  return { title: describeAgentStep(event) };
-}
-
-function describeModelEvent(event: Extract<RuntimeEvent, { type: "model" }>): RuntimeEventDisplay {
-  return event.modelMessage.event === "model_started"
-    ? { title: describeModelStarted(event) }
-    : { title: describeModelCompleted(event) };
-}
-
-function describeToolEvent(event: Extract<RuntimeEvent, { type: "tool" }>): RuntimeEventDisplay {
-  return {
-    title: `${event.toolMessage.event === "tool_started" ? "Tool started" : "Tool failed"}: ${event.toolMessage.tool.toolName}`,
-  };
 }
 
 function formatHistoryItem(item: ChatHistoryItem): string {
@@ -208,25 +177,4 @@ function parseSessionIdArg(argv: string[]): string | undefined {
     }
   }
   return undefined;
-}
-
-function describeModelStarted(event: Extract<RuntimeEvent, { type: "model" }>): string {
-  return "Model started";
-}
-
-function describeModelCompleted(event: Extract<RuntimeEvent, { type: "model" }>): string {
-  return "Model completed";
-}
-
-function describeAgentStep(event: Extract<RuntimeEvent, { type: "agent" }>): string {
-  if (event.agentMessage.agent.name === "chat") {
-    return "Chat";
-  }
-  if (event.agentMessage.agent.name === "react") {
-    return `React ${event.agentMessage.agent.content.step}`;
-  }
-  if (event.agentMessage.agent.name === "peo") {
-    return `PEO ${event.agentMessage.agent.content.step}`;
-  }
-  return "Agent step";
 }

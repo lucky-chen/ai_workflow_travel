@@ -1,5 +1,4 @@
 import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import { ensureSuccessfulModelResponse, tryParseJsonRecord } from "../agent_parsing.js";
@@ -7,7 +6,6 @@ import { ensureSuccessfulModelResponse, tryParseJsonRecord } from "../agent_pars
 export class ObservationStep {
   constructor(
     private readonly modelFactory: ModelFactory,
-    private readonly eventBus: RuntimeEventBus,
     private readonly sysPrompt: string[],
     private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
@@ -64,22 +62,6 @@ export class ObservationStep {
         step: "observation",
         stepIndex,
         input: request.userPrompt,
-      },
-    });
-    await this.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "step",
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: "react",
-          content: {
-            step: "observation",
-            stepIndex,
-            input: request.userPrompt,
-          },
-        },
       },
     });
     const response = await this.executeModel(agentInput, runId, stepIndex, request);

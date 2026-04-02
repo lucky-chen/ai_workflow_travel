@@ -3,6 +3,7 @@ import type { Storage } from "../data/storage.js";
 import type {
   AgentSessionAccessInput,
   ChatHistoryItem,
+  SessionEvent,
   SessionData,
   SessionResult,
   UserInput,
@@ -15,7 +16,6 @@ import type { AgentFactory, IntentRouter } from "../orchestration/types.js";
 import type { Metrics } from "../observability/metrics.js";
 import type { Trace } from "../observability/trace.js";
 import type { RunCheckpoint } from "./run-checkpoint.js";
-import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import type { ModelFactory } from "../model/model-factory.js";
 
 export interface RuntimeDependencies {
@@ -66,8 +66,6 @@ export interface AgentRuntimeComponents {
   modelFactory: ModelFactory;
   agentFactory: AgentFactory;
   metrics: Metrics;
-  trace: Trace;
-  eventBus: RuntimeEventBus;
   checkpoint: RunCheckpoint;
 }
 
@@ -76,4 +74,8 @@ export interface SessionRuntimeComponents {
   contextAssembler: ContextAssembler;
   sessionTranscript: SessionTranscript;
   runtimeMemory: RuntimeMemory;
+}
+
+export interface SessionEventSink {
+  emit(event: SessionEvent): Promise<void>;
 }

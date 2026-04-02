@@ -1,5 +1,4 @@
 import type { McpGateway, McpToolRegistry, ToolCall } from "../../capability/types.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import { validateToolCallArguments } from "../tool_call_argument_validator.js";
 
@@ -7,7 +6,6 @@ export class ActionStep {
   constructor(
     private readonly gateway: McpGateway,
     private readonly toolRegistry: McpToolRegistry,
-    private readonly eventBus: RuntimeEventBus,
     private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
 
@@ -56,27 +54,6 @@ export class ActionStep {
         },
       },
     });
-    await this.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "step",
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: "react",
-          content: {
-            step: "action",
-            stepIndex,
-            input: {
-              actionType: thought.actionType,
-              toolCalls: thought.toolCalls.map((toolCall) => ({
-                name: toolCall.name,
-              })),
-            },
-          },
-        },
-      },
-    });
     const observations: string[] = [];
     let executedToolCalls = 0;
     let failedToolCalls = 0;
@@ -107,16 +84,6 @@ export class ActionStep {
         toolCallId: `${runId}:react:${stepIndex}:${index + 1}:${toolCall.name}`,
         toolName: toolCall.name,
         arguments: toolCall.arguments,
-        eventAgent: {
-          name: "react",
-          content: {
-            step: "action",
-            stepIndex,
-            input: {
-              toolCalls: thought.toolCalls.map((entry) => ({ name: entry.name })),
-            },
-          },
-        },
       });
       executedToolCalls += 1;
       if (result.error) {

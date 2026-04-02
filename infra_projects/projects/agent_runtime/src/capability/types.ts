@@ -1,4 +1,4 @@
-import type { AgentEventAgent } from "./runtime-event.js";
+import type { Trace } from "../observability/trace.js";
 
 export interface ToolCall {
   name: string;
@@ -9,7 +9,6 @@ export interface ToolCallInput {
   toolCallId: string;
   toolName: string;
   arguments: Record<string, unknown>;
-  eventAgent?: AgentEventAgent;
 }
 
 export interface ToolCallResult {
@@ -73,4 +72,5 @@ export interface ExecutionEnvironmentInput {
 
 export interface McpGateway {
   call(input: ToolCallInput): Promise<ToolCallResult>;
+  withTrace(trace: Trace): McpGateway;
 }

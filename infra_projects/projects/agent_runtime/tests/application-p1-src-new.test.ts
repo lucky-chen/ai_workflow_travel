@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   createTerminalSessionDemo,
-  toRuntimeEventDisplay,
+  toSessionEventDisplay,
 } from "../src/application/terminal-session-demo.js";
 import { createRuntime } from "../src/interface/api.js";
 import { createTestWorkdir } from "./test-workdir.js";
@@ -10,7 +10,7 @@ import { createTestWorkdir } from "./test-workdir.js";
 export async function runApplicationP1SrcNewTests(): Promise<void> {
   await testTerminalDemoCreateExecuteClose();
   await testTerminalDemoOpenExistingSession();
-  await testRuntimeEventDisplayMapping();
+  await testSessionEventDisplayMapping();
 }
 
 async function testTerminalDemoCreateExecuteClose(): Promise<void> {
@@ -81,73 +81,21 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
   assert.equal(outputs.at(-1), `Session closed: ${state.sessionId}`);
 }
 
-async function testRuntimeEventDisplayMapping(): Promise<void> {
-  const reactDisplay = toRuntimeEventDisplay({
-    type: "model",
-    modelMessage: {
-      event: "model_started",
-      timestamp: new Date().toISOString(),
-      request: {
-        responseFormat: "json",
-        userPrompt: { stage: "react_thought" },
-        stream: false,
-        systemPromptCount: 1,
-      },
-    },
+async function testSessionEventDisplayMapping(): Promise<void> {
+  const createdDisplay = toSessionEventDisplay({
+    brief: "session_created",
+    timestamp: new Date().toISOString(),
   });
-  const reactStepDisplay = toRuntimeEventDisplay({
-    type: "agent",
-    agentMessage: {
-      event: "step",
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "react",
-        content: {
-          step: "thought",
-          stepIndex: 1,
-          input: {},
-        },
-      },
-    },
+  const finishedDisplay = toSessionEventDisplay({
+    brief: "run_finished",
+    timestamp: new Date().toISOString(),
   });
-  const peoDisplay = toRuntimeEventDisplay({
-    type: "agent",
-    agentMessage: {
-      event: "step",
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "peo",
-        content: {
-          step: "execution",
-          stepIndex: 1,
-          input: {
-            tasks: [{ taskId: "task-1", type: "react" }],
-          },
-        },
-      },
-    },
-  });
-  const toolDisplay = toRuntimeEventDisplay({
-    type: "tool",
-    toolMessage: {
-      event: "tool_started",
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "react",
-        content: {
-          step: "action",
-          stepIndex: 1,
-          input: {},
-        },
-      },
-      tool: {
-        toolName: "read_text_file",
-      },
-    },
+  const unknownDisplay = toSessionEventDisplay({
+    brief: "context_assembled",
+    timestamp: new Date().toISOString(),
   });
 
-  assert.equal(reactDisplay.title, "Model started");
-  assert.equal(reactStepDisplay.title, "React thought");
-  assert.equal(peoDisplay.title, "PEO execution");
-  assert.equal(toolDisplay.title, "Tool started: read_text_file");
+  assert.equal(createdDisplay.title, "Session created");
+  assert.equal(finishedDisplay.title, "Run finished");
+  assert.equal(unknownDisplay.title, "context_assembled");
 }

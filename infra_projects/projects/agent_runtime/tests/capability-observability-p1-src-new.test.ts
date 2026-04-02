@@ -12,19 +12,18 @@ import { createRuntime } from "../src/interface/api.js";
 import { FileStorage } from "../src/data/storage.js";
 import { McpGateway } from "../src/capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../src/capability/permission-policy.js";
-import { RuntimeEventBus } from "../src/capability/runtime-event-bus.js";
 import { ExecutionEnvironment } from "../src/capability/execution-environment.js";
 import { McpToolRegistry } from "../src/capability/tool-registry.js";
 import { registerExternalMcpEndpoints } from "../src/capability/external_mcp_tool_adapter.js";
-import type { RuntimeEvent } from "../src/capability/runtime-event.js";
 import type { ToolCallInput } from "../src/capability/types.js";
+import type { SessionEvent } from "../src/interface/api.js";
 import { createMetrics } from "../src/observability/metrics.js";
 import { createTrace, type Trace } from "../src/observability/trace.js";
-import { TraceRuntimeEventListener } from "../src/observability/trace-runtime-event-listener.js";
+import { mapSessionEventToTraceEvents } from "../src/observability/trace_event_mapper.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
-  await testRuntimeEventBusNotifiesTraceAndCallback();
+  await testSessionEventWritesTraceAndCallback();
   await testGatewayDispatchAndPolicyBlock();
   await testExternalMcpToolAdapterRegistersRemoteTools();
   await testRuntimeRegistersExternalMcpTools();
@@ -34,53 +33,42 @@ export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
   await testTraceAutoFlushesAfterThresholdAndTerminalEvents();
 }
 
-async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
+async function testSessionEventWritesTraceAndCallback(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-event-bus-");
   const trace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "event-bus");
-  const received: RuntimeEvent[] = [];
-  const bus = new RuntimeEventBus([
-    new TraceRuntimeEventListener(trace),
-    {
-      async onEvent(event) {
-        received.push(event);
-      },
-    },
-  ]);
+  const received: SessionEvent[] = [];
+  const event: SessionEvent = {
+    brief: "run_started",
+    sessionId: "session-1",
+    traceId: "trace-1",
+    timestamp: new Date().toISOString(),
+  };
 
-  await bus.publish({
-    type: "agent",
-    agentMessage: {
-      event: "step",
-      sessionId: "session-1",
-      timestamp: new Date().toISOString(),
-      agent: {
-        name: "react",
-        content: {
-          step: "thought",
-          stepIndex: 1,
-          input: {
-            question: {
-              task: "demo",
-            },
-          },
-        },
-      },
-    },
-  });
+  for (const traceEvent of mapSessionEventToTraceEvents(event)) {
+    await trace.record(traceEvent);
+  }
+  received.push(event);
   await trace.flush();
 
   assert.equal(received.length, 1);
   const persisted = JSON.parse(
     await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_event-bus.json"), "utf8"),
   ) as { events?: Array<{ type?: string; brief?: string; details?: Record<string, unknown> }> };
-  assert.equal(persisted.events?.[0]?.type, "agent");
-  assert.equal(persisted.events?.[0]?.brief, "react.thought.input");
-  assert.equal(persisted.events?.[0]?.details?.agent, "react");
-  assert.equal(persisted.events?.[0]?.details?.step, "thought");
+  assert.equal(persisted.events?.[0]?.type, "session");
+  assert.equal(persisted.events?.[0]?.brief, "run_started");
+  assert.equal(persisted.events?.[0]?.details?.sessionId, "session-1");
 }
 
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-gateway-");
+  const echoHandler = {
+    async handle(input: ToolCallInput) {
+      return {
+        content: String(input.arguments.content ?? ""),
+        exitCode: 0,
+      };
+    },
+  };
   const registry = new McpToolRegistry([
     {
       name: "echo",
@@ -90,31 +78,22 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
           content: { type: "string" },
         },
       },
-      handler: {
-        async handle(input: ToolCallInput) {
-          return {
-            content: String(input.arguments.content ?? ""),
-            exitCode: 0,
-          };
-        },
-      },
+      handler: echoHandler,
     },
   ]);
   const allowedTrace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-allowed");
   const blockedTrace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-blocked");
-  const allowedEventBus = new RuntimeEventBus([new TraceRuntimeEventListener(allowedTrace)]);
-  const blockedEventBus = new RuntimeEventBus([new TraceRuntimeEventListener(blockedTrace)]);
   const gateway = new McpGateway(
     new RuntimePermissionPolicy("/tmp/allowed", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
-    allowedEventBus,
+    allowedTrace,
   );
   const blockedGateway = new McpGateway(
     new RuntimePermissionPolicy("/tmp/blocked", ["/tmp/allowed"]),
     registry,
     new ExecutionEnvironment(),
-    blockedEventBus,
+    blockedTrace,
   );
 
   const allowed = await gateway.call({
@@ -144,13 +123,9 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
 
 async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
   const registry = new McpToolRegistry();
-  const workdir = await createTestWorkdir("agent-runtime-p1-external-mcp-trace-");
-  const trace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "external-mcp-register");
   const endpoint = await startTestMcpHttpServer();
   try {
-    await registerExternalMcpEndpoints(registry, [endpoint.config], new RuntimeEventBus([
-      new TraceRuntimeEventListener(trace),
-    ]));
+    await registerExternalMcpEndpoints(registry, [endpoint.config]);
 
     const handler = await registry.resolve("remote_echo");
     const definitions = await registry.listToolDefinitions();
@@ -162,16 +137,6 @@ async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
 
     assert.equal(result.content, "remote:ok");
     assert.equal(definitions.some((definition) => definition.name === "remote_echo" && Boolean(definition.inputSchema)), true);
-    await trace.flush();
-    const persisted = JSON.parse(
-      await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_external-mcp-register.json"), "utf8"),
-    ) as { events?: Array<{ brief?: string; details?: Record<string, unknown> }> };
-    const registrationEvent = persisted.events?.find((event) => event.brief === "runtime.mcp.registered");
-    assert.equal(Boolean(registrationEvent), true);
-    const registrationData = registrationEvent?.details?.data as Record<string, unknown> | undefined;
-    assert.equal(registrationData?.endpointCount, 1);
-    assert.equal(registrationData?.toolCount, 1);
-    assert.equal(Array.isArray(registrationData?.endpoints), true);
   } finally {
     await endpoint.close();
   }
@@ -322,11 +287,10 @@ async function testTracePersistsFlushState(): Promise<void> {
   const trace = createTrace(storage, "trace-persist");
 
   await trace.record({
-    type: "runtime",
-    brief: "runtime.run.started",
+    type: "session",
+    brief: "run_started",
     details: {
       sessionId: "session-1",
-      event: "run_started",
     },
     metadata: {
       timestamp: new Date().toISOString(),
@@ -337,7 +301,7 @@ async function testTracePersistsFlushState(): Promise<void> {
   const persisted = JSON.parse(
     await readFile(path.join(workdir, ".agent_runtime", "traces", "trace_trace-persist.json"), "utf8"),
   ) as { events?: Array<{ brief?: string }> };
-  assert.equal(persisted.events?.[0]?.brief, "runtime.run.started");
+  assert.equal(persisted.events?.[0]?.brief, "run_started");
 }
 
 async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<void> {
@@ -346,10 +310,10 @@ async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<vo
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
   const trace = createTrace(storage, "trace-autoflush");
 
-  await trace.record(createTraceEvent("runtime.run.started"));
+  await trace.record(createTraceEvent("run_started"));
   await assertRejectsFileRead(tracePath);
 
-  await trace.record(createTraceEvent("runtime.context.assembled"));
+  await trace.record(createTraceEvent("context_assembled"));
   await assertRejectsFileRead(tracePath);
 
   await trace.record(createTraceEvent("react.thought.input"));
@@ -358,20 +322,20 @@ async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<vo
   };
   assert.deepEqual(
     (thresholdPersisted.events ?? []).map((event) => event.brief),
-    ["runtime.run.started", "runtime.context.assembled", "react.thought.input"],
+    ["run_started", "context_assembled", "react.thought.input"],
   );
 
   const terminalTrace = createTrace(storage, "trace-autoflush");
-  await terminalTrace.record(createTraceEvent("runtime.run.finished"));
+  await terminalTrace.record(createTraceEvent("run_finished"));
   const terminalPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
     events?: Array<{ brief?: string }>;
   };
-  assert.equal(terminalPersisted.events?.at(-1)?.brief, "runtime.run.finished");
+  assert.equal(terminalPersisted.events?.at(-1)?.brief, "run_finished");
 }
 
 function createTraceEvent(brief: string): Parameters<Trace["record"]>[0] {
   return {
-    type: brief.startsWith("react.") ? "agent" : "runtime",
+    type: brief.startsWith("react.") ? "agent" : "session",
     brief,
     details: {
       sessionId: "session-1",

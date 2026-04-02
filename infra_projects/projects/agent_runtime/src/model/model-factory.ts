@@ -1,4 +1,3 @@
-import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import { StreamingEventAdapter } from "./streaming-event-adapter.js";
 import { MockModel } from "./mock-model.js";
 import {
@@ -6,22 +5,22 @@ import {
   getFetchOverride,
   validateModeSelection,
 } from "./deepseek-model.js";
-import type { IModel, ModelConfig, ModelCreationInput } from "./types.js";
+import type { IModel, ModelConfig, ModelCreationInput, ModelTraceWriter } from "./types.js";
 
 export class ModelFactory {
   constructor(
-    private readonly eventBus?: RuntimeEventBus,
+    private readonly trace?: ModelTraceWriter,
     private readonly resolveDefaultConfig?: () => Promise<ModelConfig>,
   ) {}
 
   createModel(input: ModelCreationInput): IModel {
     if (input.mock) {
-      return new MockModel(input.mockInfo, new StreamingEventAdapter(), this.eventBus);
+      return new MockModel(input.mockInfo, new StreamingEventAdapter(), this.trace);
     }
 
     validateModeSelection(input.modeSelection);
     const fetchFn = getFetchOverride(input.mockInfo);
-    return new DeepSeekModel(input.modeSelection, fetchFn, new StreamingEventAdapter(), this.eventBus);
+    return new DeepSeekModel(input.modeSelection, fetchFn, new StreamingEventAdapter(), this.trace);
   }
 
   async createDefaultModel(): Promise<IModel> {
@@ -37,6 +36,10 @@ export class ModelFactory {
   }
 
   withDefaultConfig(config: ModelConfig): ModelFactory {
-    return new ModelFactory(this.eventBus, async () => config);
+    return new ModelFactory(this.trace, async () => config);
+  }
+
+  withTrace(trace: ModelTraceWriter): ModelFactory {
+    return new ModelFactory(trace, this.resolveDefaultConfig);
   }
 }

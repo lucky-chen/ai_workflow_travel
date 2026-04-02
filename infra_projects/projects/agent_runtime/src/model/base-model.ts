@@ -1,6 +1,6 @@
-import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import type {
   IModel,
+  ModelTraceWriter,
   ModuleRequest,
   ModuleResponse,
   StreamEvent,
@@ -9,7 +9,7 @@ import type {
 export abstract class BaseModel implements IModel {
   protected running = false;
 
-  constructor(protected readonly eventBus?: RuntimeEventBus) {}
+  constructor(protected readonly trace?: ModelTraceWriter) {}
 
   isRunning(): boolean {
     return this.running;
@@ -40,14 +40,16 @@ export abstract class BaseModel implements IModel {
     input: ModuleRequest,
     response?: ModuleResponse,
   ): Promise<void> {
-    if (!this.eventBus) {
+    if (!this.trace) {
       return;
     }
-    const event = {
-      type: "model" as const,
-      modelMessage: {
-        event: type,
+    await this.trace.record({
+      type: "model",
+      brief: type === "model_started" ? "model.call.started" : "model.call.finished",
+      metadata: {
         timestamp: new Date().toISOString(),
+      },
+      details: omitUndefined({
         request: {
           responseFormat: input.responseFormat,
           userPrompt: input.userPrompt,
@@ -55,9 +57,9 @@ export abstract class BaseModel implements IModel {
           systemPromptCount: input.systemPrompt.length,
         },
         response,
-      },
-    };
-    await this.eventBus.publish(event);
+        error: response?.error?.code ? response.error : undefined,
+      }),
+    });
   }
 }
 
@@ -72,4 +74,9 @@ function normalizeModelError(error: unknown): ModuleResponse {
       message: error instanceof Error ? error.message : String(error),
     },
   };
+}
+
+function omitUndefined(value: Record<string, unknown>): Record<string, unknown> | undefined {
+  const filtered = Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
+  return Object.keys(filtered).length > 0 ? filtered : undefined;
 }

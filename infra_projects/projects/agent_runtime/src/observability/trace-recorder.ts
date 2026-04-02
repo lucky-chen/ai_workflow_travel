@@ -59,8 +59,8 @@ function normalizeTraceEvent(event: TraceEvent): TraceEvent {
 }
 
 function isImmediateFlushEvent(brief: string): boolean {
-  return brief === "runtime.session.closed"
-    || brief === "runtime.state.persisted"
-    || brief === "runtime.run.failed"
-    || brief === "runtime.run.finished";
+  return brief === "session_closed"
+    || brief === "state_persisted"
+    || brief === "run_failed"
+    || brief === "run_finished";
 }

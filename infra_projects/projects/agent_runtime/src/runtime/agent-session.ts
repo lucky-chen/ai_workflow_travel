@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import type {
+  SessionEvent,
   SessionData,
   SessionResult,
   UserInput,
 } from "../interface/api.js";
-import type { AgentType, IAgent } from "../interface/agent-api.js";
+import type { AgentEvent, AgentEventListener, AgentType, IAgent } from "../interface/agent-api.js";
 import type { Storage } from "../data/storage.js";
 import type {
   AgentRuntimeComponents,
@@ -13,18 +14,22 @@ import type {
   RuntimeSessionCreateInput,
   RuntimeSessionConfig,
   SessionRuntimeComponents,
+  SessionEventSink,
   StoredSessionState,
 } from "./types.js";
 import type {
   AgentSelectionInput,
 } from "../orchestration/types.js";
 import type { AgentRunResult } from "../interface/agent-api.js";
+import type { Trace } from "../observability/trace.js";
+import { mapAgentEventToTraceEvents } from "../observability/trace_event_mapper.js";
 
 const SESSION_STORAGE_PREFIX = "sessions";
 
 export class AgentSession implements AgentSessionLike {
   private running = false;
   private readonly agentCacheMap = new Map<AgentType, IAgent>();
+  private readonly agentListenerMap = new Map<AgentType, AgentEventListener>();
 
   private constructor(
     public readonly sessionId: string,
@@ -32,6 +37,8 @@ export class AgentSession implements AgentSessionLike {
     private state: StoredSessionState,
     private readonly agentComponents: AgentRuntimeComponents,
     private readonly sessionComponents: SessionRuntimeComponents,
+    private readonly trace: Trace,
+    private readonly sessionEventSink: SessionEventSink,
   ) {}
 
   static async create(
@@ -39,6 +46,8 @@ export class AgentSession implements AgentSessionLike {
     storage: Storage,
     agentComponents: AgentRuntimeComponents,
     sessionComponents: SessionRuntimeComponents,
+    trace: Trace,
+    sessionEventSink: SessionEventSink,
   ): Promise<AgentSession> {
     const now = new Date().toISOString();
     const history = seedHistory(input.sysPrompt, input.userPrompt);
@@ -52,21 +61,13 @@ export class AgentSession implements AgentSessionLike {
       createdAt: now,
       updatedAt: now,
     };
-    const session = new AgentSession(input.sessionId, storage, state, agentComponents, sessionComponents);
+    const session = new AgentSession(input.sessionId, storage, state, agentComponents, sessionComponents, trace, sessionEventSink);
     await sessionComponents.sessionTranscript.update(input.sessionId, history.map((item) => ({ ...item })));
     await sessionComponents.runtimeMemory.update(input.sessionId, []);
     await session.persist();
-    await agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "session_created",
-        sessionId: input.sessionId,
-        timestamp: new Date().toISOString(),
-        session: {
-          mode: "create",
-        },
-      },
-    });
+    await session.emitSessionEvent(createSessionEvent("session_created", input.sessionId, undefined, {
+      mode: "create",
+    }));
     return session;
   }
 
@@ -75,24 +76,18 @@ export class AgentSession implements AgentSessionLike {
     storage: Storage,
     agentComponents: AgentRuntimeComponents,
     sessionComponents: SessionRuntimeComponents,
+    trace: Trace,
+    sessionEventSink: SessionEventSink,
   ): Promise<AgentSession> {
     const state = await loadStoredSession(storage, sessionId);
-    const session = new AgentSession(sessionId, storage, state, agentComponents, sessionComponents);
+    const session = new AgentSession(sessionId, storage, state, agentComponents, sessionComponents, trace, sessionEventSink);
     await session.syncHistoryWithTranscript({ persistOnMismatch: true });
     if (state.status === "closed") {
       await session.reopen();
     }
-    await agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "session_opened",
-        sessionId,
-        timestamp: new Date().toISOString(),
-        session: {
-          mode: "open",
-        },
-      },
-    });
+    await session.emitSessionEvent(createSessionEvent("session_opened", sessionId, undefined, {
+      mode: "open",
+    }));
     return session;
   }
 
@@ -101,9 +96,11 @@ export class AgentSession implements AgentSessionLike {
     storage: Storage,
     agentComponents: AgentRuntimeComponents,
     sessionComponents: SessionRuntimeComponents,
+    trace: Trace,
+    sessionEventSink: SessionEventSink,
   ): Promise<AgentSession> {
     const state = await loadStoredSession(storage, sessionId);
-    const session = new AgentSession(sessionId, storage, state, agentComponents, sessionComponents);
+    const session = new AgentSession(sessionId, storage, state, agentComponents, sessionComponents, trace, sessionEventSink);
     await session.syncHistoryWithTranscript({ persistOnMismatch: false });
     return session;
   }
@@ -145,6 +142,7 @@ export class AgentSession implements AgentSessionLike {
   }
 
   async close(): Promise<void> {
+    this.unsubscribeAgentListeners();
     this.state.status = "closed";
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
@@ -185,15 +183,7 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordRunStarted(traceId: string): Promise<void> {
-    await this.agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "run_started",
-        sessionId: this.sessionId,
-        traceId,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    await this.emitSessionEvent(createSessionEvent("run_started", this.sessionId, traceId));
   }
 
   private async assembleContext(userInput: UserInput, traceId: string) {
@@ -206,15 +196,7 @@ export class AgentSession implements AgentSessionLike {
   }
 
   private async recordContextAssembled(traceId: string): Promise<void> {
-    await this.agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "context_assembled",
-        sessionId: this.sessionId,
-        traceId,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    await this.emitSessionEvent(createSessionEvent("context_assembled", this.sessionId, traceId));
   }
 
   private async selectAgent(requestedType: AgentType): Promise<IAgent> {
@@ -225,7 +207,15 @@ export class AgentSession implements AgentSessionLike {
     const agent = this.agentComponents.agentFactory.create(requestedType, {
       modelConfig: this.state.config?.model,
       sysPrompt: this.state.systemPrompt ?? [],
+      trace: this.trace,
     });
+    const listener: AgentEventListener = {
+      onEvent: async (event: AgentEvent) => {
+        await this.recordAgentEvent(event);
+      },
+    };
+    agent.subscribeEvents(listener);
+    this.agentListenerMap.set(requestedType, listener);
     this.agentCacheMap.set(requestedType, agent);
     return agent;
   }
@@ -245,20 +235,11 @@ export class AgentSession implements AgentSessionLike {
     const normalized = normalizeSessionResult(this.sessionId, traceId, result);
     await this.persistTranscript(userInput, normalized);
     await this.collectSuccessMetrics(normalized, result, requestedType, traceId);
-    await this.agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "run_finished",
-        sessionId: this.sessionId,
-        traceId,
-        timestamp: new Date().toISOString(),
-        custom: {
-          agent: requestedType,
-          format: normalized.format,
-          hasError: Boolean(normalized.errorCode),
-        },
-      },
-    });
+    await this.emitSessionEvent(createSessionEvent("run_finished", this.sessionId, traceId, {
+      agent: requestedType,
+      format: normalized.format,
+      hasError: Boolean(normalized.errorCode),
+    }));
     await this.flushObservability();
     return normalized;
   }
@@ -301,28 +282,19 @@ export class AgentSession implements AgentSessionLike {
         agentName: "session",
       },
     });
-    await this.agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "run_failed",
-        sessionId: this.sessionId,
-        traceId,
-        timestamp: new Date().toISOString(),
-        custom: {
-          error: {
-            code: failure.errorCode ?? "SESSION_EXECUTION_FAILED",
-            message: failure.errorMessage ?? "Session execution failed.",
-          },
-        },
+    await this.emitSessionEvent(createSessionEvent("run_failed", this.sessionId, traceId, {
+      error: {
+        code: failure.errorCode ?? "SESSION_EXECUTION_FAILED",
+        message: failure.errorMessage ?? "Session execution failed.",
       },
-    });
+    }));
     await this.flushObservability();
     return failure;
   }
 
   private async flushObservability(): Promise<void> {
     await this.agentComponents.metrics.flush();
-    await this.agentComponents.trace.flush();
+    await this.trace.flush();
   }
 
   private async persistTranscript(userInput: UserInput, result: SessionResult): Promise<void> {
@@ -347,15 +319,30 @@ export class AgentSession implements AgentSessionLike {
     }));
     this.state.updatedAt = new Date().toISOString();
     await this.persist();
-    await this.agentComponents.eventBus.publish({
-      type: "runtime",
-      runtimeMessage: {
-        event: "state_persisted",
-        sessionId: this.sessionId,
-        traceId: result.traceId,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    await this.emitSessionEvent(createSessionEvent("state_persisted", this.sessionId, result.traceId));
+  }
+
+  private async emitSessionEvent(event: SessionEvent): Promise<void> {
+    await this.sessionEventSink.emit(event);
+  }
+
+  private async recordAgentEvent(event: AgentEvent): Promise<void> {
+    for (const traceEvent of mapAgentEventToTraceEvents(event, this.sessionId)) {
+      if (traceEvent.type === "agent") {
+        await this.trace.record(traceEvent);
+      }
+    }
+    await this.trace.flush();
+  }
+
+  private unsubscribeAgentListeners(): void {
+    for (const [type, listener] of this.agentListenerMap.entries()) {
+      const agent = this.agentCacheMap.get(type);
+      if (agent) {
+        agent.unsubscribeEvents(listener);
+      }
+    }
+    this.agentListenerMap.clear();
   }
 
 }
@@ -490,4 +477,19 @@ function normalizeFailureSessionResult(
 
 function parseRuntimeSessionConfig(config: unknown): RuntimeSessionConfig | undefined {
   return isRecord(config) ? config as RuntimeSessionConfig : undefined;
+}
+
+function createSessionEvent(
+  brief: string,
+  sessionId?: string,
+  traceId?: string,
+  details?: Record<string, unknown>,
+): SessionEvent {
+  return {
+    timestamp: new Date().toISOString(),
+    brief,
+    sessionId,
+    traceId,
+    details,
+  };
 }

@@ -1,5 +1,4 @@
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentEvent, AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import { BaseAgent } from "../base_agent.js";
@@ -59,7 +58,6 @@ class PEOAgent extends BaseAgent {
 export function createPEOAgent(input: {
   modelFactory: ModelFactory;
   gateway: McpGateway;
-  eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
   sysPrompt: string[];
 }): IAgent {
@@ -67,23 +65,21 @@ export function createPEOAgent(input: {
   const internalReactAgent = createReActAgent({
     modelFactory: input.modelFactory,
     gateway: input.gateway,
-    eventBus: input.eventBus,
     toolRegistry: input.toolRegistry,
     sysPrompt: input.sysPrompt,
   });
   agent = new PEOAgent(
-    new PlanStep(input.modelFactory, input.eventBus, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
+    new PlanStep(input.modelFactory, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
       await agent.publishInternal(event);
     }),
     new ExecutionStep(
-      input.eventBus,
       new DirectTaskExecutor(),
       new ReactTaskExecutor(internalReactAgent),
       async (event: AgentEvent) => {
         await agent.publishInternal(event);
       },
     ),
-    new ObserveStep(input.eventBus, async (event: AgentEvent) => {
+    new ObserveStep(async (event: AgentEvent) => {
       await agent.publishInternal(event);
     }),
   );

@@ -1,8 +1,8 @@
 import { BaseModel } from "./base-model.js";
-import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
 import type { StreamingEventAdapter } from "./streaming-event-adapter.js";
 import type {
   IModel,
+  ModelTraceWriter,
   ModuleRequest,
   ModuleResponse,
   StreamEvent,
@@ -12,9 +12,9 @@ export class MockModel extends BaseModel implements IModel {
   constructor(
     private readonly mockInfo: Record<string, unknown> | undefined,
     private readonly streamingAdapter: StreamingEventAdapter,
-    eventBus?: RuntimeEventBus,
+    trace?: ModelTraceWriter,
   ) {
-    super(eventBus);
+    super(trace);
   }
 
   protected override async executeCore(input: ModuleRequest): Promise<ModuleResponse> {

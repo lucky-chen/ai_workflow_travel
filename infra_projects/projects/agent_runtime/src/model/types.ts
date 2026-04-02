@@ -1,3 +1,5 @@
+import type { Trace } from "../observability/trace.js";
+
 export type RealLlmProvider = "openai" | "deepseek";
 
 export interface ModelConfig {
@@ -19,6 +21,8 @@ export interface ModeSelection {
   model?: string;
   timeoutMs?: number;
 }
+
+export type ModelTraceWriter = Trace;
 
 export interface IModel {
   isRunning(): boolean;

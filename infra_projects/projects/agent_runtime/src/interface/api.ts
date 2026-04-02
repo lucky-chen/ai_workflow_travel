@@ -1,13 +1,19 @@
-import type { RuntimeEvent } from "../capability/runtime-event.js";
 import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import type { FetchLike } from "../model/types.js";
 import { createRuntime as createRuntimeImpl } from "../runtime/runtime.js";
 
 export type { FetchLike } from "../model/types.js";
-export type { RuntimeEvent } from "../capability/runtime-event.js";
 
-export interface RuntimeEventListener {
-  onEvent(event: RuntimeEvent): Promise<void> | void;
+export interface SessionEvent {
+  timestamp: string;
+  brief: string;
+  sessionId?: string;
+  traceId?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface SessionEventListener {
+  onEvent(event: SessionEvent): Promise<void> | void;
 }
 
 export interface RuntimeCreateOptions {
@@ -21,8 +27,8 @@ export interface SessionApi {
   createSession(input: AgentSessionAccessInput): Promise<ISession>;
   openSession(sessionId: string): Promise<ISession>;
   closeSession(sessionId: string): Promise<CloseSessionResult>;
-  subscribeEvents(listener: RuntimeEventListener): void;
-  unsubscribeEvents(listener: RuntimeEventListener): void;
+  subscribeEvents(listener: SessionEventListener): void;
+  unsubscribeEvents(listener: SessionEventListener): void;
 }
 
 export interface ISession {

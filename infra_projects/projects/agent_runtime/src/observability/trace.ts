@@ -2,7 +2,7 @@ import type { Storage } from "../data/storage.js";
 import { TraceRecorder } from "./trace-recorder.js";
 
 export interface TraceEvent {
-  type: "runtime" | "agent" | "model" | "tool";
+  type: "session" | "agent" | "model" | "tool";
   brief: string;
   details?: Record<string, unknown>;
   metadata: Record<string, unknown>;

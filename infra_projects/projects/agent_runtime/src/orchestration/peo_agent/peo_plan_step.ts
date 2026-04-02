@@ -1,5 +1,4 @@
 import type { McpToolRegistry } from "../../capability/types.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
@@ -16,7 +15,6 @@ export const PEO_STAGE_COUNT = 3;
 export class PlanStep {
   constructor(
     private readonly modelFactory: ModelFactory,
-    private readonly eventBus: RuntimeEventBus,
     private readonly toolRegistry: McpToolRegistry,
     private readonly sysPrompt: string[],
     private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
@@ -41,22 +39,6 @@ export class PlanStep {
         step: "plan",
         stepIndex,
         input: request.userPrompt,
-      },
-    });
-    await this.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "step",
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: "peo",
-          content: {
-            step: "plan",
-            stepIndex,
-            input: request.userPrompt,
-          },
-        },
       },
     });
     const response = await this.executeModel(input, runId, stepIndex, request);

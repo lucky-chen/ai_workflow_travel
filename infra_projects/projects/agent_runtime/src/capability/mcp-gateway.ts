@@ -6,39 +6,18 @@ import type {
   ToolCallInput,
   ToolCallResult,
 } from "./types.js";
-import type { RuntimeEventBus } from "./runtime-event-bus.js";
+import type { Trace } from "../observability/trace.js";
 
 export class McpGateway implements McpGatewayContract {
   constructor(
     private readonly permissionPolicy: RuntimePermissionPolicyContract,
     private readonly toolRegistry: McpToolRegistryContract,
     private readonly executionEnvironment: ExecutionEnvironmentContract,
-    private readonly eventBus: RuntimeEventBus,
+    private readonly trace?: Trace,
   ) {}
 
   async call(input: ToolCallInput): Promise<ToolCallResult> {
-    await this.eventBus.publish({
-      type: "tool",
-      toolMessage: {
-        event: "tool_started",
-        traceId: input.toolCallId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          ...(input.eventAgent ?? {
-            name: "react",
-            content: {
-              step: "action",
-              stepIndex: 0,
-              input: {},
-            },
-          }),
-        },
-        tool: {
-          toolName: input.toolName,
-          arguments: input.arguments,
-        },
-      },
-    });
+    await this.recordToolEvent("tool_started", input, undefined);
     const decision = await this.permissionPolicy.evaluate({
       toolCall: input,
     });
@@ -51,37 +30,7 @@ export class McpGateway implements McpGatewayContract {
           message: decision.message ?? "Tool call blocked by runtime permission policy.",
         },
       };
-      await this.eventBus.publish({
-        type: "tool",
-        toolMessage: {
-          event: "tool_failed",
-          traceId: input.toolCallId,
-          timestamp: new Date().toISOString(),
-          agent: {
-            ...(input.eventAgent ?? {
-              name: "react",
-              content: {
-                step: "action",
-                stepIndex: 0,
-                input: {},
-              },
-            }),
-          },
-          tool: {
-            toolName: input.toolName,
-            arguments: input.arguments,
-            error: result.error,
-            result: {
-              content: result.content,
-              exitCode: undefined,
-              blockedByPolicy: true,
-            },
-          },
-          custom: {
-            blockedByPolicy: true,
-          },
-        },
-      });
+      await this.recordToolEvent("tool_failed", input, result);
       return result;
     }
 
@@ -92,37 +41,7 @@ export class McpGateway implements McpGatewayContract {
         handler,
       });
       if (result.error || result.blockedByPolicy) {
-        await this.eventBus.publish({
-          type: "tool",
-          toolMessage: {
-            event: "tool_failed",
-            traceId: input.toolCallId,
-            timestamp: new Date().toISOString(),
-            agent: {
-              ...(input.eventAgent ?? {
-                name: "react",
-                content: {
-                  step: "action",
-                  stepIndex: 0,
-                  input: {},
-                },
-              }),
-            },
-            tool: {
-              toolName: input.toolName,
-              arguments: input.arguments,
-              error: result.error,
-              result: {
-                content: result.content,
-                exitCode: result.exitCode,
-                blockedByPolicy: result.blockedByPolicy ?? false,
-              },
-            },
-            custom: {
-              blockedByPolicy: result.blockedByPolicy ?? false,
-            },
-          },
-        });
+        await this.recordToolEvent("tool_failed", input, result);
       }
       return result;
     } catch (error) {
@@ -133,37 +52,53 @@ export class McpGateway implements McpGatewayContract {
           message: error instanceof Error ? error.message : String(error),
         },
       };
-      await this.eventBus.publish({
-        type: "tool",
-        toolMessage: {
-          event: "tool_failed",
-          traceId: input.toolCallId,
-          timestamp: new Date().toISOString(),
-          agent: {
-            ...(input.eventAgent ?? {
-              name: "react",
-              content: {
-                step: "action",
-                stepIndex: 0,
-                input: {},
-              },
-            }),
-          },
-          tool: {
-            toolName: input.toolName,
-            arguments: input.arguments,
-            error: result.error,
-            result: {
-              content: result.content,
-              blockedByPolicy: false,
-            },
-          },
-          custom: {
-            blockedByPolicy: false,
-          },
-        },
-      });
+      await this.recordToolEvent("tool_failed", input, result);
       return result;
     }
   }
+
+  withTrace(trace: Trace): McpGateway {
+    return new McpGateway(
+      this.permissionPolicy,
+      this.toolRegistry,
+      this.executionEnvironment,
+      trace,
+    );
+  }
+
+  private async recordToolEvent(
+    event: "tool_started" | "tool_failed",
+    input: ToolCallInput,
+    result?: ToolCallResult,
+  ): Promise<void> {
+    if (!this.trace) {
+      return;
+    }
+    await this.trace.record({
+      type: "tool",
+      brief: event === "tool_started" ? "tool.call.started" : "tool.call.failed",
+      metadata: {
+        timestamp: new Date().toISOString(),
+      },
+      details: omitUndefined({
+        toolName: input.toolName,
+        arguments: input.arguments ? { keys: Object.keys(input.arguments) } : undefined,
+        result: result
+          ? omitUndefined({
+              hasContent: result.content.length > 0,
+              contentLength: result.content.length,
+              exitCode: result.exitCode,
+              blockedByPolicy: result.blockedByPolicy,
+            })
+          : undefined,
+        error: result?.error,
+        blockedByPolicy: result?.blockedByPolicy,
+      }),
+    });
+  }
+}
+
+function omitUndefined(value: Record<string, unknown>): Record<string, unknown> | undefined {
+  const filtered = Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
+  return Object.keys(filtered).length > 0 ? filtered : undefined;
 }

@@ -1,5 +1,4 @@
 import type { McpToolRegistry, ToolCall } from "../../capability/types.js";
-import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
@@ -16,7 +15,6 @@ export const REACT_MAX_STEPS = 2;
 export class ThoughtStep {
   constructor(
     private readonly modelFactory: ModelFactory,
-    private readonly eventBus: RuntimeEventBus,
     private readonly toolRegistry: McpToolRegistry,
     private readonly sysPrompt: string[],
     private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
@@ -47,22 +45,6 @@ export class ThoughtStep {
         step: "thought",
         stepIndex,
         input: request.userPrompt,
-      },
-    });
-    await this.eventBus.publish({
-      type: "agent",
-      agentMessage: {
-        event: "step",
-        traceId: runId,
-        timestamp: new Date().toISOString(),
-        agent: {
-          name: "react",
-          content: {
-            step: "thought",
-            stepIndex,
-            input: request.userPrompt,
-          },
-        },
       },
     });
     const response = await this.executeModel(input, runId, stepIndex, request);

@@ -3,13 +3,11 @@ import { randomUUID } from "node:crypto";
 import type {
   AgentSessionAccessInput,
   CloseSessionResult,
+  SessionEventListener,
   SessionApi,
   RuntimeCreateOptions,
 } from "../interface/api.js";
 import { AgentSession } from "./agent-session.js";
-import {
-  type RuntimeEventListener,
-} from "../capability/runtime-event-bus.js";
 import { RuntimeAssembly } from "./runtime-assembly.js";
 import { SessionService } from "./session-service.js";
 import type { Storage } from "../data/storage.js";
@@ -44,12 +42,12 @@ export class Runtime implements SessionApi {
     return this.sessionService.closeSession(sessionId);
   }
 
-  subscribeEvents(listener: RuntimeEventListener): void {
-    this.components.eventBus.subscribe(listener);
+  subscribeEvents(listener: SessionEventListener): void {
+    this.sessionService.subscribeEvents(listener);
   }
 
-  unsubscribeEvents(listener: RuntimeEventListener): void {
-    this.components.eventBus.unsubscribe(listener);
+  unsubscribeEvents(listener: SessionEventListener): void {
+    this.sessionService.unsubscribeEvents(listener);
   }
 }
 

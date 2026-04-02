@@ -75,7 +75,6 @@ export class AgentService {
       },
     });
     await this.components.metrics.flush();
-    await this.components.trace.flush();
   }
 }
 

@@ -7,12 +7,9 @@ import { createBuiltInToolDefinitions } from "../capability/built-in-tools.js";
 import { ExecutionEnvironment } from "../capability/execution-environment.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
-import { RuntimeEventBus, type RuntimeEventListener } from "../capability/runtime-event-bus.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
 import { AgentFactory } from "../orchestration/agent_factory.js";
 import { createMetrics } from "../observability/metrics.js";
-import { createTrace } from "../observability/trace.js";
-import { TraceRuntimeEventListener } from "../observability/trace-runtime-event-listener.js";
 import { ModelFactory } from "../model/model-factory.js";
 import { createRunCheckpoint } from "./run-checkpoint.js";
 import { registerExternalToolProviders } from "./external-tool-registration.js";
@@ -27,7 +24,6 @@ export interface RuntimeAssemblyOptions {
 }
 
 export interface RuntimeAssemblyOverrides {
-  eventListeners?: RuntimeEventListener[];
 }
 
 export class RuntimeAssembly {
@@ -36,7 +32,7 @@ export class RuntimeAssembly {
   readonly initialization: Promise<void>;
 
   constructor(
-    runtimeRunId: string,
+    _runtimeRunId: string,
     options: RuntimeAssemblyOptions,
     overrides: RuntimeAssemblyOverrides = {},
   ) {
@@ -49,12 +45,7 @@ export class RuntimeAssembly {
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
-    const trace = createTrace(this.storage, runtimeRunId);
-    const eventBus = new RuntimeEventBus([
-      new TraceRuntimeEventListener(trace),
-      ...(overrides.eventListeners ?? []),
-    ]);
-    const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment, eventBus);
+    const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment);
     const workspaceLocalEnv = new WorkspaceLocalEnv(options.workdir);
     const localEnvLoading = workspaceLocalEnv.load({
       optional: options.defaultModelMode !== "real_from_local_env",
@@ -78,14 +69,13 @@ export class RuntimeAssembly {
         modeSelection: {},
       };
     };
-    const modelFactory = new ModelFactory(eventBus, resolveDefaultModelConfig);
+    const modelFactory = new ModelFactory(undefined, resolveDefaultModelConfig);
 
     this.initialization = registerExternalToolProviders({
       localEnv: workspaceLocalEnv,
       configuredMcpEndpoints: options.externalMcpEndpoints,
       localEnvLoading,
       toolRegistry,
-      eventBus,
     });
 
     this.components = {
@@ -95,12 +85,9 @@ export class RuntimeAssembly {
       agentFactory: new AgentFactory({
         modelFactory,
         gateway,
-        eventBus,
         toolRegistry,
       }),
       metrics: createMetrics(this.storage),
-      trace,
-      eventBus,
       checkpoint: createRunCheckpoint(this.storage),
     };
   }

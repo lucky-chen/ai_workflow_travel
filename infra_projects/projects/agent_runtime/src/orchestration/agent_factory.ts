@@ -1,18 +1,16 @@
 import type { McpGateway, McpToolRegistry } from "../capability/types.js";
 import type { ModelFactory } from "../model/model-factory.js";
 import type { ModelConfig } from "../model/types.js";
-import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
-import type { AgentCreateOptions } from "../interface/agent-api.js";
 import { createChatAgent } from "./chat_agent/index.js";
 import { createPEOAgent } from "./peo_agent/index.js";
 import { createReActAgent } from "./react_agent/index.js";
 import type { AgentType, IAgent } from "../interface/agent-api.js";
 import type { AgentFactory as AgentFactoryContract } from "./types.js";
+import type { Trace } from "../observability/trace.js";
 
 export interface AgentFactoryOptions {
   modelFactory: ModelFactory;
   gateway: McpGateway;
-  eventBus: RuntimeEventBus;
   toolRegistry: McpToolRegistry;
 }
 
@@ -21,24 +19,28 @@ export class AgentFactory implements AgentFactoryContract {
 
   create(
     type: AgentType,
-    overrides: { modelConfig?: ModelConfig; sysPrompt?: string[] } = {},
+    overrides: { modelConfig?: ModelConfig; sysPrompt?: string[]; trace?: Trace } = {},
   ): IAgent {
-    const modelFactory = overrides.modelConfig
-      ? this.options.modelFactory.withDefaultConfig(overrides.modelConfig)
+    let modelFactory = overrides.trace
+      ? this.options.modelFactory.withTrace(overrides.trace)
       : this.options.modelFactory;
+    modelFactory = overrides.modelConfig
+      ? modelFactory.withDefaultConfig(overrides.modelConfig)
+      : modelFactory;
+    const gateway = overrides.trace
+      ? this.options.gateway.withTrace(overrides.trace)
+      : this.options.gateway;
     const sysPrompt = overrides.sysPrompt ?? [];
     if (type === "chat") {
       return createChatAgent({
         modelFactory,
-        eventBus: this.options.eventBus,
         sysPrompt,
       });
     }
     if (type === "react") {
       return createReActAgent({
         modelFactory,
-        gateway: this.options.gateway,
-        eventBus: this.options.eventBus,
+        gateway,
         toolRegistry: this.options.toolRegistry,
         sysPrompt,
       });
@@ -46,8 +48,7 @@ export class AgentFactory implements AgentFactoryContract {
     if (type === "peo") {
       return createPEOAgent({
         modelFactory,
-        gateway: this.options.gateway,
-        eventBus: this.options.eventBus,
+        gateway,
         toolRegistry: this.options.toolRegistry,
         sysPrompt,
       });
