@@ -8,21 +8,18 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
-import {
-  CallbackRuntimeEventListener,
-  FileStorage,
-  McpToolRegistry,
-  McpGateway,
-  RuntimePermissionPolicy,
-  RuntimeEvent,
-  RuntimeEventBus,
-  ExecutionEnvironment,
-  Metrics,
-  Trace,
-  createRuntime,
-  registerExternalMcpEndpoints,
-  type ToolCallInput,
-} from "../src_new/index.js";
+import { createRuntime } from "../src_new/interface/api.js";
+import { FileStorage } from "../src_new/data/storage.js";
+import { McpGateway } from "../src_new/capability/mcp-gateway.js";
+import { RuntimePermissionPolicy } from "../src_new/capability/permission-policy.js";
+import { RuntimeEventBus, CallbackRuntimeEventListener } from "../src_new/capability/runtime-event-bus.js";
+import { ExecutionEnvironment } from "../src_new/capability/execution-environment.js";
+import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
+import { registerExternalMcpEndpoints } from "../src_new/capability/external_mcp_tool_adapter.js";
+import type { RuntimeEvent } from "../src_new/capability/runtime-event.js";
+import type { ToolCallInput } from "../src_new/capability/types.js";
+import { createMetrics } from "../src_new/observability/metrics.js";
+import { createTrace, type Trace } from "../src_new/observability/trace.js";
 import { TraceRuntimeEventListener } from "../src_new/observability/trace-runtime-event-listener.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
@@ -39,7 +36,7 @@ export async function runCapabilityObservabilityP1SrcNewTests(): Promise<void> {
 
 async function testRuntimeEventBusNotifiesTraceAndCallback(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-event-bus-");
-  const trace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "event-bus");
+  const trace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "event-bus");
   const received: RuntimeEvent[] = [];
   const bus = new RuntimeEventBus([
     new TraceRuntimeEventListener(trace),
@@ -103,8 +100,8 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
       },
     },
   ]);
-  const allowedTrace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-allowed");
-  const blockedTrace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-blocked");
+  const allowedTrace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-allowed");
+  const blockedTrace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "gateway-blocked");
   const allowedEventBus = new RuntimeEventBus([new TraceRuntimeEventListener(allowedTrace)]);
   const blockedEventBus = new RuntimeEventBus([new TraceRuntimeEventListener(blockedTrace)]);
   const gateway = new McpGateway(
@@ -148,7 +145,7 @@ async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
 async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
   const registry = new McpToolRegistry();
   const workdir = await createTestWorkdir("agent-runtime-p1-external-mcp-trace-");
-  const trace = new Trace(new FileStorage(path.join(workdir, ".agent_runtime")), "external-mcp-register");
+  const trace = createTrace(new FileStorage(path.join(workdir, ".agent_runtime")), "external-mcp-register");
   const endpoint = await startTestMcpHttpServer();
   try {
     await registerExternalMcpEndpoints(registry, [endpoint.config], new RuntimeEventBus([
@@ -218,7 +215,7 @@ async function testRuntimeRegistersExternalMcpTools(): Promise<void> {
 
 async function testMetricsAggregateSessionAndTotal(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-metrics-");
-  const metrics = new Metrics(new FileStorage(path.join(workdir, ".agent_runtime")));
+  const metrics = createMetrics(new FileStorage(path.join(workdir, ".agent_runtime")));
 
   await metrics.collect({
     sessionId: "session-1",
@@ -247,7 +244,7 @@ async function testMetricsAggregateSessionAndTotal(): Promise<void> {
 async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-metrics-autoflush-");
   const metricsPath = path.join(workdir, ".agent_runtime", "metrics", "summary.json");
-  const metrics = new Metrics(new FileStorage(path.join(workdir, ".agent_runtime")));
+  const metrics = createMetrics(new FileStorage(path.join(workdir, ".agent_runtime")));
 
   await metrics.collect({
     sessionId: "session-1",
@@ -295,7 +292,7 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
   };
   assert.equal(thresholdPersisted.total?.requestCount, 3);
 
-  const metricsWithToolUsage = new Metrics(new FileStorage(path.join(workdir, ".agent_runtime")));
+  const metricsWithToolUsage = createMetrics(new FileStorage(path.join(workdir, ".agent_runtime")));
   await metricsWithToolUsage.collect({
     sessionId: "session-2",
     result: {
@@ -318,7 +315,7 @@ async function testMetricsAutoFlushesAfterThresholdAndToolUsage(): Promise<void>
 async function testTracePersistsFlushState(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-trace-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const trace = new Trace(storage, "trace-persist");
+  const trace = createTrace(storage, "trace-persist");
 
   await trace.record({
     type: "runtime",
@@ -343,7 +340,7 @@ async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<vo
   const workdir = await createTestWorkdir("agent-runtime-p1-trace-autoflush-");
   const tracePath = path.join(workdir, ".agent_runtime", "traces", "trace_trace-autoflush.json");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const trace = new Trace(storage, "trace-autoflush");
+  const trace = createTrace(storage, "trace-autoflush");
 
   await trace.record(createTraceEvent("runtime.run.started"));
   await assertRejectsFileRead(tracePath);
@@ -360,7 +357,7 @@ async function testTraceAutoFlushesAfterThresholdAndTerminalEvents(): Promise<vo
     ["runtime.run.started", "runtime.context.assembled", "react.thought.input"],
   );
 
-  const terminalTrace = new Trace(storage, "trace-autoflush");
+  const terminalTrace = createTrace(storage, "trace-autoflush");
   await terminalTrace.record(createTraceEvent("runtime.run.finished"));
   const terminalPersisted = JSON.parse(await readFile(tracePath, "utf8")) as {
     events?: Array<{ brief?: string }>;

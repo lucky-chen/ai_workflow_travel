@@ -8,11 +8,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 import { runTerminalSessionCli } from "../bin/terminal-session-demo.js";
-import {
-  createRuntime,
-  WorkspaceLocalEnv,
-  type FetchLike,
-} from "../src_new/index.js";
+import { createRuntime, type FetchLike } from "../src_new/interface/api.js";
+import { WorkspaceLocalEnv } from "../src_new/runtime/workspace-local-env.js";
 import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
 export async function runRealProviderP1SrcNewTests(): Promise<void> {
@@ -164,7 +161,7 @@ async function testRuntimeLoadsExternalMcpServersFromLocalEnv(): Promise<void> {
         model: {
           mock: true,
           mockInfo: {
-            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolCalls\":[{\"toolName\":\"remote_echo\",\"arguments\":{\"content\":\"from local env\"}}],\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
+            content: "{\"thought\":\"use tool\",\"actionType\":\"tool\",\"toolCalls\":[{\"name\":\"remote_echo\",\"arguments\":{\"content\":\"from local env\"}}],\"shouldContinue\":false,\"finalAnswer\":\"done\"}",
           },
         },
       },

@@ -4,9 +4,10 @@ import type {
   RuntimeApi,
   SessionResult,
   UserInput,
+  RuntimeCreateOptions,
 } from "../interface/api.js";
+import { createRuntime } from "../interface/api.js";
 import type { RuntimeEvent } from "../capability/runtime-event.js";
-import { createRuntime } from "../runtime/runtime.js";
 
 export interface TerminalSessionDemoEntry {
   run(input: TerminalSessionDemoOptions): Promise<TerminalSessionDemoResult>;
@@ -20,7 +21,7 @@ export interface TerminalSessionDemoOptions {
   readInput?: () => Promise<{ rawText: string; closeRequested: boolean }>;
   writeLine?: (line: string) => Promise<void> | void;
   runtime?: RuntimeApi;
-  workdir?: string;
+  workdir?: RuntimeCreateOptions["workdir"];
 }
 
 export interface TerminalSessionDemoResult {

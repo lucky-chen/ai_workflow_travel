@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createRuntime, MultiAgentProtocol, RunCheckpoint, RuntimeEventBus } from "../src_new/index.js";
+import { createRuntime } from "../src_new/interface/api.js";
+import { RuntimeEventBus } from "../src_new/capability/runtime-event-bus.js";
+import { createRunCheckpoint } from "../src_new/runtime/run-checkpoint.js";
+import { MultiAgentProtocol } from "../src_new/orchestration/multi_agent_protocol.js";
 import type { RuntimeEvent } from "../src_new/capability/runtime-event.js";
 import { McpToolRegistry } from "../src_new/capability/tool-registry.js";
 import type { McpGateway, ToolCallInput, ToolCallResult } from "../src_new/capability/types.js";
@@ -923,7 +926,7 @@ async function testReservedPlaceholdersStayCallable(): Promise<void> {
   const session = await runtime.createSession({});
   const loaded = await session.load();
   const protocol = new MultiAgentProtocol();
-  const checkpoint = new RunCheckpoint({
+  const checkpoint = createRunCheckpoint({
     async load() {
       return {};
     },

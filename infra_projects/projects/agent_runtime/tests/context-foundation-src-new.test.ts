@@ -2,14 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  ContextAssembler,
-  ContextBudgetPolicy,
-  FileStorage,
-  RetrievalProvider,
-  RuntimeMemory,
-  SessionTranscript,
-} from "../src_new/index.js";
+import { FileStorage } from "../src_new/data/storage.js";
+import { ContextBudgetPolicy } from "../src_new/context/context-budget-policy.js";
+import { ContextAssembler } from "../src_new/context/context-assembler.js";
+import { createRetrievalProvider } from "../src_new/context/retrieval-provider.js";
+import { createRuntimeMemory } from "../src_new/context/runtime-memory.js";
+import { createSessionTranscript } from "../src_new/context/session-transcript.js";
 import { createTestWorkdir } from "./test-workdir.js";
 
 export async function runContextFoundationSrcNewTests(): Promise<void> {
@@ -21,7 +19,7 @@ export async function runContextFoundationSrcNewTests(): Promise<void> {
 async function testSessionTranscriptBoundary(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-transcript-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const transcript = new SessionTranscript(storage);
+  const transcript = createSessionTranscript(storage);
 
   await transcript.update("session-1", [
     { role: "system", content: "system prompt" },
@@ -40,7 +38,7 @@ async function testSessionTranscriptBoundary(): Promise<void> {
 async function testRuntimeMemoryBoundary(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-src-new-memory-");
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const memory = new RuntimeMemory(storage);
+  const memory = createRuntimeMemory(storage);
 
   await memory.update("session-1", [
     { summary: "priority p0" },
@@ -57,9 +55,9 @@ async function testContextAssemblerBuildsOriginalAndBoundedContext(): Promise<vo
   await writeFile(path.join(docsDir, "design.md"), "agent runtime design context assembly", "utf8");
 
   const storage = new FileStorage(path.join(workdir, ".agent_runtime"));
-  const transcript = new SessionTranscript(storage);
-  const memory = new RuntimeMemory(storage);
-  const retrieval = new RetrievalProvider(workdir);
+  const transcript = createSessionTranscript(storage);
+  const memory = createRuntimeMemory(storage);
+  const retrieval = createRetrievalProvider(workdir);
   const assembler = new ContextAssembler(
     transcript,
     memory,

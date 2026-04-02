@@ -5,22 +5,22 @@ import type {
   AgentSessionAccessInput,
   CloseSessionResult,
   RuntimeApi,
+  RuntimeCreateOptions,
 } from "../interface/api.js";
 import { FileStorage, type Storage } from "../data/storage.js";
 import { ContextAssembler } from "../context/context-assembler.js";
-import { RetrievalProvider } from "../context/retrieval-provider.js";
-import { RuntimeMemory } from "../context/runtime-memory.js";
-import { SessionTranscript } from "../context/session-transcript.js";
+import { createRetrievalProvider } from "../context/retrieval-provider.js";
+import { createRuntimeMemory } from "../context/runtime-memory.js";
+import { createSessionTranscript } from "../context/session-transcript.js";
 import { createBuiltInToolDefinitions } from "../capability/built-in-tools.js";
 import { ExecutionEnvironment } from "../capability/execution-environment.js";
-import type { ExternalMcpEndpointConfig } from "../capability/types.js";
 import { McpGateway } from "../capability/mcp-gateway.js";
 import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
 import { AgentFactory } from "../orchestration/agent_factory.js";
 import { createIntentRouter } from "../orchestration/intent_router/index.js";
-import { Metrics } from "../observability/metrics.js";
-import { Trace } from "../observability/trace.js";
+import { createMetrics } from "../observability/metrics.js";
+import { createTrace } from "../observability/trace.js";
 import { TraceRuntimeEventListener } from "../observability/trace-runtime-event-listener.js";
 import { ModelFactory } from "../model/model-factory.js";
 import { AgentSession } from "./agent-session.js";
@@ -31,10 +31,7 @@ import {
   RuntimeEventBus,
   type RuntimeEventListener,
 } from "../capability/runtime-event-bus.js";
-import type { RuntimeEventCallback } from "../capability/runtime-event.js";
-import {
-  RunCheckpoint,
-} from "./run-checkpoint.js";
+import { createRunCheckpoint } from "./run-checkpoint.js";
 import {
   toRuntimeModelConfig,
   WorkspaceLocalEnv,
@@ -44,14 +41,6 @@ import type {
   RuntimeServices,
 } from "./types.js";
 
-export interface RuntimeOptions {
-  workdir: string;
-  defaultModelMode?: "mock" | "real_from_local_env";
-  realProviderFetchFn?: import("../model/types.js").FetchLike;
-  externalMcpEndpoints?: ExternalMcpEndpointConfig[];
-  eventCallback?: RuntimeEventCallback;
-}
-
 export class Runtime implements RuntimeApi {
   private readonly storage: Storage;
   private readonly sessionManager = new AgentSessionManager();
@@ -59,22 +48,22 @@ export class Runtime implements RuntimeApi {
   private readonly runtimeRunId = randomUUID();
   private readonly initialization: Promise<void>;
 
-  constructor(private readonly options: RuntimeOptions) {
+  constructor(private readonly options: RuntimeCreateOptions) {
     if (!options.workdir) {
       throw new Error("Runtime requires workdir.");
     }
     this.storage = new FileStorage(path.join(options.workdir, ".agent_runtime"));
-    const sessionTranscript = new SessionTranscript(this.storage);
-    const runtimeMemory = new RuntimeMemory(this.storage);
+    const sessionTranscript = createSessionTranscript(this.storage);
+    const runtimeMemory = createRuntimeMemory(this.storage);
     const contextAssembler = new ContextAssembler(
       sessionTranscript,
       runtimeMemory,
-      new RetrievalProvider(options.workdir),
+      createRetrievalProvider(options.workdir),
     );
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
-    const trace = new Trace(this.storage, this.runtimeRunId);
+    const trace = createTrace(this.storage, this.runtimeRunId);
     const eventListeners: RuntimeEventListener[] = [new TraceRuntimeEventListener(trace)];
     if (options.eventCallback) {
       eventListeners.push(new CallbackRuntimeEventListener(options.eventCallback));
@@ -126,10 +115,10 @@ export class Runtime implements RuntimeApi {
         eventBus,
         toolRegistry,
       }),
-      metrics: new Metrics(this.storage),
+      metrics: createMetrics(this.storage),
       trace,
       eventBus,
-      checkpoint: new RunCheckpoint(this.storage),
+      checkpoint: createRunCheckpoint(this.storage),
       resolveDefaultModelConfig,
     };
   }
@@ -224,6 +213,6 @@ export class Runtime implements RuntimeApi {
   }
 }
 
-export function createRuntime(options: RuntimeOptions): Runtime {
+export function createRuntime(options: RuntimeCreateOptions): Runtime {
   return new Runtime(options);
 }
