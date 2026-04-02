@@ -21,25 +21,31 @@ import type { Storage } from "../data/storage.js";
 import type { RuntimeSharedComponents } from "./types.js";
 
 export class Runtime implements RuntimeApi {
-  private readonly storage: Storage;
-  private readonly runtimeRunId = randomUUID();
-  private readonly initialization: Promise<void>;
   private readonly agentService: AgentService;
   private readonly sessionService: SessionService;
-  private readonly components: RuntimeSharedComponents;
+  private readonly agentComponents: RuntimeSharedComponents;
+  private readonly sessionComponents: RuntimeSharedComponents;
+  private readonly sessionStorage: Storage;
 
   constructor(private readonly options: RuntimeCreateOptions) {
-    const assembly = new RuntimeAssembly(this.runtimeRunId, options);
-    this.storage = assembly.storage;
-    this.initialization = assembly.initialization;
-    this.agentService = new AgentService(assembly.components, this.initialization);
+    const agentAssembly = new RuntimeAssembly(randomUUID(), {
+      ...options,
+      serviceScope: "agent_service",
+    });
+    const sessionAssembly = new RuntimeAssembly(randomUUID(), {
+      ...options,
+      serviceScope: "session_service",
+    });
+    this.agentComponents = agentAssembly.components;
+    this.sessionComponents = sessionAssembly.components;
+    this.sessionStorage = sessionAssembly.storage;
+    this.agentService = new AgentService(agentAssembly.components, agentAssembly.initialization);
     this.sessionService = new SessionService(
       options.workdir,
-      this.storage,
-      assembly.components,
-      this.initialization,
+      this.sessionStorage,
+      sessionAssembly.components,
+      sessionAssembly.initialization,
     );
-    this.components = assembly.components;
   }
 
   async createSession(input: AgentSessionAccessInput): Promise<AgentSession> {
@@ -63,11 +69,13 @@ export class Runtime implements RuntimeApi {
   }
 
   subscribeEvents(listener: RuntimeEventListener): void {
-    this.components.eventBus.subscribe(listener);
+    this.agentComponents.eventBus.subscribe(listener);
+    this.sessionComponents.eventBus.subscribe(listener);
   }
 
   unsubscribeEvents(listener: RuntimeEventListener): void {
-    this.components.eventBus.unsubscribe(listener);
+    this.agentComponents.eventBus.unsubscribe(listener);
+    this.sessionComponents.eventBus.unsubscribe(listener);
   }
 }
 

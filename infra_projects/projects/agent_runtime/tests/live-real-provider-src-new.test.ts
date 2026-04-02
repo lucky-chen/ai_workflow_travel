@@ -106,7 +106,7 @@ async function runLiveModeCase(input: {
 }
 
 async function listTraceFiles(workdir: string): Promise<string[]> {
-  const tracesDir = path.join(workdir, ".agent_runtime", "traces");
+  const tracesDir = path.join(workdir, ".agent_runtime", "session_service", "traces");
   try {
     return (await readdir(tracesDir)).filter((fileName) => fileName.endsWith(".json")).sort();
   } catch {
@@ -118,7 +118,7 @@ async function loadNewTrace(
   workdir: string,
   existingTraceFiles: string[],
 ): Promise<{ events: Array<{ brief?: string }> }> {
-  const tracesDir = path.join(workdir, ".agent_runtime", "traces");
+  const tracesDir = path.join(workdir, ".agent_runtime", "session_service", "traces");
   const currentTraceFiles = await listTraceFiles(workdir);
   const newTraceFile = currentTraceFiles.find((fileName) => !existingTraceFiles.includes(fileName));
   if (!newTraceFile) {

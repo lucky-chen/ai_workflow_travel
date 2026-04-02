@@ -154,7 +154,7 @@ async function readSessionSelection(
 }
 
 async function listStoredSessions(workdir: string): Promise<StoredSessionSummary[]> {
-  const sessionsDir = path.join(workdir, ".agent_runtime", "sessions");
+  const sessionsDir = path.join(workdir, ".agent_runtime", "session_service", "sessions");
   try {
     const fileNames = await readdir(sessionsDir);
     const sessions = await Promise.all(

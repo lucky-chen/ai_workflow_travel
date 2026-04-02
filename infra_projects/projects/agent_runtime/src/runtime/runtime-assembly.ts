@@ -22,6 +22,7 @@ import type { RuntimeSharedComponents } from "./types.js";
 
 export interface RuntimeAssemblyOptions {
   workdir: string;
+  serviceScope: "agent_service" | "session_service";
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: FetchLike;
   externalMcpEndpoints?: ExternalMcpEndpointConfig[];
@@ -45,7 +46,8 @@ export class RuntimeAssembly {
       throw new Error("Runtime requires workdir.");
     }
 
-    this.storage = new FileStorage(path.join(options.workdir, ".agent_runtime"));
+    const storageRoot = path.join(options.workdir, ".agent_runtime", options.serviceScope);
+    this.storage = new FileStorage(storageRoot);
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
     const executionEnvironment = new ExecutionEnvironment();
@@ -93,7 +95,7 @@ export class RuntimeAssembly {
     });
 
     this.components = {
-      storageRoot: path.join(options.workdir, ".agent_runtime"),
+      storageRoot,
       storage: this.storage,
       intentRouter,
       agentFactory: new AgentFactory({

@@ -192,7 +192,7 @@ async function testOpenSessionReloadsPersistedSession(): Promise<void> {
   assert.equal(reopenedState.sessionId, createdState.sessionId);
   assert.deepEqual(reopenedState.history, createdState.history);
 
-  const persistedPath = path.join(workdir, ".agent_runtime", "sessions", `${createdState.sessionId}.json`);
+  const persistedPath = path.join(workdir, ".agent_runtime", "session_service", "sessions", `${createdState.sessionId}.json`);
   await access(persistedPath);
 }
 
@@ -205,7 +205,7 @@ async function testCloseSessionPersistsClosedState(): Promise<void> {
   const result = await runtime.closeSession(state.sessionId);
   assert.equal(result.sessionId, state.sessionId);
 
-  const persistedPath = path.join(workdir, ".agent_runtime", "sessions", `${state.sessionId}.json`);
+  const persistedPath = path.join(workdir, ".agent_runtime", "session_service", "sessions", `${state.sessionId}.json`);
   const persistedRaw = await readFile(persistedPath, "utf8");
   const persisted = JSON.parse(persistedRaw) as { status?: string };
 
@@ -241,7 +241,7 @@ async function testOpenSessionReactivatesClosedSession(): Promise<void> {
   assert.equal(result.errorCode, undefined);
   assert.equal(result.content, "reopened response");
 
-  const persistedPath = path.join(workdir, ".agent_runtime", "sessions", `${state.sessionId}.json`);
+  const persistedPath = path.join(workdir, ".agent_runtime", "session_service", "sessions", `${state.sessionId}.json`);
   const persistedRaw = await readFile(persistedPath, "utf8");
   const persisted = JSON.parse(persistedRaw) as { status?: string };
 
@@ -274,7 +274,7 @@ async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {
     sysPrompt: ["system prompt"],
   });
   const state = await session.load();
-  const sessionPath = path.join(workdir, ".agent_runtime", "sessions", `${state.sessionId}.json`);
+  const sessionPath = path.join(workdir, ".agent_runtime", "session_service", "sessions", `${state.sessionId}.json`);
 
   const persistedRaw = await readFile(sessionPath, "utf8");
   const persisted = JSON.parse(persistedRaw) as { history?: Array<{ role: string; content: string }> };
@@ -288,7 +288,7 @@ async function testOpenSessionSynchronizesTranscriptHistory(): Promise<void> {
 }
 
 async function findOnlyTraceFile(workdir: string): Promise<string> {
-  const traceDir = path.join(workdir, ".agent_runtime", "traces");
+  const traceDir = path.join(workdir, ".agent_runtime", "session_service", "traces");
   const entries = await readdir(traceDir);
   assert.equal(entries.length, 1);
   return path.join(traceDir, entries[0]!);

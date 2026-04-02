@@ -954,7 +954,7 @@ async function testReservedPlaceholdersStayCallable(): Promise<void> {
 }
 
 async function findOnlyTraceFile(workdir: string): Promise<string> {
-  const traceDir = path.join(workdir, ".agent_runtime", "traces");
+  const traceDir = path.join(workdir, ".agent_runtime", "session_service", "traces");
   const entries = await readdir(traceDir);
   assert.equal(entries.length, 1);
   return path.join(traceDir, entries[0]!);
