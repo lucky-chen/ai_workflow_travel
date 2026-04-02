@@ -4,7 +4,7 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as processInput, stdout as processOutput, stderr } from "node:process";
 
-import type { RuntimeApi } from "../src/interface/api.js";
+import type { SessionApi } from "../src/interface/api.js";
 import { createRuntime } from "../src/interface/api.js";
 import {
   createTerminalSessionDemo,
@@ -15,7 +15,7 @@ export interface TerminalSessionCliOptions {
   readInput?: () => Promise<string | null>;
   writeLine?: (line: string) => Promise<void> | void;
   writeError?: (line: string) => Promise<void> | void;
-  createRuntime?: (input: { workdir: string; defaultModelMode: "real_from_local_env" }) => RuntimeApi;
+  createRuntime?: (input: { workdir: string; defaultModelMode: "real_from_local_env" }) => SessionApi;
 }
 
 interface StoredSessionSummary {
@@ -154,7 +154,7 @@ async function readSessionSelection(
 }
 
 async function listStoredSessions(workdir: string): Promise<StoredSessionSummary[]> {
-  const sessionsDir = path.join(workdir, ".agent_runtime", "session_service", "sessions");
+  const sessionsDir = path.join(workdir, ".agent_runtime", "sessions");
   try {
     const fileNames = await readdir(sessionsDir);
     const sessions = await Promise.all(

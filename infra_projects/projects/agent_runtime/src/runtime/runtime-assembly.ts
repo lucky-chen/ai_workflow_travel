@@ -10,7 +10,6 @@ import { RuntimePermissionPolicy } from "../capability/permission-policy.js";
 import { RuntimeEventBus, type RuntimeEventListener } from "../capability/runtime-event-bus.js";
 import { McpToolRegistry } from "../capability/tool-registry.js";
 import { AgentFactory } from "../orchestration/agent_factory.js";
-import { createIntentRouter } from "../orchestration/intent_router/index.js";
 import { createMetrics } from "../observability/metrics.js";
 import { createTrace } from "../observability/trace.js";
 import { TraceRuntimeEventListener } from "../observability/trace-runtime-event-listener.js";
@@ -18,11 +17,10 @@ import { ModelFactory } from "../model/model-factory.js";
 import { createRunCheckpoint } from "./run-checkpoint.js";
 import { registerExternalToolProviders } from "./external-tool-registration.js";
 import { toRuntimeModelConfig, WorkspaceLocalEnv } from "./workspace-local-env.js";
-import type { RuntimeSharedComponents } from "./types.js";
+import type { AgentRuntimeComponents } from "./types.js";
 
 export interface RuntimeAssemblyOptions {
   workdir: string;
-  serviceScope: "agent_service" | "session_service";
   defaultModelMode?: "mock" | "real_from_local_env";
   realProviderFetchFn?: FetchLike;
   externalMcpEndpoints?: ExternalMcpEndpointConfig[];
@@ -34,7 +32,7 @@ export interface RuntimeAssemblyOverrides {
 
 export class RuntimeAssembly {
   readonly storage: Storage;
-  readonly components: RuntimeSharedComponents;
+  readonly components: AgentRuntimeComponents;
   readonly initialization: Promise<void>;
 
   constructor(
@@ -46,7 +44,7 @@ export class RuntimeAssembly {
       throw new Error("Runtime requires workdir.");
     }
 
-    const storageRoot = path.join(options.workdir, ".agent_runtime", options.serviceScope);
+    const storageRoot = path.join(options.workdir, ".agent_runtime");
     this.storage = new FileStorage(storageRoot);
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
     const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
@@ -82,10 +80,6 @@ export class RuntimeAssembly {
     };
     const modelFactory = new ModelFactory(eventBus, resolveDefaultModelConfig);
 
-    const intentRouter = createIntentRouter({
-      modelFactory,
-    });
-
     this.initialization = registerExternalToolProviders({
       localEnv: workspaceLocalEnv,
       configuredMcpEndpoints: options.externalMcpEndpoints,
@@ -97,7 +91,7 @@ export class RuntimeAssembly {
     this.components = {
       storageRoot,
       storage: this.storage,
-      intentRouter,
+      modelFactory,
       agentFactory: new AgentFactory({
         modelFactory,
         gateway,

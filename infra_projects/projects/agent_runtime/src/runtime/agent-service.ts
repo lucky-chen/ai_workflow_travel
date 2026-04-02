@@ -4,13 +4,13 @@ import type {
   IAgent,
 } from "../interface/agent-api.js";
 import type { ModelConfig } from "../model/types.js";
-import type { RuntimeSharedComponents } from "./types.js";
+import type { AgentRuntimeComponents } from "./types.js";
 
 export class AgentService {
   private readonly agentListeners = new WeakMap<IAgent, AgentEventListener>();
 
   constructor(
-    readonly components: RuntimeSharedComponents,
+    readonly components: AgentRuntimeComponents,
     private readonly initialization: Promise<void>,
   ) {}
 

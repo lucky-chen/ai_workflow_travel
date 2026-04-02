@@ -1,11 +1,11 @@
-import type { RuntimeApi } from "../src/interface/api.js";
+import type { SessionApi } from "../src/interface/api.js";
 import {
   createTerminalSessionDemo,
   type TerminalSessionDemoOptions,
 } from "../src/application/terminal-session-demo.js";
 
 export interface ExampleTerminalSessionDemoOptions {
-  runtime?: RuntimeApi;
+  runtime?: SessionApi;
   workdir?: string;
   sessionId?: string;
   initialSystemPrompt?: string[];

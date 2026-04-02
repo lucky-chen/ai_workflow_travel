@@ -1,6 +1,6 @@
 import type { McpGateway, McpToolRegistry } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import { BaseAgent } from "../base_agent.js";
 import { asNumber } from "../agent_parsing.js";
@@ -16,9 +16,8 @@ class PEOAgent extends BaseAgent {
     private readonly planStep: PlanStep,
     private readonly executionStep: ExecutionStep,
     private readonly observeStep: ObserveStep,
-    eventBus: RuntimeEventBus,
   ) {
-    super("peo", eventBus);
+    super("peo");
   }
 
   protected async execute(input: AgentRunInput, runId: string): Promise<AgentRunResult> {
@@ -64,6 +63,7 @@ export function createPEOAgent(input: {
   toolRegistry: McpToolRegistry;
   sysPrompt: string[];
 }): IAgent {
+  let agent!: PEOAgent;
   const internalReactAgent = createReActAgent({
     modelFactory: input.modelFactory,
     gateway: input.gateway,
@@ -71,16 +71,23 @@ export function createPEOAgent(input: {
     toolRegistry: input.toolRegistry,
     sysPrompt: input.sysPrompt,
   });
-  return new PEOAgent(
-    new PlanStep(input.modelFactory, input.eventBus, input.toolRegistry, input.sysPrompt),
+  agent = new PEOAgent(
+    new PlanStep(input.modelFactory, input.eventBus, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
+      await agent.publishInternal(event);
+    }),
     new ExecutionStep(
       input.eventBus,
       new DirectTaskExecutor(),
       new ReactTaskExecutor(internalReactAgent),
+      async (event: AgentEvent) => {
+        await agent.publishInternal(event);
+      },
     ),
-    new ObserveStep(input.eventBus),
-    input.eventBus,
+    new ObserveStep(input.eventBus, async (event: AgentEvent) => {
+      await agent.publishInternal(event);
+    }),
   );
+  return agent;
 }
 
 function createPeoSuccessResult(

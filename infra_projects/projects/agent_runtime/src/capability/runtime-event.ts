@@ -26,7 +26,6 @@ export interface RuntimeMessage {
     | "external_mcp_registered"
     | "run_started"
     | "context_assembled"
-    | "agent_event_forwarded"
     | "state_persisted"
     | "run_finished"
     | "run_failed";

@@ -1,4 +1,4 @@
-import type { AgentRunInput } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
@@ -9,6 +9,7 @@ export class ObservationStep {
     private readonly modelFactory: ModelFactory,
     private readonly eventBus: RuntimeEventBus,
     private readonly sysPrompt: string[],
+    private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
 
   async run(
@@ -54,6 +55,17 @@ export class ObservationStep {
       },
       stream: false,
     } satisfies ModuleRequest;
+    await this.emitAgentEvent({
+      timestamp: new Date().toISOString(),
+      brief: "react.observation.input",
+      details: {
+        runId,
+        agent: "react",
+        step: "observation",
+        stepIndex,
+        input: request.userPrompt,
+      },
+    });
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {

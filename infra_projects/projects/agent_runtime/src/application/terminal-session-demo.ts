@@ -1,7 +1,7 @@
 import type {
   ChatHistoryItem,
   CloseSessionResult,
-  RuntimeApi,
+  SessionApi,
   SessionResult,
   UserInput,
   RuntimeCreateOptions,
@@ -20,7 +20,7 @@ export interface TerminalSessionDemoOptions {
   config?: Record<string, unknown>;
   readInput?: () => Promise<{ rawText: string; closeRequested: boolean }>;
   writeLine?: (line: string) => Promise<void> | void;
-  runtime?: RuntimeApi;
+  runtime?: SessionApi;
   workdir?: RuntimeCreateOptions["workdir"];
 }
 
@@ -92,7 +92,7 @@ export class TerminalOutputRenderer {
 
 export class TerminalSessionDemo implements TerminalSessionDemoEntry {
   constructor(
-    private readonly runtime: RuntimeApi,
+    private readonly runtime: SessionApi,
     private readonly inputHandler: TerminalInputHandler,
     private readonly outputRenderer: TerminalOutputRenderer,
   ) {}

@@ -1,4 +1,4 @@
-import type { AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput, AgentRunResult, IAgent } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest, ModuleResponse } from "../../model/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
@@ -52,12 +52,13 @@ class ChatAgent extends BaseAgent {
     private readonly resultChecker: ChatResultChecker,
     private readonly eventBus: RuntimeEventBus,
   ) {
-    super("chat", eventBus);
+    super("chat");
   }
 
   protected async execute(input: AgentRunInput, runId: string): Promise<AgentRunResult> {
     try {
       const prompt = await this.promptBuilder.buildPrompt(input);
+      await this.publish(createAgentInputEvent(runId, prompt.userPrompt));
       await this.eventBus.publish({
         type: "agent",
         agentMessage: {
@@ -106,6 +107,19 @@ export function createChatAgent(input: {
     new ChatResultChecker(),
     input.eventBus,
   );
+}
+
+function createAgentInputEvent(runId: string, input: Record<string, unknown>): AgentEvent {
+  return {
+    timestamp: new Date().toISOString(),
+    brief: "chat.respond.input",
+    details: {
+      runId,
+      agent: "chat",
+      step: "chat",
+      input,
+    },
+  };
 }
 
 function createChatSuccessResult(

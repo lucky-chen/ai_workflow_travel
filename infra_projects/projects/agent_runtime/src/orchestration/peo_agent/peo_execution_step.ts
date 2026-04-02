@@ -1,4 +1,4 @@
-import type { AgentRunInput } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ExecutionStepResult, ITaskExecutor, PlanStepResult, PlanTask } from "./peo_types.js";
 
@@ -7,6 +7,7 @@ export class ExecutionStep {
     private readonly eventBus: RuntimeEventBus,
     private readonly directTaskExecutor: ITaskExecutor,
     private readonly reactTaskExecutor: ITaskExecutor,
+    private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
 
   async run(
@@ -16,6 +17,25 @@ export class ExecutionStep {
     plan: PlanStepResult,
   ): Promise<ExecutionStepResult> {
     const tasks = selectExecutableTasks(plan.tasks);
+    await this.emitAgentEvent({
+      timestamp: new Date().toISOString(),
+      brief: "peo.execution.input",
+      details: {
+        runId: _runId,
+        agent: "peo",
+        step: "execution",
+        stepIndex,
+        input: {
+          planSummary: plan.planSummary,
+          tasks: tasks.map((task) => ({
+            taskId: task.taskId,
+            description: task.description,
+            type: task.type,
+          })),
+          finalAnswer: plan.finalAnswer,
+        },
+      },
+    });
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {

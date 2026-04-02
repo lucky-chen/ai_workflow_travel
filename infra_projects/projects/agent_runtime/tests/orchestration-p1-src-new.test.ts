@@ -661,7 +661,7 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
       },
     },
   ]);
-  const step = new ActionStep(gateway, registry, new RuntimeEventBus([]));
+  const step = new ActionStep(gateway, registry, new RuntimeEventBus([]), async () => {});
 
   const result = await step.run(
     createMinimalAgentContext("react"),
@@ -893,6 +893,7 @@ async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
         };
       },
     },
+    async () => {},
   );
 
   const result = await step.run(
@@ -954,7 +955,7 @@ async function testReservedPlaceholdersStayCallable(): Promise<void> {
 }
 
 async function findOnlyTraceFile(workdir: string): Promise<string> {
-  const traceDir = path.join(workdir, ".agent_runtime", "session_service", "traces");
+  const traceDir = path.join(workdir, ".agent_runtime", "traces");
   const entries = await readdir(traceDir);
   assert.equal(entries.length, 1);
   return path.join(traceDir, entries[0]!);

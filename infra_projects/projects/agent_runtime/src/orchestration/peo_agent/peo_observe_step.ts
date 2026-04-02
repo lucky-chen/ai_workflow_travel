@@ -1,9 +1,12 @@
-import type { AgentRunInput } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
 import type { ObserveStepInput } from "./peo_types.js";
 
 export class ObserveStep {
-  constructor(private readonly eventBus: RuntimeEventBus) {}
+  constructor(
+    private readonly eventBus: RuntimeEventBus,
+    private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
+  ) {}
 
   async run(
     agentInput: AgentRunInput,
@@ -15,6 +18,21 @@ export class ObserveStep {
     completed: boolean;
     finalAnswer: string;
   }> {
+    await this.emitAgentEvent({
+      timestamp: new Date().toISOString(),
+      brief: "peo.observation.input",
+      details: {
+        runId,
+        agent: "peo",
+        step: "observation",
+        stepIndex,
+        input: {
+          planSummary: observeInput.executionResult.planSummary,
+          taskExecutions: observeInput.executionResult.taskExecutions,
+          finalAnswer: observeInput.executionResult.finalAnswer,
+        },
+      },
+    });
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {

@@ -7,12 +7,12 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 import {
+  createAgentApi,
   type AgentEvent,
   type AgentEventListener,
   type IAgent,
 } from "../src/interface/agent-api.js";
 import type { FetchLike } from "../src/interface/agent-api.js";
-import { createRuntime } from "../src/interface/api.js";
 import { createTestWorkdir, writeTestLocalEnv } from "./test-workdir.js";
 
 export async function runAgentApiTests(): Promise<void> {
@@ -24,10 +24,10 @@ export async function runAgentApiTests(): Promise<void> {
 }
 
 async function testCreateAgentReturnsStableApi(): Promise<void> {
-  const runtime = createRuntime({
+  const agentApi = createAgentApi({
     workdir: await createTestWorkdir("agent-runtime-agent-api-stable-"),
   });
-  const agent: IAgent = await runtime.createAgent("chat");
+  const agent: IAgent = await agentApi.createAgent("chat");
 
   assert.equal(typeof agent.run, "function");
   assert.equal(typeof agent.subscribeEvents, "function");
@@ -40,12 +40,12 @@ async function testChatAgentReturnsMockResult(): Promise<void> {
     provider: "deepseek",
     model: "deepseek-chat",
   });
-  const runtime = createRuntime({
+  const agentApi = createAgentApi({
     workdir,
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: createProviderFetch(() => "chat agent result"),
   });
-  const agent = await runtime.createAgent("chat");
+  const agent = await agentApi.createAgent("chat");
 
   const result = await agent.run({
     userInput: {
@@ -64,7 +64,7 @@ async function testReactAgentReceivesOnlyAgentScopedEvents(): Promise<void> {
     provider: "deepseek",
     model: "deepseek-chat",
   });
-  const runtime = createRuntime({
+  const agentApi = createAgentApi({
     workdir,
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: createProviderFetch((prompt) => {
@@ -87,7 +87,7 @@ async function testReactAgentReceivesOnlyAgentScopedEvents(): Promise<void> {
       throw new Error(`Unexpected stage: ${String(prompt.stage)}`);
     }),
   });
-  const agent = await runtime.createAgent("react");
+  const agent = await agentApi.createAgent("react");
   const events: AgentEvent[] = [];
   const listener: AgentEventListener = {
     onEvent(event) {
@@ -117,12 +117,12 @@ async function testAgentSubscriptionDeduplicatesAndUnsubscribes(): Promise<void>
     provider: "deepseek",
     model: "deepseek-chat",
   });
-  const runtime = createRuntime({
+  const agentApi = createAgentApi({
     workdir,
     defaultModelMode: "real_from_local_env",
     realProviderFetchFn: createProviderFetch(() => "chat result"),
   });
-  const agent = await runtime.createAgent("chat");
+  const agent = await agentApi.createAgent("chat");
   const events: AgentEvent[] = [];
   const listener: AgentEventListener = {
     onEvent(event) {
@@ -160,10 +160,10 @@ async function testAgentRegistersExternalMcpTools(): Promise<void> {
   });
   const endpoint = await startTestMcpHttpServer();
   try {
-    const runtime = createRuntime({
-      workdir,
-      externalMcpEndpoints: [endpoint.config],
-      defaultModelMode: "real_from_local_env",
+      const agentApi = createAgentApi({
+        workdir,
+        externalMcpEndpoints: [endpoint.config],
+        defaultModelMode: "real_from_local_env",
       realProviderFetchFn: createProviderFetch((prompt) => {
         if (prompt.stage === "react_thought") {
           return JSON.stringify({
@@ -184,7 +184,7 @@ async function testAgentRegistersExternalMcpTools(): Promise<void> {
         throw new Error(`Unexpected stage: ${String(prompt.stage)}`);
       }),
     });
-    const agent = await runtime.createAgent("react");
+    const agent = await agentApi.createAgent("react");
     const events: AgentEvent[] = [];
     const listener: AgentEventListener = {
       onEvent(event) {

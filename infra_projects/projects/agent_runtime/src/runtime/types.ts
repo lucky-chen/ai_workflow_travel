@@ -16,6 +16,7 @@ import type { Metrics } from "../observability/metrics.js";
 import type { Trace } from "../observability/trace.js";
 import type { RunCheckpoint } from "./run-checkpoint.js";
 import type { RuntimeEventBus } from "../capability/runtime-event-bus.js";
+import type { ModelFactory } from "../model/model-factory.js";
 
 export interface RuntimeDependencies {
   storageRoot: string;
@@ -59,10 +60,10 @@ export interface AgentSessionLike {
   close(): Promise<void>;
 }
 
-export interface RuntimeSharedComponents {
+export interface AgentRuntimeComponents {
   storageRoot: string;
   storage: Storage;
-  intentRouter: IntentRouter;
+  modelFactory: ModelFactory;
   agentFactory: AgentFactory;
   metrics: Metrics;
   trace: Trace;
@@ -70,7 +71,8 @@ export interface RuntimeSharedComponents {
   checkpoint: RunCheckpoint;
 }
 
-export interface SessionComponents {
+export interface SessionRuntimeComponents {
+  intentRouter: IntentRouter;
   contextAssembler: ContextAssembler;
   sessionTranscript: SessionTranscript;
   runtimeMemory: RuntimeMemory;

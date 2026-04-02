@@ -1,6 +1,6 @@
 import type { McpToolRegistry, ToolCall } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentRunInput } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import type { ModelFactory } from "../../model/model-factory.js";
 import type { ModuleRequest } from "../../model/types.js";
 import {
@@ -19,6 +19,7 @@ export class ThoughtStep {
     private readonly eventBus: RuntimeEventBus,
     private readonly toolRegistry: McpToolRegistry,
     private readonly sysPrompt: string[],
+    private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
 
   async run(
@@ -37,6 +38,17 @@ export class ThoughtStep {
     finalAnswer?: string;
   }> {
     const request = await this.buildPrompt(input, stepIndex, state);
+    await this.emitAgentEvent({
+      timestamp: new Date().toISOString(),
+      brief: "react.thought.input",
+      details: {
+        runId,
+        agent: "react",
+        step: "thought",
+        stepIndex,
+        input: request.userPrompt,
+      },
+    });
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {

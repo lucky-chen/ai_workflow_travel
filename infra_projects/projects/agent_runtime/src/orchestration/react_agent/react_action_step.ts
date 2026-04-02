@@ -1,6 +1,6 @@
 import type { McpGateway, McpToolRegistry, ToolCall } from "../../capability/types.js";
 import type { RuntimeEventBus } from "../../capability/runtime-event-bus.js";
-import type { AgentRunInput } from "../../interface/agent-api.js";
+import type { AgentEvent, AgentRunInput } from "../../interface/agent-api.js";
 import { validateToolCallArguments } from "../tool_call_argument_validator.js";
 
 export class ActionStep {
@@ -8,6 +8,7 @@ export class ActionStep {
     private readonly gateway: McpGateway,
     private readonly toolRegistry: McpToolRegistry,
     private readonly eventBus: RuntimeEventBus,
+    private readonly emitAgentEvent: (event: AgentEvent) => Promise<void>,
   ) {}
 
   async run(
@@ -39,6 +40,22 @@ export class ActionStep {
         failedToolCalls: 0,
       };
     }
+    await this.emitAgentEvent({
+      timestamp: new Date().toISOString(),
+      brief: "react.action.input",
+      details: {
+        runId,
+        agent: "react",
+        step: "action",
+        stepIndex,
+        input: {
+          actionType: thought.actionType,
+          toolCalls: thought.toolCalls.map((toolCall) => ({
+            name: toolCall.name,
+          })),
+        },
+      },
+    });
     await this.eventBus.publish({
       type: "agent",
       agentMessage: {
@@ -74,6 +91,18 @@ export class ActionStep {
         observations.push(`Tool argument validation failed for ${toolCall.name}: ${validation.errors.join(" ")}`);
         continue;
       }
+      await this.emitAgentEvent({
+        timestamp: new Date().toISOString(),
+        brief: "tool.call.started",
+        details: {
+          runId,
+          agent: "react",
+          step: "action",
+          stepIndex,
+          toolName: toolCall.name,
+          arguments: toolCall.arguments,
+        },
+      });
       const result = await this.gateway.call({
         toolCallId: `${runId}:react:${stepIndex}:${index + 1}:${toolCall.name}`,
         toolName: toolCall.name,
@@ -92,6 +121,19 @@ export class ActionStep {
       executedToolCalls += 1;
       if (result.error) {
         failedToolCalls += 1;
+        await this.emitAgentEvent({
+          timestamp: new Date().toISOString(),
+          brief: "tool.call.failed",
+          details: {
+            runId,
+            agent: "react",
+            step: "action",
+            stepIndex,
+            toolName: toolCall.name,
+            arguments: toolCall.arguments,
+            error: result.error,
+          },
+        });
       }
       observations.push(result.error ? result.error.message : result.content);
     }
