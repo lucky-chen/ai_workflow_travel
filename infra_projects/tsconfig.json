@@ -1,5 +1,8 @@
 {
-  "compilerOptions": {},
   "files": [],
-  "include": []
+  "references": [
+    {
+      "path": "./projects/agent_runtime"
+    }
+  ]
 }

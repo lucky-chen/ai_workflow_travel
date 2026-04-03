@@ -758,12 +758,15 @@ This section is organized by architecture partition.
       "group interactions by major interaction step, user scenario, or control point",
       "make it clear which interactions belong to the current mainline and which are future-stage extensions when relevant",
       "keep this section at cross-module interaction level rather than module-internal detail",
+      "for each 5.3.x scenario, include one mandatory UML interaction diagram before the interaction cases",
+      "the UML for each scenario must be a core-module interaction diagram rather than a layer-level interaction diagram",
+      "the UML must stay at architecture boundary level and must not expand into API field or storage schema detail",
       "for each scenario, make user scenario, stage position, and interaction goal explicit before listing interaction cases",
       "for each interaction case, make summary, modules involved, and control focus explicit",
-      "when adding lightweight shared interaction shapes, keep them at architecture boundary level rather than detailed API or storage schema level"
+      "when multiple scenarios exist, each scenario must carry its own UML instead of relying on one section-level shared UML"
     ],
     "severity": "medium",
-    "expected_format": "This section describes high-level cross-module interaction.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section in two main steps:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`"
+    "expected_format": "This section describes high-level cross-module interaction.\n\nWhen the system evolves in stages or has multiple major user scenarios, organize the section by scenario:\n\n#### 5.3.x `{ScenarioName}`\n- user scenario: `{UserScenario}`\n- stage position: `{CurrentScopeOrFutureStage}`\n- goal: `{InteractionGoal}`\n\n```plantuml\n@startuml\n{CoreModuleInteractionDiagramForScenarioX}\n@enduml\n```\n\nUnder each `5.3.x` scenario, expand into concrete interaction cases:\n\n##### 5.3.x.x `{InteractionCaseName}`\n- summary: `{WhatThisInteractionCaseCovers}`\n- modules involved: `{ModuleA}`, `{ModuleB}`, `{ModuleC}`\n- control focus: `{RoutingOrApprovalOrAsyncBoundary}`"
   }
 }
 -->
