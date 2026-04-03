@@ -19,14 +19,14 @@ async function testTerminalDemoCreateExecuteClose(): Promise<void> {
   const runtime = createSessionApi({ workdir });
   const demo = createTerminalSessionDemo({
     runtime,
-    readInput: async () => {
+    readInput: () => {
       const next = outputs.length === 0 ? "hello demo" : "";
-      return {
+      return Promise.resolve({
         rawText: next,
         closeRequested: outputs.length > 0,
-      };
+      });
     },
-    writeLine: async (line) => {
+    writeLine: (line) => {
       outputs.push(line);
     },
   });
@@ -62,11 +62,11 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
   const demo = createTerminalSessionDemo({
     runtime,
     sessionId: state.sessionId,
-    readInput: async () => ({
+    readInput: () => Promise.resolve({
       rawText: "",
       closeRequested: true,
     }),
-    writeLine: async (line) => {
+    writeLine: (line) => {
       outputs.push(line);
     },
   });
@@ -81,7 +81,7 @@ async function testTerminalDemoOpenExistingSession(): Promise<void> {
   assert.equal(outputs.at(-1), `Session closed: ${state.sessionId}`);
 }
 
-async function testSessionEventDisplayMapping(): Promise<void> {
+function testSessionEventDisplayMapping(): Promise<void> {
   const createdDisplay = toSessionEventDisplay({
     brief: "session_created",
     timestamp: new Date().toISOString(),
@@ -98,4 +98,5 @@ async function testSessionEventDisplayMapping(): Promise<void> {
   assert.equal(createdDisplay.title, "Session created");
   assert.equal(finishedDisplay.title, "Run finished");
   assert.equal(unknownDisplay.title, "context_assembled");
+  return Promise.resolve();
 }

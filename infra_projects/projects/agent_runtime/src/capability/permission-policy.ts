@@ -12,12 +12,13 @@ export class RuntimePermissionPolicy implements RuntimePermissionPolicyContract 
     private readonly defaultAllowedWorkingDirectories: string[] = [],
   ) {}
 
-  async evaluate(input: PermissionCheckInput): Promise<PermissionDecision> {
+  evaluate(_input: PermissionCheckInput): Promise<PermissionDecision> {
+    void _input;
     const workingDirectory = this.workingDirectory;
     const allowlist = this.defaultAllowedWorkingDirectories;
 
     if (!workingDirectory || allowlist.length === 0) {
-      return { allowed: true };
+      return Promise.resolve({ allowed: true });
     }
 
     const normalizedWorkingDirectory = path.resolve(workingDirectory);
@@ -28,13 +29,13 @@ export class RuntimePermissionPolicy implements RuntimePermissionPolicyContract 
     });
 
     if (allowed) {
-      return { allowed: true };
+      return Promise.resolve({ allowed: true });
     }
 
-    return {
+    return Promise.resolve({
       allowed: false,
       reasonCode: "WORKDIR_NOT_ALLOWED",
       message: `Working directory ${normalizedWorkingDirectory} is not allowed.`,
-    };
+    });
   }
 }

@@ -283,5 +283,5 @@ async function findOnlyTraceFile(workdir: string): Promise<string> {
   const traceDir = path.join(workdir, ".agent_runtime", "traces");
   const entries = await readdir(traceDir);
   assert.equal(entries.length, 1);
-  return path.join(traceDir, entries[0]!);
+  return path.join(traceDir, entries[0]);
 }

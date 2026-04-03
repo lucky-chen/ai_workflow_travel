@@ -9,11 +9,11 @@ export class McpToolRegistry implements McpToolRegistryContract {
     }
   }
 
-  async register(definition: ToolDefinition): Promise<void> {
+  register(definition: ToolDefinition): void {
     this.definitions.set(definition.name, definition);
   }
 
-  async resolve(toolName: string): Promise<ToolHandler> {
+  resolve(toolName: string): ToolHandler {
     const definition = this.definitions.get(toolName);
     if (!definition) {
       throw new Error(`Tool handler not found for ${toolName}.`);
@@ -21,15 +21,15 @@ export class McpToolRegistry implements McpToolRegistryContract {
     return definition.handler;
   }
 
-  async getDefinition(toolName: string): Promise<ToolDefinition | undefined> {
+  getDefinition(toolName: string): ToolDefinition | undefined {
     return this.definitions.get(toolName);
   }
 
-  async listToolNames(): Promise<string[]> {
+  listToolNames(): string[] {
     return [...this.definitions.keys()].sort();
   }
 
-  async listToolDefinitions(): Promise<ToolDefinition[]> {
+  listToolDefinitions(): ToolDefinition[] {
     return [...this.definitions.values()].sort((left, right) => left.name.localeCompare(right.name));
   }
 }

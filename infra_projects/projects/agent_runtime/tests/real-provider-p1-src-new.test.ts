@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import path from "node:path";
 import { once } from "node:events";
 import { AddressInfo } from "node:net";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -107,11 +106,11 @@ async function testRuntimeUsesRealProviderModeFromLocalEnv(): Promise<void> {
     model: "gpt-4.1-mini",
     timeoutMs: 10000,
   });
-  const fetchFn: FetchLike = async () => ({
+  const fetchFn: FetchLike = () => Promise.resolve({
     ok: true,
     status: 200,
-    async text() {
-      return JSON.stringify({
+    text() {
+      return Promise.resolve(JSON.stringify({
         choices: [
           {
             message: {
@@ -119,7 +118,7 @@ async function testRuntimeUsesRealProviderModeFromLocalEnv(): Promise<void> {
             },
           },
         ],
-      });
+      }));
     },
   });
 
@@ -197,11 +196,11 @@ async function testTerminalCliUsesRealProviderRuntimePath(): Promise<void> {
     model: "deepseek-chat",
     timeoutMs: 10000,
   });
-  const fetchFn: FetchLike = async () => ({
+  const fetchFn: FetchLike = () => Promise.resolve({
     ok: true,
     status: 200,
-    async text() {
-      return JSON.stringify({
+    text() {
+      return Promise.resolve(JSON.stringify({
         choices: [
           {
             message: {
@@ -209,21 +208,21 @@ async function testTerminalCliUsesRealProviderRuntimePath(): Promise<void> {
             },
           },
         ],
-      });
+      }));
     },
   });
   const lines: string[] = [];
 
   const exitCode = await runTerminalSessionCli({
     argv: ["--workdir", workdir],
-    readInput: async () => {
+    readInput: () => {
       const next = lines.some((line) => line.includes("cli real provider result")) ? "exit" : "hello";
-      return next;
+      return Promise.resolve(next);
     },
-    writeLine: async (line) => {
+    writeLine: (line) => {
       lines.push(line);
     },
-    writeError: async () => {},
+    writeError: () => undefined,
     createSessionApi: ({ workdir: runtimeWorkdir }) => createSessionApi({
       workdir: runtimeWorkdir,
       defaultModelMode: "real_from_local_env",
@@ -239,7 +238,8 @@ async function startTestMcpHttpServer(): Promise<{
   url: string;
   close(): Promise<void>;
 }> {
-  const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+    void (async () => {
     if (req.url !== "/mcp") {
       res.writeHead(404).end();
       return;
@@ -267,8 +267,9 @@ async function startTestMcpHttpServer(): Promise<{
       await transport.handleRequest(req, res, body);
     } finally {
       await transport.close();
-      server.close();
+      void server.close();
     }
+    })();
   });
   httpServer.listen(0, "127.0.0.1");
   await once(httpServer, "listening");
@@ -295,7 +296,7 @@ function createTestMcpServer(): McpServer {
         content: z.string().optional(),
       },
     },
-    async ({ content }) => ({
+    ({ content }) => Promise.resolve({
       content: [
         {
           type: "text",
@@ -310,7 +311,15 @@ function createTestMcpServer(): McpServer {
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    if (Buffer.isBuffer(chunk)) {
+      chunks.push(chunk);
+      continue;
+    }
+    if (typeof chunk === "string") {
+      chunks.push(Buffer.from(chunk));
+      continue;
+    }
+    throw new Error("Unexpected request chunk type.");
   }
   if (chunks.length === 0) {
     return undefined;

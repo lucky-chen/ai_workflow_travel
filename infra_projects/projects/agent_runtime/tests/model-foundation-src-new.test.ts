@@ -33,11 +33,11 @@ async function testModelFactoryCreatesMockModel(): Promise<void> {
 
 async function testModelFactoryCreatesHttpModel(): Promise<void> {
   const factory = new ModelFactory();
-  const fetchFn: FetchLike = async () => ({
+  const fetchFn: FetchLike = () => Promise.resolve({
     ok: true,
     status: 200,
-    async text() {
-      return JSON.stringify({
+    text() {
+      return Promise.resolve(JSON.stringify({
         choices: [
           {
             message: {
@@ -45,7 +45,7 @@ async function testModelFactoryCreatesHttpModel(): Promise<void> {
             },
           },
         ],
-      });
+      }));
     },
   });
   const model = factory.createModel({
@@ -82,7 +82,7 @@ async function testModelFactoryCreatesHttpModel(): Promise<void> {
   assert.equal(events[0]?.done, true);
 }
 
-async function testStreamingEventAdapterNormalizesProviderPayload(): Promise<void> {
+function testStreamingEventAdapterNormalizesProviderPayload(): Promise<void> {
   const adapter = new StreamingEventAdapter();
   const event = adapter.adapt({
     payload: {
@@ -98,4 +98,5 @@ async function testStreamingEventAdapterNormalizesProviderPayload(): Promise<voi
   assert.equal(event.content, "chunk");
   assert.equal(event.done, true);
   assert.equal(event.error?.code, "E_STREAM");
+  return Promise.resolve();
 }

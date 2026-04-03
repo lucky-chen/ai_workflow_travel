@@ -28,7 +28,7 @@ export class PlanStep {
       lastObservation?: { summary: Summary };
     },
   ): Promise<PlanStepResult> {
-    const request = await this.buildPrompt(input, stepIndex, state);
+    const request = this.buildPrompt(input, stepIndex, state);
     await this.emitAgentEvent({
       timestamp: new Date().toISOString(),
       brief: "peo.plan.input",
@@ -45,14 +45,14 @@ export class PlanStep {
     return checked;
   }
 
-  private async buildPrompt(
+  private buildPrompt(
     input: AgentRunInput,
     stepIndex: number,
     state: {
       lastObservation?: { summary: Summary };
     },
-  ): Promise<ModuleRequest> {
-    const toolDefinitions = await this.toolRegistry.listToolDefinitions();
+  ): ModuleRequest {
+    const toolDefinitions = this.toolRegistry.listToolDefinitions();
     return {
       systemPrompt: this.sysPrompt.concat([
         "You are the plan stage inside the PEO agent.",
@@ -93,7 +93,7 @@ export class PlanStep {
     };
   }
 
-  private async check(plan: Record<string, unknown>): Promise<PlanStepResult> {
+  private check(plan: Record<string, unknown>): Promise<PlanStepResult> {
     const content = typeof plan.content === "string" ? plan.content : "";
     const fallbackSummary = content.trim() || "PEO plan validation failed.";
     const parsed = tryParseJsonRecord(content);
@@ -108,29 +108,29 @@ export class PlanStep {
         ? parsed.plan
         : fallbackSummary;
     if (!content.trim()) {
-      return {
+      return Promise.resolve({
         planSummary,
         tasks: [],
         validationError: "PEO plan is empty.",
-      };
+      });
     }
     if (Array.isArray(parsed?.tasks) && tasks.length === 0) {
-      return {
+      return Promise.resolve({
         planSummary,
         tasks: [],
-      };
+      });
     }
     if (!Array.isArray(parsed?.tasks)) {
-      return {
+      return Promise.resolve({
         planSummary,
         tasks: [],
         validationError: "PEO plan tasks are invalid.",
-      };
+      });
     }
-    return {
+    return Promise.resolve({
       planSummary,
       tasks,
-    };
+    });
   }
 
   private async executeModel(
@@ -140,13 +140,9 @@ export class PlanStep {
     request: ModuleRequest,
   ) {
     const model = await this.modelFactory.createDefaultModel();
-    try {
-      const response = await model.execute(request);
-      ensureSuccessfulModelResponse(response);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    const response = await model.execute(request);
+    ensureSuccessfulModelResponse(response);
+    return response;
   }
 }
 

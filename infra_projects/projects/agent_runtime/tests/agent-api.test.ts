@@ -213,7 +213,8 @@ async function startTestMcpHttpServer(): Promise<{
   config: { name: string; url: string };
   close(): Promise<void>;
 }> {
-  const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+    void (async () => {
     if (req.url !== "/mcp") {
       res.writeHead(404).end();
       return;
@@ -241,8 +242,9 @@ async function startTestMcpHttpServer(): Promise<{
       await transport.handleRequest(req, res, body);
     } finally {
       await transport.close();
-      server.close();
+      void server.close();
     }
+    })();
   });
   httpServer.listen(0, "127.0.0.1");
   await once(httpServer, "listening");
@@ -281,7 +283,7 @@ function createTestMcpServer(): McpServer {
         content: z.string(),
       },
     },
-    async ({ content }) => ({
+    ({ content }) => Promise.resolve({
       content: [{
         type: "text",
         text: `remote:${content}`,
@@ -297,7 +299,7 @@ function createTestMcpServer(): McpServer {
 function createProviderFetch(
   responder: (prompt: Record<string, unknown>) => string,
 ): FetchLike {
-  return async (_url, init) => {
+  return (_url, init) => {
     const parsedBody = JSON.parse(init.body) as {
       messages?: Array<{ role?: string; content?: string }>;
     };
@@ -306,26 +308,34 @@ function createProviderFetch(
       ? JSON.parse(userMessage.content) as Record<string, unknown>
       : {};
     const content = responder(prompt);
-    return {
+    return Promise.resolve({
       ok: true,
       status: 200,
-      async text() {
-        return JSON.stringify({
+      text() {
+        return Promise.resolve(JSON.stringify({
           choices: [{
             message: {
               content,
             },
           }],
-        });
+        }));
       },
-    };
+    });
   };
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+    if (typeof chunk === "string") {
+      chunks.push(Buffer.from(chunk));
+      continue;
+    }
+    if (Buffer.isBuffer(chunk)) {
+      chunks.push(chunk);
+      continue;
+    }
+    throw new Error("Unexpected request chunk type.");
   }
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }

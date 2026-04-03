@@ -38,8 +38,9 @@ function createTaskExecutionContext(
   input: AgentRunInput,
   plan: PlanStepResult,
   task: PlanTask,
-  stepIndex: number,
+  _stepIndex: number,
 ): AgentRunInput {
+  void _stepIndex;
   return {
     userInput: {
       task: task.description,

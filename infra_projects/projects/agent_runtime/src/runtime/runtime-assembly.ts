@@ -23,9 +23,6 @@ export interface RuntimeAssemblyOptions {
   externalMcpEndpoints?: ExternalMcpEndpointConfig[];
 }
 
-export interface RuntimeAssemblyOverrides {
-}
-
 export class RuntimeAssembly {
   readonly storage: Storage;
   readonly components: AgentRuntimeComponents;
@@ -34,7 +31,6 @@ export class RuntimeAssembly {
   constructor(
     _runtimeRunId: string,
     options: RuntimeAssemblyOptions,
-    overrides: RuntimeAssemblyOverrides = {},
   ) {
     if (!options.workdir) {
       throw new Error("Controller assembly requires workdir.");
@@ -43,7 +39,7 @@ export class RuntimeAssembly {
     const storageRoot = path.join(options.workdir, ".agent_runtime");
     this.storage = new FileStorage(storageRoot);
     const permissionPolicy = new RuntimePermissionPolicy(options.workdir, [options.workdir]);
-    const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions(options.workdir));
+    const toolRegistry = new McpToolRegistry(createBuiltInToolDefinitions());
     const executionEnvironment = new ExecutionEnvironment();
     const gateway = new McpGateway(permissionPolicy, toolRegistry, executionEnvironment);
     const workspaceLocalEnv = new WorkspaceLocalEnv(options.workdir);

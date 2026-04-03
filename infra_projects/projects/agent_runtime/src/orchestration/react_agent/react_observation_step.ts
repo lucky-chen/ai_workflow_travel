@@ -74,7 +74,7 @@ export class ObservationStep {
     return checked;
   }
 
-  private async check(observation: Record<string, unknown>): Promise<{
+  private check(observation: Record<string, unknown>): Promise<{
     summary: string;
     completed: boolean;
     finalAnswer: string;
@@ -104,11 +104,11 @@ export class ObservationStep {
         : observation.shouldContinue === true && !finalAnswer.trim()
           ? true
           : false;
-    return {
+    return Promise.resolve({
       summary,
       completed: !shouldContinue,
       finalAnswer,
-    };
+    });
   }
 
   private async executeModel(
@@ -118,12 +118,8 @@ export class ObservationStep {
     request: ModuleRequest,
   ) {
     const model = await this.modelFactory.createDefaultModel();
-    try {
-      const response = await model.execute(request);
-      ensureSuccessfulModelResponse(response);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    const response = await model.execute(request);
+    ensureSuccessfulModelResponse(response);
+    return response;
   }
 }

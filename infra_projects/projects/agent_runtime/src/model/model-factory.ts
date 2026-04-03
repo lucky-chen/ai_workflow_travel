@@ -36,7 +36,7 @@ export class ModelFactory {
   }
 
   withDefaultConfig(config: ModelConfig): ModelFactory {
-    return new ModelFactory(this.trace, async () => config);
+    return new ModelFactory(this.trace, () => Promise.resolve(config));
   }
 
   withTrace(trace: ModelTraceWriter): ModelFactory {

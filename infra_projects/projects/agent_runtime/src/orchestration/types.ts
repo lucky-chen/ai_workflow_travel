@@ -1,5 +1,5 @@
 import type { ModelConfig } from "../model/types.js";
-import type { IAgent, AgentType, AgentRunResult } from "../interface/agent-api.js";
+import type { IAgent, AgentType } from "../interface/agent-api.js";
 import type { UserInput } from "../interface/api.js";
 import type { Trace } from "../observability/trace.js";
 

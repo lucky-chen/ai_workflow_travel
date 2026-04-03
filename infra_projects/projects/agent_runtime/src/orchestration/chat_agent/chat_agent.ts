@@ -6,8 +6,8 @@ import { BaseAgent } from "../base_agent.js";
 class ChatPromptBuilder {
   constructor(private readonly sysPrompt: string[]) {}
 
-  async buildPrompt(input: AgentRunInput): Promise<ModuleRequest> {
-    return {
+  buildPrompt(input: AgentRunInput): Promise<ModuleRequest> {
+    return Promise.resolve({
       systemPrompt: this.sysPrompt,
       responseFormat: "text",
       userPrompt: {
@@ -18,12 +18,12 @@ class ChatPromptBuilder {
         },
       },
       stream: false,
-    };
+    });
   }
 }
 
 class ChatResultChecker {
-  async check(result: ModuleResponse): Promise<{ data: string | Record<string, unknown>; format: "text" | "json" }> {
+  check(result: ModuleResponse): Promise<{ data: string | Record<string, unknown>; format: "text" | "json" }> {
     if (result.error.code) {
       throw new Error(result.error.message || result.error.code);
     }
@@ -31,15 +31,15 @@ class ChatResultChecker {
       throw new Error("Chat model returned empty content.");
     }
     try {
-      return {
+      return Promise.resolve({
         data: JSON.parse(result.content) as Record<string, unknown>,
         format: "json",
-      };
+      });
     } catch {
-      return {
+      return Promise.resolve({
         data: result.content,
         format: "text",
-      };
+      });
     }
   }
 }
@@ -71,11 +71,7 @@ class ChatAgent extends BaseAgent {
     request: ModuleRequest,
   ): Promise<ModuleResponse> {
     const model = await this.modelFactory.createDefaultModel();
-    try {
-      return await model.execute(request);
-    } catch (error) {
-      throw error;
-    }
+    return model.execute(request);
   }
 }
 

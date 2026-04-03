@@ -29,13 +29,14 @@ function parseTranscriptContext(payload: Record<string, unknown>, sessionId: str
     throw new Error(`Transcript payload for ${sessionId} is invalid.`);
   }
 
-  const turns = payload.turns.map((turn) => {
+  const rawTurns: unknown[] = payload.turns;
+  const turns: TranscriptTurn[] = rawTurns.map((turn) => {
     if (!turn || typeof turn !== "object") {
       throw new Error(`Transcript payload for ${sessionId} is invalid.`);
     }
-    const role = Reflect.get(turn, "role");
-    const content = Reflect.get(turn, "content");
-    const timestamp = Reflect.get(turn, "timestamp");
+    const role: unknown = Reflect.get(turn, "role");
+    const content: unknown = Reflect.get(turn, "content");
+    const timestamp: unknown = Reflect.get(turn, "timestamp");
     if (
       role !== "user" &&
       role !== "assistant" &&

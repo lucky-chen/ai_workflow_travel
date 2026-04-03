@@ -107,7 +107,10 @@ function extractDeepSeekResponseContent(rawText: string): string {
   try {
     parsed = JSON.parse(rawText) as DeepSeekResponseBody;
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : "Provider returned invalid JSON.");
+    throw new Error(
+      error instanceof Error ? error.message : "Provider returned invalid JSON.",
+      { cause: error },
+    );
   }
   const content = parsed.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) {

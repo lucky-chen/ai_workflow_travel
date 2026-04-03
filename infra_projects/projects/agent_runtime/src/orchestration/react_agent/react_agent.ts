@@ -59,19 +59,18 @@ export function createReActAgent(input: {
   toolRegistry: McpToolRegistry;
   sysPrompt: string[];
 }): IAgent {
-  let agent!: ReActAgent;
-  agent = new ReActAgent(
+  const agentInstance = new ReActAgent(
     new ThoughtStep(input.modelFactory, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
-      await agent.publishInternal(event);
+      await agentInstance.publishInternal(event);
     }),
     new ActionStep(input.gateway, input.toolRegistry, async (event: AgentEvent) => {
-      await agent.publishInternal(event);
+      await agentInstance.publishInternal(event);
     }),
     new ObservationStep(input.modelFactory, input.sysPrompt, async (event: AgentEvent) => {
-      await agent.publishInternal(event);
+      await agentInstance.publishInternal(event);
     }),
   );
-  return agent;
+  return agentInstance;
 }
 
 function createReactSuccessResult(
@@ -123,10 +122,11 @@ function createReactMaxStepResult(
   _runId: string,
   _toolCalls: number,
   _failedToolCalls: number,
-  state: {
+  _state: {
     lastObservation?: { summary: string; finalAnswer?: string };
   },
 ): AgentRunResult {
+  void _state;
   return {
     format: "text",
     errorInfo: {

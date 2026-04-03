@@ -6,12 +6,12 @@ export interface ToolArgumentValidationResult {
   definition?: ToolDefinition;
 }
 
-export async function validateToolCallArguments(input: {
+export function validateToolCallArguments(input: {
   toolRegistry: McpToolRegistry;
   toolName: string;
   arguments: Record<string, unknown>;
-}): Promise<ToolArgumentValidationResult> {
-  const definition = await input.toolRegistry.getDefinition(input.toolName);
+}): ToolArgumentValidationResult {
+  const definition = input.toolRegistry.getDefinition(input.toolName);
   if (!definition?.inputSchema) {
     return {
       valid: true,
@@ -56,8 +56,12 @@ function validateAgainstSchema(schema: Record<string, unknown>, argumentsValue: 
     if (!propertySchema?.type) {
       continue;
     }
-    if (!matchesPrimitiveType(argumentsValue[key], propertySchema.type)) {
-      errors.push(`Argument "${key}" must be of type ${String(propertySchema.type)}.`);
+    const expectedType = typeof propertySchema.type === "string" ? propertySchema.type : undefined;
+    if (!expectedType) {
+      continue;
+    }
+    if (!matchesPrimitiveType(argumentsValue[key], expectedType)) {
+      errors.push(`Argument "${key}" must be of type ${expectedType}.`);
     }
   }
 

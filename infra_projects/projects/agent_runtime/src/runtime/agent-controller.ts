@@ -34,12 +34,13 @@ export class AgentController {
     return agent;
   }
 
-  async closeAgent(agent: IAgent): Promise<void> {
+  closeAgent(agent: IAgent): Promise<void> {
     const listener = this.agentListeners.get(agent);
     if (listener) {
       agent.unsubscribeEvents(listener);
       this.agentListeners.delete(agent);
     }
+    return Promise.resolve();
   }
 
   async createAgentInstance(

@@ -1,6 +1,6 @@
 import type { ToolCallInput, ToolCallResult, ToolDefinition } from "./types.js";
 
-export function createBuiltInToolDefinitions(_rootDir: string): ToolDefinition[] {
+export function createBuiltInToolDefinitions(): ToolDefinition[] {
   return [
     {
       name: "echo_hello",
@@ -19,11 +19,12 @@ export function createBuiltInToolDefinitions(_rootDir: string): ToolDefinition[]
         required: ["content"],
       },
       handler: {
-        async handle(_input: ToolCallInput): Promise<ToolCallResult> {
-          return {
+        handle(_input: ToolCallInput): Promise<ToolCallResult> {
+          void _input;
+          return Promise.resolve({
             content: "hello",
             exitCode: 0,
-          };
+          });
         },
       },
     },

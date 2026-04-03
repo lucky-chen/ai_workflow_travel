@@ -14,7 +14,6 @@ import type { SessionTranscript } from "../context/session-transcript.js";
 import type { RuntimeMemory } from "../context/runtime-memory.js";
 import type { AgentFactory, IntentRouter } from "../orchestration/types.js";
 import type { Metrics } from "../observability/metrics.js";
-import type { Trace } from "../observability/trace.js";
 import type { RunCheckpoint } from "./run-checkpoint.js";
 import type { ModelFactory } from "../model/model-factory.js";
 

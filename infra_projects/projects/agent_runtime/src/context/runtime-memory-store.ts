@@ -29,12 +29,13 @@ function parseMemoryContext(payload: Record<string, unknown>, sessionId: string)
     throw new Error(`Runtime memory payload for ${sessionId} is invalid.`);
   }
 
-  const summaryItems = payload.summaryItems.map((item) => {
+  const rawSummaryItems: unknown[] = payload.summaryItems;
+  const summaryItems = rawSummaryItems.map((item) => {
     if (!item || typeof item !== "object") {
       throw new Error(`Runtime memory payload for ${sessionId} is invalid.`);
     }
-    const summary = Reflect.get(item, "summary");
-    const sourceTurnId = Reflect.get(item, "sourceTurnId");
+    const summary: unknown = Reflect.get(item, "summary");
+    const sourceTurnId: unknown = Reflect.get(item, "sourceTurnId");
     if (typeof summary !== "string") {
       throw new Error(`Runtime memory payload for ${sessionId} contains invalid summary.`);
     }

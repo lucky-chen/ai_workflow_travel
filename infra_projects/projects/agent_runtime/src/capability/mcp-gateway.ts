@@ -35,7 +35,7 @@ export class McpGateway implements McpGatewayContract {
     }
 
     try {
-      const handler = await this.toolRegistry.resolve(input.toolName);
+      const handler = this.toolRegistry.resolve(input.toolName);
       const result = await this.executionEnvironment.execute({
         toolCall: input,
         handler,

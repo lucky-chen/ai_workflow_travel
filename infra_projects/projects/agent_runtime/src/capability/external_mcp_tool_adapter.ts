@@ -29,7 +29,7 @@ export async function registerExternalMcpEndpoints(
   for (const endpoint of endpoints) {
     const connected = await connectExternalMcpEndpoint(endpoint);
     for (const tool of connected.tools) {
-      await registry.register(createExternalMcpToolDefinition(connected.client, tool));
+      registry.register(createExternalMcpToolDefinition(connected.client, tool));
     }
     endpointSummaries.push({
       endpointName: endpoint.name ?? endpoint.url,
@@ -127,21 +127,23 @@ async function listAllTools(client: Client): Promise<Tool[]> {
   return tools;
 }
 
-function normalizeToolResultContent(content: ToolCallResult["content"] | unknown): string {
+function normalizeToolResultContent(content: unknown): string {
   if (!Array.isArray(content)) {
     return typeof content === "string" ? content : JSON.stringify(content ?? "");
   }
   return content.map((item) => {
-    if (
-      item
-      && typeof item === "object"
-      && "type" in item
-      && item.type === "text"
-      && "text" in item
-      && typeof item.text === "string"
-    ) {
+    if (isTextContentItem(item)) {
       return item.text;
     }
     return JSON.stringify(item);
   }).join("\n");
+}
+
+function isTextContentItem(item: unknown): item is { type: "text"; text: string } {
+  return item !== null
+    && typeof item === "object"
+    && "type" in item
+    && Reflect.get(item, "type") === "text"
+    && "text" in item
+    && typeof Reflect.get(item, "text") === "string";
 }

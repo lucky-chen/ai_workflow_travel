@@ -17,15 +17,15 @@ export class MockModel extends BaseModel implements IModel {
     super(trace);
   }
 
-  protected override async executeCore(input: ModuleRequest): Promise<ModuleResponse> {
+  protected override executeCore(input: ModuleRequest): Promise<ModuleResponse> {
     const resolvedContent = resolveMockContent(this.mockInfo, input);
-    return {
+    return Promise.resolve({
       content: resolvedContent,
       error: {
         code: "",
         message: "",
       },
-    };
+    });
   }
 
   async *stream(input: ModuleRequest): AsyncIterable<StreamEvent> {
@@ -40,7 +40,9 @@ export class MockModel extends BaseModel implements IModel {
 }
 
 function resolveMockContent(mockInfo: Record<string, unknown> | undefined, input: ModuleRequest): string {
-  const responder = mockInfo?.respond;
+  const responder = typeof mockInfo?.respond === "function"
+    ? mockInfo.respond as (userPrompt: ModuleRequest["userPrompt"], request: ModuleRequest) => unknown
+    : undefined;
   if (typeof responder === "function") {
     const resolved = responder(input.userPrompt, input);
     return typeof resolved === "string" ? resolved : JSON.stringify(resolved ?? { ok: true });

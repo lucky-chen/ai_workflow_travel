@@ -28,10 +28,10 @@ export async function runTerminalSessionCli(
   options: TerminalSessionCliOptions = {},
 ): Promise<number> {
   const parsedArgs = parseArgs(options.argv ?? process.argv.slice(2));
-  const writeLine = options.writeLine ?? (async (line: string) => {
+  const writeLine = options.writeLine ?? ((line: string) => {
     processOutput.write(`${line}\n`);
   });
-  const writeError = options.writeError ?? (async (line: string) => {
+  const writeError = options.writeError ?? ((line: string) => {
     stderr.write(`${line}\n`);
   });
 

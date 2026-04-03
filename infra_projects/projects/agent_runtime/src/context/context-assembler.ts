@@ -32,7 +32,7 @@ export class ContextAssembler {
       return { originalContext };
     }
 
-    const boundedContext = await this.contextBudgetPolicy.bound(originalContext, input.runtimeLimits);
+    const boundedContext = this.contextBudgetPolicy.bound(originalContext, input.runtimeLimits);
     return {
       originalContext,
       boundedContext,

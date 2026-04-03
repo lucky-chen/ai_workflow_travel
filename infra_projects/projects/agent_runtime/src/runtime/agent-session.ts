@@ -17,9 +17,6 @@ import type {
   SessionEventSink,
   StoredSessionState,
 } from "./types.js";
-import type {
-  AgentSelectionInput,
-} from "../orchestration/types.js";
 import type { AgentRunResult } from "../interface/agent-api.js";
 import type { Trace } from "../observability/trace.js";
 import { mapAgentEventToTraceEvents } from "../observability/trace_event_mapper.js";
@@ -126,7 +123,7 @@ export class AgentSession implements AgentSessionLike {
     const traceId = randomUUID();
     try {
       await this.recordRunStarted(traceId);
-      const context = await this.assembleContext(userInput, traceId);
+      await this.assembleContext(userInput, traceId);
       const routing = await this.sessionComponents.intentRouter.resolve({
         userInput,
       });
@@ -199,10 +196,10 @@ export class AgentSession implements AgentSessionLike {
     await this.emitSessionEvent(createSessionEvent("context_assembled", this.sessionId, traceId));
   }
 
-  private async selectAgent(requestedType: AgentType): Promise<IAgent> {
+  private selectAgent(requestedType: AgentType): Promise<IAgent> {
     const cached = this.agentCacheMap.get(requestedType);
     if (cached) {
-      return cached;
+      return Promise.resolve(cached);
     }
     const agent = this.agentComponents.agentFactory.create(requestedType, {
       modelConfig: this.state.config?.model,
@@ -217,7 +214,7 @@ export class AgentSession implements AgentSessionLike {
     agent.subscribeEvents(listener);
     this.agentListenerMap.set(requestedType, listener);
     this.agentCacheMap.set(requestedType, agent);
-    return agent;
+    return Promise.resolve(agent);
   }
 
   private buildAgentRunInput(userInput: UserInput) {
@@ -395,12 +392,12 @@ async function loadStoredSession(storage: Storage, sessionId: string): Promise<S
     throw new Error(`Stored session ${sessionId} is invalid.`);
   }
 
-  const history = payload.history.map((item) => {
+  const history: StoredSessionState["history"] = payload.history.map((item) => {
     if (!item || typeof item !== "object") {
       throw new Error(`Stored session ${sessionId} contains invalid history.`);
     }
-    const role = Reflect.get(item, "role");
-    const content = Reflect.get(item, "content");
+    const role: unknown = Reflect.get(item, "role");
+    const content: unknown = Reflect.get(item, "content");
     if (
       role !== "user" &&
       role !== "assistant" &&
@@ -415,11 +412,12 @@ async function loadStoredSession(storage: Storage, sessionId: string): Promise<S
     return { role, content };
   });
 
+  const systemPromptItems: unknown[] = Array.isArray(payload.systemPrompt) ? payload.systemPrompt : [];
   return {
     sessionId: payload.sessionId,
     title: typeof payload.title === "string" ? payload.title : undefined,
     systemPrompt: Array.isArray(payload.systemPrompt)
-      ? payload.systemPrompt.filter((item): item is string => typeof item === "string")
+      ? systemPromptItems.filter((item): item is string => typeof item === "string")
       : history
         .filter((item) => item.role === "system")
         .map((item) => item.content),

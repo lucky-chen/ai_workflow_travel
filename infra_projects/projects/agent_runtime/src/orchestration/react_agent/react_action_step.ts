@@ -59,7 +59,7 @@ export class ActionStep {
     let failedToolCalls = 0;
     for (let index = 0; index < thought.toolCalls.length; index += 1) {
       const toolCall = thought.toolCalls[index];
-      const validation = await validateToolCallArguments({
+      const validation = validateToolCallArguments({
         toolRegistry: this.toolRegistry,
         toolName: toolCall.name,
         arguments: toolCall.arguments,

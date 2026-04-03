@@ -3,12 +3,12 @@ import type { IntentRoutingResult, IntentRoutingRule } from "./shared.js";
 import presets from "./intent_router_presets.json" with { type: "json" };
 
 export class RuleIntentRouter implements IntentRoutingRule {
-  async resolve(input: AgentSelectionInput): Promise<IntentRoutingResult | undefined> {
+  resolve(input: AgentSelectionInput): Promise<IntentRoutingResult | undefined> {
     const command = getSlashCommand(input.userInput.content);
     if (command) {
-      return resolveSlashCommand(command);
+      return Promise.resolve(resolveSlashCommand(command));
     }
-    return resolveFixedRule(input);
+    return Promise.resolve(resolveFixedRule(input));
   }
 }
 

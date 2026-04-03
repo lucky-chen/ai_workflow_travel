@@ -40,11 +40,11 @@ export interface ExternalMcpEndpointConfig {
 }
 
 export interface McpToolRegistry {
-  register(definition: ToolDefinition): Promise<void>;
-  resolve(toolName: string): Promise<ToolHandler>;
-  getDefinition(toolName: string): Promise<ToolDefinition | undefined>;
-  listToolNames(): Promise<string[]>;
-  listToolDefinitions(): Promise<ToolDefinition[]>;
+  register(definition: ToolDefinition): void;
+  resolve(toolName: string): ToolHandler;
+  getDefinition(toolName: string): ToolDefinition | undefined;
+  listToolNames(): string[];
+  listToolDefinitions(): ToolDefinition[];
 }
 
 export interface PermissionCheckInput {

@@ -43,7 +43,7 @@ export class WorkspaceLocalEnv {
         if (options.optional) {
           return undefined;
         }
-        throw new Error(`Missing local env file: ${this.localEnvPath}`);
+        throw new Error(`Missing local env file: ${this.localEnvPath}`, { cause: error });
       }
       throw error;
     }
@@ -55,7 +55,7 @@ export class WorkspaceLocalEnv {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Invalid local env JSON: ${this.localEnvPath}. ${message}`);
+      throw new Error(`Invalid local env JSON: ${this.localEnvPath}. ${message}`, { cause: error });
     }
   }
 

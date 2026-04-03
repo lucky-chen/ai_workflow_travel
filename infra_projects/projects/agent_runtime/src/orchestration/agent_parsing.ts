@@ -17,7 +17,7 @@ export function asNumber(value: unknown): number {
 
 export function tryParseJsonRecord(content: string): Record<string, unknown> | undefined {
   try {
-    const parsed = JSON.parse(content);
+    const parsed: unknown = JSON.parse(content);
     return isRecord(parsed) ? parsed : undefined;
   } catch {
     return undefined;

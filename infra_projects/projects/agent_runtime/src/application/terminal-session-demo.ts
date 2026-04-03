@@ -37,11 +37,11 @@ export interface SessionEventDisplay {
 export class TerminalInputHandler {
   constructor(private readonly readInputImpl: () => Promise<{ rawText: string; closeRequested: boolean }>) {}
 
-  async parseStartupInput(argv: string[]): Promise<{ mode: "create" | "open"; sessionId?: string }> {
+  parseStartupInput(argv: string[]): Promise<{ mode: "create" | "open"; sessionId?: string }> {
     const sessionId = parseSessionIdArg(argv);
-    return sessionId
+    return Promise.resolve(sessionId
       ? { mode: "open", sessionId }
-      : { mode: "create" };
+      : { mode: "create" });
   }
 
   async readUserInput(): Promise<{ rawText: string; closeRequested: boolean }> {
@@ -143,10 +143,10 @@ export function createTerminalSessionDemo(input: TerminalSessionDemoOptions): Te
     defaultModelMode: "real_from_local_env",
   });
   const inputHandler = new TerminalInputHandler(
-    input.readInput ?? (async () => ({ rawText: "", closeRequested: true })),
+    input.readInput ?? (() => Promise.resolve({ rawText: "", closeRequested: true })),
   );
   const outputRenderer = new TerminalOutputRenderer(
-    input.writeLine ?? (() => {}),
+    input.writeLine ?? (() => undefined),
   );
   return new TerminalSessionDemo(runtime, inputHandler, outputRenderer);
 }

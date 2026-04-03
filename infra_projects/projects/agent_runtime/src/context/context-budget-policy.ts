@@ -1,11 +1,11 @@
 import type { ContextBudgetLimits, ContextView } from "./types.js";
 
-export interface ContextBudgetPolicy {
-  bound(originalContext: ContextView, runtimeLimits: ContextBudgetLimits): Promise<ContextView>;
+export interface ContextBudgetPolicyContract {
+  bound(originalContext: ContextView, runtimeLimits: ContextBudgetLimits): ContextView;
 }
 
-export class ContextBudgetPolicy implements ContextBudgetPolicy {
-  async bound(originalContext: ContextView, runtimeLimits: ContextBudgetLimits): Promise<ContextView> {
+export class ContextBudgetPolicy implements ContextBudgetPolicyContract {
+  bound(originalContext: ContextView, runtimeLimits: ContextBudgetLimits): ContextView {
     return {
       transcriptContext: {
         turns: originalContext.transcriptContext.turns.slice(-runtimeLimits.maxTranscriptTurns),

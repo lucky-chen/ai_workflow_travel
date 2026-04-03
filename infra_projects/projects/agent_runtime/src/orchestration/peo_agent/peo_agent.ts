@@ -58,28 +58,27 @@ export function createPEOAgent(input: {
   toolRegistry: McpToolRegistry;
   sysPrompt: string[];
 }): IAgent {
-  let agent!: PEOAgent;
   const internalReactAgent = createReActAgent({
     modelFactory: input.modelFactory,
     gateway: input.gateway,
     toolRegistry: input.toolRegistry,
     sysPrompt: input.sysPrompt,
   });
-  agent = new PEOAgent(
+  const agentInstance = new PEOAgent(
     new PlanStep(input.modelFactory, input.toolRegistry, input.sysPrompt, async (event: AgentEvent) => {
-      await agent.publishInternal(event);
+      await agentInstance.publishInternal(event);
     }),
     new ExecutionStep(
       new ReactTaskExecutor(internalReactAgent),
       async (event: AgentEvent) => {
-        await agent.publishInternal(event);
+        await agentInstance.publishInternal(event);
       },
     ),
     new ObserveStep(async (event: AgentEvent) => {
-      await agent.publishInternal(event);
+      await agentInstance.publishInternal(event);
     }),
   );
-  return agent;
+  return agentInstance;
 }
 
 function createPeoSuccessResult(
@@ -132,10 +131,11 @@ function createPeoMaxStepResult(
   _runId: string,
   _toolCalls: number,
   _failedToolCalls: number,
-  state: {
+  _state: {
     lastObservation?: { summary: Summary };
   },
 ): AgentRunResult {
+  void _state;
   return {
     format: "text",
     errorInfo: {

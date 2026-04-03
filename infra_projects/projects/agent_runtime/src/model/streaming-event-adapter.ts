@@ -1,10 +1,10 @@
 import type { ProviderStreamEvent, StreamEvent } from "./types.js";
 
-export interface StreamingEventAdapter {
+export interface StreamingEventAdapterContract {
   adapt(event: ProviderStreamEvent): StreamEvent;
 }
 
-export class StreamingEventAdapter {
+export class StreamingEventAdapter implements StreamingEventAdapterContract {
   adapt(event: ProviderStreamEvent): StreamEvent {
     return {
       content: typeof event.payload.content === "string" ? event.payload.content : "",
@@ -18,8 +18,8 @@ function parseError(value: unknown): StreamEvent["error"] | undefined {
   if (!value || typeof value !== "object") {
     return undefined;
   }
-  const code = Reflect.get(value, "code");
-  const message = Reflect.get(value, "message");
+  const code: unknown = Reflect.get(value, "code");
+  const message: unknown = Reflect.get(value, "message");
   if (typeof code !== "string" || typeof message !== "string") {
     return undefined;
   }

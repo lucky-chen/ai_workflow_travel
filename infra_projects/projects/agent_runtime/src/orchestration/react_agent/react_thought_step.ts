@@ -35,7 +35,7 @@ export class ThoughtStep {
     shouldContinue: boolean;
     finalAnswer?: string;
   }> {
-    const request = await this.buildPrompt(input, stepIndex, state);
+    const request = this.buildPrompt(input, stepIndex, state);
     await this.emitAgentEvent({
       timestamp: new Date().toISOString(),
       brief: "react.thought.input",
@@ -59,15 +59,15 @@ export class ThoughtStep {
     return checked;
   }
 
-  private async buildPrompt(
+  private buildPrompt(
     input: AgentRunInput,
     stepIndex: number,
     state: {
       lastObservation?: { summary: string; finalAnswer?: string };
       priorActionSummaries: string[];
     },
-  ): Promise<ModuleRequest> {
-    const toolDefinitions = await this.toolRegistry.listToolDefinitions();
+  ): ModuleRequest {
+    const toolDefinitions = this.toolRegistry.listToolDefinitions();
     return {
       systemPrompt: this.sysPrompt.concat([
         "Return valid JSON only.",
@@ -98,7 +98,7 @@ export class ThoughtStep {
     };
   }
 
-  private async check(thought: Record<string, unknown>): Promise<{
+  private check(thought: Record<string, unknown>): Promise<{
     thought: string;
     actionType: "tool" | "respond";
     toolCalls?: ToolCall[];
@@ -123,13 +123,13 @@ export class ThoughtStep {
       : toolCalls.length > 0
         ? "tool"
         : "respond";
-    return {
+    return Promise.resolve({
       thought: normalizedThought,
       actionType,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       shouldContinue: parsed?.shouldContinue === true || actionType === "tool",
       finalAnswer: typeof parsed?.finalAnswer === "string" ? parsed.finalAnswer : undefined,
-    };
+    });
   }
 
   private async executeModel(
@@ -139,13 +139,9 @@ export class ThoughtStep {
     request: ModuleRequest,
   ) {
     const model = await this.modelFactory.createDefaultModel();
-    try {
-      const response = await model.execute(request);
-      ensureSuccessfulModelResponse(response);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    const response = await model.execute(request);
+    ensureSuccessfulModelResponse(response);
+    return response;
   }
 }
 

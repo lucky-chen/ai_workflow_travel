@@ -34,17 +34,17 @@ async function testTerminalCliAllowsSelectingExistingSessionFromSavedList(): Pro
   let step = 0;
   const exitCode = await runTerminalSessionCli({
     argv: ["--workdir", workdir],
-    readInput: async () => {
+    readInput: () => {
       step += 1;
       if (step === 1) {
-        return "1";
+        return Promise.resolve("1");
       }
-      return "exit";
+      return Promise.resolve("exit");
     },
-    writeLine: async (line) => {
+    writeLine: (line) => {
       outputs.push(line);
     },
-    writeError: async (line) => {
+    writeError: (line) => {
       errors.push(line);
     },
   });
@@ -80,17 +80,17 @@ async function testTerminalCliFallsBackToSelectionWhenRequestedSessionIsMissing(
   let step = 0;
   const exitCode = await runTerminalSessionCli({
     argv: ["--workdir", workdir, "--session-id", "missing-session"],
-    readInput: async () => {
+    readInput: () => {
       step += 1;
       if (step === 1) {
-        return "1";
+        return Promise.resolve("1");
       }
-      return "exit";
+      return Promise.resolve("exit");
     },
-    writeLine: async (line) => {
+    writeLine: (line) => {
       outputs.push(line);
     },
-    writeError: async (line) => {
+    writeError: (line) => {
       errors.push(line);
     },
   });

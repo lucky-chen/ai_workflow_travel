@@ -26,7 +26,7 @@ export async function runOrchestrationP1SrcNewTests(): Promise<void> {
   await testPeoDoesNotCallToolWithoutPlanAction();
   await testPeoCanContinueToSecondStepBeforeCompletion();
   await testPeoToolFailureStillFlowsIntoObserve();
-  await testToolArgumentValidatorRejectsInvalidArguments();
+  testToolArgumentValidatorRejectsInvalidArguments();
   await testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall();
   await testRuntimeCallbackReceivesReactLifecycleEvents();
   await testRuntimeCallbackReceivesPeoTaskAndToolEvents();
@@ -686,7 +686,7 @@ async function testPeoToolFailureStillFlowsIntoObserve(): Promise<void> {
   assertPeoSummaryOutput(result.content, "task-1", "react child observed tool failure");
 }
 
-async function testToolArgumentValidatorRejectsInvalidArguments(): Promise<void> {
+function testToolArgumentValidatorRejectsInvalidArguments(): void {
   const registry = new McpToolRegistry([
     {
       name: "read_text_file",
@@ -698,24 +698,24 @@ async function testToolArgumentValidatorRejectsInvalidArguments(): Promise<void>
         },
       },
       handler: {
-        async handle(): Promise<ToolCallResult> {
-          return { content: "" };
+        handle(): Promise<ToolCallResult> {
+          return Promise.resolve({ content: "" });
         },
       },
     },
   ]);
 
-  const missingPath = await validateToolCallArguments({
+  const missingPath = validateToolCallArguments({
     toolRegistry: registry,
     toolName: "read_text_file",
     arguments: {},
   });
-  const wrongType = await validateToolCallArguments({
+  const wrongType = validateToolCallArguments({
     toolRegistry: registry,
     toolName: "read_text_file",
     arguments: { path: 1 },
   });
-  const unknownField = await validateToolCallArguments({
+  const unknownField = validateToolCallArguments({
     toolRegistry: registry,
     toolName: "read_text_file",
     arguments: { path: "/tmp/a.txt", extra: true },
@@ -732,9 +732,10 @@ async function testToolArgumentValidatorRejectsInvalidArguments(): Promise<void>
 async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Promise<void> {
   let called = 0;
   const gateway: McpGateway = {
-    async call(_input: ToolCallInput): Promise<ToolCallResult> {
+    call(_input: ToolCallInput): Promise<ToolCallResult> {
+      void _input;
       called += 1;
-      return { content: "unexpected" };
+      return Promise.resolve({ content: "unexpected" });
     },
     withTrace() {
       return this;
@@ -751,8 +752,8 @@ async function testReactInvalidToolArgumentsStayInLoopWithoutGatewayCall(): Prom
         },
       },
       handler: {
-        async handle(): Promise<ToolCallResult> {
-          return { content: "" };
+        handle(): Promise<ToolCallResult> {
+          return Promise.resolve({ content: "" });
         },
       },
     },
@@ -918,9 +919,9 @@ async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
   let reactCalled = 0;
   const step = new ExecutionStep(
     {
-      async execute() {
+      execute() {
         reactCalled += 1;
-        return {
+        return Promise.resolve({
           output: "react output",
           error: {
             code: 0,
@@ -930,10 +931,10 @@ async function testPeoExecutionRoutesReactTaskToReactExecutor(): Promise<void> {
             toolCalls: 1,
             failedToolCalls: 0,
           },
-        };
+        });
       },
     },
-    async () => {},
+    () => Promise.resolve(),
   );
 
   const result = await step.run(
@@ -964,10 +965,12 @@ async function testReservedPlaceholdersStayCallable(): Promise<void> {
   const loaded = await session.load();
   const protocol = new MultiAgentProtocol();
   const checkpoint = createRunCheckpoint({
-    async load() {
-      return {};
+    load() {
+      return Promise.resolve({});
     },
-    async save() {},
+    save() {
+      return Promise.resolve();
+    },
   });
 
   const delegation = await protocol.delegate({
@@ -994,7 +997,7 @@ async function findOnlyTraceFile(workdir: string): Promise<string> {
   const traceDir = path.join(workdir, ".agent_runtime", "traces");
   const entries = await readdir(traceDir);
   assert.equal(entries.length, 1);
-  return path.join(traceDir, entries[0]!);
+  return path.join(traceDir, entries[0]);
 }
 
 function createMinimalAgentContext(requestedMode: "react" | "peo") {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { AddressInfo } from "node:net";
 import { once } from "node:events";
@@ -62,11 +62,11 @@ async function testSessionEventWritesTraceAndCallback(): Promise<void> {
 async function testGatewayDispatchAndPolicyBlock(): Promise<void> {
   const workdir = await createTestWorkdir("agent-runtime-p1-gateway-");
   const echoHandler = {
-    async handle(input: ToolCallInput) {
-      return {
-        content: String(input.arguments.content ?? ""),
+    handle(input: ToolCallInput) {
+      return Promise.resolve({
+        content: typeof input.arguments.content === "string" ? input.arguments.content : "",
         exitCode: 0,
-      };
+      });
     },
   };
   const registry = new McpToolRegistry([
@@ -127,8 +127,8 @@ async function testExternalMcpToolAdapterRegistersRemoteTools(): Promise<void> {
   try {
     await registerExternalMcpEndpoints(registry, [endpoint.config]);
 
-    const handler = await registry.resolve("remote_echo");
-    const definitions = await registry.listToolDefinitions();
+    const handler = registry.resolve("remote_echo");
+    const definitions = registry.listToolDefinitions();
     const result = await handler.handle({
       toolCallId: "remote-1",
       toolName: "remote_echo",
@@ -354,7 +354,8 @@ async function startTestMcpHttpServer(): Promise<{
   config: { name: string; url: string };
   close(): Promise<void>;
 }> {
-  const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+    void (async () => {
     if (req.url !== "/mcp") {
       res.writeHead(404).end();
       return;
@@ -382,8 +383,9 @@ async function startTestMcpHttpServer(): Promise<{
       await transport.handleRequest(req, res, body);
     } finally {
       await transport.close();
-      server.close();
+      void server.close();
     }
+    })();
   });
   httpServer.listen(0, "127.0.0.1");
   await once(httpServer, "listening");
@@ -414,7 +416,7 @@ function createTestMcpServer(): McpServer {
         content: z.string().optional(),
       },
     },
-    async ({ content }) => ({
+    ({ content }) => Promise.resolve({
       content: [
         {
           type: "text",
@@ -429,7 +431,15 @@ function createTestMcpServer(): McpServer {
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    if (Buffer.isBuffer(chunk)) {
+      chunks.push(chunk);
+      continue;
+    }
+    if (typeof chunk === "string") {
+      chunks.push(Buffer.from(chunk));
+      continue;
+    }
+    throw new Error("Unexpected request chunk type.");
   }
   if (chunks.length === 0) {
     return undefined;
