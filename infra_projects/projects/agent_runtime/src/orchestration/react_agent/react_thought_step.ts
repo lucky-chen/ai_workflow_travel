@@ -73,6 +73,8 @@ export class ThoughtStep {
         "Return valid JSON only.",
         "Decide whether the next action is a tool call or a direct response.",
         "Do not output a tool call with missing required arguments.",
+        "When action.type is tool, put tool call data under action.tool.",
+        "When action.type is respond, put the final answer under action.respond.",
       ]),
       responseFormat: "json",
       userPrompt: {
@@ -85,9 +87,23 @@ export class ThoughtStep {
           toolUsageRules: createToolUsageRules("react"),
         },
         responseContract: {
-          actionType: "\"tool\" | \"respond\"",
-          toolCalls: "array required when actionType is tool",
-          finalAnswer: "string required when actionType is respond",
+          thought: "required string",
+          action: {
+            type: "required \"tool\" | \"respond\"",
+            tool: {
+              toolCalls: {
+                description: "required when action.type is tool",
+                itemSchema: {
+                  name: "required string",
+                  arguments: "required object",
+                },
+              },
+            },
+            respond: {
+              description: "used only when action.type is respond",
+              finalAnswer: "required string",
+            },
+          },
         },
         runtimeState: {
           stepIndex,
@@ -110,25 +126,40 @@ export class ThoughtStep {
       throw new Error("ReAct thought is empty.");
     }
     const parsed = tryParseJsonRecord(content);
+    const parsedAction = isRecord(parsed?.action) ? parsed.action : undefined;
+    const parsedTool = isRecord(parsedAction?.tool) ? parsedAction.tool : undefined;
+    const parsedRespond = isRecord(parsedAction?.respond) ? parsedAction.respond : undefined;
     const normalizedThought = typeof parsed?.thought === "string" && parsed.thought.trim()
       ? parsed.thought
       : content;
-    const toolCalls = Array.isArray(parsed?.toolCalls)
-      ? parsed.toolCalls
+    const rawToolCalls = Array.isArray(parsedTool?.toolCalls)
+      ? parsedTool.toolCalls
+      : Array.isArray(parsed?.toolCalls)
+        ? parsed.toolCalls
+        : [];
+    const toolCalls = rawToolCalls.length > 0
+      ? rawToolCalls
         .map((value) => normalizeToolCall(value))
         .filter((value): value is ToolCall => Boolean(value))
       : [];
-    const actionType = parsed?.actionType === "tool" || parsed?.actionType === "respond"
-      ? parsed.actionType
-      : toolCalls.length > 0
-        ? "tool"
-        : "respond";
+    const actionType = parsedAction?.type === "tool" || parsedAction?.type === "respond"
+      ? parsedAction.type
+      : parsed?.actionType === "tool" || parsed?.actionType === "respond"
+        ? parsed.actionType
+        : toolCalls.length > 0
+          ? "tool"
+          : "respond";
+    const finalAnswer = typeof parsedRespond?.finalAnswer === "string"
+      ? parsedRespond.finalAnswer
+      : typeof parsed?.finalAnswer === "string"
+        ? parsed.finalAnswer
+        : undefined;
     return Promise.resolve({
       thought: normalizedThought,
       actionType,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       shouldContinue: parsed?.shouldContinue === true || actionType === "tool",
-      finalAnswer: typeof parsed?.finalAnswer === "string" ? parsed.finalAnswer : undefined,
+      finalAnswer,
     });
   }
 
@@ -146,11 +177,19 @@ export class ThoughtStep {
 }
 
 function normalizeToolCall(value: unknown): ToolCall | undefined {
-  if (!isRecord(value) || typeof value.name !== "string") {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const name = typeof value.name === "string"
+    ? value.name
+    : typeof value.toolName === "string"
+      ? value.toolName
+      : undefined;
+  if (!name) {
     return undefined;
   }
   return {
-    name: value.name,
+    name,
     arguments: isRecord(value.arguments)
       ? value.arguments
       : {},
